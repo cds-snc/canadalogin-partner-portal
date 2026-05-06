@@ -1,0 +1,14 @@
+/* Scoped styles for Workspaces page DataTable actions column */
+.workspaces-table .ag-header-cell:last-child {
+  min-width: 220px !important;
+  max-width: 350px !important;
+}
+
+.workspaces-table .ag-cell:last-child {
+  min-width: 220px !important;
+  max-width: 350px !important;
+}
+
+.workspaces-table .government-data-table__action {
+  white-space: nowrap;
+}

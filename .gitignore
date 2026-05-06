@@ -1,0 +1,67 @@
+### macOS
+.DS_Store
+
+### Python / Backend (FastAPI)
+/.venv/
+venv/
+env/
+ENV/
+*.py[cod]
+__pycache__/
+*.so
+*.egg-info/
+build/
+dist/
+pip-wheel-metadata/
+*.egg
+.pytest_cache/
+.mypy_cache/
+coverage.xml
+htmlcov/
+coverage/
+instance/
+.env
+celerybeat-schedule
+*.sqlite3
+
+# Alembic / migrations local artifacts
+src/migrations/versions/*.pyc
+
+### IDEs / editors
+.idea/
+*.swp
+
+### Docker
+*.log
+docker-compose.override.yml
+
+### Node / Frontend (Vite React)
+/frontend/node_modules/
+/frontend/dist/
+/frontend/.turbo/
+/frontend/.parcel-cache/
+/frontend/.vite/
+/frontend/build/
+/frontend/.pnp.cjs
+/frontend/.pnp.loader.mjs
+pnpm-lock.yaml
+package-lock.json
+yarn.lock
+
+### Playwright
+playwright-report/
+
+### Test results
+test-results/
+
+### Misc
+logs/
+*.log
+coverage/
+tmp/
+*.bak
+.ruff_cache/
+.opencode/
+
+### Delorean
+delorean/

@@ -1,0 +1,13 @@
+{
+    "chat.tools.terminal.autoApprove": {
+        "pytest": true,
+        "uv": true,
+        ".venv/bin/python": true,
+        "pnpm": true,
+        "/^node --input-type=module -e \"import \\{ redirect \\} from '@tanstack/react-router'; const value = redirect\\(\\{ to: '/login', search: \\{ redirect: '/users' \\}, replace: true \\}\\); console\\.log\\(JSON\\.stringify\\(value, null, 2\\)\\);\"$/": {
+            "approve": true,
+            "matchCommandLine": true
+        },
+        "./node_modules/.bin/eslint": true
+    }
+}
