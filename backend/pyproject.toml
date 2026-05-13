@@ -7,7 +7,7 @@ license = { text = "MIT" }
 readme = "README.md"
 requires-python = ">=3.11, <4"
 dependencies = [
-    "Authlib>=1.6.9",
+    "Authlib>=1.6.12",
     "python-dotenv>=1.0.0",
     "itsdangerous>=2.2.0",
     "pydantic[email]>=2.12.5",
