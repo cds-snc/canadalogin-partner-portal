@@ -4,8 +4,9 @@ from enum import Enum
 from typing import Any, Literal
 
 import bcrypt
+import jwt
 from fastapi.security import OAuth2PasswordBearer
-from jose import JWTError, jwt
+from jwt import PyJWTError
 from pydantic import SecretStr
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -121,7 +122,7 @@ async def verify_token(token: str, expected_token_type: TokenType, db: AsyncSess
 
         return TokenData(subject=subject)
 
-    except JWTError:
+    except PyJWTError:
         return None
 
 

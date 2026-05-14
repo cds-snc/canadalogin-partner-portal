@@ -1,7 +1,7 @@
 from datetime import timedelta
 from typing import Any
 
-from jose import JWTError
+from jwt import PyJWTError
 from sqlalchemy.ext.asyncio import AsyncSession
 from starlette.requests import Request
 
@@ -71,5 +71,5 @@ class AuthService:
                 return {"message": "Logged out successfully", "clear_cookies": True}
 
             raise UnauthorizedException("No authenticated session found.")
-        except JWTError:
+        except PyJWTError:
             raise UnauthorizedException("Invalid token.")
