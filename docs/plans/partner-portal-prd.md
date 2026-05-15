@@ -40,6 +40,8 @@ CanadaLogin Partner Portal addresses this by providing one authenticated portal 
 4. Reduce onboarding ambiguity by collecting standardized application information, contacts, security posture, migration details, and usage context.
 5. Provide operational visibility into credentials, secret rotation, and application usage.
 6. Enforce organization-aware access control through authenticated sessions, department assignment, and policy-backed authorization.
+7. Meet key [NIST 800-Rev. 5](https://nvlpubs.nist.gov/nistpubs/SpecialPublications/NIST.SP.800-53r5.pdf) security controls for application and infrastructure
+8. Meet [WCAG 2.1, level A and AA](https://www.w3.org/WAI/WCAG22/quickref/?versions=2.1) accessibility requirements for UI
 
 ### Secondary Goals
 
@@ -110,13 +112,15 @@ The following capabilities are implemented in the current repository.
 - create named rotated secrets with expiry constraints
 - delete rotated secrets
 - support IBM-style rotation payloads
+- inhibit current secrets from being viewed, only regenerated
+
 
 ### Usage And Audit Visibility
 
 - usage summary for an RP application by date
-- audit trail browsing with pagination via search-after cursors
+- audit trails the can be downloaded by approved users in csv or xml format
 - date filtering with bounded date windows
-- display of user, origin, result, IP version, and country context for usage events
+- display of user name, user email, origin, result, IP version, and country context for usage events
 
 ### External Developer Invitation Flow
 
@@ -131,7 +135,7 @@ The following capabilities are implemented in the current repository.
 
 ### Platform Administration Modules
 
-- users management, including create, edit, delete, search, department assignment, role assignment, and tier assignment
+- users management, including create, edit, delete, download audit trails, department assignment, role assignment, and tier assignment
 - roles CRUD
 - policies CRUD
 - departments CRUD
@@ -161,14 +165,9 @@ Owns one or more workspaces and the RP applications inside them. Needs to create
 ### Persona 3: Workspace Member
 
 Belongs to a workspace but is not necessarily an admin. Needs visibility into workspace resources depending on policy, but should not gain destructive management powers by default.
-
-### Persona 4: Invited External Developer
-
-Is not a workspace member. Needs narrow, application-scoped access to view and update the specific RP application they were invited to work on.
-
-### Persona 5: Policy / Onboarding Reviewer
-
 Needs structured metadata, contacts, security posture, privacy details, and migration context in order to review readiness and track onboarding completeness.
+Needs access to Monthly active users for the RP that are signing in to their application
+
 
 ## 8. Core User Journeys
 
@@ -264,14 +263,15 @@ Needs structured metadata, contacts, security posture, privacy details, and migr
 2. Workspace admins must be able to regenerate a client secret.
 3. Workspace admins must be able to create named rotated secrets with expiry.
 4. Workspace admins must be able to delete rotated secrets.
-5. Secret rotation actions must align with the IBM Security Verify integration contract.
+5. Currently active secrets should not be viewable in the UI by Platform Superusers
+6. Secret rotation actions must align with the IBM Security Verify integration contract.
 
 ### 9.7 Usage Reporting
 
-1. Workspace admins must be able to request usage summary metrics for an RP application on a selected date.
+1. Workspace admins and members must be able to view Monthly Active Users (MaU) metrics for an RP application on a selected date.
 2. Workspace admins must be able to view audit trail events for an RP application.
-3. The system must support loading additional audit events through cursor-based pagination.
-4. The usage UI must validate date windows and prevent invalid queries.
+3. The system must support downloading additional audit events in csv or xml format.
+4. The usage UI and audit trail events must validate date windows and prevent invalid queries.
 
 ### 9.8 External Developer Invitations
 
@@ -291,7 +291,7 @@ Needs structured metadata, contacts, security posture, privacy details, and migr
 3. Platform administrators must be able to manage policies.
 4. Platform administrators must be able to manage departments.
 5. Platform administrators must be able to manage tiers.
-6. The backend must expose IBM Security Verify administration capabilities for users, applications, groups, entitlements, logins, and audit trail queries.
+6. The backend must expose IBM Security Verify administration capabilities for users, applications, groups, entitlements, logins, and audit trail event queries.
 
 ### 9.10 Health And Supportability
 
@@ -326,6 +326,8 @@ Needs structured metadata, contacts, security posture, privacy details, and migr
 - the UI must provide clear success and error notices for management actions
 - onboarding flows must be explicit and understandable for first-time users
 - admin CRUD surfaces should support filtering, pagination, and export where implemented
+- interface components must be navigable by screen readers, specifically NVDA, JAWS, and Voiceover
+- colour contrast ratios must be at least 3:1 against adjacent color(s)
 
 ### Internationalization
 
@@ -363,6 +365,15 @@ These entities map cleanly to the product model:
 - RP applications may be linked to structured application information
 - invited developers are associated to RP applications through invitations rather than workspace membership
 
+### System documentation
+Create the following artifacts as outputs for every build:
+- Arcitecture overview: the actual components, services, and the relationships as they exist in the code in X format (output format)
+- Data flow diagrams: how data moves through the system end-to-end, including edge cases, async processes, and error paths in X format (output format that integrates with CDS' Valentine threat modeling tool)
+- Key dependencies: internal modules and external integrations that the system actually relies on in X format (is there something that our dependency management tools could use?)
+
+### Security Assessment and Authorization documentation
+- (placeholder for high-level process and required outputs)
+
 ## 12. Integrations And External Dependencies
 
 ### Required External Systems
@@ -390,10 +401,13 @@ The codebase does not currently define a formal KPI set, but the product should 
 - number of RP applications created
 - time from workspace creation to RP application creation
 - time from invitation sent to invitation accepted
+- user name, email, and department associated with the created workspace or application
 
 ### Adoption Metrics
 
 - monthly active authenticated users
+- monthly active authenticated users segmented by workspace
+- monthly active authenticated users segmented by application
 - monthly active workspace admins
 - number of active invited external developers
 - percentage of dashboard users with at least one workspace or RP application
