@@ -266,6 +266,7 @@ describe("WorkspaceApplicationModal", () => {
 					initialForm: {
 						applicationUrl: "https://benefits.example.gc.ca",
 						description: "Benefits access for citizens",
+						companyName: "Department Name",
 						name: "Benefits Portal",
 					},
 				}}
@@ -280,6 +281,9 @@ describe("WorkspaceApplicationModal", () => {
 		expect((screen.getByLabelText(/description/i) as HTMLInputElement).value).toBe(
 			"Benefits access for citizens"
 		);
+		expect((screen.getByLabelText(/company name/i) as HTMLInputElement).value).toBe(
+			"Department Name"
+		);
 		expect((screen.getByLabelText(/application url/i) as HTMLInputElement).value).toBe(
 			"https://benefits.example.gc.ca"
 		);
@@ -290,6 +294,7 @@ describe("WorkspaceApplicationModal", () => {
 			expect(createRPApplication).toHaveBeenCalledWith("workspace-uuid-1", {
 				applicationInfoUuid: "application-info-uuid-1",
 				application_url: "https://benefits.example.gc.ca",
+				company_name: "Department Name",
 				description: "Benefits access for citizens",
 				name: "Benefits Portal",
 				pkce_enabled: false,
