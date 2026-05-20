@@ -25,12 +25,14 @@ import {
 } from "@/fetch/workspaces";
 
 const buildCreateApplicationContext = (
-	applicationInfo: ApplicationInfoRead
+	applicationInfo: ApplicationInfoRead,
+	departmentName?: string
 ): WorkspaceApplicationCreateContext => ({
 	applicationInfoUuid: applicationInfo.uuid,
 	initialForm: {
 		applicationUrl: applicationInfo.applicationUrl,
 		description: applicationInfo.applicationDescription,
+		companyName: departmentName,
 		name: applicationInfo.applicationName,
 	},
 });
@@ -90,6 +92,11 @@ export const WorkspaceDetailPage = (): FunctionComponent => {
 	});
 
 	const departmentName = getLocalizedDepartmentName(department, i18n.language);
+	const departmentCompanyName = getLocalizedDepartmentName(
+		department,
+		i18n.language,
+		undefined
+	);
 
 	const isWorkspaceAdmin =
 		!!currentUser?.uuid &&
@@ -135,7 +142,9 @@ export const WorkspaceDetailPage = (): FunctionComponent => {
 			return;
 		}
 
-		setCreateModalContext(buildCreateApplicationContext(applicationInfo));
+		setCreateModalContext(
+			buildCreateApplicationContext(applicationInfo, departmentCompanyName)
+		);
 	};
 
 	const handleManageApplicationContacts = (

@@ -82,7 +82,7 @@ vi.mock("@/components/ui", () => ({
 }));
 vi.mock("@/features/workspaces/components/ApplicationInfoModal", () => ({ ApplicationInfoModal: () => null }));
 vi.mock("@/features/workspaces/components/WorkspaceApplicationModal", () => ({
-  WorkspaceApplicationModal: ({ createContext, isOpen }: any) => isOpen ? <section><p>application-modal-open</p><p>{createContext?.applicationInfoUuid}</p><p>{createContext?.initialForm?.name}</p></section> : null,
+  WorkspaceApplicationModal: ({ createContext, isOpen }: any) => isOpen ? <section><p>application-modal-open</p><p>{createContext?.applicationInfoUuid}</p><p>{createContext?.initialForm?.name}</p><p>{createContext?.initialForm?.companyName}</p></section> : null,
 }));
 vi.mock("@/features/auth/hooks/use-session", () => ({ useSession: vi.fn() }));
 
@@ -146,6 +146,7 @@ describe("WorkspaceDetailPage", () => {
     expect(screen.getByText("application-modal-open")).toBeTruthy();
     expect(screen.getByText("application-info-uuid-1")).toBeTruthy();
     expect(screen.getAllByText("Benefits Portal")).toHaveLength(2);
+    expect(screen.getAllByText("Department Name")).toHaveLength(2);
     expect(screen.getByRole("button", { name: /^manage contacts$/i })).toBeTruthy();
   });
 
