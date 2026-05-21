@@ -33,14 +33,13 @@ class TestExternalIdentitySchemas:
     def test_user_create_internal_accepts_external_identity_fields(self):
         user = UserCreateInternal(
             name="OIDC User",
-            username="oidcuser",
+            username="oidc.user@example.com",
             email="oidc.user@example.com",
-            hashed_password=None,
             auth_provider="oidc",
             auth_subject="subject-123",
         )
 
-        assert user.hashed_password is None
+        assert user.username == "oidc.user@example.com"
         assert user.auth_provider == "oidc"
         assert user.auth_subject == "subject-123"
 

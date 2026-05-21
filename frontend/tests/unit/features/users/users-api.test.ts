@@ -10,7 +10,7 @@ describe("users-api", () => {
 	it("requests the backend users list with pagination parameters", async () => {
 		const fetchMock = vi.spyOn(globalThis, "fetch").mockResolvedValue({
 				json: () => Promise.resolve({
-					data: [{ roleUuids: ["018f6f83-0f2b-7b0f-b2fb-96c4d8a4b301"], tierUuid: "018f6f83-0f2b-7b0f-b2fb-96c4d8a4b401", uuid: "018f6f83-0f2b-7b0f-b2fb-96c4d8a4b101", username: "jdoe" }],
+					data: [{ roleUuids: ["018f6f83-0f2b-7b0f-b2fb-96c4d8a4b301"], tierUuid: "018f6f83-0f2b-7b0f-b2fb-96c4d8a4b401", uuid: "018f6f83-0f2b-7b0f-b2fb-96c4d8a4b101" }],
 					"has_more": false,
 					"items_per_page": 20,
 					page: 2,
@@ -29,7 +29,7 @@ describe("users-api", () => {
 			}),
 		);
 		expect(response).toMatchObject({
-			data: [{ roleUuids: ["018f6f83-0f2b-7b0f-b2fb-96c4d8a4b301"], tierUuid: "018f6f83-0f2b-7b0f-b2fb-96c4d8a4b401", uuid: "018f6f83-0f2b-7b0f-b2fb-96c4d8a4b101", username: "jdoe" }],
+			data: [{ roleUuids: ["018f6f83-0f2b-7b0f-b2fb-96c4d8a4b301"], tierUuid: "018f6f83-0f2b-7b0f-b2fb-96c4d8a4b401", uuid: "018f6f83-0f2b-7b0f-b2fb-96c4d8a4b101" }],
 			"has_more": false,
 			"items_per_page": 20,
 			page: 2,
@@ -56,7 +56,6 @@ describe("users-api", () => {
 				roleUuids: [],
 				tierUuid: null,
 				uuid: "018f6f83-0f2b-7b0f-b2fb-96c4d8a4b102",
-				username: "jdoe",
 			}),
 			ok: true,
 			status: 201,
@@ -65,7 +64,6 @@ describe("users-api", () => {
 		const response = await createUser({
 			email: "jane@example.com",
 			name: "Jane Doe",
-			username: "jdoe",
 		});
 
 		expect(fetchMock).toHaveBeenCalledWith(
@@ -74,7 +72,6 @@ describe("users-api", () => {
 				body: JSON.stringify({
 					email: "jane@example.com",
 					name: "Jane Doe",
-					username: "jdoe",
 				}),
 				credentials: "include",
 				method: "POST",
@@ -84,7 +81,6 @@ describe("users-api", () => {
 			email: "jane@example.com",
 			name: "Jane Doe",
 			uuid: "018f6f83-0f2b-7b0f-b2fb-96c4d8a4b102",
-			username: "jdoe",
 		});
 	});
 

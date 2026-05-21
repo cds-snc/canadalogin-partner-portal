@@ -102,6 +102,10 @@ async def sync_oidc_user(db: AsyncSession, claims: dict[str, Any]) -> dict[str, 
         raise UnauthorizedException("OIDC subject claim is missing.")
 
     email = claims.get("email")
+    if not email:
+        raise ForbiddenException("User is not allowed to access this site")
+
+    normalized_email = str(email).strip().lower()
     provider = settings.OIDC_PROVIDER_NAME
 
     existing_user = await crud_users.get(
@@ -114,7 +118,7 @@ async def sync_oidc_user(db: AsyncSession, claims: dict[str, Any]) -> dict[str, 
     if existing_user is not None:
         await crud_users.update(
             db=db,
-            object={"last_login_at": datetime.now(UTC)},
+            object={"last_login_at": datetime.now(UTC), "email": normalized_email, "username": normalized_email},
             uuid=existing_user["uuid"],
         )
         refreshed = await crud_users.get(
@@ -128,7 +132,7 @@ async def sync_oidc_user(db: AsyncSession, claims: dict[str, Any]) -> dict[str, 
         return refreshed
 
     if email:
-        email_user = await crud_users.get(db=db, email=email, is_deleted=False, schema_to_select=UserReadInternal)
+        email_user = await crud_users.get(db=db, email=normalized_email, is_deleted=False, schema_to_select=UserReadInternal)
         if email_user is not None:
             await crud_users.update(
                 db=db,
@@ -136,6 +140,8 @@ async def sync_oidc_user(db: AsyncSession, claims: dict[str, Any]) -> dict[str, 
                     "auth_provider": provider,
                     "auth_subject": subject,
                     "last_login_at": datetime.now(UTC),
+                    "username": normalized_email,
+                    "email": normalized_email,
                 },
                 uuid=email_user["uuid"],
             )
@@ -149,19 +155,17 @@ async def sync_oidc_user(db: AsyncSession, claims: dict[str, Any]) -> dict[str, 
                 raise UnauthorizedException("Failed to refresh email-linked user")
             return refreshed
 
-    if not email or not await has_active_oidc_invitation_for_email(db, email):
+    if not await has_active_oidc_invitation_for_email(db, normalized_email):
         raise ForbiddenException("User is not allowed to access this site")
 
-    username = await generate_unique_username(db, claims)
-    name = claims.get("name") or claims.get("preferred_username") or email or username
+    name = claims.get("name") or claims.get("preferred_username") or normalized_email
 
     created_user = await crud_users.create(
         db=db,
         object=UserCreateInternal(
             name=name[:30],
-            username=username,
-            email=email or f"{subject}@invalid.local",
-            hashed_password=None,
+            username=normalized_email,
+            email=normalized_email,
             auth_provider=provider,
             auth_subject=subject,
         ),

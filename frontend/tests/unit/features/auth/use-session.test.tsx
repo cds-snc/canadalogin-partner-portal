@@ -43,7 +43,6 @@ describe("useSession", () => {
 	it("keeps the user signed out when a stale current-user request resolves after logout", async () => {
 		const deferredCurrentUser = createDeferred<{
 			name: string;
-			username: string;
 			email: string;
 			profileImageUrl: string;
 			authProvider: string | null;
@@ -79,7 +78,6 @@ describe("useSession", () => {
 			roleUuids: ["role-uuid-2"],
 			tierUuid: "tier-uuid-3",
 			uuid: "user-uuid-7",
-			username: "jdoe",
 		});
 
 		await waitFor(() => {

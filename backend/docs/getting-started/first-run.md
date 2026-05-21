@@ -165,29 +165,8 @@ Let's test the main features of your API.
 
 ### Authentication Flow
 
-The backend now supports two auth paths:
-
-- OIDC login through `/api/v1/auth/oidc/login`
-- Local username/password login through `/api/v1/login` when `LOCAL_PASSWORD_LOGIN_ENABLED=true`
-
-#### 1. Login with Admin User
-
-Use the admin credentials you set in your `.env` file:
-
-```bash
-curl -X POST "http://localhost:8000/api/v1/login" \
-  -H "Content-Type: application/x-www-form-urlencoded" \
-  -d "username=admin&password=your_admin_password"
-```
-
-You should receive a response like:
-```json
-{
-  "access_token": "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9...",
-  "token_type": "bearer",
-  "refresh_token": "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9..."
-}
-```
+Users authenticate through the OIDC browser flow at `/api/v1/auth/oidc/login`.
+There is no local username/password login path in this OIDC-only setup.
 
 #### 1a. Seed default Casbin policies
 

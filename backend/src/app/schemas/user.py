@@ -10,7 +10,6 @@ from ..schemas.rate_limit import RateLimitRead
 
 class UserBase(BaseModel):
     name: str = Field(..., min_length=2, max_length=30, examples=["User Userson"])
-    username: str = Field(..., min_length=2, max_length=20, pattern=r"^[a-z0-9]+$", examples=["userson"])
     email: EmailStr = Field(..., examples=["user.userson@example.com"])
 
 
@@ -22,8 +21,8 @@ class User(TimestampSchema, UserBase, UUIDSchema, PersistentDeletion):
         populate_by_name=True,
     )
 
+    username: EmailStr = Field(..., examples=["user.userson@example.com"])
     profile_image_url: str = Field(default="https://www.profileimageurl.com")
-    hashed_password: str | None = None
     auth_provider: str | None = None
     auth_subject: str | None = None
     is_superuser: bool = False
@@ -37,15 +36,12 @@ class UserRead(UserBase):
     model_config = ConfigDict(validate_by_name=True, validate_by_alias=True, alias_generator=to_camel, populate_by_name=True)
 
     uuid: uuid_pkg.UUID
+    username: EmailStr
     department_abbreviation: str | None = None
     department_uuid: uuid_pkg.UUID | None = None
     is_superuser: bool = False
     role_uuids: list[uuid_pkg.UUID] | None = None
     tier_uuid: uuid_pkg.UUID | None = None
-
-    name: str = Field(..., min_length=2, max_length=30, examples=["User Userson"])
-    username: str = Field(..., min_length=2, max_length=20, pattern=r"^[a-z0-9]+$", examples=["userson"])
-    email: EmailStr = Field(..., examples=["user.userson@example.com"])
     profile_image_url: str = "https://www.profileimageurl.com"
     auth_provider: str | None = None
     auth_subject: str | None = None
@@ -84,11 +80,9 @@ class UserRateLimitsRead(UserRead):
 class UserCreate(UserBase):
     model_config = ConfigDict(extra="forbid", validate_by_name=True, validate_by_alias=True, alias_generator=to_camel, populate_by_name=True)
 
-    password: str | None = None
-
 
 class UserCreateInternal(UserBase):
-    hashed_password: str | None = None
+    username: EmailStr
     auth_provider: str | None = None
     auth_subject: str | None = None
 
@@ -97,7 +91,6 @@ class UserUpdate(BaseModel):
     model_config = ConfigDict(extra="forbid", validate_by_name=True, validate_by_alias=True, alias_generator=to_camel, populate_by_name=True)
 
     name: str | None = Field(None, min_length=2, max_length=30, examples=["User Userberg"])
-    username: str | None = Field(None, min_length=2, max_length=20, pattern=r"^[a-z0-9]+$", examples=["userberg"])
     email: EmailStr | None = Field(None, examples=["user.userberg@example.com"])
     profile_image_url: str | None = Field(None, pattern=r"^(https?|ftp)://[^\s/$.?#].[^\s]*$", examples=["https://www.profileimageurl.com"])
     auth_provider: str | None = Field(None, max_length=50)

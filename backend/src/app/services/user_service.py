@@ -6,7 +6,7 @@ from fastcrud import compute_offset, paginated_response
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from ..core.exceptions.http_exceptions import DuplicateValueException, ForbiddenException, NotFoundException
-from ..core.security import blacklist_token, get_password_hash
+from ..core.security import blacklist_token
 from ..repositories.crud_departments import crud_departments
 from ..repositories.crud_rate_limit import crud_rate_limits
 from ..repositories.crud_roles import crud_roles
@@ -32,18 +32,14 @@ from ..schemas.user import (
 
 class UserService:
     async def create_user(self, db: AsyncSession, user: UserCreate) -> dict[str, Any]:
-        await self._ensure_email_available(db=db, email=user.email)
-        await self._ensure_username_available(db=db, username=user.username)
+        normalized_email = str(user.email).strip().lower()
+        await self._ensure_email_available(db=db, email=normalized_email)
+        await self._ensure_username_available(db=db, username=normalized_email)
 
-        user_internal_dict = user.model_dump()
-        password = user_internal_dict.pop("password", None)
-        if password:
-            hashed_password = get_password_hash(password=password)
-        else:
-            hashed_password = None
         user_internal = UserCreateInternal(
-            **user_internal_dict,
-            hashed_password=hashed_password,
+            name=user.name,
+            email=normalized_email,
+            username=normalized_email,
         )
         created_user = await crud_users.create(db=db, object=user_internal, schema_to_select=UserReadInternal)
         if created_user is None:
@@ -116,11 +112,15 @@ class UserService:
         self._ensure_self_only(current_user=current_user, db_user=db_user)
 
         current_email = db_user["email"]
-        current_username = db_user["username"]
         if values.email is not None and values.email != current_email:
-            await self._ensure_email_available(db=db, email=values.email)
-        if values.username is not None and values.username != current_username:
-            await self._ensure_username_available(db=db, username=values.username)
+            normalized_email = str(values.email).strip().lower()
+            await self._ensure_email_available(db=db, email=normalized_email)
+            await self._ensure_username_available(db=db, username=normalized_email)
+            update_values = values.model_dump(exclude_none=True)
+            update_values["email"] = normalized_email
+            update_values["username"] = normalized_email
+            await crud_users.update(db=db, object=update_values, uuid=user_uuid)
+            return {"message": "User updated"}
 
         await crud_users.update(db=db, object=values, uuid=user_uuid)
         return {"message": "User updated"}

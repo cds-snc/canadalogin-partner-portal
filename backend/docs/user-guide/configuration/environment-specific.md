@@ -59,12 +59,6 @@ CLIENT_CACHE_MAX_AGE=0  # Disable caching for development
 DEFAULT_RATE_LIMIT_LIMIT=1000   # Higher limits for development
 DEFAULT_RATE_LIMIT_PERIOD=3600
 
-# ------------- admin -------------
-ADMIN_NAME="Dev Admin"
-ADMIN_EMAIL="admin@localhost"
-ADMIN_USERNAME="admin"
-ADMIN_PASSWORD="admin123"
-
 # ------------- tier -------------
 TIER_NAME="dev_tier"
 
@@ -165,12 +159,6 @@ CLIENT_CACHE_MAX_AGE=300  # 5 minutes
 # ------------- rate limiting -------------
 DEFAULT_RATE_LIMIT_LIMIT=100
 DEFAULT_RATE_LIMIT_PERIOD=3600
-
-# ------------- admin -------------
-ADMIN_NAME="Staging Admin"
-ADMIN_EMAIL="admin@staging.example.com"
-ADMIN_USERNAME="staging_admin"
-ADMIN_PASSWORD="secure_staging_password_456!"
 
 # ------------- tier -------------
 TIER_NAME="staging_tier"
@@ -277,12 +265,6 @@ CLIENT_CACHE_MAX_AGE=3600  # 1 hour
 # ------------- rate limiting -------------
 DEFAULT_RATE_LIMIT_LIMIT=100
 DEFAULT_RATE_LIMIT_PERIOD=3600
-
-# ------------- admin -------------
-ADMIN_NAME="System Administrator"
-ADMIN_EMAIL="admin@example.com"
-ADMIN_USERNAME="sysadmin"
-ADMIN_PASSWORD="extremely_secure_admin_password_with_symbols_#$%!"
 
 # ------------- tier -------------
 TIER_NAME="production_tier"

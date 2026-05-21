@@ -5,7 +5,6 @@ export type UserRead = {
 	uuid: string;
 	name: string;
 	email: string;
-	username: string;
 };
 
 export type WorkspaceCreate = {

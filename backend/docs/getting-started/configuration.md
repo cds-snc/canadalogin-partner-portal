@@ -13,14 +13,6 @@ cp src/.env.example src/.env
 ## Essential Configuration
 
 Open `src/.env` and set these required values:
-
-### Application Settings
-
-```env
-# App Settings
-APP_NAME="Your app name here"
-APP_DESCRIPTION="Your app description here"
-APP_VERSION="0.1"
 CONTACT_NAME="Your name"
 CONTACT_EMAIL="Your email"
 LICENSE_NAME="The license you picked"
@@ -105,7 +97,7 @@ OIDC_SCOPES="openid profile email"
 OIDC_POST_LOGIN_REDIRECT="http://localhost:3000/auth-complete"
 
 # Local password fallback
-LOCAL_PASSWORD_LOGIN_ENABLED=true
+LOCAL_PASSWORD_LOGIN_ENABLED=false
 ```
 
 - Set `OIDC_ENABLED=true` to enable `/api/v1/auth/oidc/login` and `/api/v1/auth/oidc/callback`.
@@ -115,16 +107,6 @@ LOCAL_PASSWORD_LOGIN_ENABLED=true
 - `REDIS_SESSION_DB=1` keeps session records separate from the cache, queue, and rate-limit Redis keys while still allowing a shared local Redis server.
 - `REDIS_SESSION_PREFIX` lets you distinguish session keys during local inspection and cleanup.
 - `SESSION_ROLLING=true` extends cookie expiration on every request; leave it `false` for fixed-lifetime sessions.
-
-### First Admin User
-
-```env
-# Admin User
-ADMIN_NAME="your_name"
-ADMIN_EMAIL="your_email"
-ADMIN_USERNAME="your_username"
-ADMIN_PASSWORD="your_password"
-```
 
 ### Redis Configuration
 

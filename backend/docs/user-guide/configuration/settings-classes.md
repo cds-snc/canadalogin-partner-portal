@@ -121,17 +121,7 @@ First superuser account creation:
 
 ```python
 class FirstUserSettings(BaseSettings):
-    ADMIN_NAME: str = "Admin"
-    ADMIN_EMAIL: str
-    ADMIN_USERNAME: str = "admin"
-    ADMIN_PASSWORD: str
-
-    @field_validator("ADMIN_EMAIL")
-    @classmethod
-    def validate_admin_email(cls, v: str) -> str:
-        if "@" not in v:
-            raise ValueError("ADMIN_EMAIL must be a valid email")
-        return v
+    SUPERUSER: str | None = None
 ```
 
 ## Creating Custom Settings

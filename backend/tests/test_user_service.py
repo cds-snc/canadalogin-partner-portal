@@ -27,7 +27,7 @@ class TestUserService:
                 await service.create_user(db=mock_db, user=user)
 
     @pytest.mark.asyncio
-    async def test_create_user_hashes_password_and_creates_user(self, mock_db, sample_user_data, sample_user_read) -> None:
+    async def test_create_user_sets_username_from_email_and_creates_user(self, mock_db, sample_user_data, sample_user_read) -> None:
         service = UserService()
         user = UserCreate(**sample_user_data)
 
@@ -35,11 +35,12 @@ class TestUserService:
             mock_users.exists = AsyncMock(side_effect=[False, False])
             mock_users.create = AsyncMock(return_value=sample_user_read.model_dump())
 
-            with patch("src.app.services.user_service.get_password_hash", return_value="hashed_password") as mock_hash:
-                result = await service.create_user(db=mock_db, user=user)
+            result = await service.create_user(db=mock_db, user=user)
 
         assert result == sample_user_read.model_dump()
-        mock_hash.assert_called_once_with(password=user.password)
+        created_user = mock_users.create.call_args.kwargs["object"]
+        assert created_user.username == user.email
+        assert created_user.email == user.email
         mock_users.create.assert_awaited_once()
 
     @pytest.mark.asyncio

@@ -5,7 +5,6 @@ import type { ApiMessageResponse } from "./api-types";
 export type UserCreate = {
 	email: string;
 	name: string;
-	username: string;
 };
 
 export type UserUpdate = {
@@ -14,7 +13,6 @@ export type UserUpdate = {
 	email?: string | null;
 	name?: string | null;
 	profileImageUrl?: string | null;
-	username?: string | null;
 };
 
 export type UsersListResponse = {

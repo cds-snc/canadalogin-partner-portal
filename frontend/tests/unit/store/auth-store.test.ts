@@ -34,7 +34,6 @@ const sampleUser = {
 	roleUuids: ["role-uuid-2"],
 	tierUuid: "tier-uuid-3",
 	uuid: "user-uuid-7",
-	username: "jdoe",
 };
 
 describe("authStore", () => {

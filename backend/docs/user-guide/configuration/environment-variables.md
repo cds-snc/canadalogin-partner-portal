@@ -158,19 +158,9 @@ DEFAULT_RATE_LIMIT_PERIOD=3600   # period in seconds (1 hour)
 First superuser account configuration:
 
 ```env
-# ------------- admin -------------
-ADMIN_NAME="Admin User"
-ADMIN_EMAIL="admin@example.com"
-ADMIN_USERNAME="admin"
-ADMIN_PASSWORD="secure_admin_password"
+# The first superuser bootstrap script uses built-in defaults.
+# Update backend/src/scripts/create_first_superuser.py if you need different values.
 ```
-
-**Variables Explained:**
-
-- `ADMIN_NAME`: Display name for the admin user
-- `ADMIN_EMAIL`: Email address for the admin account
-- `ADMIN_USERNAME`: Username for admin login
-- `ADMIN_PASSWORD`: Initial password (change after first login)
 
 ### CORS Configuration
 
@@ -244,36 +234,9 @@ Docker Compose automatically loads the `.env` file:
 # In docker-compose.yml
 services:
   web:
-    env_file:
-      - ./src/.env
-```
-
-### Development Overrides
-
-Create `docker-compose.override.yml` for local customizations:
-
-```yaml
-version: '3.8'
-services:
-  web:
-    ports:
-      - "8001:8000"  # Use different port
-    environment:
-      - DEBUG=true
-    volumes:
-      - ./custom-logs:/code/logs
-```
-
-### Service Configuration
-
+# The first superuser bootstrap script uses built-in defaults.
+# Update backend/src/scripts/create_first_superuser.py if you need different values.
 Understanding each Docker service:
-
-```yaml
-services:
-  web:          # FastAPI application
-  db:           # PostgreSQL database
-  redis:        # Redis for caching/queues
-  worker:       # ARQ background task worker
   nginx:        # Reverse proxy (optional)
 ```
 

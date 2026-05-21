@@ -30,25 +30,21 @@ import { useToast } from "@/components/ui/Toast";
 type CreateUserFormState = {
 	email: string;
 	name: string;
-	username: string;
 };
 
 type EditUserFormState = {
 	email: string;
 	name: string;
-	username: string;
 };
 
 const emptyCreateForm: CreateUserFormState = {
 	email: "",
 	name: "",
-	username: "",
 };
 
 const emptyEditForm: EditUserFormState = {
 	email: "",
 	name: "",
-	username: "",
 };
 
 const departmentPickerItemsPerPage = 200;
@@ -93,7 +89,7 @@ export const UsersPage = (): FunctionComponent => {
 		useState<string>("");
 	const [modalMode, setModalMode] = useState<"create" | "edit" | null>(null);
 	const [selectedRoleUuid, setSelectedRoleUuid] = useState<string>("");
-	const [selectedUsername, setSelectedUsername] = useState<string | null>(null);
+	const [selectedUserUuid, setSelectedUserUuid] = useState<string | null>(null);
 	const [isRolesModalOpen, setIsRolesModalOpen] = useState(false);
 	const [roleToRemove, setRoleToRemove] = useState<{
 		uuid: string;
@@ -105,7 +101,7 @@ export const UsersPage = (): FunctionComponent => {
 		isLoading: isUserDepartmentLoading,
 		isUpdating: isUpdatingDepartment,
 		updateUserDepartment,
-	} = useUserDepartment(modalMode === "edit" ? selectedUsername : null);
+	} = useUserDepartment(modalMode === "edit" ? selectedUserUuid : null);
 	const {
 		addRole,
 		error: userRoleError,
@@ -113,10 +109,10 @@ export const UsersPage = (): FunctionComponent => {
 		isLoading: isUserRoleLoading,
 		isRemoving,
 		removeRole,
-	} = useUserRole(modalMode === "edit" ? selectedUsername : null);
+	} = useUserRole(modalMode === "edit" ? selectedUserUuid : null);
 	const selectedUser =
-		users.find((user) => user.uuid === selectedUsername) ?? null;
-	// Resolve department display consistently from the full departments list to avoid showing incorrect fields (e.g., username).
+		users.find((user) => user.uuid === selectedUserUuid) ?? null;
+	// Resolve department display consistently from the full departments list to avoid showing incorrect fields.
 	const currentDepartmentName = ((): string => {
 		if (selectedUser) {
 			const selectedUserDepartment = selectedUser as {
@@ -189,7 +185,6 @@ export const UsersPage = (): FunctionComponent => {
 	type UserApi = {
 		email: string;
 		name: string;
-		username: string;
 		uuid: string;
 		departmentAbbreviation?: string | null;
 		departmentUuid?: string | null;
@@ -269,8 +264,8 @@ export const UsersPage = (): FunctionComponent => {
 		}
 
 		if (
-			!selectedUsername ||
-			users.some((user) => user.uuid === selectedUsername)
+			!selectedUserUuid ||
+			users.some((user) => user.uuid === selectedUserUuid)
 		) {
 			return;
 		}
@@ -282,9 +277,9 @@ export const UsersPage = (): FunctionComponent => {
 			setModalMode(null);
 			setSelectedDepartmentAbbreviation("");
 			setSelectedRoleUuid("");
-			setSelectedUsername(null);
+			setSelectedUserUuid(null);
 		});
-	}, [deleteDialogOpen, modalMode, selectedUsername, users]);
+	}, [deleteDialogOpen, modalMode, selectedUserUuid, users]);
 
 	const closeModal = (): void => {
 		setModalMode(null);
@@ -294,13 +289,13 @@ export const UsersPage = (): FunctionComponent => {
 		setEditForm(emptyEditForm);
 		setSelectedDepartmentAbbreviation("");
 		setSelectedRoleUuid("");
-		setSelectedUsername(null);
+		setSelectedUserUuid(null);
 	};
 
 	const openCreateModal = (): void => {
 		releaseActiveElementFocus();
 		setCreateForm(emptyCreateForm);
-		setSelectedUsername(null);
+		setSelectedUserUuid(null);
 		setSelectedDepartmentAbbreviation("");
 		setDepartmentFilter("");
 		setSelectedRoleUuid("");
@@ -318,10 +313,9 @@ export const UsersPage = (): FunctionComponent => {
 		setEditForm({
 			email: user.email,
 			name: user.name,
-			username: user.username,
 		});
 		setDepartmentFilter("");
-		setSelectedUsername(user.uuid);
+		setSelectedUserUuid(user.uuid);
 		setModalMode("edit");
 	};
 
@@ -472,7 +466,7 @@ export const UsersPage = (): FunctionComponent => {
 								buttonLabel: t("users.manageRolesAction"),
 								screenReaderLabel: (row) => `Manage roles for ${row.email}`,
 								onAction: (row): void => {
-									setSelectedUsername(row.uuid);
+									setSelectedUserUuid(row.uuid);
 									setIsRolesModalOpen(true);
 								},
 							},
@@ -550,18 +544,6 @@ export const UsersPage = (): FunctionComponent => {
 							}}
 						/>
 						<Input
-							inputId="create-user-username"
-							label={t("users.usernameLabel")}
-							name="username"
-							value={createForm.username}
-							onInput={(event: React.FormEvent<HTMLInputElement>): void => {
-								setCreateForm((current) => ({
-									...current,
-									username: (event.target as HTMLInputElement).value,
-								}));
-							}}
-						/>
-						<Input
 							inputId="create-user-email"
 							label={t("users.emailLabel")}
 							name="email"
@@ -587,18 +569,6 @@ export const UsersPage = (): FunctionComponent => {
 									setEditForm((current) => ({
 										...current,
 										name: (event.target as HTMLInputElement).value,
-									}));
-								}}
-							/>
-							<Input
-								inputId="edit-user-username"
-								label={t("users.usernameLabel")}
-								name="edit-username"
-								value={editForm.username}
-								onInput={(event: React.FormEvent<HTMLInputElement>): void => {
-									setEditForm((current) => ({
-										...current,
-										username: (event.target as HTMLInputElement).value,
 									}));
 								}}
 							/>
@@ -681,7 +651,7 @@ export const UsersPage = (): FunctionComponent => {
 						: t("users.confirmDeleteAction")
 				}
 				description={t("users.deleteConfirmBody", {
-					username: selectedUser?.username ?? "",
+						email: selectedUser?.email ?? "",
 				})}
 				onClose={() => {
 					setDeleteDialogOpen(false);
@@ -710,7 +680,7 @@ export const UsersPage = (): FunctionComponent => {
 				}
 				title={
 					selectedUser
-						? t("users.manageRolesTitle", { username: selectedUser.username })
+							? t("users.manageRolesTitle", { email: selectedUser.email })
 						: t("users.manageRolesAction")
 				}
 				onClose={() => {

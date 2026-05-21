@@ -15,7 +15,6 @@ export type UserRead = {
 	roleUuids: Array<string> | null;
 	tierUuid: string | null;
 	uuid: string;
-	username: string;
 };
 
 export const getCurrentUser = async (): Promise<UserRead | null> => {

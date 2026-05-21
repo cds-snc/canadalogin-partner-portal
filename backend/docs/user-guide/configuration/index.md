@@ -24,18 +24,10 @@ nano src/.env
 Essential variables to set:
 
 ```env
-# Application
-APP_NAME="My FastAPI App"
-SECRET_KEY="your-super-secret-key-here"
-
 # Database
 POSTGRES_USER="your_user"
 POSTGRES_PASSWORD="your_password"
 POSTGRES_DB="your_database"
-
-# Admin Account
-ADMIN_EMAIL="admin@example.com"
-ADMIN_PASSWORD="secure_password"
 ```
 
 ## Configuration Architecture
@@ -129,10 +121,8 @@ DEFAULT_RATE_LIMIT_PERIOD=3600  # 1 hour in seconds
 
 ### Admin User
 ```env
-ADMIN_NAME="Admin User"
-ADMIN_EMAIL="admin@example.com"
-ADMIN_USERNAME="admin"
-ADMIN_PASSWORD="secure_password"
+# The first superuser bootstrap script uses built-in defaults.
+# Update backend/src/scripts/create_first_superuser.py if you need different values.
 ```
 
 ## Environment-Specific Configurations
@@ -175,29 +165,9 @@ Docker Compose automatically loads your `.env` file:
 ```yaml
 services:
   web:
-    env_file:
-      - ./src/.env
-    environment:
-      - DATABASE_URL=postgresql+asyncpg://${POSTGRES_USER}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB}
-```
-
-### Service Overview
-```yaml
-services:
-  web:          # FastAPI application
-  db:           # PostgreSQL database  
-  redis:        # Redis for caching/queues
-  worker:       # Background task worker
-```
-
+# The first superuser bootstrap script uses built-in defaults.
+# Update backend/src/scripts/create_first_superuser.py if you need different values.
 ## Common Configuration Patterns
-
-### Feature Flags
-```python
-# In settings class
-class FeatureSettings(BaseSettings):
-    ENABLE_CACHING: bool = True
-    ENABLE_ANALYTICS: bool = False
     ENABLE_BACKGROUND_JOBS: bool = True
 
 # Use in code

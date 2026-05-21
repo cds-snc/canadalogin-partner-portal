@@ -22,7 +22,6 @@ vi.mock("react-i18next", () => ({
 				"home.signedInBody": `Signed in as ${options?.["name"] ?? ""}.`,
 				"home.signedInEmail": `Email: ${options?.["email"] ?? ""}`,
 				"home.signedInTitle": "You are signed in",
-				"home.signedInUsername": `Username: ${options?.["username"] ?? ""}`,
 				"home.signedOutBody": "Use session-based authentication through the backend to start the OIDC flow and return with a valid app session.",
 				"home.signedOutTitle": "Sign in to continue",
 					"home.supportingLinksTitle": "Common next steps",
@@ -105,7 +104,6 @@ describe("Home", () => {
 		mockedUseSession.mockReturnValue(createSessionState({
 			currentUser: {
 				name: "Jane Doe",
-				username: "jdoe",
 				email: "jane@example.com",
 				"profileImageUrl": "https://example.com/avatar.png",
 				"authProvider": "gc-sso",

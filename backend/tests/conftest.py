@@ -61,11 +61,10 @@ def mock_redis():
 @pytest.fixture
 def sample_user_data():
     """Generate sample user data for tests."""
+    email = fake.email()
     return {
         "name": fake.name(),
-        "username": fake.user_name(),
-        "email": fake.email(),
-        "password": fake.password(),
+        "email": email,
     }
 
 
@@ -76,11 +75,13 @@ def sample_user_read():
 
     from src.app.schemas.user import UserRead
 
+    email = fake.email()
+
     return UserRead(
         uuid=uuid7(),
         name=fake.name(),
-        username=fake.user_name(),
-        email=fake.email(),
+        username=email,
+        email=email,
         profile_image_url=fake.image_url(),
         role_uuids=[],
         tier_uuid=None,
@@ -92,11 +93,13 @@ def current_user_dict():
     """Mock current user from auth dependency."""
     from uuid6 import uuid7
 
+    email = fake.email()
+
     return {
         "id": 1,
         "uuid": uuid7(),
-        "username": fake.user_name(),
-        "email": fake.email(),
+        "username": email,
+        "email": email,
         "name": fake.name(),
         "is_superuser": False,
     }

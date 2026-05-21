@@ -8,19 +8,20 @@ from uuid6 import uuid7  # 126
 
 from ..app.core.config import settings
 from ..app.core.db.database import AsyncSession, async_engine, local_session
-from ..app.core.security import get_password_hash
 from ..app.models.user import User
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-
 async def create_first_user(session: AsyncSession) -> None:
     try:
-        name = settings.ADMIN_NAME
-        email = settings.ADMIN_EMAIL
-        username = settings.ADMIN_USERNAME
-        hashed_password = get_password_hash(settings.ADMIN_PASSWORD)
+        email = settings.SUPERUSER
+        if email is None:
+            logger.info("No SUPERUSER email configured; skipping first superuser seed.")
+            return
+
+        name = email
+        username = email
 
         query = select(User).filter_by(email=email)
         result = await session.execute(query)
@@ -33,9 +34,8 @@ async def create_first_user(session: AsyncSession) -> None:
                 metadata,
                 Column("id", Integer, primary_key=True, autoincrement=True, nullable=False),
                 Column("name", String(30), nullable=False),
-                Column("username", String(20), nullable=False, unique=True, index=True),
-                Column("email", String(50), nullable=False, unique=True, index=True),
-                Column("hashed_password", String, nullable=False),
+                Column("username", String(255), nullable=False, unique=True, index=True),
+                Column("email", String(255), nullable=False, unique=True, index=True),
                 Column("profile_image_url", String, default="https://profileimageurl.com"),
                 Column("uuid", UUID(as_uuid=True), default=uuid7, unique=True),
                 Column("created_at", DateTime(timezone=True), default=lambda: datetime.now(UTC), nullable=False),
@@ -50,7 +50,6 @@ async def create_first_user(session: AsyncSession) -> None:
                 "name": name,
                 "email": email,
                 "username": username,
-                "hashed_password": hashed_password,
                 "is_superuser": True,
             }
 

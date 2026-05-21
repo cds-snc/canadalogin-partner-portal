@@ -58,7 +58,7 @@ class OIDCSettings(BaseSettings):
     OIDC_REDIRECT_PATH: str = "/api/v1/auth/oidc/callback"
     OIDC_POST_LOGIN_REDIRECT: str = "/auth-complete"
     OIDC_ACCESS_DENIED_REDIRECT: str = "/access-denied"
-    LOCAL_PASSWORD_LOGIN_ENABLED: bool = True
+    LOCAL_PASSWORD_LOGIN_ENABLED: bool = False
 
 
 class GCNotifySettings(BaseSettings):
@@ -144,10 +144,6 @@ class PostgresSettings(DatabaseSettings):
 
 class FirstUserSettings(BaseSettings):
     SUPERUSER: str | None = None
-    ADMIN_NAME: str = "admin"
-    ADMIN_EMAIL: str = "admin@admin.com"
-    ADMIN_USERNAME: str = "admin"
-    ADMIN_PASSWORD: str = "!Ch4ng3Th1sP4ssW0rd!"
 
 
 class TestSettings(BaseSettings):

@@ -62,12 +62,6 @@ REDIS_CACHE_PORT=6379
 REDIS_QUEUE_HOST="redis"
 REDIS_QUEUE_PORT=6379
 
-# Admin User
-ADMIN_NAME="Admin"
-ADMIN_EMAIL="admin@example.com"
-ADMIN_USERNAME="admin"
-ADMIN_PASSWORD="changethis"
-
 # Environment
 ENVIRONMENT="local"
 ```

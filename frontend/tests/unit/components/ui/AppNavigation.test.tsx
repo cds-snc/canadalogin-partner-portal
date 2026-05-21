@@ -48,7 +48,6 @@ describe("AppNavigation", () => {
 		vi.mocked(useSession).mockReturnValue({
 			currentUser: {
 				name: "Jane Doe",
-				username: "jdoe",
 				email: "jane@example.com",
 				profileImageUrl: "https://example.com/jane.png",
 				authProvider: "gc-sso",

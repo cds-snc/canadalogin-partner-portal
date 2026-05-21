@@ -106,11 +106,6 @@ export const Home = (): FunctionComponent => {
 
 						{isAuthenticated && currentUser ? (
 							<div className="mt-250 flex flex-col gap-150 border-t border-[var(--gcds-border-default)] pt-250">
-								<Text size="small">
-									{t("home.signedInUsername", {
-										username: currentUser.username,
-									})}
-								</Text>
 								<Text marginBottom="0" size="small">
 									{t("home.signedInEmail", { email: currentUser.email })}
 								</Text>

@@ -15,9 +15,8 @@ class User(Base):
     id: Mapped[int] = mapped_column(autoincrement=True, primary_key=True, init=False)
 
     name: Mapped[str] = mapped_column(String(30))
-    username: Mapped[str] = mapped_column(String(20), unique=True, index=True)
-    email: Mapped[str] = mapped_column(String(50), unique=True, index=True)
-    hashed_password: Mapped[str | None] = mapped_column(String, default=None, nullable=True)
+    username: Mapped[str] = mapped_column(String(255), unique=True, index=True)
+    email: Mapped[str] = mapped_column(String(255), unique=True, index=True)
     auth_provider: Mapped[str | None] = mapped_column(String(50), default=None, nullable=True)
     auth_subject: Mapped[str | None] = mapped_column(String(255), unique=True, index=True, default=None, nullable=True)
 

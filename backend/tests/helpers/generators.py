@@ -7,11 +7,11 @@ from tests.conftest import fake
 
 
 def create_user(db: Session, is_super_user: bool = False) -> models.User:
+    email = fake.email()
     _user = models.User(
         name=fake.name(),
-        username=fake.user_name(),
-        email=fake.email(),
-        hashed_password=get_password_hash(fake.password()),
+        username=email,
+        email=email,
         profile_image_url=fake.image_url(),
         uuid=uuid7,
         is_superuser=is_super_user,

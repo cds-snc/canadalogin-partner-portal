@@ -5,7 +5,6 @@ import { getCurrentUser, getOidcLoginUrl, logoutCurrentUser } from "@/fetch/auth
 const createUserFixture = (): Record<string, string | number> => ({
 	uuid: "018f6f83-0f2b-7b0f-b2fb-96c4d8a4b102",
 	name: "Jane Doe",
-	username: "jdoe",
 	email: "jane@example.com",
 	"profileImageUrl": "https://example.com/avatar.png",
 	"authProvider": "gc-sso",

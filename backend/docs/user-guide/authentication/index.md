@@ -1,6 +1,6 @@
 # Authentication & Security
 
-Learn how to implement secure authentication in your FastAPI application. The boilerplate now provides provider-agnostic OIDC authentication with Authlib, backend sessions for authenticated users, and an optional local JWT fallback for development and testing.
+Learn how to implement secure authentication in your FastAPI application. The boilerplate now provides provider-agnostic OIDC authentication with Authlib and backend sessions for authenticated users.
 
 ## What You'll Learn
 
@@ -12,7 +12,7 @@ Learn how to implement secure authentication in your FastAPI application. The bo
 
 The primary login path is OIDC. After a successful callback, the backend stores the authenticated user in a server-side Redis session and resolves the user from that session on protected routes. The browser cookie only carries the session identifier.
 
-The legacy username/password login remains available only when `LOCAL_PASSWORD_LOGIN_ENABLED=true`. In that mode, the backend still issues access and refresh JWTs for compatibility with local development and tests.
+There is no local username/password login path in this OIDC-only setup.
 
 When the frontend and backend run on different origins in development, configure `OIDC_POST_LOGIN_REDIRECT` as an absolute frontend URL such as `http://localhost:3000/auth-complete`. A backend-relative path like `/auth-complete` would keep the browser on the backend origin.
 

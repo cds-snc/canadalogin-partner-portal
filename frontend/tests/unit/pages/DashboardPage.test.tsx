@@ -16,6 +16,7 @@ vi.mock("react-i18next", () => ({
 				"dashboard.email": `Email: ${options?.["value"] ?? ""}`,
 				"dashboard.loadingBody": "Loading your profile, department, and roles.",
 				"dashboard.loadingTitle": "Loading dashboard",
+				"dashboard.name": `Name: ${options?.["value"] ?? ""}`,
 				"dashboard.noDepartment": "No department assigned",
 				"dashboard.noRPApplications": "No RP applications found.",
 				"dashboard.noRoles": "No roles assigned",
@@ -29,7 +30,6 @@ vi.mock("react-i18next", () => ({
 				"dashboard.roles": "Roles",
 				"dashboard.summary": "Overview of your account.",
 				"dashboard.title": "Dashboard",
-				"dashboard.username": `Username: ${options?.["value"] ?? ""}`,
 				"dashboard.workspacesDescription": "View the workspaces you can access.",
 				"dashboard.workspacesListTitle": "Workspaces",
 				"dashboard.workspaceApplicationItem": `${options?.["application"] ?? ""} (${options?.["workspace"] ?? ""})`,
@@ -125,7 +125,6 @@ describe("DashboardPage", () => {
 				roleUuids: ["role-uuid-1", "role-uuid-2"],
 				tierUuid: null,
 				uuid: "user-uuid-1",
-				username: "jdoe",
 			},
 			isAuthenticated: true,
 			isLoading: false,
@@ -149,7 +148,7 @@ describe("DashboardPage", () => {
 		render(<DashboardPage />);
 
 		expect(screen.getByRole("heading", { name: /dashboard/i })).toBeTruthy();
-		expect(screen.getByText(/username: jdoe/i)).toBeTruthy();
+		expect(screen.getByText(/name: jane doe/i)).toBeTruthy();
 		expect(screen.getByText(/email: jane@example.com/i)).toBeTruthy();
 		expect(screen.getByText(/department: hc - health canada/i)).toBeTruthy();
 		expect(screen.getByText(/^roles$/i)).toBeTruthy();

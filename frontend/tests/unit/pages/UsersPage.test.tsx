@@ -43,7 +43,7 @@ vi.mock("react-i18next", () => ({
 				"users.roleSaveAction": "Save role",
 				"users.summary": "Protected list of backend users.",
 				"users.title": "Users",
-				"users.username": `Username: ${options?.["value"] ?? ""}`,
+					"users.username": `Username: ${options?.["value"] ?? ""}`,
 			};
 
 			return translations[key] ?? key;
@@ -72,7 +72,7 @@ vi.mock("@/components/ui", () => ({
 		</button>
 	),
 	ConfirmDialog: ({ isOpen, title }: { isOpen: boolean; title: string }): ReactElement | null => (isOpen ? <section><h2>{title}</h2></section> : null),
-  DataTable: ({ action, pageNumber, primaryAction, rows, title, summary }: { action?: any; pageNumber?: number; primaryAction?: { buttonLabel: string; onAction: () => void }; rows?: Array<{ email: string; name: string; provider: string; roleName: string; username: string; uuid: string }>; title?: string; summary?: string }): ReactElement => (
+	DataTable: ({ action, pageNumber, primaryAction, rows, title, summary }: { action?: any; pageNumber?: number; primaryAction?: { buttonLabel: string; onAction: () => void }; rows?: Array<{ email: string; name: string; provider: string; roleName: string; uuid: string }>; title?: string; summary?: string }): ReactElement => (
     <section>
         {title ? <h2>{title}</h2> : null}
         <p>{summary ?? `Showing ${rows?.length ?? 0} users on page ${pageNumber ?? 1}`}</p>
@@ -155,7 +155,6 @@ describe("UsersPage", () => {
 					"roleUuids": ["role-uuid-3"],
 					"tierUuid": "tier-uuid-3",
 						uuid: "user-uuid-7",
-						username: "jdoe",
 					},
 				],
 				"has_more": false,
@@ -175,7 +174,6 @@ describe("UsersPage", () => {
 					"roleUuids": ["role-uuid-3"],
 					"tierUuid": "tier-uuid-3",
 					uuid: "user-uuid-7",
-					username: "jdoe",
 				},
 			],
 			updateUser: vi.fn((): Promise<void> => Promise.resolve()),
