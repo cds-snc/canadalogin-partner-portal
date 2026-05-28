@@ -42,7 +42,7 @@ flowchart LR
     User --> Browser
     Browser --> S3
     Browser --> Compute
-    ECR --> Compute
+    Compute --> ECR
     Compute --> PG
     Compute --> Redis
     Compute --> OIDC
