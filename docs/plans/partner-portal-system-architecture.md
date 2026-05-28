@@ -14,7 +14,7 @@ CanadaLogin Partner Portal requires a simple web application setup on AWS with s
 - Backend: container image pushed to Amazon ECR and deployed to Amazon ECS
 - Database: PostgreSQL
 - Cache and session store: Redis
-- External integrations: CanadaLogin OIDC identity provider, GC Notify, IBM Verify
+- External integrations: CanadaLogin OIDC identity provider, GC Notify, IBM Security Verify
 
 Note: Amazon ECR is the image registry and Amazon ECS is the container runtime target.
 
@@ -36,7 +36,7 @@ flowchart LR
     subgraph External[External Services]
         OIDC[CanadaLogin OIDC IdP]
         Notify[GC Notify]
-        IBM[IBM Verify]
+        IBM[IBM Security Verify]
     end
 
     User --> Browser
@@ -63,7 +63,7 @@ flowchart LR
 - Build the backend as a container image.
 - Push the image to Amazon ECR.
 - Deploy the container from ECR into Amazon ECS.
-- The backend must have outbound access to PostgreSQL, Redis, CanadaLogin OIDC, GC Notify, and IBM Verify.
+- The backend must have outbound access to PostgreSQL, Redis, CanadaLogin OIDC, GC Notify, and IBM Security Verify.
 
 ### 3.3 Data Services
 
@@ -76,7 +76,7 @@ Redis is used by the application for multiple purposes, but the infrastructure r
 
 - CanadaLogin OIDC IdP: user authentication
 - GC Notify: email notifications for invitation flow
-- IBM Verify: RP application and client management
+- IBM Security Verify: RP application and client management
 
 These are external dependencies and are not hosted inside AWS as part of this application stack.
 
@@ -89,7 +89,7 @@ These are external dependencies and are not hosted inside AWS as part of this ap
   - Redis
   - CanadaLogin OIDC endpoints
   - GC Notify API
-  - IBM Verify API
+  - IBM Security Verify API
 
 ## 6. Minimal Deployment Checklist
 
@@ -102,7 +102,7 @@ These are external dependencies and are not hosted inside AWS as part of this ap
 - Runtime configuration for external services:
   - CanadaLogin OIDC
   - GC Notify
-  - IBM Verify
+  - IBM Security Verify
 
 ## 7. Recommendations From Env Samples
 
@@ -125,7 +125,7 @@ These should be stored in AWS Secrets Manager or an equivalent secret store, not
 - Backend database endpoint values: `POSTGRES_SERVER`, `POSTGRES_PORT`, `POSTGRES_DB`, `POSTGRES_USER`
 - Redis endpoint values for session, cache, queue, and rate limiting
 - OIDC metadata and client ID values
-- IBM Verify base URL and client ID
+- IBM Security Verify base URL and client ID
 - GC Notify template IDs and invite expiry settings
 - Frontend variables: `VITE_APP_ENVIRONMENT`, `VITE_APP_TITLE`, `VITE_API_BASE_URL`, `VITE_AUTH_POST_LOGIN_PATH`
 
