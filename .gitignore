@@ -62,6 +62,7 @@ tmp/
 *.bak
 .ruff_cache/
 .opencode/
+.worktrees/
 
 ### Delorean
 delorean/
