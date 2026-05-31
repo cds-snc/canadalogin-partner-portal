@@ -8,6 +8,19 @@ This document provides essential information for agentic coding agents working o
 - `backend/` - FastAPI application with SQLAlchemy 2.0, PostgreSQL, Redis
 - `frontend/` - Vite + React (TypeScript) with TanStack Router/Query
 
+## Mermaid development environment
+
+### Initial setup
+
+Before doing any work, ensure `mmdc` is installed and working. If not, install `@mermaid-js/mermaid-cli`. After installing, create a sample mermaid diagram to validate that it works as expected. This tool will be used to valiate syntax like: `mmdc -i <file>.mmd -o /tmp/check.svg`
+
+### Development
+
+When you are asked to do work, always try rendering the file using `mmdc -i <file>.mmd -o /tmp/check.svg` before returning back to the user. If it does not render successfully, fix the issue, then try rendering again. Never return to the user with a broken mermaid file.
+
+When you're done, always use the `askQuestions` tool to ask the user for approval. If they ask for more work, continue working then use `askQuestions` again. Never finish working without approval from the `askQuestions` tool.
+
+
 ## Build, Lint, and Test Commands
 
 ### Backend Commands
