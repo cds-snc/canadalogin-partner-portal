@@ -12,7 +12,7 @@ This document provides essential information for agentic coding agents working o
 
 ### Initial setup
 
-Before doing any work, ensure `mmdc` is installed and working. If not, install `@mermaid-js/mermaid-cli`. After installing, create a sample mermaid diagram to validate that it works as expected. This tool will be used to valiate syntax like: `mmdc -i <file>.mmd -o /tmp/check.svg`
+Before doing any work, ensure `mmdc` is installed and working. If not, install `@mermaid-js/mermaid-cli`. After installing, create a sample mermaid diagram to validate that it works as expected. This tool will be used to validate syntax like: `mmdc -i <file>.mmd -o /tmp/check.svg`
 
 ### Development
 
