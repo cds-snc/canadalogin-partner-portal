@@ -9,7 +9,6 @@ from .role_service import RoleService
 from .task_service import TaskService
 from .tier_service import TierService
 from .user_service import UserService
-from .workspace_service import WorkspaceService
 
 __all__ = [
     "AuthService",
@@ -23,5 +22,4 @@ __all__ = [
     "TaskService",
     "TierService",
     "UserService",
-    "WorkspaceService",
 ]

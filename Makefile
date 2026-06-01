@@ -76,7 +76,7 @@ frontend-dev:
 
 frontend-test:
 	@echo "Running frontend tests"
-	cd $(FRONTEND_DIR) && $(PNPM) run test
+	cd $(FRONTEND_DIR) && $(PNPM) run test --
 
 frontend-lint:
 	@echo "Running frontend lint"

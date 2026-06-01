@@ -12,9 +12,7 @@ def test_openapi_documents_unified_error_schema_for_selected_endpoints() -> None
     assert user_me_responses["401"]["content"]["application/json"]["schema"] == error_response_schema_ref
     assert user_me_responses["422"]["content"]["application/json"]["schema"] == error_response_schema_ref
 
-    create_workspace_responses = openapi_schema["paths"]["/api/v1/workspaces"]["post"]["responses"]
-    assert create_workspace_responses["401"]["content"]["application/json"]["schema"] == error_response_schema_ref
-    assert create_workspace_responses["422"]["content"]["application/json"]["schema"] == error_response_schema_ref
+    assert "/api/v1/workspaces" not in openapi_schema["paths"]
 
     create_ibm_application_responses = openapi_schema["paths"]["/api/v1/ibm-sv-admin/applications"]["post"]["responses"]
     assert create_ibm_application_responses["400"]["content"]["application/json"]["schema"] == error_response_schema_ref

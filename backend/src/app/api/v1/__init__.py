@@ -11,7 +11,6 @@ from .roles import router as roles_router
 from .tasks import router as tasks_router
 from .tiers import router as tiers_router
 from .users import router as users_router
-from .workspaces import router as workspaces_router
 
 router = APIRouter(prefix="/v1")
 router.include_router(departments_router)
@@ -25,4 +24,3 @@ router.include_router(roles_router)
 router.include_router(tasks_router)
 router.include_router(tiers_router)
 router.include_router(rate_limits_router)
-router.include_router(workspaces_router)
