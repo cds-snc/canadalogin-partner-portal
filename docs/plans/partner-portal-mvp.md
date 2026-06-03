@@ -75,25 +75,25 @@ The MVP delivers the following capabilities, organized to mirror the four journe
 - Require the user to register a passkey as a second factor.
 - Require the user to associate themself with a GC department.
 - Require the user to accept the Partner Portal terms and conditions.
-- Set up the workspace profile by treating IBM Security Verify as the source of truth for the Verify Owner field.
-- Import the user's RP IDs based on their user email in IBM Security Verify.
+- Set up the user profile by treating IBM Security Verify as the source of truth for the Verify Owner field.
+- Import the user's RP IDs based on their application owner roles in IBM Security Verify.
 - Associate each imported RP application with a GC department.
 - Apply a reviewed and implemented session timeout across authenticated routes.
 
 ### Manage Secrets
 
-- View current secrets for an owned RP application with developer view access.
-- Rotate the secret with developer edit and rotate access, including setting a time at which the old secret will expire.
+- View current secrets for an owned RP application with application owner access.
+- Rotate the secret with application owner edit and rotate access, including setting a time at which the old secret will expire.
 - Generate a new secret that immediately removes the old secret and creates a replacement.
 
 ### Monitor And Usage Reporting
 
-- View an MAU dashboard for the partner's RP application.
-- Investigate and integrate the D&R team pipeline as the data source for MAU.
-- Display month-to-date monthly active users.
+- View an MAU dashboard for the partner's RP application. 
+- Investigate and integrate the D&R team pipeline as the data source for MAU. **decision point. if Partner Portal no need to display more than 90 days Verify data, no need to take D&R team's data**
+- Display month-to-date monthly active users. **again, last 30 days or exact month**
 - Display authentication success rate.
 - Display month-to-date active users.
-- Nice to have: line chart of MAU over the month, per day.
+- Nice to have: line chart of MAU over the month, per day **per day? that's contrast to monthly report**.
 
 ### Support And Troubleshooting
 
@@ -102,7 +102,7 @@ The MVP delivers the following capabilities, organized to mirror the four journe
 
 ## 7. Target Users And Personas
 
-### Persona 1: Partner Developer (Workspace Owner / Developer)
+### Persona 1: Partner Developer (Application Owner from Verify)
 
 A Government of Canada partner who already operates one or more RP applications integrated with CanadaLogin through IBM Security Verify. Needs to sign in with their GC email, claim their RP applications, manage client secrets, and monitor MAU for their application. Holds the developer role for view, edit, and rotate access to credentials.
 
@@ -110,7 +110,7 @@ A Government of Canada partner who already operates one or more RP applications 
 
 Receives support requests submitted through the Jira intake linked from the portal. Not a direct user of the portal in MVP, but is the downstream owner of the support workflow.
 
-> Workspace administrators, invited external developers, and platform superusers as defined in the broader vision are out of scope for the MVP. They may return in later phases.
+> Workspace administrators, invited external developers, and platform superusers as defined in the broader vision are out of scope for the MVP. They may return in later phases.(not in scope)
 
 ## 8. Core User Journeys
 
@@ -122,29 +122,29 @@ Receives support requests submitted through the Jira intake linked from the port
 4. User registers a passkey.
 5. User selects a GC department to associate with their account.
 6. User accepts the Partner Portal terms and conditions.
-7. The system updates the Verify Owner field in IBM Security Verify so that Verify remains the source of truth.
-8. The system imports the user's RP IDs from IBM Security Verify based on the verified email.
-9. User associates each imported RP application with a GC department.
+7. The system imports the Verify Owner field in IBM Security Verify so that Verify remains the source of truth.
+8. The system imports the user's RP IDs from IBM Security Verify based on application owner's role from Verify.
+9. User associates each imported RP application with a GC department.**User is Applicatioin Owner? or CL Admin?**
 
 ### Journey B: Partner Views And Rotates A Client Secret
 
-1. User opens the secrets view for an owned RP application.
-2. User views the current secret metadata available with developer view access.
-3. User initiates a rotation, specifying a time at which the old secret will expire.
+1. Application Owner opens the secrets view for an owned RP application.
+2. Application Owner views the current secret.
+3. Application Owner initiates a rotation, specifying a time at which the old secret will expire.
 4. The system creates a new secret while keeping the old secret valid until expiry.
 
 ### Journey C: Partner Generates A Brand-New Secret
 
-1. User opens the secrets view for an owned RP application.
-2. User chooses to generate a new secret.
+1. Application Owner opens the secrets view for an owned RP application.
+2. Application Owner chooses to generate a new secret.
 3. The system immediately removes the old secret and creates a new one.
-4. User retrieves the new secret value.
+4. Application Owner retrieves the new secret value.
 
 ### Journey D: Partner Views MAU For Their RP Application
 
-1. User opens the MAU dashboard for their RP application.
+1. Application Owner opens the MAU dashboard for their RP application.
 2. The dashboard displays month-to-date monthly active users, success rate, and month-to-date active users.
-3. If available, the dashboard renders a line chart of MAU over the month, per day.
+3. If available, the dashboard renders a line chart of MAU over the month, per day.**per day is contrast to monthly report**
 
 ### Journey E: Partner Requests Support Or Reads FAQs
 
