@@ -72,7 +72,6 @@ REFRESH_TOKEN_EXPIRE_DAYS=7                  # Default: 7
 
 ```env
 # Backend sessions
-SESSION_SECRET_KEY="change-this-session-secret"
 SESSION_COOKIE_NAME="app_session"
 SESSION_COOKIE_SECURE=false
 SESSION_MAX_AGE=28800
@@ -103,7 +102,6 @@ LOCAL_PASSWORD_LOGIN_ENABLED=false
 - Set `OIDC_ENABLED=true` to enable `/api/v1/auth/oidc/login` and `/api/v1/auth/oidc/callback`.
 - For split-origin local development, set `OIDC_POST_LOGIN_REDIRECT` to the frontend origin, for example `http://localhost:3000/auth-complete`, so the backend callback returns the browser to the SPA instead of the backend host.
 - Set `LOCAL_PASSWORD_LOGIN_ENABLED=false` to disable local username/password login when you want OIDC-only user auth.
-- Use a strong `SESSION_SECRET_KEY` in every environment.
 - `REDIS_SESSION_DB=1` keeps session records separate from the cache, queue, and rate-limit Redis keys while still allowing a shared local Redis server.
 - `REDIS_SESSION_PREFIX` lets you distinguish session keys during local inspection and cleanup.
 - `SESSION_ROLLING=true` extends cookie expiration on every request; leave it `false` for fixed-lifetime sessions.
