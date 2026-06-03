@@ -4,14 +4,15 @@
 
 - Status: Draft scoped to the minimum viable product based on the refined user story map dated 2026-05-31
 - Product: CanadaLogin Partner Portal (MVP)
-- Source of truth for this draft: the refined user flow diagram covering Onboarding & Setup, Manage Secrets, Monitor & Usage Reporting, and Support & Troubleshooting
 - Intended audience: product, engineering, platform operations, delivery, design, and policy stakeholders
 
 ## 1. Executive Summary
 
-The CanadaLogin Partner Portal MVP is a focused first release that lets a partner developer sign in with a Government of Canada email, set up a workspace profile linked to the relying party (RP) applications they already own in IBM Security Verify, manage the client secrets for those applications, view monthly active user (MAU) metrics, and reach support and FAQ resources.
+The CanadaLogin Partner Portal MVP is a focused first release that lets a partner developer sign in with a Government of Canada email and link their profile to the relying party (RP) applications they already own in IBM Security Verify, manage the client secrets for those applications, view monthly active user (MAU) metrics, and reach support. 
 
-This MVP intentionally narrows the broader portal vision to four user journeys: onboarding and setup, secret management, usage reporting, and support. It removes workflow features that are not required to deliver value at launch, including external developer invitations, structured multi-section application information intake, departments and tiers administration UIs, and platform-wide governance modules. The goal is to ship a small, secure, and self-service portal that proves the core onboarding-to-operations loop for partner teams.
+This MVP intentionally narrows the broader portal vision to four user journeys: onboarding and setup, secret management, usage reporting, and support. 
+
+It removes workflow features that are not required to deliver value at launch, including external developer invitations, structured multi-section application information intake, departments and tiers administration UIs, and platform-wide governance modules. The goal is to ship a small, secure, and self-service portal that proves the core onboarding-to-operations loop for partner teams.
 
 ## 2. Product Vision
 
@@ -34,25 +35,26 @@ The MVP addresses these gaps with a single authenticated portal that links a ver
 ### Primary Goals
 
 1. Let a partner sign up and sign in with a valid GC email, including password complexity, email OTP validation, and a passkey.
-2. Establish a workspace profile that uses IBM Security Verify as the source of truth for RP application ownership and associates each RP with a GC department.
-3. Allow a partner with the developer role to view current credentials, rotate the client secret with a controlled expiry on the old secret, and generate a brand-new secret that immediately replaces the old one.
+2. Link user profile that uses IBM Security Verify as the source of truth for RP application ownership and associates each RP with a GC department.
+3. Allow a the application owner role to view current credentials, rotate the client secret with a controlled expiry on the old secret, and generate a brand-new secret that immediately replaces the old one.
 4. Show partners a simple MAU dashboard with month-to-date active users and authentication success rate for their RP application.
-5. Provide direct paths to support and FAQ resources hosted by existing channels (Jira intake owned by PSO, GCExchange or marketing site).
+5. Provide a link to the partner support channel (Jira).
 6. Enforce a reviewed and implemented session timeout policy across the portal.
 7. Meet key [NIST 800-53 Rev. 5](https://nvlpubs.nist.gov/nistpubs/SpecialPublications/NIST.SP.800-53r5.pdf) security controls applicable to MVP scope.
 8. Meet [WCAG 2.1, level A and AA](https://www.w3.org/WAI/WCAG22/quickref/?versions=2.1) accessibility requirements for the MVP UI.
 
 ### Secondary Goals
 
-1. Keep the workspace profile data model thin so that future onboarding intake can extend it without rework.
-2. Preserve a clean backend contract with standardized error envelopes and reusable authorization patterns.
-3. Establish baseline telemetry for sign-in, secret rotation, and MAU usage so future iterations have a measurement foundation.
+1. Keep the profile data model thin so that future onboarding intake can extend it without rework.
+2. Use IBM Verify to support our sign-in and sign-up flows for service owners.
+3. Preserve a clean backend contract with standardized error envelopes and reusable authorization patterns.
+4. Implement basic monitoring, logs, and alarms for system health and security. 
 
 ## 5. Non-Goals
 
-1. Inviting external developers who do not already own an RP application in IBM Security Verify.
-2. Full structured application information intake covering business, technical, security, privacy, and migration sections.
-3. Workspace member management beyond the verified owner.
+1. Inviting external developers who do not already have a registered RP in production.
+2. Workspace member management beyond the verified owner.
+3. Automatic configuration of RPs.
 4. Platform administration UIs for users, roles, policies, departments, or tiers.
 5. Approval workflows, review checkpoints, or onboarding state machines.
 6. Aggregate cross-workspace analytics or executive dashboards.
@@ -65,8 +67,9 @@ The MVP delivers the following capabilities, organized to mirror the four journe
 
 ### Onboarding And Setup
 
-- Sign in to the Partner Portal through OIDC.
+- Sign in to the Partner Portal through CanadaLogin, if they are an applicaiton owner
 - Sign up or sign in using a valid Government of Canada email address.
+- Provide error messages to the user if they attempt to sign-up without a valid GC email domain
 - Enforce password complexity requirements during sign-up.
 - Validate the GC email address with a one-time passcode (OTP).
 - Require the user to register a passkey as a second factor.
