@@ -1,6 +1,6 @@
 from typing import Annotated
 
-from fastapi import APIRouter, Depends, Request
+from fastapi import APIRouter, Depends, Form, Request
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from ...api.dependencies import get_oidc_service
@@ -22,3 +22,11 @@ async def oidc_callback(
     service: Annotated[OidcService, Depends(get_oidc_service)],
 ):
     return await service.callback(request=request, db=db)
+
+
+@router.post("/backchannel-logout")
+async def oidc_backchannel_logout(
+    logout_token: Annotated[str, Form(...)],
+    service: Annotated[OidcService, Depends(get_oidc_service)],
+):
+    return await service.backchannel_logout(logout_token)

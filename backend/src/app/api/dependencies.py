@@ -17,6 +17,7 @@ from ..services import (
     AuthService,
     DepartmentService,
     HealthService,
+    OidcLogoutService,
     OidcService,
     PolicyService,
     RateLimitService,
@@ -60,8 +61,12 @@ def get_auth_service() -> AuthService:
     return AuthService()
 
 
+def get_oidc_logout_service() -> OidcLogoutService:
+    return OidcLogoutService()
+
+
 def get_oidc_service() -> OidcService:
-    return OidcService()
+    return OidcService(logout_service=get_oidc_logout_service())
 
 
 def get_task_service() -> TaskService:

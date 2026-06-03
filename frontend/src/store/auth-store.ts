@@ -1,9 +1,11 @@
 import { useStore } from "zustand";
 import { createStore } from "zustand/vanilla";
 import {
+	buildOidcLogoutUrl,
 	getCurrentUser,
 	getOidcLoginUrl,
 	logoutCurrentUser,
+	type LogoutResponse,
 	type UserRead,
 } from "@/fetch/auth";
 
@@ -99,12 +101,14 @@ const authStore = createStore<AuthStoreState>()((set, get) => {
 			inFlightHydration = null;
 			set((state) => ({ ...state, ...createSessionSnapshot(null) }));
 
-			try {
-				await logoutCurrentUser();
-			} finally {
+			const logoutResponse: LogoutResponse | null = await logoutCurrentUser().finally(() => {
 				sessionVersion += 1;
 				inFlightHydration = null;
 				set((state) => ({ ...state, ...createSessionSnapshot(null) }));
+			});
+
+			if (logoutResponse?.oidcLogout) {
+				window.location.assign(buildOidcLogoutUrl(logoutResponse.oidcLogout));
 			}
 		},
 		refreshSession: (): Promise<UserRead | null> => runHydration(true),

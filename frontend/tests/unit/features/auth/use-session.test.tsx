@@ -7,7 +7,7 @@ import { useSession } from "@/features/auth/hooks/use-session";
 vi.mock("@/fetch/auth", () => ({
 	getCurrentUser: vi.fn(),
 	getOidcLoginUrl: vi.fn((): string => "http://localhost:8000/api/v1/auth/oidc/login"),
-	logoutCurrentUser: vi.fn((): Promise<void> => Promise.resolve()),
+	logoutCurrentUser: vi.fn((): Promise<{ message: string }> => Promise.resolve({ message: "Logged out successfully" })),
 }));
 
 type DeferredPromise<T> = {
@@ -53,7 +53,9 @@ describe("useSession", () => {
 		}>();
 
 		vi.mocked(getCurrentUser).mockImplementation(() => deferredCurrentUser.promise);
-		vi.mocked(logoutCurrentUser).mockResolvedValue();
+		vi.mocked(logoutCurrentUser).mockResolvedValue({
+			message: "Logged out successfully",
+		});
 
 		const queryClient = new QueryClient();
 		const wrapper = ({ children }: PropsWithChildren): ReactElement => (

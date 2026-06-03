@@ -2,6 +2,7 @@ from .auth_service import AuthService
 from .department_service import DepartmentService
 from .gc_notify_service import GCNotifyService
 from .health_service import HealthService
+from .oidc_logout_service import OidcLogoutService
 from .oidc_service import OidcService
 from .policy_service import PolicyService
 from .rate_limit_service import RateLimitService
@@ -16,6 +17,7 @@ __all__ = [
     "GCNotifyService",
     "HealthService",
     "OidcService",
+    "OidcLogoutService",
     "PolicyService",
     "RateLimitService",
     "RoleService",

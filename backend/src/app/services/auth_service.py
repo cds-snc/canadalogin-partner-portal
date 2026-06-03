@@ -7,6 +7,7 @@ from starlette.requests import Request
 
 from ..core.config import settings
 from ..core.exceptions.http_exceptions import UnauthorizedException
+from ..core.oidc import get_oidc_client
 from ..core.security import (
     ACCESS_TOKEN_EXPIRE_MINUTES,
     TokenType,
@@ -16,9 +17,13 @@ from ..core.security import (
     create_refresh_token,
     verify_token,
     )
+from .oidc_logout_service import OidcLogoutService
 
 
 class AuthService:
+    def __init__(self, logout_service: OidcLogoutService | None = None) -> None:
+        self.logout_service = logout_service or OidcLogoutService()
+
     async def login(self, form_data: Any, db: AsyncSession) -> dict[str, Any]:
         if not settings.LOCAL_PASSWORD_LOGIN_ENABLED:
             raise UnauthorizedException("Local password login is disabled.")
@@ -58,18 +63,47 @@ class AuthService:
         db: AsyncSession,
     ) -> dict[str, Any]:
         try:
+            oidc_logout = None
             try:
+                oidc_logout = request.session.get("oidc_logout")
                 request.session.clear()
             except AssertionError:
                 pass
 
+            payload = {
+                "message": "Logged out successfully",
+                "clear_cookies": True,
+            }
+            oidc_logout_payload = await self._build_oidc_logout_payload(oidc_logout)
+            if oidc_logout_payload is not None:
+                payload["oidc_logout"] = oidc_logout_payload
+
             if access_token and refresh_token:
                 await blacklist_tokens(access_token=access_token, refresh_token=refresh_token, db=db)
-                return {"message": "Logged out successfully", "clear_cookies": True}
+                return payload
 
             if request.session == {}:
-                return {"message": "Logged out successfully", "clear_cookies": True}
+                return payload
 
             raise UnauthorizedException("No authenticated session found.")
         except PyJWTError:
             raise UnauthorizedException("Invalid token.")
+
+    async def _build_oidc_logout_payload(self, oidc_logout: dict[str, Any] | None) -> dict[str, Any] | None:
+        if not oidc_logout:
+            return None
+
+        sid = oidc_logout.get("sid")
+        if sid:
+            await self.logout_service.remove_session(sid)
+
+        client = get_oidc_client()
+        end_session_endpoint = client.server_metadata.get("end_session_endpoint")
+        if not end_session_endpoint:
+            return None
+
+        return {
+            "end_session_endpoint": end_session_endpoint,
+            "id_token_hint": oidc_logout.get("id_token"),
+            "post_logout_redirect_uri": None,
+        }
