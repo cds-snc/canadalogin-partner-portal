@@ -7,9 +7,7 @@ import { getRequestErrorNotice } from "@/fetch";
 import { getDepartment } from "@/fetch/departments";
 import {
 	getCurrentUserRPApplications,
-	getCurrentUserWorkspaces,
 	type CurrentUserRPApplicationRead,
-	type WorkspaceRead,
 } from "@/fetch/workspaces";
 import { useQuery } from "@tanstack/react-query";
 import { useRoles, useSession } from "@/hooks";
@@ -38,15 +36,6 @@ export const DashboardPage = (): FunctionComponent => {
 		queryKey: ["dashboard-department", currentUser?.departmentUuid],
 	});
 	const {
-		data: workspaces,
-		error: workspacesError,
-		isLoading: isWorkspacesLoading,
-	} = useQuery({
-		enabled: Boolean(currentUser?.uuid),
-		queryFn: getCurrentUserWorkspaces,
-		queryKey: ["dashboard-workspaces"],
-	});
-	const {
 		data: rpApplications,
 		error: applicationsError,
 		isLoading: isApplicationsLoading,
@@ -59,10 +48,9 @@ export const DashboardPage = (): FunctionComponent => {
 		isSessionLoading ||
 		isDepartmentLoading ||
 		isRolesLoading ||
-		isWorkspacesLoading ||
 		isApplicationsLoading;
 	const errorNotice = getRequestErrorNotice(
-		departmentError ?? rolesError ?? workspacesError ?? applicationsError,
+		departmentError ?? rolesError ?? applicationsError,
 		{
 			bodyKey: "dashboard.errorBody",
 			titleKey: "dashboard.errorTitle",
@@ -79,17 +67,11 @@ export const DashboardPage = (): FunctionComponent => {
 			? `${department.abbreviation} - ${department.name}`
 			: department.name
 		: (currentUser?.departmentAbbreviation ?? t("dashboard.noDepartment"));
-	const renderWorkspaceLink = (workspace: WorkspaceRead): ReactElement => (
-		<Link href={`/workspaces/${workspace.uuid}`}>{workspace.name}</Link>
-	);
 	const renderApplicationLink = (
 		application: CurrentUserRPApplicationRead
 	): ReactElement => (
 		<Link href={`/rp-applications/mine/${application.uuid}`}>
-			{t("dashboard.workspaceApplicationItem", {
-				application: application.name,
-				workspace: application.workspaceName,
-			})}
+			{application.name}
 		</Link>
 	);
 
@@ -139,24 +121,6 @@ export const DashboardPage = (): FunctionComponent => {
 							</div>
 
 							<div className="flex flex-col gap-300" role="presentation">
-								<section className={summaryCardClasses}>
-									<Heading tag="h3">
-										{t("dashboard.workspacesListTitle")}
-									</Heading>
-									<Text>{t("dashboard.workspacesDescription")}</Text>
-									{(workspaces ?? []).length > 0 ? (
-										<ul className="mt-150 flex flex-col gap-100">
-											{(workspaces ?? []).map((workspace) => (
-												<li key={workspace.uuid}>
-													{renderWorkspaceLink(workspace)}
-												</li>
-											))}
-										</ul>
-									) : (
-										<Text>{t("dashboard.noWorkspaces")}</Text>
-									)}
-								</section>
-
 								<section className={summaryCardClasses}>
 									<Heading tag="h3">
 										{t("dashboard.rpApplicationsListTitle")}

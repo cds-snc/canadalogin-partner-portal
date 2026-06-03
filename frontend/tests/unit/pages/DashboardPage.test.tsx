@@ -20,19 +20,15 @@ vi.mock("react-i18next", () => ({
 				"dashboard.noDepartment": "No department assigned",
 				"dashboard.noRPApplications": "No RP applications found.",
 				"dashboard.noRoles": "No roles assigned",
-				"dashboard.noWorkspaces": "No workspaces found.",
 				"dashboard.profileEyebrow": "Signed-in profile",
 				"dashboard.resourcesEyebrow": "Service resources",
-				"dashboard.resourcesSummary": "Jump into the areas you use most often from one place.",
-				"dashboard.resourcesTitle": "Workspaces and RP applications",
-				"dashboard.rpApplicationsDescription": "Review RP applications across your workspaces.",
+				"dashboard.resourcesSummary": "Jump into the RP applications you use most often from one place.",
+				"dashboard.resourcesTitle": "RP applications",
+				"dashboard.rpApplicationsDescription": "Review the RP applications available to your account.",
 				"dashboard.rpApplicationsListTitle": "RP Applications",
 				"dashboard.roles": "Roles",
 				"dashboard.summary": "Overview of your account.",
 				"dashboard.title": "Dashboard",
-				"dashboard.workspacesDescription": "View the workspaces you can access.",
-				"dashboard.workspacesListTitle": "Workspaces",
-				"dashboard.workspaceApplicationItem": `${options?.["application"] ?? ""} (${options?.["workspace"] ?? ""})`,
 				"nav.home": "Home",
 			};
 
@@ -89,25 +85,13 @@ describe("DashboardPage", () => {
 			})
 			.mockReturnValueOnce({
 				data: [
-					{ name: "Health Workspace", uuid: "workspace-uuid-1" },
-					{ name: "Service Workspace", uuid: "workspace-uuid-2" },
-				],
-				error: null,
-				isLoading: false,
-			})
-			.mockReturnValueOnce({
-				data: [
 					{
 						name: "Benefits Portal",
 						uuid: "application-uuid-1",
-						workspaceName: "Health Workspace",
-						workspaceUuid: "workspace-uuid-1",
 					},
 					{
 						name: "Claims Service",
 						uuid: "application-uuid-2",
-						workspaceName: "Service Workspace",
-						workspaceUuid: "workspace-uuid-2",
 					},
 				],
 				error: null,
@@ -154,16 +138,14 @@ describe("DashboardPage", () => {
 		expect(screen.getByText(/^roles$/i)).toBeTruthy();
 		expect(screen.getByText(/administrator/i)).toBeTruthy();
 		expect(screen.getByText(/editor/i)).toBeTruthy();
-		expect(screen.getByRole("heading", { name: /workspaces and rp applications/i })).toBeTruthy();
-		expect(screen.getByRole("heading", { name: /^workspaces$/i })).toBeTruthy();
-		expect(screen.getByRole("link", { name: /^health workspace$/i })).toBeTruthy();
-		expect(screen.getByRole("link", { name: /^service workspace$/i })).toBeTruthy();
-		expect(screen.getByRole("heading", { name: /^rp applications$/i })).toBeTruthy();
-		expect(screen.getByText(/benefits portal \(health workspace\)/i)).toBeTruthy();
-		expect(screen.getByText(/claims service \(service workspace\)/i)).toBeTruthy();
+		expect(screen.getByText(/^RP applications$/)).toBeTruthy();
+		expect(screen.getByText(/jump into the rp applications you use most often from one place/i)).toBeTruthy();
+		expect(screen.getByText(/^RP Applications$/)).toBeTruthy();
+		expect(screen.getByRole("link", { name: /^benefits portal$/i })).toBeTruthy();
+		expect(screen.getByRole("link", { name: /^claims service$/i })).toBeTruthy();
 		expect(
 			screen.getByRole("link", {
-				name: /benefits portal \(health workspace\)/i,
+				name: /^benefits portal$/i,
 			})
 			.getAttribute("href")
 		).toBe("/rp-applications/mine/application-uuid-1");

@@ -24,7 +24,6 @@ from ..services import (
     TaskService,
     TierService,
     UserService,
-    WorkspaceService,
 )
 
 logger = logging.getLogger(__name__)
@@ -71,10 +70,6 @@ def get_task_service() -> TaskService:
 
 def get_health_service() -> HealthService:
     return HealthService()
-
-
-def get_workspace_service() -> WorkspaceService:
-    return WorkspaceService()
 
 
 async def get_user_from_session(request: Request, db: AsyncSession) -> dict[str, Any] | None:

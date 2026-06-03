@@ -39,7 +39,6 @@ const AppNavigation = (): FunctionComponent => {
 	const authItems: Array<NavigationItem> = [
 		{ href: "/dashboard", label: t("nav.dashboard") },
 		{ href: "/profile", label: t("nav.profile") },
-		{ href: "/workspaces", label: t("nav.workspaces") },
 		{ href: "/logout", label: t("nav.logout") },
 	];
 
