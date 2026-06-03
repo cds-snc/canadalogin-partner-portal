@@ -121,9 +121,9 @@ Receives support requests submitted through the Jira intake linked from the port
 4. User registers a passkey.
 5. User selects a GC department to associate with their account.
 6. User accepts the Partner Portal terms and conditions.
-7. The system updates the Verify Owner field in IBM Security Verify so that Verify remains the source of truth.
+7. The system imports the Verify Owner field in IBM Security Verify so that Verify remains the source of truth.
 8. The system imports the user's RP IDs from IBM Security Verify based on the verified email.
-9. User associates each imported RP application with a GC department.
+9. User associates each imported RP application with a GC department.(Application Owner associate themselves or CL Admin does this for them?)
 
 ### Journey B: Partner Views And Rotates A Client Secret
 
