@@ -651,7 +651,7 @@ export const UsersPage = (): FunctionComponent => {
 						: t("users.confirmDeleteAction")
 				}
 				description={t("users.deleteConfirmBody", {
-						email: selectedUser?.email ?? "",
+					email: selectedUser?.email ?? "",
 				})}
 				onClose={() => {
 					setDeleteDialogOpen(false);
@@ -680,7 +680,7 @@ export const UsersPage = (): FunctionComponent => {
 				}
 				title={
 					selectedUser
-							? t("users.manageRolesTitle", { email: selectedUser.email })
+						? t("users.manageRolesTitle", { email: selectedUser.email })
 						: t("users.manageRolesAction")
 				}
 				onClose={() => {

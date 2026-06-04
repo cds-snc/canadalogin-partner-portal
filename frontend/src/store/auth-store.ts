@@ -1,5 +1,6 @@
 import { useStore } from "zustand";
 import { createStore } from "zustand/vanilla";
+import { clearBackendActivity } from "@/lib/backend-activity";
 import {
 	buildOidcLogoutUrl,
 	getCurrentUser,
@@ -99,13 +100,16 @@ const authStore = createStore<AuthStoreState>()((set, get) => {
 		logout: async (): Promise<void> => {
 			sessionVersion += 1;
 			inFlightHydration = null;
+			clearBackendActivity();
 			set((state) => ({ ...state, ...createSessionSnapshot(null) }));
 
-			const logoutResponse: LogoutResponse | null = await logoutCurrentUser().finally(() => {
-				sessionVersion += 1;
-				inFlightHydration = null;
-				set((state) => ({ ...state, ...createSessionSnapshot(null) }));
-			});
+			const logoutResponse: LogoutResponse | null =
+				await logoutCurrentUser().finally(() => {
+					sessionVersion += 1;
+					inFlightHydration = null;
+					clearBackendActivity();
+					set((state) => ({ ...state, ...createSessionSnapshot(null) }));
+				});
 
 			if (logoutResponse?.oidcLogout) {
 				window.location.assign(buildOidcLogoutUrl(logoutResponse.oidcLogout));
@@ -115,6 +119,7 @@ const authStore = createStore<AuthStoreState>()((set, get) => {
 		reset: (): void => {
 			sessionVersion += 1;
 			inFlightHydration = null;
+			clearBackendActivity();
 			set((state) => ({ ...state, ...initialSnapshot }));
 		},
 	};

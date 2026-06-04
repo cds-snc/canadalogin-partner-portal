@@ -339,15 +339,14 @@ export const getRPApplicationDeveloperInvitations = async (
 	workspaceUuid: string,
 	rpApplicationUuid: string
 ): Promise<Array<RPApplicationDeveloperInvitationManagementRead>> => {
-	const result = await requestJson<
-		Array<RPApplicationDeveloperInvitationManagementRead> | null
-	>(
-		`/api/v1/workspaces/${encodeURIComponent(workspaceUuid)}/applications/${encodeURIComponent(rpApplicationUuid)}/developer-invitations`,
-		{
-			cache: "no-store",
-			method: "GET",
-		}
-	);
+	const result =
+		await requestJson<Array<RPApplicationDeveloperInvitationManagementRead> | null>(
+			`/api/v1/workspaces/${encodeURIComponent(workspaceUuid)}/applications/${encodeURIComponent(rpApplicationUuid)}/developer-invitations`,
+			{
+				cache: "no-store",
+				method: "GET",
+			}
+		);
 	return result ?? [];
 };
 
@@ -356,14 +355,13 @@ export const revokeRPApplicationDeveloperInvitation = async (
 	rpApplicationUuid: string,
 	invitationUuid: string
 ): Promise<RPApplicationDeveloperInvitationManagementRead> => {
-	const result = await requestJson<
-		RPApplicationDeveloperInvitationManagementRead | null
-	>(
-		`/api/v1/workspaces/${encodeURIComponent(workspaceUuid)}/applications/${encodeURIComponent(rpApplicationUuid)}/developer-invitations/${encodeURIComponent(invitationUuid)}`,
-		{
-			method: "DELETE",
-		}
-	);
+	const result =
+		await requestJson<RPApplicationDeveloperInvitationManagementRead | null>(
+			`/api/v1/workspaces/${encodeURIComponent(workspaceUuid)}/applications/${encodeURIComponent(rpApplicationUuid)}/developer-invitations/${encodeURIComponent(invitationUuid)}`,
+			{
+				method: "DELETE",
+			}
+		);
 	if (!result) {
 		throw new Error("Failed to revoke RP application developer invitation");
 	}
@@ -375,14 +373,13 @@ export const resendRPApplicationDeveloperInvitation = async (
 	rpApplicationUuid: string,
 	invitationUuid: string
 ): Promise<RPApplicationDeveloperInvitationManagementRead> => {
-	const result = await requestJson<
-		RPApplicationDeveloperInvitationManagementRead | null
-	>(
-		`/api/v1/workspaces/${encodeURIComponent(workspaceUuid)}/applications/${encodeURIComponent(rpApplicationUuid)}/developer-invitations/${encodeURIComponent(invitationUuid)}/resend`,
-		{
-			method: "POST",
-		}
-	);
+	const result =
+		await requestJson<RPApplicationDeveloperInvitationManagementRead | null>(
+			`/api/v1/workspaces/${encodeURIComponent(workspaceUuid)}/applications/${encodeURIComponent(rpApplicationUuid)}/developer-invitations/${encodeURIComponent(invitationUuid)}/resend`,
+			{
+				method: "POST",
+			}
+		);
 	if (!result) {
 		throw new Error("Failed to resend RP application developer invitation");
 	}

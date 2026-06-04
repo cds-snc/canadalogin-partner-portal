@@ -181,6 +181,8 @@ pnpm run storybook:build
 - Vite environment variables are read through `import.meta.env`.
 - If `VITE_API_BASE_URL` is unset, local auth behavior depends on the browser hostname matching the backend cookie origin.
 - Prefer keeping frontend and backend on matching local hosts such as both `127.0.0.1` or both `localhost`.
+- `VITE_SESSION_WARNING_AFTER_MINUTES` controls when the inactivity warning modal appears (default: `25`).
+- `VITE_SESSION_COUNTDOWN_MINUTES` controls the warning countdown duration before auto-logout (default: `5`).
 
 ## Notes For Contributors
 

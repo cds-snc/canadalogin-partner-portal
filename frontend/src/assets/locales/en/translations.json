@@ -128,6 +128,15 @@
 		"summary": "Closing the current backend session.",
 		"title": "Signing you out"
 	},
+	"sessionTimeout": {
+		"continueAction": "Continue session",
+		"continuingAction": "Continuing...",
+		"countdownLabel": "You will be signed out in {{time}}.",
+		"loggingOutAction": "Signing out...",
+		"logoutAction": "Sign out now",
+		"warningDescription": "No successful backend activity was detected recently.",
+		"warningTitle": "Session timeout warning"
+	},
 	"header": {
 		"switchLanguageEnglish": "English",
 		"switchLanguageFrench": "Français"

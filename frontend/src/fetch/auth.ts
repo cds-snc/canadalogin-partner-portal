@@ -46,9 +46,7 @@ export const getCurrentUser = async (): Promise<UserRead | null> => {
 	}
 };
 
-export const buildOidcLogoutUrl = (
-	oidcLogout: OidcLogoutResponse
-): string => {
+export const buildOidcLogoutUrl = (oidcLogout: OidcLogoutResponse): string => {
 	const logoutUrl = new URL(oidcLogout.endSessionEndpoint);
 
 	if (oidcLogout.idTokenHint) {

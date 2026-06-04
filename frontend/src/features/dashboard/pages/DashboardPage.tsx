@@ -146,9 +146,7 @@ export const DashboardPage = (): FunctionComponent => {
 								{t("dashboard.profileEyebrow")}
 							</p>
 							<div className="mt-150 flex flex-col gap-150">
-								<Text>
-									{t("dashboard.name", { value: currentUser.name })}
-								</Text>
+								<Text>{t("dashboard.name", { value: currentUser.name })}</Text>
 								<Text>
 									{t("dashboard.email", { value: currentUser.email })}
 								</Text>
