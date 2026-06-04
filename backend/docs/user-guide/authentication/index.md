@@ -145,7 +145,6 @@ REFRESH_TOKEN_EXPIRE_DAYS=7
 ### OIDC and Session Settings
 
 ```env
-SESSION_SECRET_KEY="change-this-session-secret"
 REDIS_SESSION_HOST="localhost"
 REDIS_SESSION_PORT=6379
 REDIS_SESSION_DB=1

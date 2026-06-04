@@ -13,6 +13,7 @@ from src.app.api.v1.logout import router as logout_router
 from src.app.core.config import settings
 from src.app.core.db.database import async_get_db
 from src.app.core.setup import create_application
+from src.app.schemas.auth import LogoutOidcResponse, LogoutResponse
 
 
 def make_request(session: dict | None = None) -> Request:
@@ -39,7 +40,7 @@ class TestLogoutEndpoint:
 
         result = await logout(request, response, None, None, mock_db, mock_service)
 
-        assert result == {"message": "Logged out successfully"}
+        assert result == LogoutResponse(message="Logged out successfully")
         expected_cookie = f"{settings.SESSION_COOKIE_NAME}=".encode()
         assert any(expected_cookie in header for _, header in response.raw_headers)
         mock_service.logout.assert_awaited_once_with(
@@ -76,6 +77,34 @@ class TestLogoutEndpoint:
         assert "SameSite=lax" in session_cookie_header
         if settings.SESSION_COOKIE_SECURE:
             assert "Secure" in session_cookie_header
+
+    @pytest.mark.asyncio
+    async def test_logout_returns_oidc_logout_details_when_service_provides_them(self, mock_db):
+        request = make_request(session={"user_uuid": "019cfc22-bff2-7168-ae43-387a301d8fcb"})
+        response = Response()
+        mock_service = Mock()
+        mock_service.logout = AsyncMock(
+            return_value={
+                "message": "Logged out successfully",
+                "clear_cookies": True,
+                "oidc_logout": {
+                    "end_session_endpoint": "https://example.verify.ibm.com/logout",
+                    "id_token_hint": "id-token-value",
+                    "post_logout_redirect_uri": "https://portal.example.gc.ca/logout-complete",
+                },
+            }
+        )
+
+        result = await logout(request, response, None, None, mock_db, mock_service)
+
+        assert result == LogoutResponse(
+            message="Logged out successfully",
+            oidc_logout=LogoutOidcResponse(
+                end_session_endpoint="https://example.verify.ibm.com/logout",
+                id_token_hint="id-token-value",
+                post_logout_redirect_uri="https://portal.example.gc.ca/logout-complete",
+            ),
+        )
 
 
 class TrackingInMemoryStore(InMemoryStore):

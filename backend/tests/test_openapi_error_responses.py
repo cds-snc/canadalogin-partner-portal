@@ -21,3 +21,13 @@ def test_openapi_documents_unified_error_schema_for_selected_endpoints() -> None
     assert create_ibm_application_responses["422"]["content"]["application/json"]["schema"] == error_response_schema_ref
 
     assert openapi_schema["components"]["schemas"]["ErrorResponse"]["type"] == "object"
+
+
+def test_openapi_documents_logout_response_contract() -> None:
+    openapi_schema = app.openapi()
+
+    logout_responses = openapi_schema["paths"]["/api/v1/logout"]["post"]["responses"]
+    logout_schema = logout_responses["200"]["content"]["application/json"]["schema"]
+
+    assert logout_schema == {"$ref": "#/components/schemas/LogoutResponse"}
+    assert openapi_schema["components"]["schemas"]["LogoutResponse"]["type"] == "object"

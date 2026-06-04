@@ -97,9 +97,28 @@ describe("fetch auth", () => {
 	});
 
 	it("posts to logout with credentials included", async () => {
-		globalThis.fetch = vi.fn().mockResolvedValue({ ok: true, status: 204 }) as typeof fetch;
+		globalThis.fetch = vi.fn().mockResolvedValue({
+			ok: true,
+			json: () =>
+				Promise.resolve({
+					message: "Logged out successfully",
+					oidcLogout: {
+						endSessionEndpoint: "https://example.verify.ibm.com/oidc/logout",
+						idTokenHint: "id-token-value",
+						postLogoutRedirectUri: "https://portal.example.gc.ca/logout-complete",
+					},
+				}),
+			headers: new Headers({ "content-type": "application/json" }),
+		}) as typeof fetch;
 
-		await logoutCurrentUser();
+		await expect(logoutCurrentUser()).resolves.toEqual({
+			message: "Logged out successfully",
+			oidcLogout: {
+				endSessionEndpoint: "https://example.verify.ibm.com/oidc/logout",
+				idTokenHint: "id-token-value",
+				postLogoutRedirectUri: "https://portal.example.gc.ca/logout-complete",
+			},
+		});
 
 		expect(globalThis.fetch).toHaveBeenCalledWith(
 			"http://localhost:8000/api/v1/logout",

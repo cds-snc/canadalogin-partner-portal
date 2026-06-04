@@ -112,7 +112,6 @@ Based on `backend/.env.sample` and `frontend/.env.sample`, the infrastructure te
 
 - `POSTGRES_PASSWORD`
 - `SECRET_KEY`
-- `SESSION_SECRET_KEY`
 - `OIDC_CLIENT_SECRET`
 - `IBM_SV_ADMIN_CLIENT_SECRET`
 - `GC_NOTIFY_API_KEY`

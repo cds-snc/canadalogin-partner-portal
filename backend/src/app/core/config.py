@@ -22,7 +22,6 @@ class CryptSettings(BaseSettings):
 
 
 class SessionSettings(BaseSettings):
-    SESSION_SECRET_KEY: SecretStr = SecretStr("change-this-session-secret")
     SESSION_COOKIE_NAME: str = "app_session"
     SESSION_COOKIE_SECURE: bool = False
     SESSION_MAX_AGE: int = 60 * 60 * 8
