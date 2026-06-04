@@ -1,4 +1,5 @@
 import { toLoginHref } from "@/features/auth/login-search";
+import { markBackendActivity } from "@/lib/backend-activity";
 import type { ApiErrorDetail } from "./api-types";
 import { buildApiUrl } from "./base-url";
 import {
@@ -160,6 +161,7 @@ export const requestJson = async <ResponseType>(
 	});
 
 	if (response.status === 204) {
+		markBackendActivity();
 		return null;
 	}
 
@@ -182,8 +184,11 @@ export const requestJson = async <ResponseType>(
 	}
 
 	if (responseData === null) {
+		markBackendActivity();
 		return null;
 	}
+
+	markBackendActivity();
 
 	return responseData as ResponseType;
 };

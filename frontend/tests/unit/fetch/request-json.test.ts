@@ -1,4 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { markBackendActivity } from "@/lib/backend-activity";
 import {
 	BadRequestError,
 	ForbiddenRequestError,
@@ -7,6 +8,10 @@ import {
 	requestJson,
 } from "@/fetch";
 
+vi.mock("@/lib/backend-activity", () => ({
+	markBackendActivity: vi.fn(),
+}));
+
 describe("requestJson", () => {
 	const originalFetch = globalThis.fetch;
 	const originalLocation = globalThis.location;
@@ -14,6 +19,7 @@ describe("requestJson", () => {
 	beforeEach(() => {
 		vi.unstubAllEnvs();
 		vi.stubEnv("VITE_API_BASE_URL", "http://localhost:8000");
+		vi.mocked(markBackendActivity).mockReset();
 		vi.stubGlobal("location", {
 			href: "http://localhost:3000/dashboard",
 			pathname: "/dashboard",
@@ -160,5 +166,39 @@ describe("requestJson", () => {
 			message: "Legacy error detail",
 			status: 400,
 		});
+		expect(markBackendActivity).not.toHaveBeenCalled();
+	});
+
+	it("marks backend activity when a request succeeds", async () => {
+		globalThis.fetch = vi.fn().mockResolvedValue({
+			headers: new Headers({ "content-type": "application/json" }),
+			json: () => Promise.resolve({ uuid: "item-1" }),
+			ok: true,
+			status: 200,
+		} as Response);
+
+		await expect(
+			requestJson<{ uuid: string }>("/api/v1/posts", {
+				method: "GET",
+			}),
+		).resolves.toEqual({ uuid: "item-1" });
+
+		expect(markBackendActivity).toHaveBeenCalledTimes(1);
+	});
+
+	it("marks backend activity for successful empty responses", async () => {
+		globalThis.fetch = vi.fn().mockResolvedValue({
+			headers: new Headers(),
+			ok: true,
+			status: 204,
+		} as Response);
+
+		await expect(
+			requestJson("/api/v1/posts", {
+				method: "DELETE",
+			}),
+		).resolves.toBeNull();
+
+		expect(markBackendActivity).toHaveBeenCalledTimes(1);
 	});
 });

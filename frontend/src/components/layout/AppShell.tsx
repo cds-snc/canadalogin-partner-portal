@@ -1,5 +1,6 @@
 import type { PropsWithChildren } from "react";
 import type { FunctionComponent } from "../../common/types";
+import { InactivitySessionGuard } from "@/features/auth/components/InactivitySessionGuard";
 import Container from "../ui/Container";
 import DateModified from "../ui/DateModified";
 import { LayoutFooter } from "./LayoutFooter";
@@ -13,6 +14,7 @@ export const AppShell = ({ children }: AppShellProps): FunctionComponent => {
 
 	return (
 		<>
+			<InactivitySessionGuard />
 			<LayoutHeader />
 			<main className="bg-[var(--gcds-bg-white)]" id="main-content">
 				<Container alignment="center" id="app-shell" size="xl" tag="div">
