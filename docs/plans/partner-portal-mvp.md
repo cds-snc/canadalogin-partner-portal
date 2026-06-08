@@ -73,11 +73,10 @@ The MVP delivers the following capabilities, organized to mirror the four journe
 - Enforce password complexity requirements during sign-up.
 - Validate the GC email address with a one-time passcode (OTP).
 - Require the user to register a passkey as a second factor.
-- Require the user to associate themself with a GC department.
+- Require the user to associate themself with a GC department, or discern it from their email domain. (Optional)
 - Require the user to accept the Partner Portal terms and conditions.
-- Set up the partner profile by treating IBM Security Verify as the source of truth for the Verify Owner field.
+- Set up the partner profile by treating IBM Security Verify as the source of truth for the Verify Owner field, and RP department (var: Company Name - FOR DECISION). 
 - Import the user's RP IDs based on their user email in IBM Security Verify.
-- Associate each imported RP application with a GC department.
 - Apply a reviewed and implemented session timeout across authenticated routes.
 
 ### Manage Secrets
@@ -85,11 +84,13 @@ The MVP delivers the following capabilities, organized to mirror the four journe
 - View current secrets for an owned RP application as the application owner.
 - Rotate the secret as the application owner, including setting a time at which the old secret will expire.
 - Generate a new secret as the application owner that immediately removes the old secret and creates a replacement.
+- Download a CSV log that shows **when** a secret was rotated, or otherwise changed, and by **whom**. Ensure the log format aligns with the current Sentinel format.
+- Send the updated secret log to our Sentinel instance (stretch)
 
 ### Monitor And Usage Reporting
 
-- View an MAU dashboard for the partner's RP application.
 - Investigate and integrate the D&R team pipeline as the data source for MAU.
+- Ensure the D&R team repository is the single source of truth for metrics
 - Display month-to-date monthly active users.
 - Display authentication success rate.
 - Display month-to-date active users.
@@ -115,39 +116,39 @@ Receives support requests submitted through the Jira intake linked from the port
 
 ### Journey A: First-Time Partner Sign-Up And Profile Setup
 
-1. User navigates to the Partner Portal and signs up or signs in with a valid GC email address.
-2. User sets a password that meets complexity requirements.
-3. User validates their GC email with an emailed OTP.
-4. User registers a passkey.
-5. User selects a GC department to associate with their account.
-6. User accepts the Partner Portal terms and conditions.
-7. The system imports the Verify Owner field in IBM Security Verify so that Verify remains the source of truth.
-8. The system imports the user's RP IDs from IBM Security Verify based on the verified email.
-9. User associates each imported RP application with a GC department.(Application Owner associate themselves or CL Admin does this for them?)
+1. Content informs users who can sign-up and create an account right now - only people with a live RP. 
+2. User navigates to the Partner Portal and signs up or signs in with a valid GC email address.
+3. Back-end validates that their domain name is on our allow list for GC departments
+4. User sets a password that meets complexity requirements.
+5. User validates their GC email with an emailed OTP.
+6. User register and use a passkey.
+7. User accepts the Partner Portal terms and conditions.
+8. User selects a GC department to associate with their account. OR we prompt the user to decide on a department based on their domain
+9. The system checks the Verify Owner field in IBM Security Verify to see if they have an existing RP they own.
+  a. Happy: If the Verify Owner field matches an existing RP they can view their account
+  b. unhappy: If the Verify Owner field does NOT match an existing RP, inform them that they cannot sign-up right now. 
 
-### Journey B: Partner Views And Rotates A Client Secret
+### Journey B: Partner Views, Generates, or Rotates A Client Secret
 
-1. User opens the secrets view for an owned RP application.
-2. User views the current secret metadata as the application owner.
-3. User initiates a rotation, specifying a time at which the old secret will expire.
-4. The system creates a new secret while keeping the old secret valid until expiry.
-
-### Journey C: Partner Generates A Brand-New Secret
-
-1. User opens the secrets view for an owned RP application.
-2. User chooses to generate a new secret.
-3. The system immediately removes the old secret and creates a new one.
-4. User retrieves the new secret value.
+1. Application owner lands in the portal and can see their RP metadata, including: application name, client ID, application URL, call-back URL, and department name and MAU.
+2. Application owner can open the secrets view for an owned RP application.
+3. In the secrets view, they can initiate a "rotation", specifying a time at which the old secret will expire. The system creates a new secret while keeping the old secret valid until expiry.
+4. In the secrets view, they can initiate a "generate new secret". This immediately invalidates the old secret and replaces it with a new one. 
 
 ### Journey D: Partner Views MAU For Their RP Application
 
-1. User opens the MAU dashboard for their RP application.
-2. The dashboard displays month-to-date monthly active users, success rate, and month-to-date active users.
-3. If available, the dashboard renders a line chart of MAU over the month, per day.
+1. Application owner lands in the portal and can see their RP metadata, including: application name, client ID, application URL, call-back URL, and department name, and MAU.
+2. User opens the reporting dashboard for their RP application.
+3. The dashboard displays month-to-date monthly active users, success rate, and month-to-date active users.
+4. If available, the dashboard renders a line chart of MAU over the month, per day.
 
 ### Journey E: Partner Requests Support
 
 1. User selects Submit Support Request and is taken to the PSO-owned Jira intake form.
+
+### Journey F: Partner billing
+1. PSO team can associate an RP ID and a department (var: Company Name - FOR DECISION)
+2. D&R team: PSO team can use the department and MAU to determine the billing amount for a month, up to 90 days in the past
 
 ## 9. Functional Requirements
 
