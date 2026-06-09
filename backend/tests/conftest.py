@@ -16,8 +16,15 @@ from src.app.main import app
 DATABASE_URI = settings.POSTGRES_URI
 DATABASE_PREFIX = settings.POSTGRES_SYNC_PREFIX
 
-sync_engine = create_engine(DATABASE_PREFIX + DATABASE_URI)
-local_session = sessionmaker(autocommit=False, autoflush=False, bind=sync_engine)
+
+def _create_local_session() -> tuple[Any, Any]:
+    """Create sync engine and session factory lazily for DB-dependent tests."""
+    try:
+        sync_engine = create_engine(DATABASE_PREFIX + DATABASE_URI)
+        local_session = sessionmaker(autocommit=False, autoflush=False, bind=sync_engine)
+        return sync_engine, local_session
+    except (ImportError, OSError) as exc:
+        pytest.skip(f"Database client libraries unavailable for test session: {exc}")
 
 
 fake = Faker()
@@ -25,6 +32,7 @@ fake = Faker()
 
 @pytest.fixture(scope="session")
 def client() -> Generator[TestClient, Any, None]:
+    sync_engine, _ = _create_local_session()
     with TestClient(app) as _client:
         yield _client
     app.dependency_overrides = {}
@@ -33,9 +41,11 @@ def client() -> Generator[TestClient, Any, None]:
 
 @pytest.fixture
 def db() -> Generator[Session, Any, None]:
+    sync_engine, local_session = _create_local_session()
     session = local_session()
     yield session
     session.close()
+    sync_engine.dispose()
 
 
 def override_dependency(dependency: Callable[..., Any], mocked_response: Any) -> None:
