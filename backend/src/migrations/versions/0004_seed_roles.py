@@ -1,4 +1,4 @@
-"""Seed essential roles (superuser, workspace_admin).
+"""Seed essential roles (admin, application owners).
 
 Revision ID: 0004_seed_roles
 Revises: 0003_seed_superuser
@@ -27,8 +27,11 @@ def upgrade() -> None:
         return
 
     roles = [
-        {"name": "superuser", "description": "Full access superuser"},
-        {"name": "workspace_admin", "description": "Workspace administrator"},
+        {"name": "admin", "description": "Administrator role mapped from OIDC admin group"},
+        {
+            "name": "application owners",
+            "description": "Application owners role mapped from OIDC groups",
+        },
     ]
 
     for role in roles:
@@ -54,5 +57,5 @@ def downgrade() -> None:
     if not inspector.has_table("role"):
         return
 
-    names = ["superuser", "workspace_admin"]
+    names = ["admin", "application owners"]
     bind.execute(sa.text("DELETE FROM role WHERE name = ANY(:names)"), {"names": names})

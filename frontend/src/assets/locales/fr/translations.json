@@ -49,10 +49,11 @@
 		"title": "Ouverture de votre session"
 	},
 	"accessDenied": {
-		"action": "Retourner à l'ouverture de session",
-		"body": "Si vous pensez devoir avoir accès, communiquez avec l'administrateur de l'espace de travail qui vous a invité.",
+		"action": "Fermer la session",
+		"body": "L'accès est réservé aux utilisateurs appartenant aux groupes d'autorisation requis. Si vous pensez que c'est une erreur, communiquez avec l'administrateur CanadaLogin.",
+		"countdown": "Fermeture de session dans {{seconds}} secondes.",
 		"noticeTitle": "Vous n'avez pas accès à ce site",
-		"summary": "Votre compte est connecté, mais il n'a pas la permission d'utiliser le portail partenaire.",
+		"summary": "Votre compte est connecté, mais il n'appartient pas à un groupe autorisé pour le portail partenaire.",
 		"title": "Accès refusé"
 	},
 	"invitations": {

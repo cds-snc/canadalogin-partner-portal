@@ -25,6 +25,7 @@ class OidcService:
         try:
             oidc_user = await sync_oidc_user(db, claims)
         except ForbiddenException:
+            request.session.clear()
             return RedirectResponse(url=settings.OIDC_ACCESS_DENIED_REDIRECT)
         regenerate_session_id(request)
         try:

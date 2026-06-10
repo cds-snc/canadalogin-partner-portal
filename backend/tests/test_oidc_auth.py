@@ -3,6 +3,7 @@ from unittest.mock import AsyncMock, Mock, patch
 import pytest
 from starlette.requests import Request
 
+from src.app.core.config import settings
 from src.app.api.v1.oidc import oidc_callback, oidc_login
 from src.app.core.exceptions.http_exceptions import ForbiddenException
 from src.app.core.oidc import sync_oidc_user
@@ -28,29 +29,42 @@ class TestSyncOidcUser:
             "email": "oidc.user@example.com",
             "name": "OIDC User",
             "preferred_username": "oidcuser",
+            settings.OIDC_GROUP_CLAIM_KEY: [settings.OIDC_ADMIN_GROUP_NAME],
         }
 
-        created_user = {
+        refreshed_created_user = {
             "id": 7,
-            "username": "oidcuser",
+            "uuid": "019cfc22-bff2-7168-ae43-387a301d8fcb",
+            "username": "oidc.user@example.com",
             "email": "oidc.user@example.com",
             "auth_provider": "oidc",
             "auth_subject": "subject-123",
+            "role_ids": [1],
         }
 
         with patch("src.app.core.oidc.crud_users") as mock_crud:
-            with patch(
-                "src.app.core.oidc.has_active_oidc_invitation_for_email",
-                new=AsyncMock(return_value=True),
-            ):
-                mock_crud.get = AsyncMock(side_effect=[None, None])
-                mock_crud.exists = AsyncMock(return_value=False)
-                mock_crud.create = AsyncMock(return_value=created_user)
+            with patch("src.app.core.oidc.crud_roles") as mock_roles:
+                with patch(
+                    "src.app.core.oidc.has_active_oidc_invitation_for_email",
+                    new=AsyncMock(return_value=True),
+                ):
+                    mock_roles.get = AsyncMock(
+                        return_value={"id": 1, "name": settings.CLPP_ADMIN_ROLE_NAME}
+                    )
+                    mock_crud.get = AsyncMock(
+                        side_effect=[
+                            None,
+                            None,
+                            refreshed_created_user,
+                        ]
+                    )
+                    mock_crud.create = AsyncMock(return_value=refreshed_created_user)
+                    mock_crud.update = AsyncMock(return_value=None)
 
-                result = await sync_oidc_user(mock_db, claims)
+                    result = await sync_oidc_user(mock_db, claims)
 
-                assert result == created_user
-                mock_crud.create.assert_awaited_once()
+                    assert result == refreshed_created_user
+                    mock_crud.create.assert_awaited_once()
 
     @pytest.mark.asyncio
     async def test_sync_oidc_user_rejects_unknown_uninvited_email(self, mock_db):
@@ -59,19 +73,43 @@ class TestSyncOidcUser:
             "email": "oidc.user@example.com",
             "name": "OIDC User",
             "preferred_username": "oidcuser",
+            settings.OIDC_GROUP_CLAIM_KEY: [
+                settings.OIDC_APPLICATION_OWNERS_GROUP_NAME
+            ],
         }
 
         with patch("src.app.core.oidc.crud_users") as mock_crud:
-            with patch(
-                "src.app.core.oidc.has_active_oidc_invitation_for_email",
-                new=AsyncMock(return_value=False),
-            ):
-                mock_crud.get = AsyncMock(side_effect=[None, None])
+            with patch("src.app.core.oidc.crud_roles") as mock_roles:
+                with patch(
+                    "src.app.core.oidc.has_active_oidc_invitation_for_email",
+                    new=AsyncMock(return_value=False),
+                ):
+                    mock_roles.get = AsyncMock(return_value={"id": 2, "name": "application owners"})
+                    mock_crud.get = AsyncMock(side_effect=[None, None])
 
+                    with pytest.raises(ForbiddenException, match="not allowed"):
+                        await sync_oidc_user(mock_db, claims)
+
+        mock_crud.create.assert_not_called()
+
+    @pytest.mark.asyncio
+    async def test_sync_oidc_user_rejects_user_outside_allowed_groups(self, mock_db):
+        claims = {
+            "sub": "subject-123",
+            "email": "oidc.user@example.com",
+            "name": "OIDC User",
+            settings.OIDC_GROUP_CLAIM_KEY: ["developers"],
+        }
+
+        with patch("src.app.core.oidc.crud_users") as mock_crud:
+            with patch("src.app.core.oidc.crud_roles") as mock_roles:
                 with pytest.raises(ForbiddenException, match="not allowed"):
                     await sync_oidc_user(mock_db, claims)
 
-        mock_crud.create.assert_not_called()
+                mock_roles.get.assert_not_called()
+                mock_crud.get.assert_not_called()
+                mock_crud.update.assert_not_called()
+                mock_crud.create.assert_not_called()
 
     @pytest.mark.asyncio
     async def test_sync_oidc_user_uses_internal_schema_for_session_user_id(self, mock_db):
@@ -79,6 +117,7 @@ class TestSyncOidcUser:
             "sub": "subject-123",
             "email": "oidc.user@example.com",
             "name": "OIDC User",
+            settings.OIDC_GROUP_CLAIM_KEY: [settings.OIDC_ADMIN_GROUP_NAME],
         }
         existing_user = {
             "id": 7,
@@ -87,15 +126,27 @@ class TestSyncOidcUser:
             "email": "oidc.user@example.com",
             "auth_provider": "CanadaLogin",
             "auth_subject": "subject-123",
+            "role_ids": [7],
         }
 
         with patch("src.app.core.oidc.crud_users") as mock_crud:
-            mock_crud.get = AsyncMock(side_effect=[existing_user, existing_user])
-            mock_crud.update = AsyncMock(return_value=None)
+            with patch("src.app.core.oidc.crud_roles") as mock_roles:
+                mock_roles.get = AsyncMock(
+                    return_value={"id": 1, "name": settings.CLPP_ADMIN_ROLE_NAME}
+                )
+                mock_crud.get = AsyncMock(side_effect=[existing_user, existing_user])
+                mock_crud.update = AsyncMock(return_value=None)
 
-            result = await sync_oidc_user(mock_db, claims)
+                result = await sync_oidc_user(mock_db, claims)
 
         assert result == existing_user
+        mock_crud.update.assert_awaited_once()
+        update_kwargs = mock_crud.update.await_args.kwargs
+        assert update_kwargs["db"] == mock_db
+        assert update_kwargs["uuid"] == existing_user["uuid"]
+        assert update_kwargs["object"]["email"] == "oidc.user@example.com"
+        assert update_kwargs["object"]["username"] == "oidc.user@example.com"
+        assert update_kwargs["object"]["role_ids"] == [1]
 
 
 class TestOidcCallback:

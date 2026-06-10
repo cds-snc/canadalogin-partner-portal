@@ -95,7 +95,7 @@ describe("requestJson", () => {
 		);
 	});
 
-	it("throws a ForbiddenRequestError for 403 responses without redirecting", async () => {
+	it("redirects to access-denied and throws ForbiddenRequestError for 403 responses", async () => {
 		globalThis.fetch = vi.fn().mockResolvedValue({
 			headers: new Headers({ "content-type": "application/json" }),
 			json: () =>
@@ -115,7 +115,7 @@ describe("requestJson", () => {
 				method: "GET",
 			}),
 		).rejects.toBeInstanceOf(ForbiddenRequestError);
-		expect(window.location.replace).not.toHaveBeenCalled();
+		expect(window.location.replace).toHaveBeenCalledWith("/access-denied");
 	});
 
 	it("throws a ServerRequestError for 5xx responses", async () => {
