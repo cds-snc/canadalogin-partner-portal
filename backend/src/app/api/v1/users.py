@@ -37,13 +37,11 @@ async def search_users(
     db: Annotated[AsyncSession, Depends(async_get_db)],
     service: Annotated[UserService, Depends(get_user_service)],
     current_user: Annotated[dict, Depends(get_current_user)],
-    workspace_uuid: uuid_pkg.UUID | None = None,
 ) -> list[dict[str, Any]]:
     """Search users by name, email, or username."""
     return await service.search_users(
         db=db,
         query=q,
-        workspace_uuid=workspace_uuid,
     )
 
 

@@ -54,12 +54,21 @@ class OidcLogoutService:
         jwks = await client.fetch_jwk_set()
         expected_issuer = metadata.get("issuer")
         expected_audience = settings.OIDC_CLIENT_ID
-        claims_requests: dict[str, dict[str, Any]] = {}
-        if expected_issuer:
-            claims_requests["iss"] = {"essential": True, "value": expected_issuer}
-        if expected_audience:
-            claims_requests["aud"] = {"essential": True, "value": expected_audience}
-        claims_registry = JWTClaimsRegistry(**claims_requests)
+        if expected_issuer and expected_audience:
+            claims_registry = JWTClaimsRegistry(
+                iss={"essential": True, "value": expected_issuer},
+                aud={"essential": True, "value": expected_audience},
+            )
+        elif expected_issuer:
+            claims_registry = JWTClaimsRegistry(
+                iss={"essential": True, "value": expected_issuer},
+            )
+        elif expected_audience:
+            claims_registry = JWTClaimsRegistry(
+                aud={"essential": True, "value": expected_audience},
+            )
+        else:
+            claims_registry = JWTClaimsRegistry()
 
         try:
             token = jwt.decode(logout_token, jwks)

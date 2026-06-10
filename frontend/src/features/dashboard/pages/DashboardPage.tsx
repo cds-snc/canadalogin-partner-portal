@@ -69,11 +69,19 @@ export const DashboardPage = (): FunctionComponent => {
 		: (currentUser?.departmentAbbreviation ?? t("dashboard.noDepartment"));
 	const renderApplicationLink = (
 		application: CurrentUserRPApplicationRead
-	): ReactElement => (
+	): ReactElement => {
+		const applicationLabel =
+			application.dnrAppName?.trim() ||
+			application.name?.trim() ||
+			application.ibm_sv_application_id ||
+			t("dashboard.rpApplicationsListTitle");
+
+		return (
 		<Link href={`/rp-applications/mine/${application.uuid}`}>
-			{application.name}
+			{applicationLabel}
 		</Link>
-	);
+		);
+	};
 
 	return (
 		<CenteredPageLayout className="max-w-6xl gap-600">

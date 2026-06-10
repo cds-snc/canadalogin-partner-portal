@@ -1,8 +1,8 @@
 """Seed department catalog.
 
 Revision ID: 0002_seed_department_catalog
-Revises: 0001_core_schema
-Create Date: 2026-06-10
+Revises: 0001_initial
+Create Date: 2026-04-20
 
 """
 from __future__ import annotations
@@ -17,7 +17,7 @@ from sqlalchemy.dialects import postgresql
 from uuid6 import uuid7
 
 revision = "0002_seed_department_catalog"
-down_revision = "0001_core_schema"
+down_revision = "0001_initial"
 branch_labels = None
 depends_on = None
 
@@ -53,7 +53,7 @@ def load_seed_rows() -> list[dict[str, object]]:
                 "name_fr": normalize_text(row.get("nom_harmonisé")) or normalize_text(row.get("appellation_légale")),
             }
             for row in reader
-            if (abbreviation := normalize_text(row.get("gc_orgID"))) is not None
+            if (abbreviation := normalize_text(row.get("abbreviation"))) is not None
         ]
 
 
@@ -81,18 +81,16 @@ def upgrade() -> None:
     )
 
     for row in load_seed_rows():
-        gc_org_id = row["gc_org_id"]
-        if gc_org_id is None:
-            continue
+        lookup_conditions = [department.c.name == row["name"]]
+        if row["gc_org_id"] is not None:
+            lookup_conditions.insert(0, department.c.gc_org_id == row["gc_org_id"])
 
-        existing_id = bind.execute(
-            sa.select(department.c.id).where(department.c.gc_org_id == gc_org_id)
-        ).scalar_one_or_none()
+        existing_id = bind.execute(sa.select(department.c.id).where(sa.or_(*lookup_conditions))).scalar_one_or_none()
 
         values = {
             "abbreviation": row["abbreviation"],
             "abbreviation_fr": row["abbreviation_fr"],
-            "gc_org_id": gc_org_id,
+            "gc_org_id": row["gc_org_id"],
             "lead_department_name": row["lead_department_name"],
             "lead_department_name_fr": row["lead_department_name_fr"],
             "name": row["name"],

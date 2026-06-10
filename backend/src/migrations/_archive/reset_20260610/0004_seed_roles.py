@@ -1,8 +1,8 @@
-"""Seed essential roles.
+"""Seed essential roles (admin, application owners).
 
 Revision ID: 0004_seed_roles
-Revises: 0003_rp_app_schema
-Create Date: 2026-06-10
+Revises: 0003_seed_superuser
+Create Date: 2026-04-20
 
 """
 from __future__ import annotations
@@ -14,7 +14,7 @@ from alembic import op
 from uuid6 import uuid7
 
 revision = "0004_seed_roles"
-down_revision = "0003_rp_app_schema"
+down_revision = "0003_seed_superuser"
 branch_labels = None
 depends_on = None
 

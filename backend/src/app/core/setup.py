@@ -1,6 +1,7 @@
 from asyncio import Event
 from collections.abc import AsyncGenerator, Callable
 from contextlib import _AsyncGeneratorContextManager, asynccontextmanager
+from threading import Thread
 from typing import Any, cast
 
 import fastapi
@@ -25,6 +26,8 @@ from ..repositories.dependencies import close_ibm_sv_admin_client as close_ibm_s
 from ..repositories.dependencies import set_ibm_sv_admin_client
 from ..repositories.ibm_sv_admin import IBMVerifyAdminClient, create_admin_oauth_client
 from .exceptions import register_exception_handlers
+from .worker.functions import sync_ibm_verify_rp_applications
+from .worker.settings import start_arq_service
 
 logger = logging.getLogger(__name__)
 
@@ -51,6 +54,7 @@ from .utils import cache, queue
 
 redis_session_client: redis.Redis | None = None
 redis_session_store: RedisStore | None = None
+arq_service_thread: Thread | None = None
 
 
 # -------------- database --------------
@@ -136,6 +140,20 @@ async def close_redis_session_pool() -> None:
         logger.info("Redis session store closed")
 
 
+# -------------- arq service --------------
+def start_arq_service_on_startup() -> None:
+    global arq_service_thread
+
+    if arq_service_thread is not None and arq_service_thread.is_alive():
+        logger.info("ARQ service already running")
+        return
+
+    logger.info("Starting ARQ service on application startup...")
+    arq_service_thread = Thread(target=start_arq_service, name="arq-worker", daemon=True)
+    arq_service_thread.start()
+    logger.info("ARQ service start requested")
+
+
 # -------------- IBM Security Verify --------------
 async def create_ibm_sv_admin_client() -> None:
     logger.info("Creating IBM Security Verify admin client...")
@@ -160,6 +178,17 @@ async def close_ibm_sv_admin_client() -> None:
     logger.info("IBM Security Verify admin client closed")
 
 
+async def sync_rp_applications_on_startup() -> None:
+    logger.info("Syncing RP applications on startup...")
+    try:
+        result = await sync_ibm_verify_rp_applications({})
+    except Exception as exc:  # pragma: no cover - defensive startup guard
+        logger.warning("RP application startup sync failed: %s", exc)
+        return
+
+    logger.info("RP application startup sync completed: %s", result)
+
+
 # -------------- application --------------
 async def set_threadpool_tokens(number_of_tokens: int = 100) -> None:
     limiter = current_default_thread_limiter()
@@ -182,6 +211,7 @@ def lifespan_factory(
         | IBMVerifySettings
     ),
     create_tables_on_start: bool = True,
+    start_arq_service_on_start: bool = True,
 ) -> Callable[[FastAPI], _AsyncGeneratorContextManager[Any]]:
     """Factory to create a lifespan async context manager for a FastAPI app."""
 
@@ -211,6 +241,12 @@ def lifespan_factory(
 
             if create_tables_on_start:
                 await create_tables()
+
+            if start_arq_service_on_start:
+                start_arq_service_on_startup()
+
+            if isinstance(settings, IBMVerifySettings):
+                await sync_rp_applications_on_startup()
 
             initialization_complete.set()
             logger.info("Application started successfully")
@@ -258,6 +294,7 @@ def create_application(
         | IBMVerifySettings
     ),
     create_tables_on_start: bool = True,
+    start_arq_service_on_start: bool = True,
     lifespan: Callable[[FastAPI], _AsyncGeneratorContextManager[Any]] | None = None,
     **kwargs: Any,
 ) -> FastAPI:
@@ -317,7 +354,11 @@ def create_application(
 
     # Use custom lifespan if provided, otherwise use default factory
     if lifespan is None:
-        lifespan = lifespan_factory(settings, create_tables_on_start=create_tables_on_start)
+        lifespan = lifespan_factory(
+            settings,
+            create_tables_on_start=create_tables_on_start,
+            start_arq_service_on_start=start_arq_service_on_start,
+        )
 
     application = FastAPI(lifespan=lifespan, **kwargs)
     application.include_router(router)

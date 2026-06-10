@@ -23,7 +23,7 @@ def make_request(session: dict | None = None) -> Request:
 
 class TestSyncOidcUser:
     @pytest.mark.asyncio
-    async def test_sync_oidc_user_creates_external_user_for_invited_email(self, mock_db):
+    async def test_sync_oidc_user_creates_missing_user_for_allowed_group(self, mock_db):
         claims = {
             "sub": "subject-123",
             "email": "oidc.user@example.com",
@@ -32,42 +32,46 @@ class TestSyncOidcUser:
             settings.OIDC_GROUP_CLAIM_KEY: [settings.OIDC_ADMIN_GROUP_NAME],
         }
 
-        refreshed_created_user = {
+        created_user = {
             "id": 7,
             "uuid": "019cfc22-bff2-7168-ae43-387a301d8fcb",
             "username": "oidc.user@example.com",
             "email": "oidc.user@example.com",
-            "auth_provider": "oidc",
+            "name": "OIDC User",
+            "auth_provider": "CanadaLogin",
             "auth_subject": "subject-123",
             "role_ids": [1],
         }
 
         with patch("src.app.core.oidc.crud_users") as mock_crud:
             with patch("src.app.core.oidc.crud_roles") as mock_roles:
-                with patch(
-                    "src.app.core.oidc.has_active_oidc_invitation_for_email",
-                    new=AsyncMock(return_value=True),
-                ):
-                    mock_roles.get = AsyncMock(
-                        return_value={"id": 1, "name": settings.CLPP_ADMIN_ROLE_NAME}
-                    )
-                    mock_crud.get = AsyncMock(
-                        side_effect=[
-                            None,
-                            None,
-                            refreshed_created_user,
-                        ]
-                    )
-                    mock_crud.create = AsyncMock(return_value=refreshed_created_user)
-                    mock_crud.update = AsyncMock(return_value=None)
+                mock_roles.get = AsyncMock(
+                    return_value={"id": 1, "name": settings.CLPP_ADMIN_ROLE_NAME}
+                )
+                mock_crud.get = AsyncMock(side_effect=[None, None, created_user])
+                mock_crud.create = AsyncMock(return_value=created_user)
+                mock_crud.update = AsyncMock(return_value=None)
 
-                    result = await sync_oidc_user(mock_db, claims)
+                result = await sync_oidc_user(mock_db, claims)
 
-                    assert result == refreshed_created_user
-                    mock_crud.create.assert_awaited_once()
+        assert result == created_user
+        mock_crud.create.assert_awaited_once()
+        create_kwargs = mock_crud.create.await_args.kwargs
+        assert create_kwargs["db"] == mock_db
+        created_object = create_kwargs["object"]
+        assert created_object.name == "oidc.user@example.com"
+        assert created_object.email == "oidc.user@example.com"
+        assert created_object.username == "oidc.user@example.com"
+        assert created_object.auth_provider == "CanadaLogin"
+        assert created_object.auth_subject == "subject-123"
+        mock_crud.update.assert_awaited_once()
+        update_kwargs = mock_crud.update.await_args.kwargs
+        assert update_kwargs["db"] == mock_db
+        assert update_kwargs["uuid"] == created_user["uuid"]
+        assert update_kwargs["object"]["role_ids"] == [1]
 
     @pytest.mark.asyncio
-    async def test_sync_oidc_user_rejects_unknown_uninvited_email(self, mock_db):
+    async def test_sync_oidc_user_creates_missing_user_for_application_owners(self, mock_db):
         claims = {
             "sub": "subject-123",
             "email": "oidc.user@example.com",
@@ -78,19 +82,29 @@ class TestSyncOidcUser:
             ],
         }
 
+        created_user = {
+            "id": 8,
+            "uuid": "019cfc22-bff2-7168-ae43-387a301d8fcc",
+            "username": "oidc.user@example.com",
+            "email": "oidc.user@example.com",
+            "name": "OIDC User",
+            "auth_provider": "CanadaLogin",
+            "auth_subject": "subject-123",
+            "role_ids": [2],
+        }
+
         with patch("src.app.core.oidc.crud_users") as mock_crud:
             with patch("src.app.core.oidc.crud_roles") as mock_roles:
-                with patch(
-                    "src.app.core.oidc.has_active_oidc_invitation_for_email",
-                    new=AsyncMock(return_value=False),
-                ):
-                    mock_roles.get = AsyncMock(return_value={"id": 2, "name": "application owners"})
-                    mock_crud.get = AsyncMock(side_effect=[None, None])
+                mock_roles.get = AsyncMock(return_value={"id": 2, "name": "application owners"})
+                mock_crud.get = AsyncMock(side_effect=[None, None, created_user])
+                mock_crud.create = AsyncMock(return_value=created_user)
+                mock_crud.update = AsyncMock(return_value=None)
 
-                    with pytest.raises(ForbiddenException, match="not allowed"):
-                        await sync_oidc_user(mock_db, claims)
+                result = await sync_oidc_user(mock_db, claims)
 
-        mock_crud.create.assert_not_called()
+        assert result == created_user
+        mock_crud.create.assert_awaited_once()
+        mock_crud.update.assert_awaited_once()
 
     @pytest.mark.asyncio
     async def test_sync_oidc_user_rejects_user_outside_allowed_groups(self, mock_db):
@@ -141,6 +155,7 @@ class TestSyncOidcUser:
 
         assert result == existing_user
         mock_crud.update.assert_awaited_once()
+        assert mock_crud.update.await_args is not None
         update_kwargs = mock_crud.update.await_args.kwargs
         assert update_kwargs["db"] == mock_db
         assert update_kwargs["uuid"] == existing_user["uuid"]
