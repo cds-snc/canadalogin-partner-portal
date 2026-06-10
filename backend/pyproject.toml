@@ -39,6 +39,7 @@ dependencies = [
     "structlog>=25.1.0,<=25.5.0",
     "rich>=14.3.0",
     "starsessions[redis]>=2.2.1",
+    "ibm-verify-community-sdk>=0.2.0",
 ]
 
 [project.optional-dependencies]
