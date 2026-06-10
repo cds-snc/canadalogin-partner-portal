@@ -40,6 +40,29 @@ Follow the existing module layout under `frontend/src`:
 
 Mirror the existing feature layout. Do not place feature-specific page logic into broad shared folders when a feature directory already exists for that concern.
 
+
+## Frontend project structure snapshot:
+
+- App root: `frontend/src/`
+- Key modules: `routes/`, `features/`, `components/`, `fetch/`, `store/`, `hooks/`, `types/`, `utils/`
+- Shared UI structure: `components/layout/` and `components/ui/`
+
+## Frontend technologies:
+
+- React 19 + TypeScript
+- TanStack Router + TanStack Query
+- Zustand
+- React Hook Form + Zod
+- Vitest + Playwright
+- GCDS-based UI wrappers
+
+## Frontend environment and docs:
+
+- Env file: `frontend/.env`
+- Set `VITE_API_BASE_URL` for backend API origin.
+- Frontend docs: `frontend/README.md`
+- Never commit `.env` files or secrets.
+
 ## Required Working Pattern
 
 ### 1. Start from an existing feature
@@ -172,6 +195,88 @@ Frontend auth regressions in local development are often origin-mismatch problem
 
 ## Coding Standard To Preserve
 
+### General Principles
+
+1. **Type Safety** - Use TypeScript for frontend, Python type hints for backend
+2. **No Magic** - Explicit is better than implicit
+3. **Single Responsibility** - Small, focused functions and components
+4. **Test Everything** - All new features require tests
+
+### Frontend (React + TypeScript)
+
+**Naming Conventions:**
+- Components: `PascalCase` (e.g., `UserProfile.tsx`)
+- Hooks: `camelCase` starting with `use` (e.g., `useAuth.ts`)
+- Utilities: `camelCase` (e.g., `formatDate.ts`)
+- Constants: `UPPER_SNAKE_CASE`
+- Files: `kebab-case.tsx`
+
+**Imports Order:**
+1. External libraries (React, TanStack, etc.)
+2. Internal components/hooks
+3. Types/interfaces
+4. Utilities
+5. Assets/styles
+
+```typescript
+// Good
+import { useState } from 'react'
+import { useQuery } from '@tanstack/react-query'
+import { Button } from '@/components/ui/Button'
+import { UserCard } from './UserCard'
+import type { User } from '@/types/user'
+import { formatDate } from '@/utils/date'
+```
+
+**Component Structure:**
+```typescript
+interface Props {
+	title: string
+	onSubmit: () => void
+}
+
+export function UserForm({ title, onSubmit }: Props) {
+	const [name, setName] = useState('')
+  
+	return (
+		<form>
+			<h1>{title}</h1>
+			{/* ... */}
+		</form>
+	)
+}
+```
+
+**Rules:**
+- Always use explicit return types for components
+- Use Zod for form validation schemas
+- Use React Hook Form for forms
+- Prefer TanStack Query for data fetching
+- Use TanStack Router for routing
+- When adding a nested TanStack child route under an existing page route, convert the parent route into a layout that renders `Outlet` and move the existing page into an `index.ts` child route. If the URL updates but the page content does not change, check the parent route render path before debugging the child route.
+- The invited-developer flow uses `/invitations/rp-applications?token=...`, `/rp-applications/mine/$rpApplicationUuid`, and `/access-denied`; preserve those paths unless the backend contract changes too
+- Invited-developer RP application pages must use current-user endpoints instead of workspace-scoped fetches because invitees are not workspace members
+
+**ESLint Rules (from eslint.config.js):**
+- `camelcase` for variables
+- `typescript-eslint/return-await`: error
+- `react-hooks/exhaustive-deps`: error
+- Props sorted: callbacksLast, shorthandFirst, reservedFirst
+
+**Prettier Settings (from prettier.config.js):**
+- Print width: 80
+- Tab width: 2
+- Use tabs: true
+- Semi: true
+- Single quote: false (double quotes)
+- Trailing comma: es5
+
+- Repo style quick rules:
+	- Naming: components `PascalCase`, hooks/utilities `camelCase`, constants `UPPER_SNAKE_CASE`, files `kebab-case`
+	- Import order: external libs, internal modules, types, utilities, assets/styles
+	- Forms: prefer Zod schemas with React Hook Form
+	- Formatting/lint baseline: Prettier width 80, tab width 2, tabs enabled, semicolons, double quotes, trailing comma `es5`; ESLint `camelcase`, `typescript-eslint/return-await`, `react-hooks/exhaustive-deps`, and props sorting (`callbacksLast`, `shorthandFirst`, `reservedFirst`)
+
 - Use TypeScript for frontend code under `src/`
 - Prefer alias imports through `@/` when the repo already uses them
 - Keep route files small and feature pages focused
@@ -250,6 +355,40 @@ pnpm run build
 ```
 
 When route, auth, or redirect behavior changes, also run the most relevant targeted unit tests and Playwright checks if the change affects a real browser flow.
+
+## Repo Command Reference
+
+Use these when needed (in addition to the focused verification commands above):
+
+```bash
+cd frontend
+pnpm install
+pnpm run dev
+pnpm run lint
+pnpm run lint:fix
+pnpm run format
+pnpm run test
+pnpm run test:unit
+pnpm run test:unit src/features/auth/hooks/use-session.test.ts
+pnpm run test:unit:coverage
+pnpm run test:e2e
+pnpm run test:e2e:report
+pnpm run build
+pnpm run preview
+pnpm run storybook
+pnpm run storybook:build
+```
+
+## Environment And Stack Notes
+
+- Frontend env file is `frontend/.env`; set `VITE_API_BASE_URL` for backend API origin.
+- Never commit secrets or `.env` files.
+- Frontend stack centers on React + TanStack Router/Query + Zustand + React Hook Form/Zod + Vitest/Playwright + GCDS wrappers.
+
+## Testing Expectations
+
+- Unit tests should stay focused on one behavior with clear setup and assertions.
+- E2E tests should cover critical user flows and include appropriate data cleanup.
 
 ## Common Mistakes
 

@@ -11,6 +11,7 @@ import {
 } from "./errors";
 
 const unauthorizedPaths = new Set(["/auth-complete", "/login"]);
+const forbiddenPaths = new Set(["/access-denied"]);
 
 type RequestJsonOptions = {
 	redirectOnUnauthorized?: boolean;
@@ -112,6 +113,16 @@ const redirectToLogin = (): void => {
 	);
 };
 
+const redirectToAccessDenied = (): void => {
+	const location = globalThis.location;
+
+	if (!location || forbiddenPaths.has(location.pathname)) {
+		return;
+	}
+
+	location.replace("/access-denied");
+};
+
 const toRequestError = (
 	status: number,
 	responseData: unknown
@@ -178,6 +189,10 @@ export const requestJson = async <ResponseType>(
 			options.redirectOnUnauthorized !== false
 		) {
 			redirectToLogin();
+		}
+
+		if (requestError instanceof ForbiddenRequestError) {
+			redirectToAccessDenied();
 		}
 
 		throw requestError;

@@ -49,10 +49,11 @@
 		"title": "Signing you in"
 	},
 	"accessDenied": {
-		"action": "Return to sign in",
-		"body": "If you believe you should have access, contact the workspace administrator who invited you.",
+		"action": "Sign out",
+		"body": "Access is limited to users in the required authorization groups. If you believe this is incorrect, contact CanadaLogin administrator.",
+		"countdown": "Signing out in {{seconds}} seconds.",
 		"noticeTitle": "You do not have access to this site",
-		"summary": "Your account is signed in, but it does not have permission to use the Partner Portal.",
+		"summary": "Your account is signed in, but it is not in an allowed group for the Partner Portal.",
 		"title": "Access denied"
 	},
 	"invitations": {
