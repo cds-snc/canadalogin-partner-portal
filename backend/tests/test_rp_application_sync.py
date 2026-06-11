@@ -1,6 +1,10 @@
 from unittest.mock import AsyncMock, Mock
 
 import pytest
+from ibm_verify_community_sdk.applications.models import (
+    GetApplicationResponse,
+    ListApplicationsResponse,
+)
 
 import src.app.services.rp_application_service as rp_application_sync_module
 from src.app.core.worker.functions import sync_ibm_verify_rp_applications
@@ -15,25 +19,25 @@ class TestRPApplicationServiceSync:
         db = Mock()
         ibm_admin_client = Mock()
         ibm_admin_client.list_applications = AsyncMock(
-            return_value=[
+            return_value=ListApplicationsResponse.model_validate(
                 {
-                    "id": "ibm-app-1",
-                    "name": "Example App",
-                },
-                {
-                    "id": "ibm-app-2",
-                    "name": "Existing App",
-                },
-            ]
+                    "_embedded": {
+                        "applications": [
+                            {"applicationRefId": "ibm-app-1", "name": "Example App"},
+                            {"applicationRefId": "ibm-app-2", "name": "Existing App"},
+                        ]
+                    }
+                }
+            )
         )
         ibm_admin_client.get_application_detail = AsyncMock(
             side_effect=[
-                {
-                    "owners": ["owner@example.gc.ca", {"email": "backup@example.gc.ca"}],
-                },
-                {
-                    "owners": ["updated@example.gc.ca"],
-                },
+                GetApplicationResponse.model_validate(
+                    {"owners": [{"email": "owner@example.gc.ca"}, {"email": "backup@example.gc.ca"}]}
+                ),
+                GetApplicationResponse.model_validate(
+                    {"owners": [{"email": "updated@example.gc.ca"}]}
+                ),
             ]
         )
 

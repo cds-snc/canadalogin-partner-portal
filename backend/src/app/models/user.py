@@ -30,6 +30,8 @@ class User(Base):
     is_superuser: Mapped[bool] = mapped_column(default=False)
     # Account enabled flag - false until user completes profile onboarding (department set)
     enabled: Mapped[bool] = mapped_column(default=False, index=True)
+    accepted_terms_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), default=None)
+    terms_version: Mapped[str | None] = mapped_column(String(20), default=None)
 
     department_id: Mapped[int | None] = mapped_column(ForeignKey("department.id"), index=True, default=None, init=False)
     tier_id: Mapped[int | None] = mapped_column(ForeignKey("tier.id"), index=True, default=None, init=False)

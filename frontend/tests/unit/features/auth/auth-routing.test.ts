@@ -12,6 +12,7 @@ vi.mock("@/features/auth/session-queries", () => ({
 }));
 
 const sampleUser = {
+	acceptedTermsAt: "2026-06-11T12:00:00Z",
 	"authProvider": "gc-sso",
 	"authSubject": "subject-123",
 	email: "jane@example.com",
@@ -100,6 +101,39 @@ describe("auth-routing", () => {
 				replace: true,
 				to: "/users",
 			},
+		});
+	});
+
+	it("redirects to terms-and-conditions when terms have not been accepted", async () => {
+		vi.mocked(revalidateCurrentUser).mockResolvedValue({
+			...sampleUser,
+			acceptedTermsAt: null,
+		});
+
+		await expect(requireAuthenticatedUser("/dashboard")).rejects.toMatchObject({
+			options: {
+				replace: true,
+				search: { redirect: "/dashboard" },
+				to: "/terms-and-conditions",
+			},
+		});
+	});
+
+	it("passes terms check when acceptedTermsAt is set", async () => {
+		vi.mocked(revalidateCurrentUser).mockResolvedValue(sampleUser);
+
+		await expect(requireAuthenticatedUser("/dashboard")).resolves.toEqual(sampleUser);
+	});
+
+	it("passes terms check when already on the terms page", async () => {
+		vi.mocked(revalidateCurrentUser).mockResolvedValue({
+			...sampleUser,
+			acceptedTermsAt: null,
+		});
+
+		await expect(requireAuthenticatedUser("/terms-and-conditions")).resolves.toEqual({
+			...sampleUser,
+			acceptedTermsAt: null,
 		});
 	});
 

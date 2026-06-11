@@ -23,8 +23,8 @@ vi.mock("react-i18next", () => ({
 			};
 
 			if (key === "accessDenied.countdown") {
-				const seconds = String(options?.seconds ?? "");
-				return translations[key].replace("{{seconds}}", seconds);
+				const seconds = String(options?.["seconds"] ?? "");
+				return (translations[key] ?? key).replace("{{seconds}}", seconds);
 			}
 
 			return translations[key] ?? key;

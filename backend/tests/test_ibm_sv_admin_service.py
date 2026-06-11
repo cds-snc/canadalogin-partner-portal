@@ -1,6 +1,7 @@
 from unittest.mock import AsyncMock, Mock
 
 import pytest
+from ibm_verify_community_sdk.applications.models import ApplicationOwner, GetApplicationResponse
 
 from src.app.core.exceptions.http_exceptions import BadRequestException
 from src.app.services.ibm_sv_admin_service import IBMVerifyAdminService
@@ -89,34 +90,36 @@ class TestIBMVerifyAdminServiceAuditReportNormalization:
     async def test_build_application_update_payload_merges_structured_json_fields(self) -> None:
         mock_client = Mock()
         mock_client.get_application_detail = AsyncMock(
-            return_value={
-                "name": "[TBS] - Application One",
-                "templateId": "998",
-                "description": "Old description",
-                "visibleOnLaunchpad": True,
-                "applicationState": True,
-                "owners": ["owner-1"],
-                "provisioning": {},
-                "customization": {"themeId": "default"},
-                "apiAccessClients": [],
-                "attributeMappings": [],
-                "providers": {
-                    "oidc": {
-                        "properties": {
-                            "redirectUris": ["https://old.example/callback"],
-                            "doNotGenerateClientSecret": "false",
-                            "additionalConfig": {
-                                "clientAuthMethod": "client_secret_basic",
-                                "logoutOption": "none",
-                                "sessionRequired": False,
+            return_value=GetApplicationResponse.model_validate(
+                {
+                    "name": "[TBS] - Application One",
+                    "templateId": "998",
+                    "description": "Old description",
+                    "visibleOnLaunchpad": True,
+                    "applicationState": True,
+                    "owners": [{"email": "owner-1"}],
+                    "provisioning": {},
+                    "customization": {"themeId": "default"},
+                    "apiAccessClients": [],
+                    "attributeMappings": [],
+                    "providers": {
+                        "oidc": {
+                            "properties": {
+                                "redirectUris": ["https://old.example/callback"],
+                                "doNotGenerateClientSecret": "false",
+                                "additionalConfig": {
+                                    "clientAuthMethod": "client_secret_basic",
+                                    "logoutOption": "none",
+                                    "sessionRequired": False,
+                                },
                             },
+                            "applicationUrl": "https://old.example",
+                            "requirePkceVerification": "false",
                         },
-                        "applicationUrl": "https://old.example",
-                        "requirePkceVerification": "false",
+                        "saml": {"properties": {"companyName": "Old Company", "uniqueID": ""}},
                     },
-                    "saml": {"properties": {"companyName": "Old Company", "uniqueID": ""}},
-                },
-            }
+                }
+            )
         )
 
         service = IBMVerifyAdminService(mock_client)

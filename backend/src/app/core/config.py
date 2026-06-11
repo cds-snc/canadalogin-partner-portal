@@ -12,6 +12,7 @@ class AppSettings(BaseSettings):
     LICENSE_NAME: str | None = None
     CONTACT_NAME: str | None = None
     CONTACT_EMAIL: str | None = None
+    TERMS_VERSION: str = "v1"
 
 
 class CryptSettings(BaseSettings):

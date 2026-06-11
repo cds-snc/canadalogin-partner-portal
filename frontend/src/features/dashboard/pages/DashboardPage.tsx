@@ -77,9 +77,9 @@ export const DashboardPage = (): FunctionComponent => {
 			t("dashboard.rpApplicationsListTitle");
 
 		return (
-		<Link href={`/rp-applications/mine/${application.uuid}`}>
-			{applicationLabel}
-		</Link>
+			<Link href={`/rp-applications/mine/${application.uuid}`}>
+				{applicationLabel}
+			</Link>
 		);
 	};
 

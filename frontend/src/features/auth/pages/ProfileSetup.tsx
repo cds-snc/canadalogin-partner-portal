@@ -1,4 +1,4 @@
-import { useState, type ReactElement } from "react";
+import { useMemo, useState, type ReactElement } from "react";
 import { useTranslation } from "react-i18next";
 import { Button, Heading, Notice, Select, Text } from "@/components/ui";
 import { CenteredPageLayout } from "@/components/layout";
@@ -26,6 +26,11 @@ export const ProfileSetup = (): ReactElement => {
 	const userUuid = currentUser?.uuid ?? null;
 	const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
 	const [submitError, setSubmitError] = useState<string | null>(null);
+
+	const sortedDepartments = useMemo(
+		() => [...departments].sort((a, b) => a.name.localeCompare(b.name)),
+		[departments]
+	);
 
 	const [selected, setSelected] = useState<string>("");
 
@@ -125,7 +130,7 @@ export const ProfileSetup = (): ReactElement => {
 						}}
 					>
 						<option value="">{t("profile.chooseDepartment")}</option>
-						{departments.map((d) => (
+						{sortedDepartments.map((d) => (
 							<option key={d.uuid} value={d.uuid}>
 								{d.name}
 							</option>

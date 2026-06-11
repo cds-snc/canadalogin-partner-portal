@@ -161,6 +161,7 @@
 		"cardTitle": "Utilisateur actuel",
 		"chooseDepartment": "Choisir un ministère",
 		"department": "Ministère : {{value}}",
+		"departmentSavedSuccess": "Ministère enregistré avec succès",
 		"email": "Courriel : {{value}}",
 		"errorLoading": "Échec du chargement des ministères",
 		"loading": "Chargement des ministères",
@@ -677,5 +678,20 @@
 		"noMembers": "Aucun membre pour le moment",
 		"loadingMembers": "Chargement des membres...",
 		"roles": "Roles"
+	},
+	"termsAndConditions": {
+		"title": "Conditions d'utilisation",
+		"intro": "Veuillez lire et accepter les conditions d'utilisation pour continuer à utiliser cette application.",
+		"section1Title": "Acceptation des conditions",
+		"section1Body": "En utilisant ce service, vous acceptez de vous conformer aux présentes conditions d'utilisation. Si vous n'acceptez pas ces conditions, vous ne devez pas utiliser ce service.",
+		"section2Title": "Confidentialité et protection des données",
+		"section2Body": "Vos renseignements personnels sont collectés, utilisés et divulgués conformément aux lois applicables en matière de protection de la vie privée. En utilisant ce service, vous consentez à la collecte et à l'utilisation de vos renseignements tels que décrits dans notre avis de confidentialité.",
+		"section3Title": "Utilisation acceptable",
+		"section3Body": "Vous acceptez d'utiliser ce service uniquement à des fins licites et d'une manière qui ne porte pas atteinte aux droits d'autrui. Vous ne devez pas tenter d'obtenir un accès non autorisé à quelque partie que ce soit du système.",
+		"checkboxLabel": "J'ai lu et j'accepte les conditions d'utilisation",
+		"acceptButton": "Accepter et continuer",
+		"accepting": "Traitement en cours...",
+		"error": "Une erreur s'est produite lors de l'acceptation des conditions. Veuillez réessayer.",
+		"success": "Conditions acceptées avec succès"
 	}
 }

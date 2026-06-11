@@ -6,7 +6,7 @@ It includes data normalization, transformation logic, and application payload bu
 
 import json
 from ipaddress import ip_address
-from typing import Any
+from typing import Any, cast
 
 from ..core.exceptions.http_exceptions import BadRequestException, NotFoundException
 from ..repositories.ibm_sv_admin import IBMVerifyAdminClient
@@ -456,11 +456,12 @@ class IBMVerifyAdminService:
     async def get_application_detail(self, application_id: str) -> dict[str, Any]:
         """Get application details."""
         payload = await self._client.get_application_detail(application_id)
-        return payload.model_dump(by_alias=True, exclude_none=True)
+        return cast("dict[str, Any]", payload.model_dump(by_alias=True, exclude_none=True))
 
     async def create_application(self, payload: dict[str, Any]) -> dict[str, Any]:
         """Create a new application."""
-        return await self._client.create_application(payload)
+        result = await self._client.create_application(payload)
+        return cast("dict[str, Any]", result.model_dump(by_alias=True, exclude_none=True))
 
     async def update_application(self, application_id: str, payload: dict[str, Any]) -> bool:
         """Update an existing application."""
@@ -478,7 +479,7 @@ class IBMVerifyAdminService:
     ) -> dict[str, Any]:
         """Get total logins for an application."""
         payload = await self._client.get_application_total_logins(application_id, from_date, to_date)
-        return payload.model_dump(by_alias=True, exclude_none=True)
+        return cast("dict[str, Any]", payload.model_dump(by_alias=True, exclude_none=True))
 
     async def get_application_audit_trail(
         self,
@@ -521,12 +522,12 @@ class IBMVerifyAdminService:
     async def get_client_secret(self, client_id: str) -> dict[str, Any]:
         """Get client secrets for an OIDC client."""
         payload = await self._client.get_client_secret(client_id)
-        return payload.model_dump(by_alias=True, exclude_none=True)
+        return cast("dict[str, Any]", payload.model_dump(by_alias=True, exclude_none=True))
 
     async def update_client_secret(self, client_id: str, payload: dict[str, Any]) -> dict[str, Any]:
         """Update client secret for an OIDC client."""
         result = await self._client.update_client_secret(client_id, payload)
-        return result.model_dump(by_alias=True, exclude_none=True)
+        return cast("dict[str, Any]", result.model_dump(by_alias=True, exclude_none=True))
 
     async def delete_rotated_client_secrets(self, client_id: str, path: list[str]) -> bool:
         """Delete rotated client secrets."""
@@ -535,7 +536,7 @@ class IBMVerifyAdminService:
     async def get_application_entitlements(self, application_id: str) -> dict[str, Any]:
         """Get entitlements for an application."""
         payload = await self._client.get_application_entitlements(application_id)
-        return payload.model_dump(by_alias=True, exclude_none=True)
+        return cast("dict[str, Any]", payload.model_dump(by_alias=True, exclude_none=True))
 
     async def list_groups(self, count: int = 100, start_index: int = 1) -> list[dict[str, Any]]:
         """List all groups."""
@@ -552,7 +553,7 @@ class IBMVerifyAdminService:
     async def get_group_by_id(self, group_id: str) -> dict[str, Any]:
         """Get a group by ID."""
         payload = await self._client.get_group_by_id(group_id)
-        return payload.model_dump(by_alias=True, exclude_none=True)
+        return cast("dict[str, Any]", payload.model_dump(by_alias=True, exclude_none=True))
 
     async def add_user_to_group(self, group_id: str, user_id: str) -> None:
         """Add a user to a group."""

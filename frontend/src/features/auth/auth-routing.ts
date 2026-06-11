@@ -34,13 +34,24 @@ export const requireAuthenticatedUser = async (
 		}) as unknown as Error;
 	}
 
-	// Enforce department selection for all first-time users.
-	// Redirect to /profile/setup when department is not set (except when already on profile pages).
+	// Enforce terms acceptance before allowing access to any authenticated page.
 	const targetPath = sanitizeAppPath(redirectTo, getPostLoginPath());
-	const isProfilePath = targetPath.startsWith("/profile");
+	const isOnboardingPath =
+		targetPath.startsWith("/terms-and-conditions") ||
+		targetPath.startsWith("/profile");
 
+	if (!isOnboardingPath && currentUser.acceptedTermsAt == null) {
+		throw redirect({
+			replace: true,
+			to: "/terms-and-conditions",
+			search: { redirect: targetPath },
+		}) as unknown as Error;
+	}
+
+	// Enforce department selection for all first-time users.
+	// Redirect to /profile/setup when department is not set (except when already on onboarding pages).
 	if (
-		!isProfilePath &&
+		!isOnboardingPath &&
 		(currentUser.departmentAbbreviation == null ||
 			currentUser.departmentAbbreviation === "")
 	) {

@@ -11,6 +11,7 @@
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as UsersRouteImport } from './routes/users'
 import { Route as TiersRouteImport } from './routes/tiers'
+import { Route as TermsAndConditionsRouteImport } from './routes/terms-and-conditions'
 import { Route as RolesRouteImport } from './routes/roles'
 import { Route as ProfileRouteImport } from './routes/profile'
 import { Route as PoliciesRouteImport } from './routes/policies'
@@ -35,6 +36,11 @@ const UsersRoute = UsersRouteImport.update({
 const TiersRoute = TiersRouteImport.update({
   id: '/tiers',
   path: '/tiers',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const TermsAndConditionsRoute = TermsAndConditionsRouteImport.update({
+  id: '/terms-and-conditions',
+  path: '/terms-and-conditions',
   getParentRoute: () => rootRouteImport,
 } as any)
 const RolesRoute = RolesRouteImport.update({
@@ -129,6 +135,7 @@ export interface FileRoutesByFullPath {
   '/policies': typeof PoliciesRoute
   '/profile': typeof ProfileRouteWithChildren
   '/roles': typeof RolesRoute
+  '/terms-and-conditions': typeof TermsAndConditionsRoute
   '/tiers': typeof TiersRoute
   '/users': typeof UsersRoute
   '/profile/setup': typeof ProfileSetupRoute
@@ -148,6 +155,7 @@ export interface FileRoutesByTo {
   '/policies': typeof PoliciesRoute
   '/profile': typeof ProfileRouteWithChildren
   '/roles': typeof RolesRoute
+  '/terms-and-conditions': typeof TermsAndConditionsRoute
   '/tiers': typeof TiersRoute
   '/users': typeof UsersRoute
   '/profile/setup': typeof ProfileSetupRoute
@@ -168,6 +176,7 @@ export interface FileRoutesById {
   '/policies': typeof PoliciesRoute
   '/profile': typeof ProfileRouteWithChildren
   '/roles': typeof RolesRoute
+  '/terms-and-conditions': typeof TermsAndConditionsRoute
   '/tiers': typeof TiersRoute
   '/users': typeof UsersRoute
   '/profile/setup': typeof ProfileSetupRoute
@@ -189,6 +198,7 @@ export interface FileRouteTypes {
     | '/policies'
     | '/profile'
     | '/roles'
+    | '/terms-and-conditions'
     | '/tiers'
     | '/users'
     | '/profile/setup'
@@ -208,6 +218,7 @@ export interface FileRouteTypes {
     | '/policies'
     | '/profile'
     | '/roles'
+    | '/terms-and-conditions'
     | '/tiers'
     | '/users'
     | '/profile/setup'
@@ -227,6 +238,7 @@ export interface FileRouteTypes {
     | '/policies'
     | '/profile'
     | '/roles'
+    | '/terms-and-conditions'
     | '/tiers'
     | '/users'
     | '/profile/setup'
@@ -247,6 +259,7 @@ export interface RootRouteChildren {
   PoliciesRoute: typeof PoliciesRoute
   ProfileRoute: typeof ProfileRouteWithChildren
   RolesRoute: typeof RolesRoute
+  TermsAndConditionsRoute: typeof TermsAndConditionsRoute
   TiersRoute: typeof TiersRoute
   UsersRoute: typeof UsersRoute
 }
@@ -265,6 +278,13 @@ declare module '@tanstack/react-router' {
       path: '/tiers'
       fullPath: '/tiers'
       preLoaderRoute: typeof TiersRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/terms-and-conditions': {
+      id: '/terms-and-conditions'
+      path: '/terms-and-conditions'
+      fullPath: '/terms-and-conditions'
+      preLoaderRoute: typeof TermsAndConditionsRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/roles': {
@@ -401,6 +421,7 @@ const rootRouteChildren: RootRouteChildren = {
   PoliciesRoute: PoliciesRoute,
   ProfileRoute: ProfileRouteWithChildren,
   RolesRoute: RolesRoute,
+  TermsAndConditionsRoute: TermsAndConditionsRoute,
   TiersRoute: TiersRoute,
   UsersRoute: UsersRoute,
 }
