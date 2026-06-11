@@ -256,7 +256,7 @@ requires-dist = [
     { name = "gunicorn", specifier = ">=25.0.0" },
     { name = "httptools", specifier = ">=0.7.1" },
     { name = "httpx", specifier = ">=0.26.0" },
-    { name = "ibm-verify-community-sdk", specifier = ">=0.2.0" },
+    { name = "ibm-verify-community-sdk", specifier = "==0.3.0" },
     { name = "itsdangerous", specifier = ">=2.2.0" },
     { name = "mypy", specifier = ">=1.16.0" },
     { name = "mypy", marker = "extra == 'dev'", specifier = ">=1.8.0" },
@@ -780,16 +780,16 @@ wheels = [
 
 [[package]]
 name = "ibm-verify-community-sdk"
-version = "0.2.0"
+version = "0.3.0"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "httpx" },
     { name = "pydantic" },
     { name = "python-dotenv" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/f1/a9/70513aee053940d15d051169c134d7bc9ce012f9eca81240ff58de4bdb78/ibm_verify_community_sdk-0.2.0.tar.gz", hash = "sha256:bbbce8cfe0519489b370f14f8a336f0e70f38a3643a9e0cbdb80731894338e43", size = 22931, upload-time = "2026-06-09T14:52:15.38Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/24/fb/af7f73c594ab3bbc608433a6cad8b2736d1dbca66ef4af1b7639ad9c2ff6/ibm_verify_community_sdk-0.3.0.tar.gz", hash = "sha256:3a641283e82c7ff2da1f8f0ab3d83d8a9fe682f2a610a1c30067864bf600d8a3", size = 23459, upload-time = "2026-06-11T19:23:14.34Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/2b/31/e4aa30ece01ed245d7137e4940f6333ac1698c2afc408900465a671794a8/ibm_verify_community_sdk-0.2.0-py3-none-any.whl", hash = "sha256:62c59947f631266e7448ba343e024b87a2481c9a827448b98ca21b102df974fb", size = 37646, upload-time = "2026-06-09T14:52:13.717Z" },
+    { url = "https://files.pythonhosted.org/packages/5f/ba/0dfac932b05f10a30c2cb8ff19e217ca32abea77ef1b9c8c77ac5284c406/ibm_verify_community_sdk-0.3.0-py3-none-any.whl", hash = "sha256:4c24e99dfffece2a3461d6dbcd6700a4d55cd2ad0f6072133c1fc203e5604c57", size = 38087, upload-time = "2026-06-11T19:23:13.034Z" },
 ]
 
 [[package]]

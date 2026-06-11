@@ -6,7 +6,7 @@ ROOT_DIR := $(CURDIR)
 ROOT_VENV := $(ROOT_DIR)/.venv
 UV_PROJECT_ENVIRONMENT := $(ROOT_VENV)
 
-.PHONY: help install test lint format typecheck
+.PHONY: help install test lint format typecheck dev
 .PHONY: frontend-install frontend-build frontend-dev frontend-test frontend-lint frontend-format frontend-preview
 
 # Common helpers
@@ -26,6 +26,7 @@ help:
 	@echo "  lint              - run ruff lint checks on backend source"
 	@echo "  format            - run ruff to auto-fix lint issues in backend source"
 	@echo "  typecheck         - run mypy over backend sources"
+	@echo "  dev               - run backend API with uvicorn (reload)"
 	@echo "  frontend-install  - pnpm install in frontend/"
 	@echo "  frontend-build    - pnpm run build in frontend/"
 	@echo "  frontend-dev      - pnpm run dev in frontend/"
@@ -57,6 +58,10 @@ format:
 typecheck:
 	@echo "Running mypy type checker"
 	$(BACKEND_CMD) mypy src/app
+
+dev:
+	@echo "Starting backend API server"
+	cd $(BACKEND_DIR) && UV_PROJECT_ENVIRONMENT=$(UV_PROJECT_ENVIRONMENT) $(UV) run uvicorn src.app.main:app --reload --host 127.0.0.1 --port 8000
 
 # Frontend targets
 FRONTEND_DIR := frontend
@@ -116,13 +121,14 @@ all-format:
 	cd $(FRONTEND_DIR) && $(PNPM) run format
 
 # Backend shortcuts (bk-*)
-.PHONY: bk-install bk-test bk-lint bk-format bk-typecheck
+.PHONY: bk-install bk-test bk-lint bk-format bk-typecheck bk-dev
 bk-install: install
 bk-test: test
 bk-lint: lint
 bk-format: format
 
 bk-typecheck: typecheck
+bk-dev: dev
 
 # Backend migration shortcut
 .PHONY: bk-migration

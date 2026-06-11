@@ -21,7 +21,8 @@ class IBMVerifyUserService:
 
     async def get_profile(self) -> dict[str, Any]:
         """Get the current user's profile."""
-        return await self._client.fetch_profile()
+        payload = await self._client.fetch_profile()
+        return payload.model_dump(by_alias=True, exclude_none=True)
 
     async def get_userinfo(self) -> dict[str, Any]:
         """Get userinfo claims from the OAuth2 endpoint."""
@@ -58,6 +59,7 @@ class IBMVerifyUserService:
     async def get_applications(self) -> list[dict[str, Any]]:
         """Get applications accessible to the current user."""
         payload = await self._client.fetch_applications()
+        payload = payload.model_dump(by_alias=True, exclude_none=True)
         return self._extract_applications(payload)
 
     async def has_application(self, application_id: str | int | UUID) -> bool:

@@ -1,10 +1,12 @@
 import logging
+import re
 import uuid as uuid_pkg
 from collections.abc import Mapping
 from datetime import UTC, datetime
 from typing import Any
 
 from fastcrud import compute_offset, paginated_response
+from ibm_verify_community_sdk.applications.models import ListApplicationsResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from ..core.exceptions.http_exceptions import NotFoundException
@@ -24,27 +26,69 @@ from ..schemas.rp_application import (
 from .ibm_sv_user_service import IBMVerifyUserService
 
 logger = logging.getLogger(__name__)
+APPLICATION_ID_PATTERN = re.compile(r"/applications/([^/?#]+)")
 
 
 class RPApplicationService:
-    def _extract_application_id(self, application: dict[str, Any]) -> str | None:
-        for key in ("id", "application_id", "applicationId", "applicationid"):
-            value = application.get(key)
+    def _extract_application_id(self, application: Any) -> str | None:
+        if isinstance(application, Mapping):
+            for key in ("id", "application_id", "applicationId", "applicationid", "applicationRefId", "application_ref_id"):
+                value = application.get(key)
+                if value is None:
+                    continue
+                normalized = str(value).strip()
+                if normalized:
+                    return normalized
+
+            links = application.get("_links")
+            if isinstance(links, Mapping):
+                self_link = links.get("self") or links.get("self_")
+                if isinstance(self_link, Mapping):
+                    href = self_link.get("href")
+                    if isinstance(href, str):
+                        match = APPLICATION_ID_PATTERN.search(href)
+                        if match is not None:
+                            return match.group(1)
+
+            return None
+
+        for attr in ("id", "application_id", "applicationId", "applicationid", "applicationRefId", "application_ref_id"):
+            value = getattr(application, attr, None)
             if value is None:
                 continue
             normalized = str(value).strip()
             if normalized:
                 return normalized
+
+        links = getattr(application, "links", None)
+        self_link = getattr(links, "self_", None) if links is not None else None
+        href = getattr(self_link, "href", None) if self_link is not None else None
+        if isinstance(href, str):
+            match = APPLICATION_ID_PATTERN.search(href)
+            if match is not None:
+                return match.group(1)
+
         return None
 
-    def _extract_application_name(self, application: dict[str, Any]) -> str | None:
-        for key in ("name", "application_name", "applicationName", "displayName"):
-            value = application.get(key)
+    def _extract_application_name(self, application: Any) -> str | None:
+        if isinstance(application, Mapping):
+            for key in ("name", "application_name", "applicationName", "displayName", "display_name"):
+                value = application.get(key)
+                if value is None:
+                    continue
+                normalized = str(value).strip()
+                if normalized:
+                    return normalized
+            return None
+
+        for attr in ("name", "application_name", "applicationName", "displayName", "display_name"):
+            value = getattr(application, attr, None)
             if value is None:
                 continue
             normalized = str(value).strip()
             if normalized:
                 return normalized
+
         return None
 
     def _extract_owner_email(self, owner: Any) -> str | None:
@@ -58,6 +102,14 @@ class RPApplicationService:
                     return normalized
 
             return None
+
+        for attr in ("email", "mail", "userName", "username", "displayName", "name", "value"):
+            value = getattr(owner, attr, None)
+            if value is None:
+                continue
+            normalized = str(value).strip()
+            if normalized:
+                return normalized
 
         normalized = str(owner or "").strip()
         return normalized or None
@@ -192,18 +244,15 @@ class RPApplicationService:
         db: AsyncSession,
         ibm_admin_client: IBMVerifyAdminClient,
     ) -> dict[str, int]:
-        remote_applications = await ibm_admin_client.list_applications()
+        remote_applications_response: ListApplicationsResponse = await ibm_admin_client.list_applications()
+        embedded = remote_applications_response.embedded
+        remote_applications = embedded.applications if embedded is not None and embedded.applications is not None else []
 
         created = 0
         updated = 0
         skipped = 0
 
         for application in remote_applications:
-            if not isinstance(application, dict):
-                logger.info("Skipping RP application sync item because payload is not a mapping: %r", application)
-                skipped += 1
-                continue
-
             application_id = self._extract_application_id(application)
             application_name = self._extract_application_name(application)
             if application_id is None or application_name is None:
@@ -215,10 +264,9 @@ class RPApplicationService:
                 continue
 
             application_detail = await ibm_admin_client.get_application_detail(application_id)
-
-            application_owner = self._build_application_owner_snapshot(application_detail)
+            application_owner = self._build_application_owner_snapshot(getattr(application_detail, "owners", None))
             if application_owner is None:
-                application_owner = self._build_application_owner_snapshot(application.get("owners"))
+                application_owner = self._build_application_owner_snapshot(getattr(application, "owners", None))
             existing_application = await crud_rp_applications.get(
                 db=db,
                 ibm_sv_application_id=application_id,
