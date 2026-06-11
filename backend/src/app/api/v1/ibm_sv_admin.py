@@ -36,7 +36,9 @@ async def list_users(
     client: Annotated[IBMVerifyAdminClient, Depends(get_ibm_sv_admin_client)],
 ) -> list[dict[str, Any]]:
     """List all users from IBM Security Verify."""
-    return await client.fetch_users()
+    payload = await client.fetch_users()
+    resources = payload.Resources or []
+    return [user.model_dump(by_alias=True, exclude_none=True) for user in resources]
 
 
 @router.get("/ibm-sv-admin/users/search")
@@ -47,7 +49,9 @@ async def search_users(
     client: Annotated[IBMVerifyAdminClient, Depends(get_ibm_sv_admin_client)],
 ) -> list[dict[str, Any]]:
     """Search users by name in IBM Security Verify."""
-    return await client.search_users_by_name(username)
+    payload = await client.search_users_by_name(username)
+    resources = payload.Resources or []
+    return [user.model_dump(by_alias=True, exclude_none=True) for user in resources]
 
 
 # Application endpoints
@@ -56,7 +60,7 @@ async def search_users(
 async def list_applications(
     request: Request,
     client: Annotated[IBMVerifyAdminClient, Depends(get_ibm_sv_admin_client)],
-) -> list[dict[str, Any]]:
+) -> Any:
     """List all applications from IBM Security Verify."""
     return await client.list_applications()
 
@@ -69,7 +73,8 @@ async def get_application(
     client: Annotated[IBMVerifyAdminClient, Depends(get_ibm_sv_admin_client)],
 ) -> dict[str, Any]:
     """Get application details from IBM Security Verify."""
-    return await client.get_application_detail(application_id)
+    payload = await client.get_application_detail(application_id)
+    return payload.model_dump(by_alias=True, exclude_none=True)
 
 
 @router.post("/ibm-sv-admin/applications", responses=error_responses(400, 401, 403, 422))
@@ -131,7 +136,8 @@ async def get_application_logins(
     to_date: str | None = None,
 ) -> dict[str, Any]:
     """Get total logins for an application."""
-    return await client.get_application_total_logins(application_id, from_date, to_date)
+    payload = await client.get_application_total_logins(application_id, from_date, to_date)
+    return payload.model_dump(by_alias=True, exclude_none=True)
 
 
 @router.get("/ibm-sv-admin/applications/{application_id}/audit-trail")
@@ -168,7 +174,8 @@ async def get_application_entitlements(
     client: Annotated[IBMVerifyAdminClient, Depends(get_ibm_sv_admin_client)],
 ) -> dict[str, Any]:
     """Get entitlements for an application."""
-    return await client.get_application_entitlements(application_id)
+    payload = await client.get_application_entitlements(application_id)
+    return payload.model_dump(by_alias=True, exclude_none=True)
 
 
 # Group endpoints
@@ -181,7 +188,9 @@ async def list_groups(
     start_index: int = 1,
 ) -> list[dict[str, Any]]:
     """List all groups from IBM Security Verify."""
-    return await client.list_groups(count, start_index)
+    payload = await client.list_groups(count, start_index)
+    resources = payload.Resources or []
+    return [group.model_dump(by_alias=True, exclude_none=True) for group in resources]
 
 
 @router.get("/ibm-sv-admin/groups/search")
@@ -192,7 +201,9 @@ async def search_groups(
     client: Annotated[IBMVerifyAdminClient, Depends(get_ibm_sv_admin_client)],
 ) -> list[dict[str, Any]]:
     """Search groups by name in IBM Security Verify."""
-    return await client.search_groups_by_name(group_name)
+    payload = await client.search_groups_by_name(group_name)
+    resources = payload.Resources or []
+    return [group.model_dump(by_alias=True, exclude_none=True) for group in resources]
 
 
 @router.get("/ibm-sv-admin/groups/{group_id}")
@@ -203,7 +214,8 @@ async def get_group(
     client: Annotated[IBMVerifyAdminClient, Depends(get_ibm_sv_admin_client)],
 ) -> dict[str, Any]:
     """Get group details from IBM Security Verify."""
-    return await client.get_group_by_id(group_id)
+    payload = await client.get_group_by_id(group_id)
+    return payload.model_dump(by_alias=True, exclude_none=True)
 
 
 @router.post("/ibm-sv-admin/groups/{group_id}/users/{user_id}")

@@ -7,13 +7,23 @@ from collections.abc import Callable
 from typing import Any
 
 import httpx
-import requests
 from authlib.integrations.httpx_client import AsyncOAuth2Client
-from ibm_verify_community_sdk.applications.models import ApplicationRequest
+from ibm_verify_community_sdk.applications.models import (
+    ApplicationRequest,
+    GetApplicationEntitlementsResponse,
+    GetApplicationResponse,
+    ListApplicationsResponse,
+)
 from ibm_verify_community_sdk.client import APIClientError, IbmVerifyClient
-from ibm_verify_community_sdk.groups.models import PatchGroupOperation, PatchGroupRequest
-from ibm_verify_community_sdk.oidc.models import DeleteClientSecretOperation, RotateClientSecretRequest
-from ibm_verify_community_sdk.reports.models import ReportRequest, ReportSearchAfterRequest
+from ibm_verify_community_sdk.groups.models import GetGroupsResponse, Group, PatchGroupOperation, PatchGroupRequest
+from ibm_verify_community_sdk.oidc.models import (
+    DeleteClientSecretOperation,
+    GetClientSecretsResponse,
+    RotateClientSecretRequest,
+    RotateClientSecretResponse,
+)
+from ibm_verify_community_sdk.reports.models import ReportRequest, ReportResponse, ReportSearchAfterRequest
+from ibm_verify_community_sdk.users.models import GetUsersResponse
 
 from ..core.config import settings
 from ..core.exceptions.ibm_sv_exceptions import (
@@ -82,10 +92,8 @@ class IBMVerifyAdminClient:
         message = str(exc)
 
         cause = exc.__cause__
-        response = None
-        if isinstance(cause, requests.RequestException) and cause.response is not None:
-            response = cause.response
-        elif isinstance(cause, httpx.HTTPError):
+        response = getattr(cause, "response", None)
+        if response is None and isinstance(cause, httpx.HTTPError):
             response = getattr(cause, "response", None)
 
         if response is not None:
@@ -154,7 +162,7 @@ class IBMVerifyAdminClient:
         end_of_day = start_of_day + timedelta(days=1) - timedelta(milliseconds=1)
         return str(int(start_of_day.timestamp() * 1000)), str(int(end_of_day.timestamp() * 1000))
 
-    async def fetch_users(self) -> list[dict[str, Any]]:
+    async def fetch_users(self) -> GetUsersResponse:
         """Fetch all users from IBM Verify."""
         payload = await self._run_sdk(
             lambda sdk_client: sdk_client.users.get_users(
@@ -163,13 +171,15 @@ class IBMVerifyAdminClient:
                 startIndex="1",
             )
         )
+        if isinstance(payload, GetUsersResponse):
+            return payload
         if isinstance(payload, dict):
-            resources = payload.get("Resources")
-            if isinstance(resources, list):
-                return resources
-        return payload if isinstance(payload, list) else []
+            return GetUsersResponse.model_validate(payload)
+        if isinstance(payload, list):
+            return GetUsersResponse(Resources=payload)
+        raise IBMVerifyServerError(message="Unexpected fetch_users response payload")
 
-    async def search_users_by_name(self, username: str) -> list[dict[str, Any]]:
+    async def search_users_by_name(self, username: str) -> GetUsersResponse:
         """Search for users by username."""
         payload = await self._run_sdk(
             lambda sdk_client: sdk_client.users.get_users(
@@ -179,92 +189,75 @@ class IBMVerifyAdminClient:
                 fullText=username,
             )
         )
+        if isinstance(payload, GetUsersResponse):
+            return payload
         if isinstance(payload, dict):
-            resources = payload.get("Resources")
-            if isinstance(resources, list):
-                return resources
-        return payload if isinstance(payload, list) else []
-
-    async def list_applications(self) -> list[dict[str, Any]]:
-        """List all applications."""
-        payload = await self._run_sdk(lambda sdk_client: sdk_client.applications.list_applications())
-
-        def normalize_application(application: dict[str, Any]) -> dict[str, Any]:
-            normalized_application = dict(application)
-            application_id = normalized_application.get("id")
-            if application_id is None:
-                self_link = normalized_application.get("_links")
-                if isinstance(self_link, dict):
-                    self_href = self_link.get("self")
-                    if isinstance(self_href, dict):
-                        href = self_href.get("href")
-                        if isinstance(href, str):
-                            match = APPLICATION_ID_PATTERN.search(href)
-                            if match is not None:
-                                application_id = match.group(1)
-
-            if application_id is not None:
-                normalized_application["id"] = str(application_id)
-
-            return normalized_application
-
-        if isinstance(payload, dict):
-            embedded = payload.get("_embedded")
-            if isinstance(embedded, dict):
-                resources = embedded.get("applications")
-                if isinstance(resources, list):
-                    return [normalize_application(application) for application in resources if isinstance(application, dict)]
-            resources = payload.get("resources", payload.get("Resources"))
-            if isinstance(resources, list):
-                return [normalize_application(application) for application in resources if isinstance(application, dict)]
+            return GetUsersResponse.model_validate(payload)
         if isinstance(payload, list):
-            return [normalize_application(application) for application in payload if isinstance(application, dict)]
-        return []
+            return GetUsersResponse(Resources=payload)
+        raise IBMVerifyServerError(message="Unexpected search_users_by_name response payload")
 
-    async def get_application_detail(self, application_id: str) -> dict[str, Any]:
+    async def list_applications(self) -> ListApplicationsResponse:
+        """List all applications."""
+        access_token = await self._ensure_access_token()
+        sdk_client = await self._get_or_create_sdk_client(access_token)
+
+        try:
+            response = sdk_client.applications.list_applications()
+
+            if inspect.isawaitable(response):
+                response = await response
+        except APIClientError as exc:
+            raise self._translate_sdk_error(exc) from exc
+
+        data = getattr(response, "data", None)
+        if isinstance(data, ListApplicationsResponse):
+            return data
+        if isinstance(data, dict):
+            return ListApplicationsResponse.model_validate(data)
+
+        if isinstance(response, ListApplicationsResponse):
+            return response
+        if isinstance(response, dict):
+            return ListApplicationsResponse.model_validate(response)
+
+        raise IBMVerifyServerError(message="Unexpected list_applications response payload")
+
+    async def get_application_detail(self, application_id: str) -> GetApplicationResponse:
         """Get application details by ID."""
-        try:
-            response = await self._client.get(f"{self._base_url}/v1.0/applications/{application_id}")
-            response.raise_for_status()
-        except httpx.HTTPStatusError as exc:
-            status_code = exc.response.status_code
-            response_body: dict[str, Any] | None = None
-            message = exc.response.text or str(exc)
-
-            try:
-                body = exc.response.json()
-            except ValueError:
-                body = None
-
-            if isinstance(body, dict):
-                response_body = body
-                body_message = body.get("message")
-                if isinstance(body_message, str) and body_message.strip():
-                    message = body_message.strip()
-
-            error_map = {
-                400: IBMVerifyBadRequest,
-                401: IBMVerifyUnauthorized,
-                403: IBMVerifyForbidden,
-                404: IBMVerifyNotFound,
-            }
-            exc_class = error_map.get(status_code, IBMVerifyServerError)
-            raise exc_class(message=message, response_body=response_body) from exc
-        except httpx.HTTPError as exc:
-            raise IBMVerifyServerError(message=str(exc)) from exc
+        access_token = await self._ensure_access_token()
+        sdk_client = await self._get_or_create_sdk_client(access_token)
 
         try:
-            payload = response.json()
-        except ValueError:
-            return {}
+            response = sdk_client.applications.get_application(application_id=application_id)
 
-        return payload if isinstance(payload, dict) else {}
+            if inspect.isawaitable(response):
+                response = await response
+        except APIClientError as exc:
+            raise self._translate_sdk_error(exc) from exc
 
-    async def create_application(self, payload: dict[str, Any]) -> dict[str, Any]:
+        data = getattr(response, "data", None)
+        if isinstance(data, GetApplicationResponse):
+            return data
+        if isinstance(data, dict):
+            return GetApplicationResponse.model_validate(data)
+
+        if isinstance(response, GetApplicationResponse):
+            return response
+        if isinstance(response, dict):
+            return GetApplicationResponse.model_validate(response)
+
+        raise IBMVerifyServerError(message="Unexpected get_application_detail response payload")
+
+    async def create_application(self, payload: dict[str, Any]) -> GetApplicationResponse:
         """Create a new application."""
         body = ApplicationRequest.model_validate(payload)
         result = await self._run_sdk(lambda sdk_client: sdk_client.applications.create_application(body=body))
-        return result if isinstance(result, dict) else {}
+        if isinstance(result, GetApplicationResponse):
+            return result
+        if isinstance(result, dict):
+            return GetApplicationResponse.model_validate(result)
+        raise IBMVerifyServerError(message="Unexpected create_application response payload")
 
     async def update_application(self, application_id: str, payload: dict[str, Any]) -> bool:
         """Update an existing application."""
@@ -286,7 +279,7 @@ class IBMVerifyAdminClient:
         application_id: str,
         from_date: str | None = None,
         to_date: str | None = None,
-    ) -> dict[str, Any]:
+    ) -> ReportResponse:
         """Get total logins for an application."""
         from_timestamp, to_timestamp = self._resolve_report_range(from_date, to_date)
         body = ReportRequest.model_validate(
@@ -297,7 +290,11 @@ class IBMVerifyAdminClient:
             }
         )
         payload = await self._run_sdk(lambda sdk_client: sdk_client.reports.run_app_total_logins(body=body))
-        return payload if isinstance(payload, dict) else {}
+        if isinstance(payload, ReportResponse):
+            return payload
+        if isinstance(payload, dict):
+            return ReportResponse.model_validate(payload)
+        raise IBMVerifyServerError(message="Unexpected get_application_total_logins response payload")
 
     async def get_application_audit_trail(
         self,
@@ -307,7 +304,7 @@ class IBMVerifyAdminClient:
         size: int = 25,
         sort_by: str = "time",
         sort_order: str = "DESC",
-    ) -> dict[str, Any]:
+    ) -> ReportResponse:
         """Get audit trail for an application."""
         from_timestamp, to_timestamp = self._resolve_report_range(from_date, to_date)
         normalized_sort_order = (sort_order or "DESC").upper()
@@ -324,7 +321,11 @@ class IBMVerifyAdminClient:
             }
         )
         payload = await self._run_sdk(lambda sdk_client: sdk_client.reports.run_app_audit_trail(body=body))
-        return payload if isinstance(payload, dict) else {}
+        if isinstance(payload, ReportResponse):
+            return payload
+        if isinstance(payload, dict):
+            return ReportResponse.model_validate(payload)
+        raise IBMVerifyServerError(message="Unexpected get_application_audit_trail response payload")
 
     async def app_audit_trail_search_after(
         self,
@@ -333,7 +334,7 @@ class IBMVerifyAdminClient:
         to_date: str | None = None,
         size: int = 25,
         search_after: str | None = None,
-    ) -> dict[str, Any]:
+    ) -> ReportResponse:
         """Get audit trail with search_after cursor for pagination."""
         from_timestamp, to_timestamp = self._resolve_report_range(from_date, to_date)
         body = ReportSearchAfterRequest.model_validate(
@@ -348,14 +349,22 @@ class IBMVerifyAdminClient:
             }
         )
         payload = await self._run_sdk(lambda sdk_client: sdk_client.reports.run_app_audit_trail_search_after(body=body))
-        return payload if isinstance(payload, dict) else {}
+        if isinstance(payload, ReportResponse):
+            return payload
+        if isinstance(payload, dict):
+            return ReportResponse.model_validate(payload)
+        raise IBMVerifyServerError(message="Unexpected app_audit_trail_search_after response payload")
 
-    async def get_client_secret(self, client_id: str) -> dict[str, Any]:
+    async def get_client_secret(self, client_id: str) -> GetClientSecretsResponse:
         """Get client secrets for an OIDC client."""
         payload = await self._run_sdk(lambda sdk_client: sdk_client.oidc.get_client_secrets(client_id=client_id))
-        return payload if isinstance(payload, dict) else {}
+        if isinstance(payload, GetClientSecretsResponse):
+            return payload
+        if isinstance(payload, dict):
+            return GetClientSecretsResponse.model_validate(payload)
+        raise IBMVerifyServerError(message="Unexpected get_client_secret response payload")
 
-    async def update_client_secret(self, client_id: str, payload: dict[str, Any]) -> dict[str, Any]:
+    async def update_client_secret(self, client_id: str, payload: dict[str, Any]) -> RotateClientSecretResponse:
         """Update client secret for an OIDC client."""
         body = RotateClientSecretRequest.model_validate(payload) if payload else None
         result = await self._run_sdk(
@@ -364,7 +373,11 @@ class IBMVerifyAdminClient:
                 body=body,
             )
         )
-        return result if isinstance(result, dict) else {}
+        if isinstance(result, RotateClientSecretResponse):
+            return result
+        if isinstance(result, dict):
+            return RotateClientSecretResponse.model_validate(result)
+        raise IBMVerifyServerError(message="Unexpected update_client_secret response payload")
 
     async def delete_rotated_client_secrets(self, client_id: str, path: list[str]) -> bool:
         """Delete rotated client secrets."""
@@ -377,14 +390,18 @@ class IBMVerifyAdminClient:
         )
         return True
 
-    async def get_application_entitlements(self, application_id: str) -> dict[str, Any]:
+    async def get_application_entitlements(self, application_id: str) -> GetApplicationEntitlementsResponse:
         """Get entitlements for an application."""
         payload = await self._run_sdk(
             lambda sdk_client: sdk_client.applications.get_application_entitlements(application_id=application_id)
         )
-        return payload if isinstance(payload, dict) else {}
+        if isinstance(payload, GetApplicationEntitlementsResponse):
+            return payload
+        if isinstance(payload, dict):
+            return GetApplicationEntitlementsResponse.model_validate(payload)
+        raise IBMVerifyServerError(message="Unexpected get_application_entitlements response payload")
 
-    async def list_groups(self, count: int = 100, start_index: int = 1) -> list[dict[str, Any]]:
+    async def list_groups(self, count: int = 100, start_index: int = 1) -> GetGroupsResponse:
         """List all groups."""
         payload = await self._run_sdk(
             lambda sdk_client: sdk_client.groups.get_groups(
@@ -392,13 +409,15 @@ class IBMVerifyAdminClient:
                 startIndex=str(start_index),
             )
         )
+        if isinstance(payload, GetGroupsResponse):
+            return payload
         if isinstance(payload, dict):
-            resources = payload.get("Resources")
-            if isinstance(resources, list):
-                return resources
-        return payload if isinstance(payload, list) else []
+            return GetGroupsResponse.model_validate(payload)
+        if isinstance(payload, list):
+            return GetGroupsResponse(Resources=payload)
+        raise IBMVerifyServerError(message="Unexpected list_groups response payload")
 
-    async def search_groups_by_name(self, group_name: str) -> list[dict[str, Any]]:
+    async def search_groups_by_name(self, group_name: str) -> GetGroupsResponse:
         """Search for groups by name."""
         payload = await self._run_sdk(
             lambda sdk_client: sdk_client.groups.get_groups(
@@ -408,16 +427,22 @@ class IBMVerifyAdminClient:
                 fullText=group_name,
             )
         )
+        if isinstance(payload, GetGroupsResponse):
+            return payload
         if isinstance(payload, dict):
-            resources = payload.get("Resources")
-            if isinstance(resources, list):
-                return resources
-        return payload if isinstance(payload, list) else []
+            return GetGroupsResponse.model_validate(payload)
+        if isinstance(payload, list):
+            return GetGroupsResponse(Resources=payload)
+        raise IBMVerifyServerError(message="Unexpected search_groups_by_name response payload")
 
-    async def get_group_by_id(self, group_id: str) -> dict[str, Any]:
+    async def get_group_by_id(self, group_id: str) -> Group:
         """Get a group by ID."""
         payload = await self._run_sdk(lambda sdk_client: sdk_client.groups.get_group(group_id=group_id))
-        return payload if isinstance(payload, dict) else {}
+        if isinstance(payload, Group):
+            return payload
+        if isinstance(payload, dict):
+            return Group.model_validate(payload)
+        raise IBMVerifyServerError(message="Unexpected get_group_by_id response payload")
 
     async def add_user_to_group(self, group_id: str, user_id: str) -> None:
         """Add a user to a group."""
@@ -446,9 +471,9 @@ class IBMVerifyAdminClient:
         """Check if a user is a member of a group."""
         try:
             group = await self.get_group_by_id(group_id)
-            members = group.get("members", [])
+            members = group.members or []
             for member in members:
-                if member.get("value") == user_id:
+                if member.value == user_id:
                     return True
             return False
         except Exception:

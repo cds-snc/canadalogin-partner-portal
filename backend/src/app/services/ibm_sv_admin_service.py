@@ -193,7 +193,8 @@ class IBMVerifyAdminService:
         Fetches the current application details and returns a payload that can be
         used for partial updates while preserving existing values.
         """
-        current_detail = await self._client.get_application_detail(application_id)
+        current_detail_response = await self._client.get_application_detail(application_id)
+        current_detail = current_detail_response.model_dump(by_alias=True, exclude_none=True)
         if not current_detail:
             raise NotFoundException(f"Application with ID {application_id} not found.")
 
@@ -442,15 +443,20 @@ class IBMVerifyAdminService:
 
     async def list_users(self) -> list[dict[str, Any]]:
         """List all users."""
-        return await self._client.fetch_users()
+        payload = await self._client.fetch_users()
+        resources = payload.Resources or []
+        return [user.model_dump(by_alias=True, exclude_none=True) for user in resources]
 
     async def search_users_by_name(self, username: str) -> list[dict[str, Any]]:
         """Search for users by username."""
-        return await self._client.search_users_by_name(username)
+        payload = await self._client.search_users_by_name(username)
+        resources = payload.Resources or []
+        return [user.model_dump(by_alias=True, exclude_none=True) for user in resources]
 
     async def get_application_detail(self, application_id: str) -> dict[str, Any]:
         """Get application details."""
-        return await self._client.get_application_detail(application_id)
+        payload = await self._client.get_application_detail(application_id)
+        return payload.model_dump(by_alias=True, exclude_none=True)
 
     async def create_application(self, payload: dict[str, Any]) -> dict[str, Any]:
         """Create a new application."""
@@ -471,7 +477,8 @@ class IBMVerifyAdminService:
         to_date: str | None = None,
     ) -> dict[str, Any]:
         """Get total logins for an application."""
-        return await self._client.get_application_total_logins(application_id, from_date, to_date)
+        payload = await self._client.get_application_total_logins(application_id, from_date, to_date)
+        return payload.model_dump(by_alias=True, exclude_none=True)
 
     async def get_application_audit_trail(
         self,
@@ -491,7 +498,7 @@ class IBMVerifyAdminService:
             sort_by,
             sort_order,
         )
-        return self._normalize_audit_report(payload)
+        return self._normalize_audit_report(payload.model_dump(by_alias=True, exclude_none=True))
 
     async def get_application_audit_trail_search_after(
         self,
@@ -509,15 +516,17 @@ class IBMVerifyAdminService:
             size=size,
             search_after=search_after,
         )
-        return self._normalize_audit_report(payload)
+        return self._normalize_audit_report(payload.model_dump(by_alias=True, exclude_none=True))
 
     async def get_client_secret(self, client_id: str) -> dict[str, Any]:
         """Get client secrets for an OIDC client."""
-        return await self._client.get_client_secret(client_id)
+        payload = await self._client.get_client_secret(client_id)
+        return payload.model_dump(by_alias=True, exclude_none=True)
 
     async def update_client_secret(self, client_id: str, payload: dict[str, Any]) -> dict[str, Any]:
         """Update client secret for an OIDC client."""
-        return await self._client.update_client_secret(client_id, payload)
+        result = await self._client.update_client_secret(client_id, payload)
+        return result.model_dump(by_alias=True, exclude_none=True)
 
     async def delete_rotated_client_secrets(self, client_id: str, path: list[str]) -> bool:
         """Delete rotated client secrets."""
@@ -525,19 +534,25 @@ class IBMVerifyAdminService:
 
     async def get_application_entitlements(self, application_id: str) -> dict[str, Any]:
         """Get entitlements for an application."""
-        return await self._client.get_application_entitlements(application_id)
+        payload = await self._client.get_application_entitlements(application_id)
+        return payload.model_dump(by_alias=True, exclude_none=True)
 
     async def list_groups(self, count: int = 100, start_index: int = 1) -> list[dict[str, Any]]:
         """List all groups."""
-        return await self._client.list_groups(count, start_index)
+        payload = await self._client.list_groups(count, start_index)
+        resources = payload.Resources or []
+        return [group.model_dump(by_alias=True, exclude_none=True) for group in resources]
 
     async def search_groups_by_name(self, group_name: str) -> list[dict[str, Any]]:
         """Search for groups by name."""
-        return await self._client.search_groups_by_name(group_name)
+        payload = await self._client.search_groups_by_name(group_name)
+        resources = payload.Resources or []
+        return [group.model_dump(by_alias=True, exclude_none=True) for group in resources]
 
     async def get_group_by_id(self, group_id: str) -> dict[str, Any]:
         """Get a group by ID."""
-        return await self._client.get_group_by_id(group_id)
+        payload = await self._client.get_group_by_id(group_id)
+        return payload.model_dump(by_alias=True, exclude_none=True)
 
     async def add_user_to_group(self, group_id: str, user_id: str) -> None:
         """Add a user to a group."""
