@@ -85,7 +85,7 @@ class TestWorkerCronConfiguration:
 
         assert cron_job.name == "sync_ibm_verify_rp_applications"
         assert cron_job.minute == {0, 10, 20, 30, 40, 50}
-        assert cron_job.run_at_startup is False
+        assert cron_job.run_at_startup is True
 
 
 class TestWorkerSyncJob:

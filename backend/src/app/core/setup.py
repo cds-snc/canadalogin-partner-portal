@@ -26,7 +26,6 @@ from ..repositories.dependencies import close_ibm_sv_admin_client as close_ibm_s
 from ..repositories.dependencies import set_ibm_sv_admin_client
 from ..repositories.ibm_sv_admin import IBMVerifyAdminClient, create_admin_oauth_client
 from .exceptions import register_exception_handlers
-from .worker.functions import sync_ibm_verify_rp_applications
 from .worker.settings import start_arq_service
 
 logger = logging.getLogger(__name__)
@@ -178,16 +177,6 @@ async def close_ibm_sv_admin_client() -> None:
     logger.info("IBM Security Verify admin client closed")
 
 
-async def sync_rp_applications_on_startup() -> None:
-    logger.info("Syncing RP applications on startup...")
-    try:
-        result = await sync_ibm_verify_rp_applications({})
-    except Exception as exc:  # pragma: no cover - defensive startup guard
-        logger.warning("RP application startup sync failed: %s", exc)
-        return
-
-    logger.info("RP application startup sync completed: %s", result)
-
 
 # -------------- application --------------
 async def set_threadpool_tokens(number_of_tokens: int = 100) -> None:
@@ -244,9 +233,6 @@ def lifespan_factory(
 
             if start_arq_service_on_start:
                 start_arq_service_on_startup()
-
-            if isinstance(settings, IBMVerifySettings):
-                await sync_rp_applications_on_startup()
 
             initialization_complete.set()
             logger.info("Application started successfully")

@@ -9,14 +9,14 @@ from arq.worker import check_health, run_worker
 
 from ...core.config import settings
 from ...core.logger import logging  # noqa: F401
-from .functions import on_job_end, on_job_start, sample_background_task, shutdown, startup, sync_ibm_verify_rp_applications
+from .functions import on_job_end, on_job_start, shutdown, startup, sync_ibm_verify_rp_applications
 
 REDIS_QUEUE_HOST = settings.REDIS_QUEUE_HOST
 REDIS_QUEUE_PORT = settings.REDIS_QUEUE_PORT
 
 
 class WorkerSettings:
-    functions = [sample_background_task, sync_ibm_verify_rp_applications]
+    functions = [sync_ibm_verify_rp_applications]
     cron_jobs = [
         CronJob(
             "sync_ibm_verify_rp_applications",
@@ -25,12 +25,12 @@ class WorkerSettings:
             day=None,
             weekday=None,
             hour=None,
-            minute={0, 10, 20, 30, 40, 50},
+            minute={0, 10, 20, 30, 40, 50}, # run every 10 minutes
             second=0,
             microsecond=0,
-            run_at_startup=False,
+            run_at_startup=True,
             unique=True,
-            job_id="sync-ibm-verify-rp-applications",
+            job_id=None,
             timeout_s=300.0,
             keep_result_s=None,
             keep_result_forever=None,

@@ -62,7 +62,7 @@ class TestSessionLifespan:
             patch("src.app.core.setup.create_redis_rate_limit_pool", new=AsyncMock()),
             patch("src.app.core.setup.create_redis_session_pool", new=AsyncMock(), create=True),
             patch("src.app.core.setup.create_ibm_sv_admin_client", new=AsyncMock()),
-            patch("src.app.core.setup.sync_rp_applications_on_startup", new=AsyncMock()),
+            patch("src.app.core.worker.functions.sync_ibm_verify_rp_applications", new=AsyncMock()) as mock_sync,
             patch("src.app.core.setup.close_redis_cache_pool", new=AsyncMock()),
             patch("src.app.core.setup.close_redis_queue_pool", new=AsyncMock()),
             patch("src.app.core.setup.close_redis_rate_limit_pool", new=AsyncMock()),
@@ -76,12 +76,4 @@ class TestSessionLifespan:
 
         mock_thread.assert_called_once()
         thread_instance.start.assert_called_once()
-
-    @pytest.mark.asyncio
-    async def test_startup_sync_helper_calls_rp_application_sync(self) -> None:
-        from src.app.core.setup import sync_rp_applications_on_startup
-
-        with patch("src.app.core.setup.sync_ibm_verify_rp_applications", new=AsyncMock(return_value={"created": 1, "updated": 0, "skipped": 0, "processed": 1})) as mock_sync:
-            await sync_rp_applications_on_startup()
-
-        mock_sync.assert_awaited_once_with({})
+        mock_sync.assert_not_awaited()
