@@ -6,27 +6,23 @@ import { useSession, type SessionState } from "@/hooks";
 import { Home } from "@/pages/Home";
 
 vi.mock("react-i18next", () => ({
-	useTranslation: (): { t: (key: string, options?: Record<string, string>) => string } => ({
-		t: (key: string, options?: Record<string, string>): string => {
+	useTranslation: (): { t: (key: string) => string } => ({
+		t: (key: string): string => {
 			const translations: Record<string, string> = {
-					"home.featureAccess": "Protect frontend routes with backend session checks and role-aware navigation.",
-					"home.featureContent": "Review sample pages and protected CRUD flows that exercise the API integration.",
-					"home.featureObservability": "Verify backend readiness, health, and session behavior from the same shell.",
-					"home.featureSectionTitle": "What this starter includes",
-				"home.backendOrigin": `Backend origin: ${options?.["origin"] ?? ""}`,
-					"home.heroEyebrow": "Session-first frontend",
-					"home.heroTitle": "Build secure service flows on top of a practical frontend shell.",
-				"home.signInAction": "Sign in with GC identity provider",
+				"home.featureSectionTitle": "Manage RP applications",
+				"home.heroEyebrow": "Partner portal",
+				"home.heroTitle": "Manage your relying party applications in one place.",
+				"home.signInAction": "Sign in with CanadaLogin",
 				"home.signOutAction": "Sign out",
-					"home.statusPanelTitle": "Current session status",
-				"home.signedInBody": `Signed in as ${options?.["name"] ?? ""}.`,
-				"home.signedInEmail": `Email: ${options?.["email"] ?? ""}`,
-				"home.signedInTitle": "You are signed in",
-				"home.signedOutBody": "Use session-based authentication through the backend to start the OIDC flow and return with a valid app session.",
-				"home.signedOutTitle": "Sign in to continue",
-					"home.supportingLinksTitle": "Common next steps",
-				"home.summary": "This frontend now targets a session-first BFF-style integration with the backend for OIDC authentication and protected API access.",
-				"home.title": "Digital service delivery starter",
+				"home.summary": "Access the CanadaLogin Partner Portal to configure, and monitor relying party applications connected to the CanadaLogin service.",
+				"home.title": "CanadaLogin Partner Portal",
+				"home.aboutCardTitle": "About this portal",
+				"home.aboutCardDescription": "Learn about the CanadaLogin Partner Portal and how it supports relying party application management.",
+				"home.federalCardTitle": "System health",
+				"home.federalCardDescription": "Check the current health and readiness of the CanadaLogin backend services.",
+				"home.optionalCardTitle": "Terms and conditions",
+				"home.optionalCardDescription": "Review the terms and conditions for using the Partner Portal.",
+				"home.dashboardPageLink": "Go to dashboard",
 			};
 
 			return translations[key] ?? key;
@@ -78,26 +74,17 @@ describe("Home", () => {
 		);
 
 		expect(
-			screen.getByRole("heading", { name: /digital service delivery starter/i }),
+			screen.getByRole("heading", { name: /canadalogin partner portal/i }),
 		).toBeTruthy();
 		expect(
-			screen.getByRole("heading", { name: /build secure service flows on top of a practical frontend shell/i }),
+			screen.getByRole("heading", { name: /manage your relying party applications in one place/i }),
 		).toBeTruthy();
 		expect(
-			screen.getByRole("heading", { name: /current session status/i }),
+			screen.getByRole("heading", { name: /manage rp applications/i }),
 		).toBeTruthy();
 		expect(
-			screen.getByRole("heading", { name: /what this starter includes/i }),
+			screen.getByRole("button", { name: /sign in with canadalogin/i }),
 		).toBeTruthy();
-		expect(
-			screen.getByRole("button", { name: /sign in with gc identity provider/i }),
-		).toBeTruthy();
-		expect(
-			screen.getByText(/session-based authentication through the backend/i),
-		).toBeTruthy();
-		expect(
-			screen.getAllByText(/protect frontend routes with backend session checks/i),
-		).toHaveLength(2);
 	});
 
 	it("shows the signed-in user and a sign-out action when authenticated", () => {
@@ -105,11 +92,11 @@ describe("Home", () => {
 			currentUser: {
 				name: "Jane Doe",
 				email: "jane@example.com",
-				"profileImageUrl": "https://example.com/avatar.png",
-				"authProvider": "gc-sso",
-				"authSubject": "subject-123",
-				"roleUuids": ["role-uuid-2"],
-				"tierUuid": "tier-uuid-3",
+				profileImageUrl: "https://example.com/avatar.png",
+				authProvider: "gc-sso",
+				authSubject: "subject-123",
+				roleUuids: ["role-uuid-2"],
+				tierUuid: "tier-uuid-3",
 				uuid: "user-uuid-7",
 			},
 			isLoading: false,
@@ -124,8 +111,7 @@ describe("Home", () => {
 			</QueryClientProvider>,
 		);
 
-		expect(screen.getByRole("heading", { name: /current session status/i })).toBeTruthy();
-		expect(screen.getByText(/signed in as jane doe/i)).toBeTruthy();
+		expect(screen.getByRole("button", { name: /go to dashboard/i })).toBeTruthy();
 		expect(screen.getByRole("button", { name: /sign out/i })).toBeTruthy();
 	});
 });

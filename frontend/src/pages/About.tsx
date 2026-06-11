@@ -1,50 +1,47 @@
-import { CenteredPageLayout } from "../components/layout";
+import { useTranslation } from "react-i18next";
 import type { FunctionComponent } from "../common/types";
-
-// Components (internal)
-import { Heading, Text, Card, Grid } from "../components";
+import { Card, Grid, Heading, Text } from "../components";
+import { CenteredPageLayout } from "../components/layout";
 
 const About = (): FunctionComponent => {
+	const { t } = useTranslation();
+
 	return (
 		<CenteredPageLayout className="max-w-6xl gap-600">
-			<Heading tag="h1">About this app</Heading>
+			<div className="max-w-3xl">
+				<Heading tag="h1">{t("about.title")}</Heading>
+				<Text>{t("about.intro")}</Text>
+			</div>
 
-			<Text>
-				This app was built using GC Design System styles and components.
-			</Text>
+			<section>
+				<Heading tag="h2">{t("about.sectionFeatureTitle")}</Heading>
+				<Text>{t("about.sectionFeatureBody")}</Text>
+			</section>
 
-			<Heading tag="h2">Learn more about the GC Design System</Heading>
+			<section>
+				<Heading tag="h2">{t("about.sectionIntegrationTitle")}</Heading>
+				<Text>{t("about.sectionIntegrationBody")}</Text>
+			</section>
+
+			<section>
+				<Heading tag="h2">{t("about.sectionSupportTitle")}</Heading>
+				<Text>{t("about.sectionSupportBody")}</Text>
+			</section>
 
 			<Grid columnsDesktop="1fr 1fr" columnsTablet="1fr 1fr">
 				<Card
-					badge="Design"
-					cardTitle="Figma library"
+					badge="Docs"
+					cardTitle={t("about.cardTitle")}
 					cardTitleTag="h3"
-					className="mb-300"
-					description="View all of our styles and components to use in your designs."
-					href="https://www.figma.com/design/mh2maMG2NBtk41k1O1UGHV/GC-Design-System?node-id=4-1006&node-type=CANVAS&t=YFNAbrqORUhggvuC-0"
-					imgAlt=""
-					imgSrc="/figma.png"
+					description={t("about.cardDescription")}
+					href="/"
 				/>
 				<Card
-					badge="Guidance"
-					cardTitle="Documentation site"
+					badge="Portal"
+					cardTitle={t("home.title")}
 					cardTitleTag="h3"
-					className="mb-300"
-					description="View all of our styles and components along with guidance on how to use them."
-					href="https://design-system.canada.ca"
-					imgAlt=""
-					imgSrc="/docs.png"
-				/>
-				<Card
-					badge="Code"
-					cardTitle="GitHub repo"
-					cardTitleTag="h3"
-					className="mb-300"
-					description="View our code in Github for all of our components."
-					href="https://github.com/cds-snc/gcds-components"
-					imgAlt=""
-					imgSrc="/github.png"
+					description={t("about.summary")}
+					href="/"
 				/>
 			</Grid>
 		</CenteredPageLayout>
