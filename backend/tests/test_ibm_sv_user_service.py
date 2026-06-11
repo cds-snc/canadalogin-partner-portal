@@ -2,7 +2,6 @@ from unittest.mock import AsyncMock, Mock, patch
 
 import pytest
 
-from src.app.schemas.rp_application import RPApplicationRead
 from src.app.services.ibm_sv_user_service import IBMVerifyUserService
 from src.app.services.rp_application_service import RPApplicationService
 

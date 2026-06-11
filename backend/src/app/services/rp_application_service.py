@@ -1,5 +1,6 @@
 import logging
 import uuid as uuid_pkg
+from collections.abc import Mapping
 from datetime import UTC, datetime
 from typing import Any
 
@@ -7,8 +8,10 @@ from fastcrud import compute_offset, paginated_response
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from ..core.exceptions.http_exceptions import NotFoundException
+from ..repositories.crud_audit_log import crud_audit_log
 from ..repositories.crud_rp_applications import crud_rp_applications
 from ..repositories.ibm_sv_admin import IBMVerifyAdminClient
+from ..schemas.audit_log import AuditLogCreateInternal
 from ..schemas.rp_application import (
     RPApplicationCreate,
     RPApplicationCreateInternal,
@@ -105,6 +108,7 @@ class RPApplicationService:
         self,
         db: AsyncSession,
         rp_application: RPApplicationCreate,
+        current_user: Mapping[str, Any],
         created_by: int | None,
     ) -> dict[str, Any]:
         created = await crud_rp_applications.create(
@@ -120,6 +124,18 @@ class RPApplicationService:
         )
         if created is None:
             raise NotFoundException("Failed to create RP application")
+
+        await crud_audit_log.create(
+            db=db,
+            object=AuditLogCreateInternal(
+                user=current_user.get("name", ""),
+                user_uuid=current_user["uuid"],
+                target="rp_application",
+                target_uuid=created["uuid"],
+                operation="CREATE",
+                description=f"Created RP application '{rp_application.dnr_app_name}'",
+            ),
+        )
         return created
 
     async def list_rp_applications(
@@ -295,8 +311,9 @@ class RPApplicationService:
         db: AsyncSession,
         rp_application_uuid: uuid_pkg.UUID | str,
         values: RPApplicationUpdate,
+        current_user: Mapping[str, Any],
     ) -> dict[str, str]:
-        await self.get_rp_application_by_uuid(db=db, rp_application_uuid=rp_application_uuid)
+        existing = await self.get_rp_application_by_uuid(db=db, rp_application_uuid=rp_application_uuid)
 
         updated_fields = values.model_dump(exclude_unset=True)
         if len(updated_fields) == 0:
@@ -311,13 +328,41 @@ class RPApplicationService:
             object=update_payload,
             uuid=rp_application_uuid,
         )
+
+        changed_keys = ", ".join(updated_fields.keys())
+        audit_target_uuid = uuid_pkg.UUID(str(rp_application_uuid)) if isinstance(rp_application_uuid, str) else rp_application_uuid
+        await crud_audit_log.create(
+            db=db,
+            object=AuditLogCreateInternal(
+                user=current_user.get("name", ""),
+                user_uuid=current_user["uuid"],
+                target="rp_application",
+                target_uuid=audit_target_uuid,
+                operation="UPDATE",
+                description=f"Updated RP application '{existing.get('dnr_app_name', '')}': {changed_keys}",
+            ),
+        )
         return {"message": "RP application updated"}
 
     async def delete_rp_application(
         self,
         db: AsyncSession,
         rp_application_uuid: uuid_pkg.UUID | str,
+        current_user: Mapping[str, Any],
     ) -> dict[str, str]:
-        await self.get_rp_application_by_uuid(db=db, rp_application_uuid=rp_application_uuid)
+        existing = await self.get_rp_application_by_uuid(db=db, rp_application_uuid=rp_application_uuid)
         await crud_rp_applications.delete(db=db, uuid=rp_application_uuid)
+
+        audit_target_uuid = uuid_pkg.UUID(str(rp_application_uuid)) if isinstance(rp_application_uuid, str) else rp_application_uuid
+        await crud_audit_log.create(
+            db=db,
+            object=AuditLogCreateInternal(
+                user=current_user.get("name", ""),
+                user_uuid=current_user["uuid"],
+                target="rp_application",
+                target_uuid=audit_target_uuid,
+                operation="DELETE",
+                description=f"Deleted RP application '{existing.get('dnr_app_name', '')}'",
+            ),
+        )
         return {"message": "RP application deleted"}

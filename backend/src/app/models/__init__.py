@@ -1,4 +1,5 @@
 from .access_policy import AccessPolicy
+from .audit_log import AuditLog
 from .department import Department
 from .rate_limit import RateLimit
 from .role import Role

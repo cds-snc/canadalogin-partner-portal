@@ -3,8 +3,8 @@ from unittest.mock import AsyncMock, Mock, patch
 import pytest
 from starlette.requests import Request
 
-from src.app.core.config import settings
 from src.app.api.v1.oidc import oidc_callback, oidc_login
+from src.app.core.config import settings
 from src.app.core.exceptions.http_exceptions import ForbiddenException
 from src.app.core.oidc import sync_oidc_user
 

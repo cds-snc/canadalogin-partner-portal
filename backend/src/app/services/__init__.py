@@ -1,3 +1,4 @@
+from .audit_service import AuditService
 from .auth_service import AuthService
 from .department_service import DepartmentService
 from .gc_notify_service import GCNotifyService
@@ -14,6 +15,7 @@ from .tier_service import TierService
 from .user_service import UserService
 
 __all__ = [
+    "AuditService",
     "AuthService",
     "DepartmentService",
     "GCNotifyService",

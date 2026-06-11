@@ -36,6 +36,7 @@ async def write_rp_application(
     return await service.create_rp_application(
         db=db,
         rp_application=rp_application,
+        current_user=current_user,
         created_by=current_user.get("id"),
     )
 
@@ -94,11 +95,13 @@ async def patch_rp_application(
     values: RPApplicationUpdate,
     db: Annotated[AsyncSession, Depends(async_get_db)],
     service: Annotated[RPApplicationService, Depends(get_rp_application_service)],
+    current_user: Annotated[dict, Depends(get_current_user)],
 ) -> dict[str, str]:
     return await service.update_rp_application(
         db=db,
         rp_application_uuid=rp_application_uuid,
         values=values,
+        current_user=current_user,
     )
 
 
@@ -109,8 +112,10 @@ async def erase_rp_application(
     rp_application_uuid: uuid_pkg.UUID,
     db: Annotated[AsyncSession, Depends(async_get_db)],
     service: Annotated[RPApplicationService, Depends(get_rp_application_service)],
+    current_user: Annotated[dict, Depends(get_current_user)],
 ) -> dict[str, str]:
     return await service.delete_rp_application(
         db=db,
         rp_application_uuid=rp_application_uuid,
+        current_user=current_user,
     )

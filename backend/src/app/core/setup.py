@@ -47,8 +47,7 @@ from .config import (
     SessionSettings,
     settings,
 )
-from .db.database import Base
-from .db.database import async_engine as engine
+from .db.database import Base, get_async_engine
 from .utils import cache, queue
 
 redis_session_client: redis.Redis | None = None
@@ -59,7 +58,7 @@ arq_service_thread: Thread | None = None
 # -------------- database --------------
 async def create_tables() -> None:
     logger.info("Creating database tables...")
-    async with engine.begin() as conn:
+    async with get_async_engine().begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
     logger.info("Database tables created successfully")
 
