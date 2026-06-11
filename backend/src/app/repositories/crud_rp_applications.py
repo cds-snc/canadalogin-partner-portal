@@ -1,7 +1,7 @@
 from fastcrud import FastCRUD
 
 from ..models.rp_application import RPApplication
-from ..schemas.workspace import (
+from ..schemas.rp_application import (
     RPApplicationCreateInternal,
     RPApplicationDelete,
     RPApplicationRead,

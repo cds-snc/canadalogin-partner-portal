@@ -64,6 +64,31 @@ class TestIBMVerifyAdminClient:
             run_sdk.assert_awaited_once()
 
     @pytest.mark.asyncio
+    async def test_list_applications_normalizes_application_ids_from_self_links(self) -> None:
+        mock_http_client = Mock()
+        client = IBMVerifyAdminClient(mock_http_client)
+        payload = {
+            "resources": [
+                {
+                    "_links": {"self": {"href": "/appaccess/v1.0/applications/7878783453"}},
+                    "name": "Step Up",
+                }
+            ]
+        }
+
+        with patch.object(client, "_run_sdk", AsyncMock(return_value=payload)) as run_sdk:
+            result = await client.list_applications()
+
+        assert result == [
+            {
+                "_links": {"self": {"href": "/appaccess/v1.0/applications/7878783453"}},
+                "name": "Step Up",
+                "id": "7878783453",
+            }
+        ]
+        run_sdk.assert_awaited_once()
+
+    @pytest.mark.asyncio
     async def test_update_application_uses_integrated_sdk_execution(self) -> None:
         mock_http_client = Mock()
         client = IBMVerifyAdminClient(mock_http_client)

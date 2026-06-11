@@ -5,9 +5,6 @@ from typing import Any
 from authlib.integrations.starlette_client import OAuth
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from ..repositories.crud_rp_application_developer_invitations import (
-    crud_rp_application_developer_invitations,
-)
 from ..repositories.crud_roles import crud_roles
 from ..repositories.crud_users import crud_users
 from ..schemas.role import RoleRead
@@ -63,7 +60,7 @@ def _normalize_claim_values(value: Any) -> set[str]:
 
     if isinstance(value, str):
         raw_values = value.split(",") if "," in value else [value]
-    elif isinstance(value, (list, tuple, set)):
+    elif isinstance(value, list | tuple | set):
         raw_values = [str(item) for item in value]
     else:
         raw_values = [str(value)]
@@ -121,26 +118,6 @@ async def _resolve_role_ids_from_membership(
             role_ids.append(application_owners_role["id"])
 
     return role_ids
-
-
-async def has_active_oidc_invitation_for_email(db: AsyncSession, email: str) -> bool:
-    normalized_email = email.strip().lower()
-    invitations = await crud_rp_application_developer_invitations.get_multi(
-        db=db,
-        invited_email=normalized_email,
-        accepted_at=None,
-        revoked_at=None,
-        is_deleted=False,
-    )
-    invitation_rows = invitations.get("data", []) if isinstance(invitations, dict) else invitations
-    now = datetime.now(UTC)
-
-    for invitation in invitation_rows:
-        invitation_data = invitation if isinstance(invitation, dict) else dict(invitation)
-        if invitation_data.get("invite_expires_at") and invitation_data["invite_expires_at"] > now:
-            return True
-
-    return False
 
 
 async def generate_unique_username(db: AsyncSession, claims: dict[str, Any]) -> str:
@@ -239,38 +216,37 @@ async def sync_oidc_user(db: AsyncSession, claims: dict[str, Any]) -> dict[str, 
                 raise UnauthorizedException("Failed to refresh email-linked user")
             return refreshed
 
-    if not await has_active_oidc_invitation_for_email(db, normalized_email):
-        raise ForbiddenException("User is not allowed to access this site")
-
-    name = claims.get("name") or claims.get("preferred_username") or normalized_email
-
     created_user = await crud_users.create(
         db=db,
         object=UserCreateInternal(
-            name=name[:30],
-            username=normalized_email,
+            name=normalized_email,
             email=normalized_email,
+            username=normalized_email,
             auth_provider=provider,
             auth_subject=subject,
         ),
         schema_to_select=UserReadInternal,
     )
     if created_user is None:
-        raise UnauthorizedException("Unable to create the OIDC user.")
+        raise UnauthorizedException("Failed to create OIDC user")
 
     await crud_users.update(
         db=db,
-        object={"role_ids": mapped_role_ids},
+        object={
+            "last_login_at": datetime.now(UTC),
+            "role_ids": mapped_role_ids,
+        },
         uuid=created_user["uuid"],
     )
 
-    refreshed_created_user = await crud_users.get(
+    refreshed = await crud_users.get(
         db=db,
         uuid=created_user["uuid"],
         is_deleted=False,
         schema_to_select=UserReadInternal,
     )
-    if refreshed_created_user is None:
-        raise UnauthorizedException("Failed to refresh created OIDC user")
+    if refreshed is None:
+        raise UnauthorizedException("Failed to refresh created user")
 
-    return refreshed_created_user
+    return refreshed
+

@@ -1,4 +1,4 @@
-from unittest.mock import AsyncMock, patch
+from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 from fastapi import APIRouter, FastAPI
@@ -24,7 +24,7 @@ class TestSessionLifespan:
     @pytest.mark.asyncio
     async def test_lifespan_initializes_and_closes_session_redis(self) -> None:
         app = FastAPI()
-        lifespan = lifespan_factory(settings, create_tables_on_start=False)
+        lifespan = lifespan_factory(settings, create_tables_on_start=False, start_arq_service_on_start=False)
 
         with (
             patch("src.app.core.setup.create_redis_cache_pool", new=AsyncMock()) as mock_cache_create,
@@ -47,3 +47,33 @@ class TestSessionLifespan:
         mock_queue_close.assert_awaited_once()
         mock_rate_limit_close.assert_awaited_once()
         mock_session_close.assert_awaited_once()
+
+    @pytest.mark.asyncio
+    async def test_lifespan_starts_arq_service_on_startup(self) -> None:
+        app = FastAPI()
+        lifespan = lifespan_factory(settings, create_tables_on_start=False)
+
+        thread_instance = MagicMock()
+        thread_instance.is_alive.return_value = False
+
+        with (
+            patch("src.app.core.setup.create_redis_cache_pool", new=AsyncMock()),
+            patch("src.app.core.setup.create_redis_queue_pool", new=AsyncMock()),
+            patch("src.app.core.setup.create_redis_rate_limit_pool", new=AsyncMock()),
+            patch("src.app.core.setup.create_redis_session_pool", new=AsyncMock(), create=True),
+            patch("src.app.core.setup.create_ibm_sv_admin_client", new=AsyncMock()),
+            patch("src.app.core.worker.functions.sync_ibm_verify_rp_applications", new=AsyncMock()) as mock_sync,
+            patch("src.app.core.setup.close_redis_cache_pool", new=AsyncMock()),
+            patch("src.app.core.setup.close_redis_queue_pool", new=AsyncMock()),
+            patch("src.app.core.setup.close_redis_rate_limit_pool", new=AsyncMock()),
+            patch("src.app.core.setup.close_redis_session_pool", new=AsyncMock(), create=True),
+            patch("src.app.core.setup.close_ibm_sv_admin_client", new=AsyncMock()),
+            patch("src.app.core.setup.arq_service_thread", None),
+            patch("src.app.core.setup.Thread", return_value=thread_instance) as mock_thread,
+        ):
+            async with lifespan(app):
+                assert app.state.initialization_complete.is_set()
+
+        mock_thread.assert_called_once()
+        thread_instance.start.assert_called_once()
+        mock_sync.assert_not_awaited()

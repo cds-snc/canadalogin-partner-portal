@@ -12,8 +12,6 @@ from ..repositories.crud_rate_limit import crud_rate_limits
 from ..repositories.crud_roles import crud_roles
 from ..repositories.crud_tier import crud_tiers
 from ..repositories.crud_users import crud_users
-from ..repositories.crud_workspace_members import crud_workspace_members
-from ..repositories.crud_workspaces import crud_workspaces
 from ..schemas.department import DepartmentRead
 from ..schemas.rate_limit import RateLimitRead
 from ..schemas.role import RoleRead
@@ -64,6 +62,8 @@ class UserService:
         query: str,
         workspace_uuid: uuid_pkg.UUID | str | None = None,
     ) -> list[dict[str, Any]]:
+        # workspace_uuid is retained for backward compatibility and ignored.
+        _ = workspace_uuid
         filters: dict[str, Any] = {"is_deleted": False}
 
         users_data = await crud_users.get_multi(
@@ -73,21 +73,10 @@ class UserService:
         )
         users = users_data.get("data", []) if isinstance(users_data, dict) else users_data
 
-        excluded_user_ids: set[int] = set()
-        if workspace_uuid:
-            ws = await crud_workspaces.get(db=db, uuid=workspace_uuid, is_deleted=False)
-            if ws:
-                members_data = await crud_workspace_members.get_multi(
-                    db=db, workspace_id=ws["id"], is_deleted=False
-                )
-                members = members_data.get("data", []) if isinstance(members_data, dict) else members_data
-                excluded_user_ids = {m["user_id"] for m in members}
-
         query_lower = query.lower()
         filtered = [
             user for user in users
-            if user.get("id") not in excluded_user_ids
-            and (
+            if (
                 query_lower in (user.get("name") or "").lower()
                 or query_lower in (user.get("email") or "").lower()
                 or query_lower in (user.get("username") or "").lower()

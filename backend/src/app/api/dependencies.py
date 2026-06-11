@@ -12,16 +12,19 @@ from ..core.utils.rate_limit import rate_limiter
 from ..repositories.crud_rate_limit import crud_rate_limits
 from ..repositories.crud_tier import crud_tiers
 from ..repositories.crud_users import crud_users
+from ..repositories.dependencies import get_ibm_sv_user_client
 from ..schemas.rate_limit import sanitize_path
 from ..services import (
     AuthService,
     DepartmentService,
     HealthService,
+    IBMVerifyUserService,
     OidcLogoutService,
     OidcService,
     PolicyService,
     RateLimitService,
     RoleService,
+    RPApplicationService,
     TaskService,
     TierService,
     UserService,
@@ -55,6 +58,14 @@ def get_policy_service() -> PolicyService:
 
 def get_rate_limit_service() -> RateLimitService:
     return RateLimitService()
+
+
+def get_ibm_sv_user_service(request: Request) -> IBMVerifyUserService:
+    return IBMVerifyUserService(client=get_ibm_sv_user_client(request))
+
+
+def get_rp_application_service() -> RPApplicationService:
+    return RPApplicationService()
 
 
 def get_auth_service() -> AuthService:

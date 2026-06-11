@@ -1,5 +1,7 @@
 """IBM Security Verify repository dependencies."""
 
+import asyncio
+import logging
 from typing import Annotated
 
 from fastapi import Depends, Request
@@ -9,6 +11,8 @@ from ..repositories.ibm_sv_admin import IBMVerifyAdminClient, create_admin_oauth
 from ..repositories.ibm_sv_user import IBMVerifyUserClient
 
 _ibm_sv_admin_client: IBMVerifyAdminClient | None = None
+_ibm_sv_admin_client_loop_id: int | None = None
+logger = logging.getLogger(__name__)
 
 
 async def get_ibm_sv_admin_client() -> IBMVerifyAdminClient:
@@ -17,10 +21,23 @@ async def get_ibm_sv_admin_client() -> IBMVerifyAdminClient:
     This client uses client_credentials flow and is shared across requests.
     Suitable for admin operations that don't require user context.
     """
-    global _ibm_sv_admin_client
+    global _ibm_sv_admin_client, _ibm_sv_admin_client_loop_id
 
-    if _ibm_sv_admin_client is not None:
+    current_loop_id = id(asyncio.get_running_loop())
+
+    if _ibm_sv_admin_client is not None and _ibm_sv_admin_client_loop_id == current_loop_id:
         return _ibm_sv_admin_client
+
+    if _ibm_sv_admin_client is not None and _ibm_sv_admin_client_loop_id != current_loop_id:
+        logger.info(
+            "Recreating IBM Verify admin client for a different event loop",
+            extra={
+                "previous_loop_id": _ibm_sv_admin_client_loop_id,
+                "current_loop_id": current_loop_id,
+            },
+        )
+        await _ibm_sv_admin_client.aclose()
+        _ibm_sv_admin_client = None
 
     oauth_client = await create_admin_oauth_client()
 
@@ -28,6 +45,7 @@ async def get_ibm_sv_admin_client() -> IBMVerifyAdminClient:
         await oauth_client.fetch_token()
 
     _ibm_sv_admin_client = IBMVerifyAdminClient(oauth_client)
+    _ibm_sv_admin_client_loop_id = current_loop_id
     return _ibm_sv_admin_client
 
 
@@ -68,17 +86,22 @@ async def get_ibm_sv_user_client_from_token(access_token: str) -> IBMVerifyUserC
 
 async def close_ibm_sv_admin_client() -> None:
     """Close the admin client. Called during application shutdown."""
-    global _ibm_sv_admin_client
+    global _ibm_sv_admin_client, _ibm_sv_admin_client_loop_id
 
     if _ibm_sv_admin_client is not None:
         await _ibm_sv_admin_client.aclose()
         _ibm_sv_admin_client = None
+        _ibm_sv_admin_client_loop_id = None
 
 
 def set_ibm_sv_admin_client(client: IBMVerifyAdminClient) -> None:
     """Set the global admin client (for testing or manual initialization)."""
-    global _ibm_sv_admin_client
+    global _ibm_sv_admin_client, _ibm_sv_admin_client_loop_id
     _ibm_sv_admin_client = client
+    try:
+        _ibm_sv_admin_client_loop_id = id(asyncio.get_running_loop())
+    except RuntimeError:
+        _ibm_sv_admin_client_loop_id = None
 
 
 IBMVerifyAdminClientDep = Annotated[IBMVerifyAdminClient, Depends(get_ibm_sv_admin_client)]

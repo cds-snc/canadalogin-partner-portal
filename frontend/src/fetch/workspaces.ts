@@ -101,12 +101,17 @@ export type RPApplicationRead = {
 export type CurrentUserRPApplicationRead = {
 	id: number;
 	uuid: string;
-	name: string;
-	status: string;
-	settings: RPApplicationSettings | null;
+	dnrAppName?: string;
+	name?: string;
+	status?: string;
+	settings?: RPApplicationSettings | null;
 	ibm_sv_application_id?: string | null;
-	workspaceName: string;
-	workspaceUuid: string;
+	departmentId?: number | null;
+	workspaceName?: string;
+	workspaceUuid?: string;
+	applicationOwner?: {
+		owners: Array<{ email: string }>;
+	} | null;
 };
 
 export type RPApplicationDeveloperInvitationRead = {

@@ -2,6 +2,7 @@
 
 import inspect
 import logging
+import re
 from collections.abc import Callable
 from typing import Any
 
@@ -24,6 +25,7 @@ from ..core.exceptions.ibm_sv_exceptions import (
 )
 
 LOGGER = logging.getLogger(__name__)
+APPLICATION_ID_PATTERN = re.compile(r"/applications/([^/?#]+)")
 
 
 class IBMVerifyAdminClient:
@@ -186,20 +188,76 @@ class IBMVerifyAdminClient:
     async def list_applications(self) -> list[dict[str, Any]]:
         """List all applications."""
         payload = await self._run_sdk(lambda sdk_client: sdk_client.applications.list_applications())
+
+        def normalize_application(application: dict[str, Any]) -> dict[str, Any]:
+            normalized_application = dict(application)
+            application_id = normalized_application.get("id")
+            if application_id is None:
+                self_link = normalized_application.get("_links")
+                if isinstance(self_link, dict):
+                    self_href = self_link.get("self")
+                    if isinstance(self_href, dict):
+                        href = self_href.get("href")
+                        if isinstance(href, str):
+                            match = APPLICATION_ID_PATTERN.search(href)
+                            if match is not None:
+                                application_id = match.group(1)
+
+            if application_id is not None:
+                normalized_application["id"] = str(application_id)
+
+            return normalized_application
+
         if isinstance(payload, dict):
             embedded = payload.get("_embedded")
             if isinstance(embedded, dict):
                 resources = embedded.get("applications")
                 if isinstance(resources, list):
-                    return resources
+                    return [normalize_application(application) for application in resources if isinstance(application, dict)]
             resources = payload.get("resources", payload.get("Resources"))
             if isinstance(resources, list):
-                return resources
-        return payload if isinstance(payload, list) else []
+                return [normalize_application(application) for application in resources if isinstance(application, dict)]
+        if isinstance(payload, list):
+            return [normalize_application(application) for application in payload if isinstance(application, dict)]
+        return []
 
     async def get_application_detail(self, application_id: str) -> dict[str, Any]:
         """Get application details by ID."""
-        payload = await self._run_sdk(lambda sdk_client: sdk_client.applications.get_application(application_id=application_id))
+        try:
+            response = await self._client.get(f"{self._base_url}/v1.0/applications/{application_id}")
+            response.raise_for_status()
+        except httpx.HTTPStatusError as exc:
+            status_code = exc.response.status_code
+            response_body: dict[str, Any] | None = None
+            message = exc.response.text or str(exc)
+
+            try:
+                body = exc.response.json()
+            except ValueError:
+                body = None
+
+            if isinstance(body, dict):
+                response_body = body
+                body_message = body.get("message")
+                if isinstance(body_message, str) and body_message.strip():
+                    message = body_message.strip()
+
+            error_map = {
+                400: IBMVerifyBadRequest,
+                401: IBMVerifyUnauthorized,
+                403: IBMVerifyForbidden,
+                404: IBMVerifyNotFound,
+            }
+            exc_class = error_map.get(status_code, IBMVerifyServerError)
+            raise exc_class(message=message, response_body=response_body) from exc
+        except httpx.HTTPError as exc:
+            raise IBMVerifyServerError(message=str(exc)) from exc
+
+        try:
+            payload = response.json()
+        except ValueError:
+            return {}
+
         return payload if isinstance(payload, dict) else {}
 
     async def create_application(self, payload: dict[str, Any]) -> dict[str, Any]:
