@@ -3,6 +3,7 @@ import io
 from typing import Optional
 
 import boto3
+from botocore.exceptions import ClientError
 
 from ..core.config import settings
 from ..schemas.mau import MAUCsvRow
@@ -10,12 +11,32 @@ from ..schemas.mau import MAUCsvRow
 
 class S3Repository:
     def __init__(self) -> None:
-        self.client = boto3.client(
-            "s3",
-            aws_access_key_id=settings.AWS_ACCESS_KEY_ID,
-            aws_secret_access_key=settings.AWS_SECRET_ACCESS_KEY,
-            region_name=settings.AWS_S3_REGION,
-        )
+        session_kwargs = {}
+        if settings.AWS_S3_PROFILE:
+            session_kwargs["profile_name"] = settings.AWS_S3_PROFILE
+        session = boto3.Session(**session_kwargs)
+
+        if settings.AWS_S3_ROLE_ARN:
+            sts_client = session.client("sts", region_name=settings.AWS_S3_REGION)
+            try:
+                response = sts_client.assume_role(
+                    RoleArn=settings.AWS_S3_ROLE_ARN,
+                    RoleSessionName="S3RepositorySession",
+                    DurationSeconds=900,
+                )
+            except ClientError:
+                self.client = session.client("s3", region_name=settings.AWS_S3_REGION)
+            else:
+                creds = response["Credentials"]
+                self.client = boto3.client(
+                    "s3",
+                    aws_access_key_id=creds["AccessKeyId"],
+                    aws_secret_access_key=creds["SecretAccessKey"],
+                    aws_session_token=creds["SessionToken"],
+                    region_name=settings.AWS_S3_REGION,
+                )
+        else:
+            self.client = session.client("s3", region_name=settings.AWS_S3_REGION)
         self.bucket = settings.S3_MAU_BUCKET_NAME
         self.folder = settings.S3_MAU_FOLDER
 
