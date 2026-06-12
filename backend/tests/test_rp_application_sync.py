@@ -83,13 +83,19 @@ class TestRPApplicationServiceSync:
 
 
 class TestWorkerCronConfiguration:
-    def test_worker_settings_registers_ten_minute_sync_job(self) -> None:
-        assert len(WorkerSettings.cron_jobs) == 1
-        cron_job = WorkerSettings.cron_jobs[0]
+    def test_worker_settings_registers_cron_jobs(self) -> None:
+        assert len(WorkerSettings.cron_jobs) == 2
 
-        assert cron_job.name == "sync_ibm_verify_rp_applications"
-        assert cron_job.minute == {0, 10, 20, 30, 40, 50}
-        assert cron_job.run_at_startup is True
+        sync_job = WorkerSettings.cron_jobs[0]
+        assert sync_job.name == "sync_ibm_verify_rp_applications"
+        assert sync_job.minute == {0, 10, 20, 30, 40, 50}
+        assert sync_job.run_at_startup is True
+
+        mau_job = WorkerSettings.cron_jobs[1]
+        assert mau_job.name == "load_mau_data"
+        assert mau_job.hour == {7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19}
+        assert mau_job.minute == 0
+        assert mau_job.run_at_startup is True
 
 
 class TestWorkerSyncJob:

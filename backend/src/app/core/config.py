@@ -151,8 +151,7 @@ class FirstUserSettings(BaseSettings):
     SUPERUSER: str | None = None
 
 
-class TestSettings(BaseSettings):
-    ...
+class TestSettings(BaseSettings): ...
 
 
 class RedisCacheSettings(BaseSettings):
@@ -211,6 +210,14 @@ class CORSSettings(BaseSettings):
     CORS_HEADERS: list[str] = ["*"]
 
 
+class S3Settings(BaseSettings):
+    AWS_S3_REGION: str = "ca-central-1"
+    AWS_S3_ROLE_ARN: str = ""
+    AWS_S3_PROFILE: str = ""
+    S3_MAU_BUCKET_NAME: str = ""
+    S3_MAU_FOLDER: str = "ibm_verify/app_login_counts/"
+
+
 class Settings(
     AppSettings,
     SQLiteSettings,
@@ -230,6 +237,7 @@ class Settings(
     DefaultRateLimitSettings,
     EnvironmentSettings,
     CORSSettings,
+    S3Settings,
     FileLoggerSettings,
     ConsoleLoggerSettings,
 ):

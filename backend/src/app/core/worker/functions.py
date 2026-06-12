@@ -5,10 +5,13 @@ from typing import Any
 import structlog
 import uvloop
 from arq.worker import Worker
+from redis.asyncio import Redis as AsyncRedis
 
 from ...api.dependencies import get_rp_application_service
+from ...core.config import settings
 from ...core.db.database import local_session
 from ...repositories.dependencies import get_ibm_sv_admin_client
+from ...services.mau_service import MAUService
 
 asyncio.set_event_loop_policy(uvloop.EventLoopPolicy())
 
@@ -28,6 +31,17 @@ async def sync_ibm_verify_rp_applications(ctx: dict[str, Any]) -> dict[str, int]
 
     logging.info("IBM Verify RP application sync completed: %s", result)
     return result
+
+
+async def load_mau_data(ctx: dict[str, Any]) -> dict[str, bool]:
+    redis = AsyncRedis.from_url(settings.REDIS_CACHE_URL)
+    try:
+        service = MAUService(redis=redis)
+        loaded = await service.load_yesterday_mau_if_missing()
+        logging.info("MAU data loaded: %s", loaded)
+        return {"loaded": loaded}
+    finally:
+        await redis.aclose()  # type: ignore[attr-defined]
 
 
 # -------- base functions --------
