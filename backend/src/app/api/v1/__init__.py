@@ -5,6 +5,7 @@ from .departments import router as departments_router
 from .health import router as health_router
 from .ibm_sv_admin import router as ibm_sv_admin_router
 from .logout import router as logout_router
+from .mau import router as mau_router
 from .oidc import router as oidc_router
 from .policies import router as policies_router
 from .rate_limits import router as rate_limits_router
@@ -19,6 +20,7 @@ router.include_router(audit_logs_router)
 router.include_router(departments_router)
 router.include_router(health_router)
 router.include_router(ibm_sv_admin_router)
+router.include_router(mau_router)
 router.include_router(oidc_router)
 router.include_router(logout_router)
 router.include_router(policies_router)

@@ -9,14 +9,14 @@ from arq.worker import check_health, run_worker
 
 from ...core.config import settings
 from ...core.logger import logging  # noqa: F401
-from .functions import on_job_end, on_job_start, shutdown, startup, sync_ibm_verify_rp_applications
+from .functions import load_mau_data, on_job_end, on_job_start, shutdown, startup, sync_ibm_verify_rp_applications
 
 REDIS_QUEUE_HOST = settings.REDIS_QUEUE_HOST
 REDIS_QUEUE_PORT = settings.REDIS_QUEUE_PORT
 
 
 class WorkerSettings:
-    functions = [sync_ibm_verify_rp_applications]
+    functions = [sync_ibm_verify_rp_applications, load_mau_data]
     cron_jobs = [
         CronJob(
             "sync_ibm_verify_rp_applications",
@@ -35,7 +35,25 @@ class WorkerSettings:
             keep_result_s=None,
             keep_result_forever=None,
             max_tries=1,
-        )
+        ),
+        CronJob(
+            "load_mau_data",
+            load_mau_data,
+            month=None,
+            day=None,
+            weekday=None,
+            hour={7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19},
+            minute=0,
+            second=0,
+            microsecond=0,
+            run_at_startup=True,
+            unique=True,
+            job_id=None,
+            timeout_s=60.0,
+            keep_result_s=None,
+            keep_result_forever=None,
+            max_tries=1,
+        ),
     ]
     redis_settings = RedisSettings(host=REDIS_QUEUE_HOST, port=REDIS_QUEUE_PORT)
     on_startup = startup

@@ -40,10 +40,22 @@ UV_PROJECT_ENVIRONMENT=../.venv uv run mypy src/app
 cd src && UV_PROJECT_ENVIRONMENT=../../.venv uv run alembic upgrade head
 ```
 
-Migration note: keep Alembic `revision` values <= 32 chars.
+#### Migration note: keep Alembic `revision` values <= 32 chars.
 
 ### Frontend
 
+Use repo-root make targets when possible:
+
+```bash
+make ft-install
+make ft-build
+make ft-test
+make ft-lint
+make ft-format
+make ft-dev
+```
+
+Direct `pnpm` usage from `frontend/`
 ```bash
 cd frontend
 pnpm install
@@ -73,11 +85,9 @@ pnpm run build
 Routing and invited developer constraints:
 
 - For nested routes, convert parent into a layout with `Outlet` and move current page to `index.ts`.
-- Preserve invited-developer paths unless backend contract changes:
-  - `/invitations/rp-applications?token=...`
   - `/rp-applications/mine/$rpApplicationUuid`
   - `/access-denied`
-- Invited-developer pages must use current-user endpoints, not workspace-scoped endpoints.
+  - `/auth-complete`
 
 Formatting/lint reminders:
 
@@ -91,12 +101,7 @@ Formatting/lint reminders:
 - Use project exceptions from `core.exceptions.http_exceptions` (avoid raw `HTTPException`/`ValueError`).
 - Preserve centralized exception handling and error envelope (`error.code`, `error.message`, `error.details`, `error.requestId`).
 - For OpenAPI error docs, use `core.exceptions.openapi.error_responses(...)`.
-
-Invite flow constraints:
-
-- Unknown OIDC users are not auto-provisioned unless an active RP-app invitation exists.
-- Blocked OIDC sign-ins redirect to `/access-denied` via `OIDC_ACCESS_DENIED_REDIRECT` and must not create a session.
-- Invited developers use `/api/v1/rp-applications/mine` with narrow app-scoped permissions.
+- Blocked OIDC sign-ins redirect to `access-denied page` via `OIDC_ACCESS_DENIED_REDIRECT` and must not create a session.
 
 ## Key Paths
 

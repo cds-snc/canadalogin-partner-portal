@@ -211,6 +211,14 @@ class CORSSettings(BaseSettings):
     CORS_HEADERS: list[str] = ["*"]
 
 
+class S3Settings(BaseSettings):
+    AWS_ACCESS_KEY_ID: str = ""
+    AWS_SECRET_ACCESS_KEY: str = ""
+    AWS_S3_REGION: str = "ca-central-1"
+    S3_MAU_BUCKET_NAME: str = ""
+    S3_MAU_FOLDER: str = "ibm_verify/app_login_counts/"
+
+
 class Settings(
     AppSettings,
     SQLiteSettings,
@@ -230,6 +238,7 @@ class Settings(
     DefaultRateLimitSettings,
     EnvironmentSettings,
     CORSSettings,
+    S3Settings,
     FileLoggerSettings,
     ConsoleLoggerSettings,
 ):

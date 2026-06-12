@@ -50,17 +50,7 @@ Run `make help` for a full list of available targets.
 - GC Notify-backed RP application developer invitations with app-scoped access for invited users
 - Casbin authorization decorators, rate limiting, ARQ background jobs, caching helpers
 - Multiple deployment modes: local (uvicorn), staging (gunicorn + uvicorn workers), production (nginx)
-
-### Invited RP Application Developers
-
-The repo now supports inviting external developers to a single RP application without adding them as workspace members.
-
-- workspace admins send invites through the backend API and GC Notify
-- invited developers accept through the frontend invite route at `/invitations/rp-applications?token=...`
-- invited developers land on `/rp-applications/mine/{rpApplicationUuid}` and can view and edit RP application details only
-- unknown and uninvited OIDC users are denied access and redirected to `/access-denied`
-
-At the moment, there is no workspace-admin frontend page for creating invitations; only the acceptance flow is exposed in the frontend.
+- MAU (Monthly Active User) data loading from AWS S3 via ARQ cron job, cached in Redis with query-by-app and date-range support
 
 For full backend docs and configuration, see `backend/README.md` and the site at `backend/docs/`.
 
@@ -164,6 +154,7 @@ docker compose up --build
 
 - Backend: create `backend/src/.env` (or copy from examples) and set `ENVIRONMENT`, DB, Redis, OIDC, and session variables.
 - Backend invitation flow also requires GC Notify and invite-link settings: `GC_NOTIFY_API_KEY`, `GC_NOTIFY_RP_APPLICATION_INVITE_TEMPLATE_ID`, `GC_NOTIFY_EMAIL_REPLY_TO_ID` (optional), `RP_APPLICATION_INVITE_URL_BASE`, `RP_APPLICATION_INVITATION_EXPIRE_DAYS`, and `OIDC_ACCESS_DENIED_REDIRECT`.
+- **MAU data loading**: if using the MAU feature, set `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY`, `AWS_S3_REGION`, `S3_MAU_BUCKET_NAME`, and `S3_MAU_FOLDER` in the backend `.env`. The ARQ cron job loads yesterday's MAU CSV from `s3://{bucket}/{folder}/date={yyyy-mm-dd}/app_login_counts.csv` hourly (7am–7pm) and caches results in Redis.
 - Frontend: environment variables for API base URLs can be set via Vite's `import.meta.env` or `.env` files in `frontend/`.
 
 Do NOT commit secrets or `.env` files to source control.
