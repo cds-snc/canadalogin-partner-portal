@@ -14,6 +14,8 @@ export type LogoutResponse = {
 };
 
 export type UserRead = {
+	acceptedTermsAt?: string | null;
+	termsVersion?: string | null;
 	authProvider: string | null;
 	authSubject: string | null;
 	departmentAbbreviation?: string | null;

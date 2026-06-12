@@ -1,6 +1,6 @@
 """IBM Security Verify Admin API endpoints."""
 
-from typing import Annotated, Any
+from typing import Annotated, Any, cast
 
 from fastapi import APIRouter, Depends, Request
 from pydantic import BaseModel, Field
@@ -74,7 +74,7 @@ async def get_application(
 ) -> dict[str, Any]:
     """Get application details from IBM Security Verify."""
     payload = await client.get_application_detail(application_id)
-    return payload.model_dump(by_alias=True, exclude_none=True)
+    return cast("dict[str, Any]", payload.model_dump(by_alias=True, exclude_none=True))
 
 
 @router.post("/ibm-sv-admin/applications", responses=error_responses(400, 401, 403, 422))
@@ -137,7 +137,7 @@ async def get_application_logins(
 ) -> dict[str, Any]:
     """Get total logins for an application."""
     payload = await client.get_application_total_logins(application_id, from_date, to_date)
-    return payload.model_dump(by_alias=True, exclude_none=True)
+    return cast("dict[str, Any]", payload.model_dump(by_alias=True, exclude_none=True))
 
 
 @router.get("/ibm-sv-admin/applications/{application_id}/audit-trail")
@@ -175,7 +175,7 @@ async def get_application_entitlements(
 ) -> dict[str, Any]:
     """Get entitlements for an application."""
     payload = await client.get_application_entitlements(application_id)
-    return payload.model_dump(by_alias=True, exclude_none=True)
+    return cast("dict[str, Any]", payload.model_dump(by_alias=True, exclude_none=True))
 
 
 # Group endpoints
@@ -215,7 +215,7 @@ async def get_group(
 ) -> dict[str, Any]:
     """Get group details from IBM Security Verify."""
     payload = await client.get_group_by_id(group_id)
-    return payload.model_dump(by_alias=True, exclude_none=True)
+    return cast("dict[str, Any]", payload.model_dump(by_alias=True, exclude_none=True))
 
 
 @router.post("/ibm-sv-admin/groups/{group_id}/users/{user_id}")

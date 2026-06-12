@@ -4,6 +4,13 @@ from typing import Any
 from unittest.mock import AsyncMock, Mock, patch
 
 import pytest
+from ibm_verify_community_sdk.applications.models import (
+    GetApplicationEntitlementsResponse,
+    GetApplicationResponse,
+)
+from ibm_verify_community_sdk.groups.models import GetGroupsResponse, Group
+from ibm_verify_community_sdk.reports.models import ReportResponse
+from ibm_verify_community_sdk.users.models import GetAccountDetailsResponse, GetUsersResponse
 
 from src.app.api.v1 import ibm_sv_admin
 
@@ -20,10 +27,12 @@ class TestUserEndpoints:
     async def test_list_users_delegates_to_client(self):
         mock_client = Mock()
         mock_client.fetch_users = AsyncMock(
-            return_value=[
-                {"id": "user1", "name": "Test User"},
-                {"id": "user2", "name": "Another User"},
-            ]
+            return_value=GetUsersResponse(
+                Resources=[
+                    GetAccountDetailsResponse(id="user1", name={"formatted": "Test User"}),
+                    GetAccountDetailsResponse(id="user2", name={"formatted": "Another User"}),
+                ]
+            )
         )
 
         result = await unwrap_endpoint(ibm_sv_admin.list_users)(Mock(), mock_client)
@@ -36,13 +45,15 @@ class TestUserEndpoints:
     async def test_search_users_delegates_to_client(self):
         mock_client = Mock()
         mock_client.search_users_by_name = AsyncMock(
-            return_value=[{"id": "user1", "name": "Test User"}]
+            return_value=GetUsersResponse(
+                Resources=[GetAccountDetailsResponse(id="user1", name={"formatted": "Test User"})]
+            )
         )
 
         result = await unwrap_endpoint(ibm_sv_admin.search_users)(Mock(), "test", mock_client)
 
         assert len(result) == 1
-        assert result[0]["name"] == "Test User"
+        assert result[0]["id"] == "user1"
         mock_client.search_users_by_name.assert_awaited_once_with("test")
 
 
@@ -64,7 +75,7 @@ class TestApplicationEndpoints:
     async def test_get_application_delegates_to_client(self):
         mock_client = Mock()
         mock_client.get_application_detail = AsyncMock(
-            return_value={"id": "app1", "name": "Test App", "description": "A test app"}
+            return_value=GetApplicationResponse(name="Test App", description="A test app")
         )
 
         result = await unwrap_endpoint(ibm_sv_admin.get_application)(Mock(), "app1", mock_client)
@@ -148,14 +159,14 @@ class TestApplicationEndpoints:
     async def test_get_application_logins_delegates_to_client(self):
         mock_client = Mock()
         mock_client.get_application_total_logins = AsyncMock(
-            return_value={"total": 100, "logins": []}
+            return_value=ReportResponse(response={"total": 100, "logins": []}, success=True)
         )
 
         result = await unwrap_endpoint(ibm_sv_admin.get_application_logins)(
             Mock(), "app1", mock_client, from_date="2024-01-01", to_date="2024-01-31"
         )
 
-        assert result["total"] == 100
+        assert result["response"]["total"] == 100
         mock_client.get_application_total_logins.assert_awaited_once_with("app1", "2024-01-01", "2024-01-31")
 
     @pytest.mark.asyncio
@@ -178,7 +189,7 @@ class TestApplicationEndpoints:
     async def test_get_application_entitlements_delegates_to_client(self):
         mock_client = Mock()
         mock_client.get_application_entitlements = AsyncMock(
-            return_value={"entitlements": []}
+            return_value=GetApplicationEntitlementsResponse(entitlements=[])
         )
 
         result = await unwrap_endpoint(ibm_sv_admin.get_application_entitlements)(Mock(), "app1", mock_client)
@@ -192,7 +203,9 @@ class TestGroupEndpoints:
     async def test_list_groups_delegates_to_client(self):
         mock_client = Mock()
         mock_client.list_groups = AsyncMock(
-            return_value=[{"id": "group1", "displayName": "Test Group"}]
+            return_value=GetGroupsResponse(
+                Resources=[Group(id="group1", displayName="Test Group")]
+            )
         )
 
         result = await unwrap_endpoint(ibm_sv_admin.list_groups)(Mock(), mock_client, count=100, start_index=1)
@@ -205,7 +218,9 @@ class TestGroupEndpoints:
     async def test_search_groups_delegates_to_client(self):
         mock_client = Mock()
         mock_client.search_groups_by_name = AsyncMock(
-            return_value=[{"id": "group1", "displayName": "Test Group"}]
+            return_value=GetGroupsResponse(
+                Resources=[Group(id="group1", displayName="Test Group")]
+            )
         )
 
         result = await unwrap_endpoint(ibm_sv_admin.search_groups)(Mock(), "test", mock_client)
@@ -217,7 +232,7 @@ class TestGroupEndpoints:
     async def test_get_group_delegates_to_client(self):
         mock_client = Mock()
         mock_client.get_group_by_id = AsyncMock(
-            return_value={"id": "group1", "displayName": "Test Group"}
+            return_value=Group(id="group1", displayName="Test Group")
         )
 
         result = await unwrap_endpoint(ibm_sv_admin.get_group)(Mock(), "group1", mock_client)

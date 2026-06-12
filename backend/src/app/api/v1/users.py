@@ -105,6 +105,17 @@ async def patch_user(
     return await service.update_user(db=db, user_uuid=user_uuid, current_user=current_user, values=values)
 
 
+@router.patch("/user/me/accept-terms")
+async def accept_terms_me(
+    request: Request,
+    current_user: Annotated[dict, Depends(get_current_user)],
+    db: Annotated[AsyncSession, Depends(async_get_db)],
+    service: Annotated[UserServiceClass, Depends(get_user_service)],
+):
+    return await service.accept_terms(db=db, current_user=current_user)
+
+
+
 @router.patch("/user/me/department")
 async def patch_my_department(
     request: Request,

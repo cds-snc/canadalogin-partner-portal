@@ -30,6 +30,8 @@ class User(TimestampSchema, UserBase, UUIDSchema, PersistentDeletion):
     department_id: int | None = None
     role_ids: list[int] | None = None
     tier_id: int | None = None
+    accepted_terms_at: datetime | None = None
+    terms_version: str | None = None
 
 
 class UserRead(UserBase):
@@ -45,6 +47,8 @@ class UserRead(UserBase):
     profile_image_url: str = "https://www.profileimageurl.com"
     auth_provider: str | None = None
     auth_subject: str | None = None
+    accepted_terms_at: datetime | None = None
+    terms_version: str | None = None
 
 
 class UserReadInternal(UserRead):

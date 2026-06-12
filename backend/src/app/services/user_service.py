@@ -1,17 +1,21 @@
 import uuid as uuid_pkg
 from collections.abc import Mapping
+from datetime import UTC, datetime
 from typing import Any
 
 from fastcrud import compute_offset, paginated_response
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from ..core.config import settings
 from ..core.exceptions.http_exceptions import DuplicateValueException, ForbiddenException, NotFoundException
 from ..core.security import blacklist_token
+from ..repositories.crud_audit_log import crud_audit_log
 from ..repositories.crud_departments import crud_departments
 from ..repositories.crud_rate_limit import crud_rate_limits
 from ..repositories.crud_roles import crud_roles
 from ..repositories.crud_tier import crud_tiers
 from ..repositories.crud_users import crud_users
+from ..schemas.audit_log import AuditLogCreateInternal
 from ..schemas.department import DepartmentRead
 from ..schemas.rate_limit import RateLimitRead
 from ..schemas.role import RoleRead
@@ -29,6 +33,28 @@ from ..schemas.user import (
 
 
 class UserService:
+    async def accept_terms(self, db: AsyncSession, current_user: Mapping[str, Any]) -> dict[str, str]:
+        await self._get_user(db=db, user_uuid=current_user["uuid"], include_deleted=False)
+        await crud_users.update(
+            db=db,
+            object={
+                "accepted_terms_at": datetime.now(UTC),
+                "terms_version": settings.TERMS_VERSION,
+            },
+            uuid=current_user["uuid"],
+        )
+        await crud_audit_log.create(
+            db=db,
+            object=AuditLogCreateInternal(
+                user=current_user.get("name", ""),
+                user_uuid=current_user["uuid"],
+                target="terms",
+                operation="ACCEPT",
+                description=f"User accepted terms version {settings.TERMS_VERSION}",
+            ),
+        )
+        return {"message": "Terms accepted"}
+
     async def create_user(self, db: AsyncSession, user: UserCreate) -> dict[str, Any]:
         normalized_email = str(user.email).strip().lower()
         await self._ensure_email_available(db=db, email=normalized_email)
@@ -278,6 +304,8 @@ class UserService:
 
     async def _build_public_user(self, db: AsyncSession, user: dict[str, Any]) -> dict[str, Any]:
         public_user = {
+            "accepted_terms_at": user.get("accepted_terms_at"),
+            "terms_version": user.get("terms_version"),
             "auth_provider": user.get("auth_provider"),
             "auth_subject": user.get("auth_subject"),
             "department_abbreviation": None,

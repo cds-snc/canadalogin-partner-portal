@@ -4,7 +4,7 @@ This service handles user-facing operations that require the current user's
 access token. Each instance is tied to a specific user's session.
 """
 
-from typing import Any
+from typing import Any, cast
 from uuid import UUID
 
 from ..repositories.ibm_sv_user import IBMVerifyUserClient
@@ -22,7 +22,7 @@ class IBMVerifyUserService:
     async def get_profile(self) -> dict[str, Any]:
         """Get the current user's profile."""
         payload = await self._client.fetch_profile()
-        return payload.model_dump(by_alias=True, exclude_none=True)
+        return cast("dict[str, Any]", payload.model_dump(by_alias=True, exclude_none=True))
 
     async def get_userinfo(self) -> dict[str, Any]:
         """Get userinfo claims from the OAuth2 endpoint."""

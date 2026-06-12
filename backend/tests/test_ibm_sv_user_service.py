@@ -1,6 +1,7 @@
 from unittest.mock import AsyncMock, Mock, patch
 
 import pytest
+from ibm_verify_community_sdk.applications.models import Application, GetApplicationsResponse
 
 from src.app.services.ibm_sv_user_service import IBMVerifyUserService
 from src.app.services.rp_application_service import RPApplicationService
@@ -11,13 +12,27 @@ class TestIBMVerifyUserService:
     async def test_get_applications_normalizes_payload_and_checks_membership(self) -> None:
         client = Mock()
         client.fetch_applications = AsyncMock(
-            return_value={
-                "applications": [
-                    {"applicationId": "app-1", "name": "One"},
-                    {"id": "app-2", "name": "Two"},
-                    "ignored",
-                ]
-            }
+            return_value=GetApplicationsResponse(
+                totalCount=2,
+                applications=[
+                    Application(
+                        name="One",
+                        links=[],
+                        status=[],
+                        category=[],
+                        id="app-1",
+                        discretionaryApp=False,
+                    ),
+                    Application(
+                        name="Two",
+                        links=[],
+                        status=[],
+                        category=[],
+                        id="app-2",
+                        discretionaryApp=False,
+                    ),
+                ],
+            )
         )
         service = IBMVerifyUserService(client=client)
 
