@@ -154,27 +154,6 @@ docker compose up --build
 
 - Backend: create `backend/src/.env` (or copy from examples) and set `ENVIRONMENT`, DB, Redis, OIDC, and session variables.
 - Backend invitation flow also requires GC Notify and invite-link settings: `GC_NOTIFY_API_KEY`, `GC_NOTIFY_RP_APPLICATION_INVITE_TEMPLATE_ID`, `GC_NOTIFY_EMAIL_REPLY_TO_ID` (optional), `RP_APPLICATION_INVITE_URL_BASE`, `RP_APPLICATION_INVITATION_EXPIRE_DAYS`, and `OIDC_ACCESS_DENIED_REDIRECT`.
-- **MAU data loading**: if using the MAU feature, set `AWS_S3_REGION`, `AWS_S3_ROLE_ARN`, `S3_MAU_BUCKET_NAME`, and `S3_MAU_FOLDER` in the backend `.env`. The ARQ cron job assumes the cross-account IAM role to read MAU CSV files from S3 hourly (7am–7pm) and caches results in Redis.  
--   **Local dev — one-time AWS SSO setup**:
-
-  1. Run `aws configure sso` and follow the prompts:
-
-  ```
-  SSO session name (Recommended): cl-pp-dev
-  SSO start URL [None]: https://d-90671d265b.awsapps.com/start
-  SSO region [None]: ca-central-1
-  SSO registration scopes [None]: sso:account:access
-
-  There are 5 AWS accounts available to you.
-  Using the account ID 122345465656
-  There are 3 roles available to you.
-  Using the role name "AWSReadOnlyAccess"
-  Default client Region [None]: ca-central-1
-  CLI default output format (json if not specified) [None]:
-  Profile name [AWSReadOnlyAccess-123345: cl-pp-dev
-  ```
-
-  2. Set `AWS_S3_PROFILE=cl-pp-dev` in `backend/.env`. boto3 creates a session with the named profile; the app then calls STS AssumeRole using the configured `AWS_S3_ROLE_ARN`.
 - Frontend: environment variables for API base URLs can be set via Vite's `import.meta.env` or `.env` files in `frontend/`.
 
 Do NOT commit secrets or `.env` files to source control.

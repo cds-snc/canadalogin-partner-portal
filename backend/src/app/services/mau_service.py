@@ -60,10 +60,6 @@ class MAUService:
         if start_date is None:
             start_date = end_date - timedelta(days=30)
 
-        yesterday = date.today() - timedelta(days=1)
-        if start_date <= yesterday <= end_date:
-            await self._load_date_if_missing(yesterday)
-
         app_key = self._cache_key(application_name)
         date_fields = [
             d.isoformat()
