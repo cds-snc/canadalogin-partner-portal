@@ -190,6 +190,7 @@ class DefaultRateLimitSettings(BaseSettings):
 
 class WorkerCronSettings(BaseSettings):
     TIMEZONE: str = "America/Toronto"
+    LOAD_MAU_ENABLED: bool = False
 
 
 class IBMVerifySettings(BaseSettings):

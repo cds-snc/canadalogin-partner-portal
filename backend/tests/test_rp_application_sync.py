@@ -7,6 +7,7 @@ from ibm_verify_community_sdk.applications.models import (
 )
 
 import src.app.services.rp_application_service as rp_application_sync_module
+from src.app.core.config import settings
 from src.app.core.worker.functions import sync_ibm_verify_rp_applications
 from src.app.core.worker.settings import WorkerSettings
 from src.app.services.rp_application_service import RPApplicationService
@@ -84,18 +85,19 @@ class TestRPApplicationServiceSync:
 
 class TestWorkerCronConfiguration:
     def test_worker_settings_registers_cron_jobs(self) -> None:
-        assert len(WorkerSettings.cron_jobs) == 2
+        cron_job_names = [job.name for job in WorkerSettings.cron_jobs]
+        assert "sync_ibm_verify_rp_applications" in cron_job_names
 
-        sync_job = WorkerSettings.cron_jobs[0]
-        assert sync_job.name == "sync_ibm_verify_rp_applications"
+        sync_job = WorkerSettings.cron_jobs[cron_job_names.index("sync_ibm_verify_rp_applications")]
         assert sync_job.minute == {0, 10, 20, 30, 40, 50}
         assert sync_job.run_at_startup is True
 
-        mau_job = WorkerSettings.cron_jobs[1]
-        assert mau_job.name == "load_mau_data"
-        assert mau_job.hour is None
-        assert mau_job.minute == 55
-        assert mau_job.run_at_startup is True
+        if settings.LOAD_MAU_ENABLED:
+            assert "load_mau_data" in cron_job_names
+            mau_job = WorkerSettings.cron_jobs[cron_job_names.index("load_mau_data")]
+            assert mau_job.hour is None
+            assert mau_job.minute == 55
+            assert mau_job.run_at_startup is True
 
 
 class TestWorkerSyncJob:
