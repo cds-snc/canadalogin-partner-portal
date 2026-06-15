@@ -188,6 +188,10 @@ class DefaultRateLimitSettings(BaseSettings):
     DEFAULT_RATE_LIMIT_PERIOD: int = 3600
 
 
+class WorkerCronSettings(BaseSettings):
+    TIMEZONE: str = "America/Toronto"
+
+
 class IBMVerifySettings(BaseSettings):
     IBM_SV_ADMIN_BASE_URL: str | None = None
     IBM_SV_ADMIN_CLIENT_ID: SecretStr | None = None
@@ -240,6 +244,7 @@ class Settings(
     S3Settings,
     FileLoggerSettings,
     ConsoleLoggerSettings,
+    WorkerCronSettings,
 ):
     model_config = SettingsConfigDict(
         env_file=os.path.join(os.path.dirname(os.path.realpath(__file__)), "..", "..", "..", ".env"),

@@ -1,3 +1,4 @@
+import logging
 from datetime import date, timedelta
 from typing import Any, Optional
 
@@ -32,6 +33,7 @@ class MAUService:
         loaded_key = self._loaded_key(target_date)
         exists = await self._cache().exists(loaded_key)
         if exists:
+            logging.info("MAU data existed and skipped loading for date: %s", target_date)
             return False
         return await self._load_file_for_date(target_date)
 
