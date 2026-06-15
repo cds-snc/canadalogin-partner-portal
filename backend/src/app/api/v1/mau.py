@@ -3,15 +3,12 @@ from typing import Optional
 
 from fastapi import APIRouter, Depends, Query
 
+from ...api.dependencies import get_mau_service
 from ...core.access_control import casbin_guard
 from ...schemas.mau import MAUReportItem, MAUReportResponse
 from ...services.mau_service import MAUService
 
 router = APIRouter(prefix="/mau", tags=["MAU"])
-
-
-async def get_mau_service() -> MAUService:
-    return MAUService()
 
 
 @router.get("/report", response_model=MAUReportResponse)

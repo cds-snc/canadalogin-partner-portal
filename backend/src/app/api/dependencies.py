@@ -20,6 +20,7 @@ from ..services import (
     DepartmentService,
     HealthService,
     IBMVerifyUserService,
+    MAUService,
     OidcLogoutService,
     OidcService,
     PolicyService,
@@ -91,6 +92,10 @@ def get_task_service() -> TaskService:
 
 def get_health_service() -> HealthService:
     return HealthService()
+
+
+def get_mau_service() -> MAUService:
+    return MAUService()
 
 
 async def get_user_from_session(request: Request, db: AsyncSession) -> dict[str, Any] | None:
