@@ -1,1 +1,0 @@
-"""Demo backend package root."""
