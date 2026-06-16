@@ -26,7 +26,8 @@ flowchart LR
     Browser[Browser]
 
     subgraph AWS[AWS]
-        S3[S3 Frontend Hosting]
+        S3_FE[S3 Frontend Hosting]
+        S3_MAU[S3 MAU CSV Data]
         ECR[ECR Backend Image]
         Compute[Amazon ECS]
         PG[(PostgreSQL)]
@@ -40,7 +41,7 @@ flowchart LR
     end
 
     User --> Browser
-    Browser --> S3
+    Browser --> S3_FE
     Browser --> Compute
     Compute --> ECR
     Compute --> PG
@@ -48,6 +49,7 @@ flowchart LR
     Compute --> OIDC
     Compute --> Notify
     Compute --> IBM
+    Compute -->|"hourly cron 7am-7pm"| S3_MAU
 ```
 
 ## 3. Required Infrastructure Components
@@ -140,6 +142,41 @@ These should be stored in AWS Secrets Manager or an equivalent secret store, not
 ### 7.4 Redis Recommendation
 
 The backend sample exposes separate Redis settings for sessions, cache, queue. Infrastructure can back these with one managed Redis service if desired.
+## 8. MAU Data Loading from S3
+
+### 8.1 Overview
+
+Monthly Active User (MAU) data is stored as CSV files on S3 and loaded into Redis cache via an ARQ cron job.
+
+- **Source**: S3 bucket at `s3://{bucket}/{folder}/date={yyyy-mm-dd}/app_login_counts.csv`
+- **CSV columns**: `application_name,total_logins,unique_users,failed_logins,successful_logins,mtd_unique_users,date`
+- **Cache**: Redis hash under key `mau:{yyyy-mm-dd}` (field=app_name, value=mau_count), no TTL
+- **Schedule**: ARQ cron job runs every hour from 7:00 to 19:00 (7am–7pm)
+
+### 8.2 Data Flow
+
+1. **Cron job**: ARQ worker triggers `load_mau_data` every hour between 7am and 7pm.
+2. **Target date**: Always loads yesterday's data (`date.today() - 1 day`).
+3. **Loaded check**: `EXISTS mau:loaded:{yesterday}` — if the key exists, skip loading.
+4. **S3 fetch**: If not yet loaded, download `date={yesterday}/app_login_counts.csv` from the configured S3 folder path.
+5. **Cache write**: Each CSV row is stored in `HSET mau:{application_name} {date} {full_record_json}` — keyed by app name for efficient queries by application + date range.
+6. **Loaded flag**: Set `mau:loaded:{file_date}` to prevent redundant S3 fetches on subsequent cron runs.
+
+### 8.3 Query Layer
+
+- `MAUService.get_mau_by_application(name, start_date, end_date)` — queries a single app's MAU over a date range (default last 30 days). On cache miss, auto-loads the missing date from S3.
+- `MAUService.get_mau_by_application(application_name, start_date, end_date)` — queries one app's MAU over a date range. Auto-loads missing dates from S3 on cache miss.
+
+### 8.4 Configuration
+
+| Variable | Description |
+|---|---|
+| `AWS_ACCESS_KEY_ID` | S3 access key |
+| `AWS_SECRET_ACCESS_KEY` | S3 secret access key (store in Secrets Manager) |
+| `AWS_S3_REGION` | S3 region (default: `ca-central-1`) |
+| `S3_MAU_BUCKET_NAME` | Bucket containing MAU CSV files |
+| `S3_MAU_FOLDER` | Folder path (default: `ibm_verify/app_login_counts/`) |
+
 ### 7.5 Frontend Routing Recommendation
 
 The frontend sample shows that post-login routing is client-side.

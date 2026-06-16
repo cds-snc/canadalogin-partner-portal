@@ -1,13 +1,15 @@
 import uuid as uuid_pkg
+from datetime import date, timedelta
 from typing import Annotated, Any
 
-from fastapi import APIRouter, Depends, Request
+from fastapi import APIRouter, Depends, Query, Request
 from fastcrud import PaginatedListResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from ...api.dependencies import (
     get_current_user,
     get_ibm_sv_user_service,
+    get_mau_service,
     get_rp_application_service,
 )
 from ...core.access_control import casbin_guard
@@ -15,6 +17,8 @@ from ...core.db.database import async_get_db
 from ...core.exceptions.openapi import error_responses
 from ...repositories.dependencies import get_ibm_sv_admin_client
 from ...repositories.ibm_sv_admin import IBMVerifyAdminClient
+from ...core.exceptions.http_exceptions import BadRequestException
+from ...schemas.mau import MAUReportItem, MAUReportResponse
 from ...schemas.rp_application import (
     RPApplicationCreate,
     RPApplicationCurrentUserOAuthSetupRead,
@@ -23,6 +27,7 @@ from ...schemas.rp_application import (
     RPApplicationUpdate,
 )
 from ...services.ibm_sv_user_service import IBMVerifyUserService
+from ...services.mau_service import MAUService
 from ...services.rp_application_service import RPApplicationService
 
 router = APIRouter(tags=["rp-applications"])
@@ -99,6 +104,68 @@ async def read_current_user_rp_application_oauth_setup(
         ibm_admin_client=ibm_admin_client,
     )
     return RPApplicationCurrentUserOAuthSetupRead.model_validate(oauth_setup)
+
+
+@router.get(
+    "/rp-applications/mine/{rp_application_uuid}/mau-report",
+    response_model=MAUReportResponse,
+)
+@casbin_guard.require_permission("mau_report", "read")
+async def read_current_user_rp_application_mau_report(
+    request: Request,
+    rp_application_uuid: uuid_pkg.UUID,
+    db: Annotated[AsyncSession, Depends(async_get_db)],
+    current_user: Annotated[dict, Depends(get_current_user)],
+    service: Annotated[RPApplicationService, Depends(get_rp_application_service)],
+    ibm_user_service: Annotated[IBMVerifyUserService, Depends(get_ibm_sv_user_service)],
+    mau_service: Annotated[MAUService, Depends(get_mau_service)],
+    start_date: date | None = Query(
+        None,
+        description="Start date (YYYY-MM-DD), defaults to 30 days ago",
+    ),
+    end_date: date | None = Query(
+        None,
+        description="End date (YYYY-MM-DD), defaults to today",
+    ),
+) -> MAUReportResponse:
+    application = await service.get_current_user_rp_application_by_uuid(
+        db=db,
+        current_user=current_user,
+        rp_application_uuid=rp_application_uuid,
+        ibm_user_service=ibm_user_service,
+    )
+    application_name = application.get("dnr_app_name")
+    if not isinstance(application_name, str) or application_name.strip() == "":
+        # Keep a clear user-facing failure when data is incomplete.
+        raise BadRequestException(
+            "RP application does not have a mapped MAU application name"
+        )
+
+    resolved_end = end_date or date.today()
+    resolved_start = start_date or (resolved_end - timedelta(days=30))
+    records = await mau_service.get_mau_by_application(
+        application_name=application_name,
+        start_date=resolved_start,
+        end_date=resolved_end,
+    )
+
+    return MAUReportResponse(
+        application_name=application_name,
+        start_date=resolved_start,
+        end_date=resolved_end,
+        records=[
+            MAUReportItem(
+                date=record.date,
+                application_name=record.application_name,
+                total_logins=record.total_logins,
+                unique_users=record.unique_users,
+                failed_logins=record.failed_logins,
+                successful_logins=record.successful_logins,
+                mtd_unique_users=record.mtd_unique_users,
+            )
+            for record in records
+        ],
+    )
 
 
 @router.get("/rp-application/{rp_application_uuid}", response_model=RPApplicationRead)
