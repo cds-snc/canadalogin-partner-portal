@@ -77,9 +77,11 @@ export const DashboardPage = (): FunctionComponent => {
 			t("dashboard.rpApplicationsListTitle");
 
 		return (
-			<Link href={`/rp-applications/mine/${application.uuid}`}>
-				{applicationLabel}
-			</Link>
+			<div className="flex items-center gap-200">
+				<Link href={`/rp-applications/mine/${application.uuid}`}>
+					{applicationLabel}
+				</Link>
+			</div>
 		);
 	};
 

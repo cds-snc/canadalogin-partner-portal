@@ -3,13 +3,13 @@
 ## Overview
 
 The CanadaLogin Partner Portal loads Monthly Active User (MAU) data from CSV files stored in an AWS S3 bucket.
-An ARQ background worker runs hourly (7 AM – 7 PM UTC) to fetch the previous day's file, parse it, and cache
+An ARQ background worker runs hourly (7 AM – 7 PM) to fetch the previous day's file, parse it, and cache
 each row in Redis. The API serves cached data by application name and date range.
 
 ### Data flow
 
 ```
-Scratch AWS Account (data owner)      Dev/Prod AWS Account (app runner)
+D&R AWS Account (data owner)           Dev/Prod AWS Account (app runner)
 ┌─────────────────────┐               ┌──────────────────────────────────┐
 │ S3 Bucket           │               │ Partner Portal (ECS / local)     │
 │  └─ {folder}/       │  STS AssumeRole│   ┌─────────────────────────┐   │
@@ -25,7 +25,7 @@ Two AWS accounts are involved:
 
 | Account | Role |
 |---------|------|
-| **Scratch / Data account** | Owns the S3 bucket. Bucket policy grants read access to the dev/prod IAM role. |
+| **Data account / Scratch** | Owns the S3 bucket. Bucket policy grants read access to the dev/prod IAM role. |
 | **Dev / Prod account** | Runs the Partner Portal. An IAM role (`cl-pp-mau-s3-read`) is assumed via STS by the ECS task (prod) or SSO user (local). |
 
 ---
@@ -82,7 +82,7 @@ app-c,105,31,2,103,745,2026-06-15
 The following infrastructure must exist before MAU data can be loaded. These are typically provisioned
 via Terraform / CloudFormation — the snippets below serve as reference.
 
-### 1. Scratch account — S3 bucket
+### 1. Data Owner account — S3 bucket
 
 Create a bucket that will hold the daily CSV files.
 
@@ -114,7 +114,7 @@ Create an IAM role (e.g. `cl-pp-mau-s3-read`) in the **dev/prod account**.
 > For local dev, include `"arn:aws:iam::{DEV_ACCOUNT_ID}:root"` so that any SSO-authenticated
 > user in the dev account with `sts:AssumeRole` permissions can assume the role.
 
-**Permissions policy** — grants read access to the scratch bucket:
+**Permissions policy** — grants read access to the S3 bucket:
 
 ```json
 {
@@ -127,15 +127,15 @@ Create an IAM role (e.g. `cl-pp-mau-s3-read`) in the **dev/prod account**.
         "s3:ListBucket"
       ],
       "Resource": [
-        "arn:aws:s3:::{SCRATCH_BUCKET_NAME}",
-        "arn:aws:s3:::{SCRATCH_BUCKET_NAME}/*"
+        "arn:aws:s3:::{S3_BUCKET_NAME}",
+        "arn:aws:s3:::{S3_BUCKET_NAME}/*"
       ]
     }
   ]
 }
 ```
 
-### 3. Scratch account — Bucket policy
+### 3. Data Owner account — Bucket policy
 
 Attach this policy to the S3 bucket in the **scratch account** to allow the dev account's IAM role
 to read objects:
@@ -154,8 +154,8 @@ to read objects:
         "s3:ListBucket"
       ],
       "Resource": [
-        "arn:aws:s3:::{SCRATCH_BUCKET_NAME}",
-        "arn:aws:s3:::{SCRATCH_BUCKET_NAME}/*"
+        "arn:aws:s3:::{S3_BUCKET_NAME}",
+        "arn:aws:s3:::{S3_BUCKET_NAME}/*"
       ]
     }
   ]
@@ -230,7 +230,7 @@ full list of defaults:
 ```ini
 AWS_S3_REGION="ca-central-1"
 AWS_S3_ROLE_ARN="arn:aws:iam::123456789:role/cl-pp-mau-s3-read"
-AWS_S3_PROFILE="cl-pp-dev"                       # uncomment and set to your SSO profile
+# AWS_S3_PROFILE="cl-pp-dev"   # uncomment for local dev — set to your SSO profile name
 S3_MAU_BUCKET_NAME="your-mau-data-bucket"
 S3_MAU_FOLDER="ibm_verify/app_login_counts/"
 ```

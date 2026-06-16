@@ -101,7 +101,8 @@
 		"pkceEnabledLabel": "PKCE",
 		"redirectUrisLabel": "URI de redirection",
 		"revealSecretAction": "Afficher le secret",
-		"statusLabel": "Statut"
+		"statusLabel": "Statut",
+		"usageReportAction": "Rapport d'utilisation"
 	},
 	"invitations": {
 		"rpApplication": {
@@ -171,6 +172,42 @@
 		"rpApplicationsListTitle": "Applications RP",
 		"summary": "Aperçu de votre compte.",
 		"title": "Tableau de bord"
+	},
+	"mauReport": {
+		"dailyListTitle": "Mesures MAU quotidiennes",
+		"exportCsv": "Exporter en CSV",
+		"emptyBody": "Aucune donnée MAU n'a été renvoyée pour la plage de dates sélectionnée.",
+		"emptyTitle": "Aucune donnée MAU",
+		"errorBody": "Le rapport MAU n'a pas pu être chargé pour cette application RP.",
+		"errorTitle": "Impossible de charger le rapport MAU",
+		"filters": {
+			"apply": "Appliquer la plage de dates",
+			"endDate": "Date de fin",
+			"startDate": "Date de début"
+		},
+		"loadingBody": "Chargement des données MAU pour cette application RP.",
+		"loadingTitle": "Chargement du rapport MAU",
+		"metrics": {
+			"failedLogin": "Connexions échouées",
+			"mtdUniqueUser": "Utilisateurs uniques MTD",
+			"successLogin": "Connexions réussies",
+			"totalLogin": "Connexions totales",
+			"uniqueUser": "Utilisateurs uniques"
+		},
+		"subtitle": "Rapport pour {{application}}.",
+		"table": {
+			"date": "Date",
+			"failedLogin": "Connexions échouées",
+			"mtdUniqueUser": "Utilisateurs uniques MTD",
+			"successLogin": "Connexions réussies",
+			"successRate": "Taux de réussite",
+			"totalLogin": "Connexions totales",
+			"uniqueUser": "Utilisateurs uniques"
+		},
+		"title": "Rapport MAU",
+		"trendChartBody": "Tentatives quotidiennes de connexion, utilisateurs uniques et taux de réussite.",
+		"trendChartTitle": "Tendance quotidienne des connexions",
+		"unknownApplication": "application inconnue"
 	},
 	"logout": {
 		"summary": "Fermeture de la session backend en cours.",

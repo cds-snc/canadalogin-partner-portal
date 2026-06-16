@@ -101,7 +101,8 @@
 		"pkceEnabledLabel": "PKCE",
 		"redirectUrisLabel": "Redirect URIs",
 		"revealSecretAction": "Reveal secret",
-		"statusLabel": "Status"
+		"statusLabel": "Status",
+		"usageReportAction": "Usage Report"
 	},
 	"invitations": {
 		"rpApplication": {
@@ -171,6 +172,42 @@
 		"rpApplicationsListTitle": "RP Applications",
 		"summary": "Overview of your account.",
 		"title": "Dashboard"
+	},
+	"mauReport": {
+		"dailyListTitle": "Daily MAU metrics",
+		"exportCsv": "Export to CSV",
+		"emptyBody": "No MAU records were returned for the selected date range.",
+		"emptyTitle": "No MAU data",
+		"errorBody": "The MAU report could not be loaded for this RP application.",
+		"errorTitle": "Unable to load MAU report",
+		"filters": {
+			"apply": "Apply date range",
+			"endDate": "End date",
+			"startDate": "Start date"
+		},
+		"loadingBody": "Loading MAU data for this RP application.",
+		"loadingTitle": "Loading MAU report",
+		"metrics": {
+			"failedLogin": "Failed login",
+			"mtdUniqueUser": "MTD unique user",
+			"successLogin": "Success login",
+			"totalLogin": "Total login",
+			"uniqueUser": "Unique user"
+		},
+		"subtitle": "Reporting on {{application}}.",
+		"table": {
+			"date": "Date",
+			"failedLogin": "Failed login",
+			"mtdUniqueUser": "MTD unique user",
+			"successLogin": "Success login",
+			"successRate": "Success rate",
+			"totalLogin": "Total login",
+			"uniqueUser": "Unique user"
+		},
+		"title": "MAU report",
+		"trendChartBody": "Daily sign-in attempts, unique users, and success rate.",
+		"trendChartTitle": "Daily sign-in trend",
+		"unknownApplication": "unknown application"
 	},
 	"logout": {
 		"summary": "Closing the current backend session.",
