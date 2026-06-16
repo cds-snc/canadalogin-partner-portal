@@ -53,7 +53,7 @@ export const useUserDepartment = (
 	});
 	return {
 		department: query.data ?? null,
-		error: (query.error as Error | null | undefined) ?? null,
+		error: query.error ?? null,
 		isLoading: query.isLoading,
 		isUpdating: mutation.isPending,
 		updateUserDepartment: async (

@@ -3,7 +3,14 @@ import { useEffect, useMemo, useState, type ReactNode } from "react";
 import { useTranslation } from "react-i18next";
 import type { FunctionComponent } from "@/common/types";
 import { Breadcrumbs, CenteredPageLayout } from "@/components/layout";
-import { Button, Container, Grid, Heading, Notice, Text } from "@/components/ui";
+import {
+	Button,
+	Container,
+	Grid,
+	Heading,
+	Notice,
+	Text,
+} from "@/components/ui";
 import { HttpRequestError } from "@/fetch/errors";
 import {
 	getCurrentUserRPOAuthSetup,
@@ -28,7 +35,12 @@ type LabelValueRowProps = {
 
 const LabelValueRow = ({ label, value }: LabelValueRowProps): ReactNode => (
 	<div className="mb-300 last:mb-0">
-		<Grid columns="1fr" columnsDesktop="12rem 1fr" columnsTablet="12rem 1fr" tag="div">
+		<Grid
+			columns="1fr"
+			columnsDesktop="12rem 1fr"
+			columnsTablet="12rem 1fr"
+			tag="div"
+		>
 			<Text marginBottom="0">
 				<strong>{label}:</strong>
 			</Text>
@@ -143,7 +155,9 @@ export const CurrentUserRPOAuthSetupPage = (): FunctionComponent => {
 				padding="300"
 				tag="section"
 			>
-				<Heading marginTop="0" tag="h2">{t("rpOAuthSetup.applicationSectionTitle")}</Heading>
+				<Heading marginTop="0" tag="h2">
+					{t("rpOAuthSetup.applicationSectionTitle")}
+				</Heading>
 				<div>
 					<LabelValueRow
 						label={t("rpOAuthSetup.applicationUrlLabel")}
@@ -162,7 +176,9 @@ export const CurrentUserRPOAuthSetupPage = (): FunctionComponent => {
 				padding="300"
 				tag="section"
 			>
-				<Heading marginTop="0" tag="h2">{t("rpOAuthSetup.oauthSectionTitle")}</Heading>
+				<Heading marginTop="0" tag="h2">
+					{t("rpOAuthSetup.oauthSectionTitle")}
+				</Heading>
 				<div>
 					<LabelValueRow
 						label={t("rpOAuthSetup.clientIdLabel")}
@@ -179,8 +195,8 @@ export const CurrentUserRPOAuthSetupPage = (): FunctionComponent => {
 								</Text>
 								<Button
 									buttonRole="secondary"
-									type="button"
 									size="small"
+									type="button"
 									onGcdsClick={() => {
 										setIsSecretVisible((current) => !current);
 									}}
@@ -226,7 +242,9 @@ export const CurrentUserRPOAuthSetupPage = (): FunctionComponent => {
 				</div>
 
 				<div className="mt-200">
-					<Heading tag="h3">{t("rpOAuthSetup.logoutRedirectUrisLabel")}</Heading>
+					<Heading tag="h3">
+						{t("rpOAuthSetup.logoutRedirectUrisLabel")}
+					</Heading>
 					{logoutRedirectUris.length === 0 ? (
 						<Text>{t("rpOAuthSetup.noLogoutRedirectUris")}</Text>
 					) : (

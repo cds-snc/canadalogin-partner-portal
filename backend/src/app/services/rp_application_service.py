@@ -334,6 +334,26 @@ class RPApplicationService:
 
         return matched_applications
 
+    async def get_current_user_rp_application_by_uuid(
+        self,
+        db: AsyncSession,
+        current_user: dict[str, Any],
+        rp_application_uuid: uuid_pkg.UUID | str,
+        ibm_user_service: IBMVerifyUserService,
+    ) -> dict[str, Any]:
+        applications = await self.list_current_user_rp_applications(
+            db=db,
+            current_user=current_user,
+            ibm_user_service=ibm_user_service,
+        )
+
+        expected_uuid = str(rp_application_uuid)
+        for application in applications:
+            if str(application.get("uuid")) == expected_uuid:
+                return application
+
+        raise NotFoundException("RP application not found")
+
     async def get_current_user_rp_application_oauth_setup(
         self,
         db: AsyncSession,

@@ -64,7 +64,7 @@ export const useUserRole = (
 		addRole: async (nextUserUuid: string, roleUuid: string): Promise<void> => {
 			await addMutation.mutateAsync({ roleUuid, userUuid: nextUserUuid });
 		},
-		error: (query.error as Error | null | undefined) ?? null,
+		error: query.error ?? null,
 		isAdding: addMutation.isPending,
 		isLoading: query.isLoading,
 		isRemoving: removeMutation.isPending,

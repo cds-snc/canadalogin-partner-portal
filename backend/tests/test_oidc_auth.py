@@ -38,7 +38,7 @@ class TestSyncOidcUser:
             "username": "oidc.user@example.com",
             "email": "oidc.user@example.com",
             "name": "OIDC User",
-            "auth_provider": "CanadaLogin",
+            "auth_provider": settings.OIDC_PROVIDER_NAME,
             "auth_subject": "subject-123",
             "role_ids": [1],
         }
@@ -62,7 +62,7 @@ class TestSyncOidcUser:
         assert created_object.name == "oidc.user@example.com"
         assert created_object.email == "oidc.user@example.com"
         assert created_object.username == "oidc.user@example.com"
-        assert created_object.auth_provider == "CanadaLogin"
+        assert created_object.auth_provider == settings.OIDC_PROVIDER_NAME
         assert created_object.auth_subject == "subject-123"
         mock_crud.update.assert_awaited_once()
         update_kwargs = mock_crud.update.await_args.kwargs
@@ -88,7 +88,7 @@ class TestSyncOidcUser:
             "username": "oidc.user@example.com",
             "email": "oidc.user@example.com",
             "name": "OIDC User",
-            "auth_provider": "CanadaLogin",
+            "auth_provider": settings.OIDC_PROVIDER_NAME,
             "auth_subject": "subject-123",
             "role_ids": [2],
         }
@@ -138,7 +138,7 @@ class TestSyncOidcUser:
             "uuid": "019cfc22-bff2-7168-ae43-387a301d8fcb",
             "username": "oidcuser",
             "email": "oidc.user@example.com",
-            "auth_provider": "CanadaLogin",
+            "auth_provider": settings.OIDC_PROVIDER_NAME,
             "auth_subject": "subject-123",
             "role_ids": [7],
         }
