@@ -149,6 +149,15 @@ export const CurrentUserRPOAuthSetupPage = (): FunctionComponent => {
 				<Heading tag="h1">{applicationName}</Heading>
 			</div>
 
+			<div className="flex justify-end">
+				<Button
+					href={`/rp-applications/mine/${rpApplicationUuid}/mau-report`}
+					type="link"
+				>
+					{t("rpOAuthSetup.usageReportAction")}
+				</Button>
+			</div>
+
 			<Container
 				border
 				id="rp-oauth-setup-application-context"

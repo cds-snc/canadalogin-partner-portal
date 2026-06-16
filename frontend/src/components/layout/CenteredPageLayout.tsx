@@ -10,7 +10,7 @@ export const CenteredPageLayout = ({
 	className = "",
 }: CenteredPageLayoutProps): FunctionComponent => (
 	<div
-		className={`mx-auto flex w-full max-w-3xl flex-col items-stretch justify-start gap-500 py-200 text-left ${className}`.trim()}
+		className={`mx-auto flex w-full max-w-5xl flex-col items-stretch justify-start gap-500 py-600 text-left ${className}`.trim()}
 	>
 		{children}
 	</div>

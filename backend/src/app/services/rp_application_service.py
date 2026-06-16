@@ -531,11 +531,8 @@ class RPApplicationService:
             existing_application_data = (
                 existing_application if isinstance(existing_application, dict) else dict(existing_application)
             )
-            if (
-                existing_application_data.get("dnr_app_name") == application_name
-                and existing_application_data.get("application_owner") == (
-                    application_owner.model_dump(by_alias=True) if application_owner is not None else None
-                )
+            if existing_application_data.get("application_owner") == (
+                application_owner.model_dump(by_alias=True) if application_owner is not None else None
             ):
                 logger.info(
                     "Skipping RP application sync item because it is already up to date: %s",
@@ -547,7 +544,6 @@ class RPApplicationService:
             await crud_rp_applications.update(
                 db=db,
                 object={
-                    "dnr_app_name": application_name,
                     "application_owner": application_owner.model_dump(by_alias=True) if application_owner is not None else None,
                     "updated_at": datetime.now(UTC),
                 },

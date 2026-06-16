@@ -149,5 +149,9 @@ describe("DashboardPage", () => {
 			})
 			.getAttribute("href")
 		).toBe("/rp-applications/mine/application-uuid-1");
+		expect(
+			screen.getAllByRole("link").length
+		).toBe(2);
+		expect(screen.queryByRole("link", { name: /^usage$/i })).toBeNull();
 	});
 });

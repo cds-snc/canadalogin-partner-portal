@@ -1,49 +1,9 @@
-import {
-	useDeferredValue,
-	useMemo,
-	useRef,
-	useState,
-	type ChangeEvent,
-	type KeyboardEvent,
-	type ReactElement,
-	type ReactNode,
-} from "react";
-import { AgGridReact } from "ag-grid-react";
-import Button from "./Button";
-import {
-	ClientSideRowModelModule,
-	CsvExportModule,
-	DateFilterModule,
-	type ColDef,
-	type ColDefField,
-	type GridApi,
-	type GridReadyEvent,
-	type ICellRendererParams,
-	type ModelUpdatedEvent,
-	ModuleRegistry,
-	PaginationModule,
-	QuickFilterModule,
-	RowApiModule,
-	TextFilterModule,
-} from "ag-grid-community";
-import "ag-grid-community/styles/ag-grid.css";
-import "ag-grid-community/styles/ag-theme-quartz.css";
-import "./DataTable.css";
-
-ModuleRegistry.registerModules([
-	ClientSideRowModelModule,
-	PaginationModule,
-	TextFilterModule,
-	DateFilterModule,
-	QuickFilterModule,
-	RowApiModule,
-	CsvExportModule,
-]);
+import { useMemo, type ReactElement, type ReactNode } from "react";
+import Table, { type TableColumn } from "./Table";
 
 export type DataTableColumn<Row extends Record<string, unknown>> = {
 	cellRenderer?: (row: Row) => ReactNode;
-	field: ColDefField<Row, unknown>;
-	filter?: boolean | string;
+	field: keyof Row & string;
 	headerName: string;
 	maxWidth?: number;
 	minWidth?: number;
@@ -93,52 +53,24 @@ export type DataTableProps<Row extends Record<string, unknown>> = {
 const DataTable = <Row extends Record<string, unknown>>({
 	action,
 	columns,
-	emptyMessage = "No rows found.",
-	exportFileName = "table-export.csv",
-	exportLabel = "Export CSV",
-	getRowId,
-	itemLabel,
-	layout = "stacked",
-	onSearchChange,
-	pageNumber,
-	onSearchSubmit,
-	pagination = true,
-	primaryAction,
-	actionColumnWidth,
+	pagination: paginationProp,
 	rows,
-	searchLabel = "Search table",
-	searchQuery: controlledSearchQuery,
-	searchPlaceholder = "Filter rows",
-	summary,
 	title = "Data table",
 }: DataTableProps<Row>): ReactElement => {
-	const gridApiReference = useRef<GridApi<Row> | null>(null);
-	const [internalSearchQuery, setInternalSearchQuery] = useState("");
-	const [visibleRowCount, setVisibleRowCount] = useState<number>(rows.length);
-	const searchQuery = controlledSearchQuery ?? internalSearchQuery;
-	const deferredSearchQuery = useDeferredValue(searchQuery);
-
-	const columnDefinitions = useMemo<Array<ColDef<Row>>>(() => {
-		const baseColumns = columns.map((column): ColDef<Row> => {
-			const renderCell = column.cellRenderer;
-			const formatValue = column.valueFormatter;
+	const gcdsColumns = useMemo<Array<TableColumn<Row>>>(() => {
+		const baseColumns = columns.map((col): TableColumn<Row> => {
+			const renderCell = col.cellRenderer;
+			const formatValue = col.valueFormatter;
 
 			return {
-				field: column.field,
-				filter: column.filter ?? "agTextColumnFilter",
-				headerName: column.headerName,
-				maxWidth: column.maxWidth,
-				minWidth: column.minWidth ?? 160,
-				pinned: column.pinned,
-				sortable: column.sortable ?? true,
-				cellRenderer: renderCell
-					? (parameters: ICellRendererParams<Row>): ReactNode =>
-							parameters.data ? renderCell(parameters.data) : null
-					: undefined,
-				valueFormatter: formatValue
-					? (parameters): string =>
-							parameters.data ? formatValue(parameters.data) : ""
-					: undefined,
+				field: col.field,
+				header: col.headerName,
+				sort: col.sortable ?? true,
+				renderCell: renderCell
+					? ({ row }): ReactNode => renderCell(row ?? {})
+					: formatValue
+						? ({ row }): ReactNode => formatValue(row)
+						: undefined,
 			};
 		});
 
@@ -151,14 +83,11 @@ const DataTable = <Row extends Record<string, unknown>>({
 		return [
 			...baseColumns,
 			{
-				filter: false,
-				headerName: "Actions",
-				maxWidth: actionColumnWidth?.max ?? 200,
-				minWidth: actionColumnWidth?.min ?? 150,
-				sortable: false,
-				cellRenderer: (parameters: ICellRendererParams<Row>): ReactNode => {
-					const rowData = parameters.data;
-
+				field: "_actions",
+				header: "Actions",
+				sort: false,
+				renderCell: ({ row }): ReactNode => {
+					const rowData = row as unknown as Row | null;
 					if (!rowData) {
 						return null;
 					}
@@ -174,150 +103,40 @@ const DataTable = <Row extends Record<string, unknown>>({
 					return (
 						<div className="flex gap-100">
 							{visibleActions.map((a, index) => (
-								<button
+								<a
 									key={index}
-									className={`government-data-table__action${a.variant === "link" ? " government-data-table__action--link" : ""}`}
-									id={a.buttonId?.(rowData)}
-									type="button"
-									onClick={(): void => {
+									className="gcds-button-link"
+									href="#"
+									onClick={(e) => {
+										e.preventDefault();
 										a.onAction(rowData);
 									}}
 								>
 									{a.buttonLabel}
 									{a.screenReaderLabel ? (
-										<span className="visibility-sr-only">
+										<span className="gcds-sr-only">
 											{" "}
 											{a.screenReaderLabel(rowData)}
 										</span>
 									) : null}
-								</button>
+								</a>
 							))}
 						</div>
 					);
 				},
 			},
 		];
-	}, [action, actionColumnWidth, columns]);
-
-	const defaultColumnDefinition = useMemo<ColDef<Row>>(
-		() => ({
-			filter: "agTextColumnFilter",
-			flex: 1,
-			floatingFilter: false,
-			resizable: true,
-			sortable: true,
-		}),
-		[]
-	);
-
-	const handleGridReady = (event: GridReadyEvent<Row>): void => {
-		gridApiReference.current = event.api;
-		setVisibleRowCount(
-			pagination ? event.api.getDisplayedRowCount() : rows.length
-		);
-	};
-
-	const handleModelUpdated = (event: ModelUpdatedEvent<Row>): void => {
-		setVisibleRowCount(
-			pagination ? event.api.getDisplayedRowCount() : rows.length
-		);
-	};
-
-	const handleExport = (): void => {
-		gridApiReference.current?.exportDataAsCsv({ fileName: exportFileName });
-	};
-
-	const summaryText =
-		summary ??
-		`Showing ${visibleRowCount} ${itemLabel}${pageNumber ? ` on page ${pageNumber}` : ""}`;
+	}, [action, columns]);
 
 	return (
-		<section
-			className={`government-data-table government-data-table--${layout}`}
-		>
-			<div className="government-data-table__header">
-				<div className="government-data-table__heading-group">
-					<div>
-						<h2 className="government-data-table__title">{title}</h2>
-						<p aria-live="polite" className="government-data-table__summary">
-							{summaryText}
-						</p>
-					</div>
-					{primaryAction ? (
-						<Button
-							buttonId={primaryAction.buttonId}
-							className="government-data-table__create"
-							type="button"
-							onGcdsClick={primaryAction.onAction}
-						>
-							{primaryAction.buttonLabel}
-						</Button>
-					) : null}
-				</div>
-				<div className="government-data-table__toolbar">
-					<label
-						className="government-data-table__search"
-						htmlFor={`${title}-search`}
-					>
-						<span>{searchLabel}</span>
-						<input
-							id={`${title}-search`}
-							name={`${title}-search`}
-							placeholder={searchPlaceholder}
-							type="search"
-							value={searchQuery}
-							onChange={(event: ChangeEvent<HTMLInputElement>): void => {
-								if (controlledSearchQuery === undefined) {
-									setInternalSearchQuery(event.target.value);
-								}
-
-								onSearchChange?.(event.target.value);
-							}}
-							onKeyDown={(event: KeyboardEvent<HTMLInputElement>): void => {
-								if (event.key !== "Enter" || !onSearchSubmit) {
-									return;
-								}
-
-								event.preventDefault();
-								onSearchSubmit(searchQuery.trim());
-							}}
-						/>
-					</label>
-					<div className="government-data-table__toolbar-actions">
-						<Button
-							buttonRole="secondary"
-							type="button"
-							onGcdsClick={handleExport}
-						>
-							{exportLabel}
-						</Button>
-					</div>
-				</div>
-			</div>
-
-			<div className="government-data-table__surface ag-theme-quartz">
-				<AgGridReact<Row>
-					columnDefs={columnDefinitions}
-					defaultColDef={defaultColumnDefinition}
-					domLayout={layout === "stacked" ? "autoHeight" : "normal"}
-					overlayNoRowsTemplate={`<span class="government-data-table__empty">${emptyMessage}</span>`}
-					pagination={pagination}
-					paginationPageSize={10}
-					paginationPageSizeSelector={pagination ? false : undefined}
-					quickFilterText={deferredSearchQuery}
-					rowData={[...rows]}
-					suppressCellFocus={false}
-					theme="legacy"
-					getRowId={
-						getRowId
-							? (parameters): string => getRowId(parameters.data)
-							: undefined
-					}
-					onGridReady={handleGridReady}
-					onModelUpdated={handleModelUpdated}
-				/>
-			</div>
-		</section>
+		<Table
+			filter
+			sort
+			caption={title}
+			columns={gcdsColumns}
+			data={rows}
+			pagination={paginationProp ?? true}
+		/>
 	);
 };
 

@@ -29,6 +29,8 @@ import { Route as AboutRouteImport } from './routes/about'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as ProfileSetupRouteImport } from './routes/profile/setup'
 import { Route as RpApplicationsMineRpApplicationUuidRouteImport } from './routes/rp-applications/mine/$rpApplicationUuid'
+import { Route as RpApplicationsMineRpApplicationUuidIndexRouteImport } from './routes/rp-applications/mine/$rpApplicationUuid/index'
+import { Route as RpApplicationsMineRpApplicationUuidMauReportRouteImport } from './routes/rp-applications/mine/$rpApplicationUuid/mau-report'
 
 const UsersRoute = UsersRouteImport.update({
   id: '/users',
@@ -132,6 +134,18 @@ const RpApplicationsMineRpApplicationUuidRoute =
     path: '/rp-applications/mine/$rpApplicationUuid',
     getParentRoute: () => rootRouteImport,
   } as any)
+const RpApplicationsMineRpApplicationUuidIndexRoute =
+  RpApplicationsMineRpApplicationUuidIndexRouteImport.update({
+    id: '/',
+    path: '/',
+    getParentRoute: () => RpApplicationsMineRpApplicationUuidRoute,
+  } as any)
+const RpApplicationsMineRpApplicationUuidMauReportRoute =
+  RpApplicationsMineRpApplicationUuidMauReportRouteImport.update({
+    id: '/mau-report',
+    path: '/mau-report',
+    getParentRoute: () => RpApplicationsMineRpApplicationUuidRoute,
+  } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -153,7 +167,9 @@ export interface FileRoutesByFullPath {
   '/tiers': typeof TiersRoute
   '/users': typeof UsersRoute
   '/profile/setup': typeof ProfileSetupRoute
-  '/rp-applications/mine/$rpApplicationUuid': typeof RpApplicationsMineRpApplicationUuidRoute
+  '/rp-applications/mine/$rpApplicationUuid': typeof RpApplicationsMineRpApplicationUuidRouteWithChildren
+  '/rp-applications/mine/$rpApplicationUuid/mau-report': typeof RpApplicationsMineRpApplicationUuidMauReportRoute
+  '/rp-applications/mine/$rpApplicationUuid/': typeof RpApplicationsMineRpApplicationUuidIndexRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -175,7 +191,8 @@ export interface FileRoutesByTo {
   '/tiers': typeof TiersRoute
   '/users': typeof UsersRoute
   '/profile/setup': typeof ProfileSetupRoute
-  '/rp-applications/mine/$rpApplicationUuid': typeof RpApplicationsMineRpApplicationUuidRoute
+  '/rp-applications/mine/$rpApplicationUuid/mau-report': typeof RpApplicationsMineRpApplicationUuidMauReportRoute
+  '/rp-applications/mine/$rpApplicationUuid': typeof RpApplicationsMineRpApplicationUuidIndexRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -198,7 +215,9 @@ export interface FileRoutesById {
   '/tiers': typeof TiersRoute
   '/users': typeof UsersRoute
   '/profile/setup': typeof ProfileSetupRoute
-  '/rp-applications/mine/$rpApplicationUuid': typeof RpApplicationsMineRpApplicationUuidRoute
+  '/rp-applications/mine/$rpApplicationUuid': typeof RpApplicationsMineRpApplicationUuidRouteWithChildren
+  '/rp-applications/mine/$rpApplicationUuid/mau-report': typeof RpApplicationsMineRpApplicationUuidMauReportRoute
+  '/rp-applications/mine/$rpApplicationUuid/': typeof RpApplicationsMineRpApplicationUuidIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -223,6 +242,8 @@ export interface FileRouteTypes {
     | '/users'
     | '/profile/setup'
     | '/rp-applications/mine/$rpApplicationUuid'
+    | '/rp-applications/mine/$rpApplicationUuid/mau-report'
+    | '/rp-applications/mine/$rpApplicationUuid/'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -244,6 +265,7 @@ export interface FileRouteTypes {
     | '/tiers'
     | '/users'
     | '/profile/setup'
+    | '/rp-applications/mine/$rpApplicationUuid/mau-report'
     | '/rp-applications/mine/$rpApplicationUuid'
   id:
     | '__root__'
@@ -267,6 +289,8 @@ export interface FileRouteTypes {
     | '/users'
     | '/profile/setup'
     | '/rp-applications/mine/$rpApplicationUuid'
+    | '/rp-applications/mine/$rpApplicationUuid/mau-report'
+    | '/rp-applications/mine/$rpApplicationUuid/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -288,7 +312,7 @@ export interface RootRouteChildren {
   TermsAndConditionsRoute: typeof TermsAndConditionsRoute
   TiersRoute: typeof TiersRoute
   UsersRoute: typeof UsersRoute
-  RpApplicationsMineRpApplicationUuidRoute: typeof RpApplicationsMineRpApplicationUuidRoute
+  RpApplicationsMineRpApplicationUuidRoute: typeof RpApplicationsMineRpApplicationUuidRouteWithChildren
 }
 
 declare module '@tanstack/react-router' {
@@ -433,6 +457,20 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof RpApplicationsMineRpApplicationUuidRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/rp-applications/mine/$rpApplicationUuid/': {
+      id: '/rp-applications/mine/$rpApplicationUuid/'
+      path: '/'
+      fullPath: '/rp-applications/mine/$rpApplicationUuid/'
+      preLoaderRoute: typeof RpApplicationsMineRpApplicationUuidIndexRouteImport
+      parentRoute: typeof RpApplicationsMineRpApplicationUuidRoute
+    }
+    '/rp-applications/mine/$rpApplicationUuid/mau-report': {
+      id: '/rp-applications/mine/$rpApplicationUuid/mau-report'
+      path: '/mau-report'
+      fullPath: '/rp-applications/mine/$rpApplicationUuid/mau-report'
+      preLoaderRoute: typeof RpApplicationsMineRpApplicationUuidMauReportRouteImport
+      parentRoute: typeof RpApplicationsMineRpApplicationUuidRoute
+    }
   }
 }
 
@@ -446,6 +484,24 @@ const ProfileRouteChildren: ProfileRouteChildren = {
 
 const ProfileRouteWithChildren =
   ProfileRoute._addFileChildren(ProfileRouteChildren)
+
+interface RpApplicationsMineRpApplicationUuidRouteChildren {
+  RpApplicationsMineRpApplicationUuidMauReportRoute: typeof RpApplicationsMineRpApplicationUuidMauReportRoute
+  RpApplicationsMineRpApplicationUuidIndexRoute: typeof RpApplicationsMineRpApplicationUuidIndexRoute
+}
+
+const RpApplicationsMineRpApplicationUuidRouteChildren: RpApplicationsMineRpApplicationUuidRouteChildren =
+  {
+    RpApplicationsMineRpApplicationUuidMauReportRoute:
+      RpApplicationsMineRpApplicationUuidMauReportRoute,
+    RpApplicationsMineRpApplicationUuidIndexRoute:
+      RpApplicationsMineRpApplicationUuidIndexRoute,
+  }
+
+const RpApplicationsMineRpApplicationUuidRouteWithChildren =
+  RpApplicationsMineRpApplicationUuidRoute._addFileChildren(
+    RpApplicationsMineRpApplicationUuidRouteChildren,
+  )
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
@@ -467,7 +523,7 @@ const rootRouteChildren: RootRouteChildren = {
   TiersRoute: TiersRoute,
   UsersRoute: UsersRoute,
   RpApplicationsMineRpApplicationUuidRoute:
-    RpApplicationsMineRpApplicationUuidRoute,
+    RpApplicationsMineRpApplicationUuidRouteWithChildren,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
