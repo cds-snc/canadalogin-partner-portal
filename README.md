@@ -50,17 +50,7 @@ Run `make help` for a full list of available targets.
 - GC Notify-backed RP application developer invitations with app-scoped access for invited users
 - Casbin authorization decorators, rate limiting, ARQ background jobs, caching helpers
 - Multiple deployment modes: local (uvicorn), staging (gunicorn + uvicorn workers), production (nginx)
-
-### Invited RP Application Developers
-
-The repo now supports inviting external developers to a single RP application without adding them as workspace members.
-
-- workspace admins send invites through the backend API and GC Notify
-- invited developers accept through the frontend invite route at `/invitations/rp-applications?token=...`
-- invited developers land on `/rp-applications/mine/{rpApplicationUuid}` and can view and edit RP application details only
-- unknown and uninvited OIDC users are denied access and redirected to `/access-denied`
-
-At the moment, there is no workspace-admin frontend page for creating invitations; only the acceptance flow is exposed in the frontend.
+- MAU (Monthly Active User) data loading from AWS S3 via IAM role assumption (cross-account ARQ cron job), cached in Redis with query-by-app and date-range support
 
 For full backend docs and configuration, see `backend/README.md` and the site at `backend/docs/`.
 
