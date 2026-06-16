@@ -1,1 +1,0 @@
-export type ApiMessageResponse = Record<string, string>;

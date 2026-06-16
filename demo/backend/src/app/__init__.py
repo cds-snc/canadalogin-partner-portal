@@ -1,1 +1,0 @@
-"""Demo backend application package."""
