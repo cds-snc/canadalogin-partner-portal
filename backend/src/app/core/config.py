@@ -58,7 +58,7 @@ class OIDCSettings(BaseSettings):
     OIDC_REDIRECT_PATH: str = "/api/v1/auth/oidc/callback"
     OIDC_POST_LOGIN_REDIRECT: str = "/auth-complete"
     OIDC_ACCESS_DENIED_REDIRECT: str = "/access-denied"
-    OIDC_GROUP_CLAIM_KEY: str = "groups"
+    OIDC_GROUP_CLAIM_KEY: str = "groupIds"
     OIDC_ADMIN_GROUP_NAME: str = "admin"
     OIDC_APPLICATION_OWNERS_GROUP_NAME: str = "application owners"
     CLPP_ADMIN_ROLE_NAME: str = "admin"

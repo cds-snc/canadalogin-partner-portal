@@ -9,7 +9,8 @@ from fastcrud import compute_offset, paginated_response
 from ibm_verify_community_sdk.applications.models import ListApplicationsResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from ..core.exceptions.http_exceptions import NotFoundException
+from ..core.config import settings
+from ..core.exceptions.http_exceptions import ForbiddenException, NotFoundException
 from ..repositories.crud_audit_log import crud_audit_log
 from ..repositories.crud_rp_applications import crud_rp_applications
 from ..repositories.ibm_sv_admin import IBMVerifyAdminClient
@@ -17,6 +18,7 @@ from ..schemas.audit_log import AuditLogCreateInternal
 from ..schemas.rp_application import (
     RPApplicationCreate,
     RPApplicationCreateInternal,
+    RPApplicationCurrentUserOAuthSetupRead,
     RPApplicationCurrentUserRead,
     RPApplicationOwnerRead,
     RPApplicationOwnerSnapshotRead,
@@ -30,6 +32,99 @@ APPLICATION_ID_PATTERN = re.compile(r"/applications/([^/?#]+)")
 
 
 class RPApplicationService:
+    def _as_dict(self, value: Any) -> dict[str, Any]:
+        if isinstance(value, dict):
+            return value
+        if hasattr(value, "model_dump"):
+            dumped_value = value.model_dump(by_alias=True, exclude_none=True)
+            if isinstance(dumped_value, dict):
+                return dumped_value
+        if isinstance(value, Mapping):
+            return dict(value)
+        return {}
+
+    def _first_string_value(self, value: Any, keys: tuple[str, ...]) -> str | None:
+        value_dict = self._as_dict(value)
+
+        for key in keys:
+            candidate = value_dict.get(key)
+            if candidate is None:
+                continue
+
+            normalized = str(candidate).strip()
+            if normalized:
+                return normalized
+
+        for key in keys:
+            candidate = getattr(value, key, None)
+            if candidate is None:
+                continue
+
+            normalized = str(candidate).strip()
+            if normalized:
+                return normalized
+
+        return None
+
+    def _extract_redirect_uris(self, value: Any) -> list[str]:
+        if isinstance(value, list):
+            return [str(uri).strip() for uri in value if str(uri).strip()]
+
+        if isinstance(value, str):
+            return [uri.strip() for uri in value.splitlines() if uri.strip()]
+
+        return []
+
+    def _extract_bool(self, value: Any) -> bool | None:
+        if value is None:
+            return None
+
+        if isinstance(value, bool):
+            return value
+
+        normalized = str(value).strip().lower()
+        if normalized in {"true", "1", "yes", "on"}:
+            return True
+        if normalized in {"false", "0", "no", "off"}:
+            return False
+
+        return None
+
+    def _extract_client_secret(self, value: Any) -> str | None:
+        value_dict = self._as_dict(value)
+
+        direct_secret = self._first_string_value(
+            value_dict,
+            (
+                "clientSecret",
+                "client_secret",
+                "secret",
+                "value",
+            ),
+        )
+        if direct_secret is not None:
+            return direct_secret
+
+        for key in ("clientSecrets", "client_secrets", "secrets", "rotatedSecrets"):
+            secrets = value_dict.get(key)
+            if not isinstance(secrets, list):
+                continue
+
+            for secret_entry in secrets:
+                extracted_secret = self._first_string_value(
+                    secret_entry,
+                    (
+                        "clientSecret",
+                        "client_secret",
+                        "secret",
+                        "value",
+                    ),
+                )
+                if extracted_secret is not None:
+                    return extracted_secret
+
+        return None
+
     def _extract_application_id(self, application: Any) -> str | None:
         if isinstance(application, Mapping):
             for key in ("id", "application_id", "applicationId", "applicationid", "applicationRefId", "application_ref_id"):
@@ -238,6 +333,118 @@ class RPApplicationService:
                 matched_applications.append(RPApplicationCurrentUserRead.model_validate(application_data).model_dump())
 
         return matched_applications
+
+    async def get_current_user_rp_application_oauth_setup(
+        self,
+        db: AsyncSession,
+        rp_application_uuid: uuid_pkg.UUID | str,
+        current_user: dict[str, Any],
+        ibm_admin_client: IBMVerifyAdminClient,
+    ) -> dict[str, Any]:
+        current_user_email = self._extract_current_user_email(current_user)
+        if current_user_email is None:
+            raise ForbiddenException("Only RP application owners can view OAuth setup")
+
+        rp_application = await crud_rp_applications.get(
+            db=db,
+            uuid=rp_application_uuid,
+            is_deleted=False,
+            schema_to_select=RPApplicationRead,
+        )
+        if rp_application is None:
+            raise NotFoundException("RP application not found")
+
+        rp_application_data = self._as_dict(rp_application)
+        if not self._is_owner_email_match(
+            rp_application_data.get("application_owner"),
+            current_user_email,
+        ):
+            raise ForbiddenException("Only RP application owners can view OAuth setup")
+
+        ibm_application_id = self._first_string_value(
+            rp_application_data,
+            ("ibm_sv_application_id", "ibmSvApplicationId"),
+        )
+        if ibm_application_id is None:
+            raise NotFoundException("IBM Verify application not found for RP application")
+
+        ibm_application_detail = await ibm_admin_client.get_application_detail(
+            ibm_application_id
+        )
+        detail_data = self._as_dict(ibm_application_detail)
+
+        providers = self._as_dict(detail_data.get("providers"))
+        oidc_provider = self._as_dict(providers.get("oidc"))
+        oidc_properties = self._as_dict(oidc_provider.get("properties"))
+        additional_config = self._as_dict(oidc_properties.get("additionalConfig"))
+
+        client_id = self._first_string_value(
+            oidc_properties,
+            ("clientId", "client_id"),
+        )
+        if client_id is None:
+            client_id = self._first_string_value(
+                detail_data,
+                ("clientId", "client_id"),
+            )
+        if client_id is None:
+            raise RuntimeError("IBM Verify application detail missing client ID")
+
+        client_secret_response = await ibm_admin_client.get_client_secret(client_id)
+        client_secret = self._extract_client_secret(client_secret_response)
+        if client_secret is None:
+            raise RuntimeError("IBM Verify application detail missing client secret")
+
+        application_state = detail_data.get("applicationState")
+        if isinstance(application_state, bool):
+            status = "active" if application_state else "inactive"
+        elif application_state is None:
+            status = "unknown"
+        else:
+            status = str(application_state).strip() or "unknown"
+
+        application_url = self._first_string_value(
+            oidc_provider,
+            ("applicationUrl", "application_url"),
+        )
+        if application_url is None:
+            application_url = self._first_string_value(
+                oidc_properties,
+                ("applicationUrl", "application_url"),
+            )
+
+        redirect_uris = self._extract_redirect_uris(
+            oidc_properties.get("redirectUris")
+        )
+        logout_redirect_uris: list[str] = []
+        for key in ("logoutRedirectURIs", "logoutRedirectUris", "logout_redirect_uris"):
+            logout_redirect_uris = self._extract_redirect_uris(
+                additional_config.get(key)
+            )
+            if logout_redirect_uris:
+                break
+
+        logout_uri = self._first_string_value(
+            additional_config,
+            ("logoutURI", "logoutUri", "logout_uri"),
+        )
+        pkce_enabled = self._extract_bool(
+            oidc_provider.get("requirePkceVerification")
+        )
+
+        response = RPApplicationCurrentUserOAuthSetupRead(
+            rp_application_name=rp_application_data["dnr_app_name"],
+            status=status,
+            application_url=application_url,
+            discovery_endpoint=settings.OIDC_SERVER_METADATA_URL,
+            client_id=client_id,
+            client_secret=client_secret,
+            pkce_enabled=pkce_enabled,
+            redirect_uris=redirect_uris,
+            logout_uri=logout_uri,
+            logout_redirect_uris=logout_redirect_uris,
+        )
+        return response.model_dump(by_alias=True)
 
     async def sync_rp_applications_from_ibm_verify(
         self,

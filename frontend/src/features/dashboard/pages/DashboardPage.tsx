@@ -8,7 +8,7 @@ import { getDepartment } from "@/fetch/departments";
 import {
 	getCurrentUserRPApplications,
 	type CurrentUserRPApplicationRead,
-} from "@/fetch/workspaces";
+} from "@/fetch/rp-applications";
 import { useQuery } from "@tanstack/react-query";
 import { useRoles, useSession } from "@/hooks";
 

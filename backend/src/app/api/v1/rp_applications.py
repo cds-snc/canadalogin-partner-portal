@@ -12,8 +12,12 @@ from ...api.dependencies import (
 )
 from ...core.access_control import casbin_guard
 from ...core.db.database import async_get_db
+from ...core.exceptions.openapi import error_responses
+from ...repositories.dependencies import get_ibm_sv_admin_client
+from ...repositories.ibm_sv_admin import IBMVerifyAdminClient
 from ...schemas.rp_application import (
     RPApplicationCreate,
+    RPApplicationCurrentUserOAuthSetupRead,
     RPApplicationCurrentUserRead,
     RPApplicationRead,
     RPApplicationUpdate,
@@ -71,6 +75,30 @@ async def read_current_user_rp_applications(
         ibm_user_service=ibm_user_service,
     )
     return [RPApplicationCurrentUserRead.model_validate(application) for application in applications]
+
+
+@router.get(
+    "/rp-applications/mine/{rp_application_uuid}/oauth-setup",
+    response_model=RPApplicationCurrentUserOAuthSetupRead,
+    responses=error_responses(403, 404, 500),
+)
+async def read_current_user_rp_application_oauth_setup(
+    request: Request,
+    rp_application_uuid: uuid_pkg.UUID,
+    db: Annotated[AsyncSession, Depends(async_get_db)],
+    current_user: Annotated[dict, Depends(get_current_user)],
+    service: Annotated[RPApplicationService, Depends(get_rp_application_service)],
+    ibm_admin_client: Annotated[
+        IBMVerifyAdminClient, Depends(get_ibm_sv_admin_client)
+    ],
+) -> RPApplicationCurrentUserOAuthSetupRead:
+    oauth_setup = await service.get_current_user_rp_application_oauth_setup(
+        db=db,
+        rp_application_uuid=rp_application_uuid,
+        current_user=current_user,
+        ibm_admin_client=ibm_admin_client,
+    )
+    return RPApplicationCurrentUserOAuthSetupRead.model_validate(oauth_setup)
 
 
 @router.get("/rp-application/{rp_application_uuid}", response_model=RPApplicationRead)

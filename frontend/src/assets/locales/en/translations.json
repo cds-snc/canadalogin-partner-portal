@@ -69,6 +69,40 @@
 		"summary": "Your account is signed in, but it is not in an allowed group for the Partner Portal.",
 		"title": "Access denied"
 	},
+	"genericError": {
+		"dashboardAction": "Go to dashboard",
+		"homeAction": "Go to home",
+		"notFoundBody": "The page or resource you requested could not be found.",
+		"notFoundTitle": "We could not find that page",
+		"title": "Something went wrong",
+		"unexpectedBody": "An unexpected error occurred while loading this page. Try again from the dashboard.",
+		"unexpectedTitle": "Unexpected error"
+	},
+	"rpOAuthSetup": {
+		"applicationNameLabel": "Application name",
+		"applicationSectionTitle": "Application details",
+		"applicationUrlLabel": "Application URL",
+		"applicationUuidLabel": "RP application UUID",
+		"clientIdLabel": "Client ID",
+		"clientSecretLabel": "Client secret",
+		"discoveryEndpointLabel": "Discovery endpoint",
+		"hideSecretAction": "Hide secret",
+		"ibmApplicationIdLabel": "IBM application ID",
+		"loadingBody": "Loading OAuth setup details for this RP application.",
+		"loadingTitle": "Loading OAuth setup",
+		"logoutRedirectUrisLabel": "Logout redirect URIs",
+		"logoutUriLabel": "Logout URI",
+		"noLogoutRedirectUris": "No logout redirect URIs configured.",
+		"noRedirectUris": "No redirect URIs configured.",
+		"notAvailable": "Not available",
+		"oauthSectionTitle": "OAuth setup",
+		"pkceDisabled": "Disabled",
+		"pkceEnabled": "Enabled",
+		"pkceEnabledLabel": "PKCE",
+		"redirectUrisLabel": "Redirect URIs",
+		"revealSecretAction": "Reveal secret",
+		"statusLabel": "Status"
+	},
 	"invitations": {
 		"rpApplication": {
 			"dashboardAction": "Go to dashboard",
