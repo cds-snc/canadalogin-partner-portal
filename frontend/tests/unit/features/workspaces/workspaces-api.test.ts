@@ -2,19 +2,20 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import {
 	acceptRPApplicationDeveloperInvitation,
 	deleteRPApplication,
+	getCurrentUserRPOAuthSetup,
 	getCurrentUserRPApplication,
 	getRPApplicationDeveloperInvitations,
-	inviteRPApplicationDeveloper,
+	getRPApplicationClientCredentials,
 	getRPApplicationUsageAuditTrail,
 	getRPApplicationUsageAuditTrailSearchAfter,
 	getRPApplicationUsageSummary,
-	getRPApplicationClientCredentials,
+	inviteRPApplicationDeveloper,
 	resendRPApplicationDeveloperInvitation,
 	revokeRPApplicationDeveloperInvitation,
 	rotateRPApplicationClientSecret,
 	updateCurrentUserRPApplication,
 	updateRPApplication,
-} from "@/fetch/workspaces";
+} from "@/fetch/rp-applications";
 
 describe("workspaces-api", () => {
 	afterEach(() => {
@@ -173,6 +174,43 @@ describe("workspaces-api", () => {
 			})
 		);
 		expect(response.name).toBe("[DEPT] - Renamed App");
+	});
+
+	it("gets current-user RP OAuth setup through the backend API", async () => {
+		const applicationUuid = "application-uuid-1";
+		const fetchMock = vi.spyOn(globalThis, "fetch").mockResolvedValue({
+			headers: new Headers({ "content-type": "application/json" }),
+			json: () =>
+				Promise.resolve({
+					applicationUrl: "https://benefits.example.gc.ca",
+					discoveryEndpoint:
+						"https://cds-gcsignin-dev.verify.ibm.com/oauth2/.well-known/openid-configuration",
+					clientId: "client-id-123",
+					clientSecret: "secret-value-123",
+					logoutRedirectUris: [
+						"https://benefits.example.gc.ca/logout-complete",
+					],
+					logoutUri: "https://benefits.example.gc.ca/backchannel-logout",
+					pkceEnabled: true,
+					rpApplicationName: "Benefits Portal",
+					redirectUris: ["https://benefits.example.gc.ca/callback"],
+					status: "active",
+				}),
+			ok: true,
+			status: 200,
+		} as Response);
+
+		const response = await getCurrentUserRPOAuthSetup(applicationUuid);
+
+		expect(fetchMock).toHaveBeenCalledWith(
+			`http://localhost:8000/api/v1/rp-applications/mine/${applicationUuid}/oauth-setup`,
+			expect.objectContaining({
+				cache: "no-store",
+				credentials: "include",
+				method: "GET",
+			})
+		);
+		expect(response.clientSecret).toBe("secret-value-123");
 	});
 
 	it("invites an RP application developer through the backend API", async () => {

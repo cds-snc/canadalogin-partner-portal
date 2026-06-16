@@ -69,6 +69,40 @@
 		"summary": "Votre compte est connecté, mais il n'appartient pas à un groupe autorisé pour le portail partenaire.",
 		"title": "Accès refusé"
 	},
+	"genericError": {
+		"dashboardAction": "Aller au tableau de bord",
+		"homeAction": "Aller à l'accueil",
+		"notFoundBody": "La page ou la ressource demandée est introuvable.",
+		"notFoundTitle": "Nous n'avons pas trouvé cette page",
+		"title": "Une erreur est survenue",
+		"unexpectedBody": "Une erreur inattendue est survenue lors du chargement de cette page. Réessayez à partir du tableau de bord.",
+		"unexpectedTitle": "Erreur inattendue"
+	},
+	"rpOAuthSetup": {
+		"applicationNameLabel": "Nom de l'application",
+		"applicationSectionTitle": "Détails de l'application",
+		"applicationUrlLabel": "URL de l'application",
+		"applicationUuidLabel": "UUID de l'application RP",
+		"clientIdLabel": "ID client",
+		"clientSecretLabel": "Secret client",
+		"discoveryEndpointLabel": "Point de terminaison de découverte",
+		"hideSecretAction": "Masquer le secret",
+		"ibmApplicationIdLabel": "ID d'application IBM",
+		"loadingBody": "Chargement des details de configuration OAuth pour cette application RP.",
+		"loadingTitle": "Chargement de la configuration OAuth",
+		"logoutRedirectUrisLabel": "URI de redirection de deconnexion",
+		"logoutUriLabel": "URI de deconnexion",
+		"noLogoutRedirectUris": "Aucun URI de redirection de deconnexion configure.",
+		"noRedirectUris": "Aucun URI de redirection configure.",
+		"notAvailable": "Indisponible",
+		"oauthSectionTitle": "Configuration OAuth",
+		"pkceDisabled": "Desactive",
+		"pkceEnabled": "Active",
+		"pkceEnabledLabel": "PKCE",
+		"redirectUrisLabel": "URI de redirection",
+		"revealSecretAction": "Afficher le secret",
+		"statusLabel": "Statut"
+	},
 	"invitations": {
 		"rpApplication": {
 			"dashboardAction": "Aller au tableau de bord",

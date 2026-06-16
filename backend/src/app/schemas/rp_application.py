@@ -66,6 +66,26 @@ class RPApplicationCurrentUserRead(BaseModel):
     application_owner: RPApplicationOwnerSnapshotRead | None = None
 
 
+class RPApplicationCurrentUserOAuthSetupRead(BaseModel):
+    model_config = ConfigDict(
+        validate_by_name=True,
+        validate_by_alias=True,
+        alias_generator=to_camel,
+        populate_by_name=True,
+    )
+
+    rp_application_name: str
+    status: str
+    application_url: str | None = None
+    discovery_endpoint: str | None = None
+    client_id: str
+    client_secret: str
+    pkce_enabled: bool | None = None
+    redirect_uris: list[str] = Field(default_factory=list)
+    logout_uri: str | None = None
+    logout_redirect_uris: list[str] = Field(default_factory=list)
+
+
 class RPApplicationCreate(BaseModel):
     model_config = ConfigDict(
         extra="forbid",

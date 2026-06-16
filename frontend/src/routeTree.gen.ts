@@ -20,6 +20,7 @@ import { Route as LogoutRouteImport } from './routes/logout'
 import { Route as LoginRouteImport } from './routes/login'
 import { Route as HealthRouteImport } from './routes/health'
 import { Route as FederalAndProvincialHolidaysRouteImport } from './routes/federal-and-provincial-holidays'
+import { Route as ErrorRouteImport } from './routes/error'
 import { Route as DepartmentsRouteImport } from './routes/departments'
 import { Route as DashboardRouteImport } from './routes/dashboard'
 import { Route as AuthCompleteRouteImport } from './routes/auth-complete'
@@ -27,6 +28,7 @@ import { Route as AccessDeniedRouteImport } from './routes/access-denied'
 import { Route as AboutRouteImport } from './routes/about'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as ProfileSetupRouteImport } from './routes/profile/setup'
+import { Route as RpApplicationsMineRpApplicationUuidRouteImport } from './routes/rp-applications/mine/$rpApplicationUuid'
 
 const UsersRoute = UsersRouteImport.update({
   id: '/users',
@@ -84,6 +86,11 @@ const FederalAndProvincialHolidaysRoute =
     path: '/federal-and-provincial-holidays',
     getParentRoute: () => rootRouteImport,
   } as any)
+const ErrorRoute = ErrorRouteImport.update({
+  id: '/error',
+  path: '/error',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const DepartmentsRoute = DepartmentsRouteImport.update({
   id: '/departments',
   path: '/departments',
@@ -119,6 +126,12 @@ const ProfileSetupRoute = ProfileSetupRouteImport.update({
   path: '/setup',
   getParentRoute: () => ProfileRoute,
 } as any)
+const RpApplicationsMineRpApplicationUuidRoute =
+  RpApplicationsMineRpApplicationUuidRouteImport.update({
+    id: '/rp-applications/mine/$rpApplicationUuid',
+    path: '/rp-applications/mine/$rpApplicationUuid',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -127,6 +140,7 @@ export interface FileRoutesByFullPath {
   '/auth-complete': typeof AuthCompleteRoute
   '/dashboard': typeof DashboardRoute
   '/departments': typeof DepartmentsRoute
+  '/error': typeof ErrorRoute
   '/federal-and-provincial-holidays': typeof FederalAndProvincialHolidaysRoute
   '/health': typeof HealthRoute
   '/login': typeof LoginRoute
@@ -139,6 +153,7 @@ export interface FileRoutesByFullPath {
   '/tiers': typeof TiersRoute
   '/users': typeof UsersRoute
   '/profile/setup': typeof ProfileSetupRoute
+  '/rp-applications/mine/$rpApplicationUuid': typeof RpApplicationsMineRpApplicationUuidRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -147,6 +162,7 @@ export interface FileRoutesByTo {
   '/auth-complete': typeof AuthCompleteRoute
   '/dashboard': typeof DashboardRoute
   '/departments': typeof DepartmentsRoute
+  '/error': typeof ErrorRoute
   '/federal-and-provincial-holidays': typeof FederalAndProvincialHolidaysRoute
   '/health': typeof HealthRoute
   '/login': typeof LoginRoute
@@ -159,6 +175,7 @@ export interface FileRoutesByTo {
   '/tiers': typeof TiersRoute
   '/users': typeof UsersRoute
   '/profile/setup': typeof ProfileSetupRoute
+  '/rp-applications/mine/$rpApplicationUuid': typeof RpApplicationsMineRpApplicationUuidRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -168,6 +185,7 @@ export interface FileRoutesById {
   '/auth-complete': typeof AuthCompleteRoute
   '/dashboard': typeof DashboardRoute
   '/departments': typeof DepartmentsRoute
+  '/error': typeof ErrorRoute
   '/federal-and-provincial-holidays': typeof FederalAndProvincialHolidaysRoute
   '/health': typeof HealthRoute
   '/login': typeof LoginRoute
@@ -180,6 +198,7 @@ export interface FileRoutesById {
   '/tiers': typeof TiersRoute
   '/users': typeof UsersRoute
   '/profile/setup': typeof ProfileSetupRoute
+  '/rp-applications/mine/$rpApplicationUuid': typeof RpApplicationsMineRpApplicationUuidRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -190,6 +209,7 @@ export interface FileRouteTypes {
     | '/auth-complete'
     | '/dashboard'
     | '/departments'
+    | '/error'
     | '/federal-and-provincial-holidays'
     | '/health'
     | '/login'
@@ -202,6 +222,7 @@ export interface FileRouteTypes {
     | '/tiers'
     | '/users'
     | '/profile/setup'
+    | '/rp-applications/mine/$rpApplicationUuid'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -210,6 +231,7 @@ export interface FileRouteTypes {
     | '/auth-complete'
     | '/dashboard'
     | '/departments'
+    | '/error'
     | '/federal-and-provincial-holidays'
     | '/health'
     | '/login'
@@ -222,6 +244,7 @@ export interface FileRouteTypes {
     | '/tiers'
     | '/users'
     | '/profile/setup'
+    | '/rp-applications/mine/$rpApplicationUuid'
   id:
     | '__root__'
     | '/'
@@ -230,6 +253,7 @@ export interface FileRouteTypes {
     | '/auth-complete'
     | '/dashboard'
     | '/departments'
+    | '/error'
     | '/federal-and-provincial-holidays'
     | '/health'
     | '/login'
@@ -242,6 +266,7 @@ export interface FileRouteTypes {
     | '/tiers'
     | '/users'
     | '/profile/setup'
+    | '/rp-applications/mine/$rpApplicationUuid'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -251,6 +276,7 @@ export interface RootRouteChildren {
   AuthCompleteRoute: typeof AuthCompleteRoute
   DashboardRoute: typeof DashboardRoute
   DepartmentsRoute: typeof DepartmentsRoute
+  ErrorRoute: typeof ErrorRoute
   FederalAndProvincialHolidaysRoute: typeof FederalAndProvincialHolidaysRoute
   HealthRoute: typeof HealthRoute
   LoginRoute: typeof LoginRoute
@@ -262,6 +288,7 @@ export interface RootRouteChildren {
   TermsAndConditionsRoute: typeof TermsAndConditionsRoute
   TiersRoute: typeof TiersRoute
   UsersRoute: typeof UsersRoute
+  RpApplicationsMineRpApplicationUuidRoute: typeof RpApplicationsMineRpApplicationUuidRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -343,6 +370,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof FederalAndProvincialHolidaysRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/error': {
+      id: '/error'
+      path: '/error'
+      fullPath: '/error'
+      preLoaderRoute: typeof ErrorRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/departments': {
       id: '/departments'
       path: '/departments'
@@ -392,6 +426,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ProfileSetupRouteImport
       parentRoute: typeof ProfileRoute
     }
+    '/rp-applications/mine/$rpApplicationUuid': {
+      id: '/rp-applications/mine/$rpApplicationUuid'
+      path: '/rp-applications/mine/$rpApplicationUuid'
+      fullPath: '/rp-applications/mine/$rpApplicationUuid'
+      preLoaderRoute: typeof RpApplicationsMineRpApplicationUuidRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
@@ -413,6 +454,7 @@ const rootRouteChildren: RootRouteChildren = {
   AuthCompleteRoute: AuthCompleteRoute,
   DashboardRoute: DashboardRoute,
   DepartmentsRoute: DepartmentsRoute,
+  ErrorRoute: ErrorRoute,
   FederalAndProvincialHolidaysRoute: FederalAndProvincialHolidaysRoute,
   HealthRoute: HealthRoute,
   LoginRoute: LoginRoute,
@@ -424,6 +466,8 @@ const rootRouteChildren: RootRouteChildren = {
   TermsAndConditionsRoute: TermsAndConditionsRoute,
   TiersRoute: TiersRoute,
   UsersRoute: UsersRoute,
+  RpApplicationsMineRpApplicationUuidRoute:
+    RpApplicationsMineRpApplicationUuidRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

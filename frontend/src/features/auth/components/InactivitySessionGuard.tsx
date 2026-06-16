@@ -25,9 +25,6 @@ export const InactivitySessionGuard = (): FunctionComponent => {
 	const navigate = useNavigate();
 	const { isAuthenticated, isLoading, logout, refreshSession } = useSession();
 	const [nowMs, setNowMs] = useState<number>(() => Date.now());
-	const [warningDeadlineMs, setWarningDeadlineMs] = useState<number | null>(
-		null
-	);
 	const [isContinuing, setIsContinuing] = useState(false);
 	const [isLoggingOut, setIsLoggingOut] = useState(false);
 	const hasTriggeredAutoLogoutRef = useRef(false);
@@ -38,7 +35,6 @@ export const InactivitySessionGuard = (): FunctionComponent => {
 			await navigate({ replace: true, to: "/" });
 		} finally {
 			hasTriggeredAutoLogoutRef.current = false;
-			setWarningDeadlineMs(null);
 			setIsLoggingOut(false);
 		}
 	}, [logout, navigate]);
@@ -46,7 +42,6 @@ export const InactivitySessionGuard = (): FunctionComponent => {
 	useEffect(() => {
 		if (!isAuthenticated || isLoading) {
 			hasTriggeredAutoLogoutRef.current = false;
-			setWarningDeadlineMs(null);
 			return;
 		}
 
@@ -64,40 +59,62 @@ export const InactivitySessionGuard = (): FunctionComponent => {
 		};
 	}, [isAuthenticated, isLoading]);
 
-	useEffect(() => {
+	const warningState = useMemo((): {
+		countdownSeconds: number;
+		isWarningVisible: boolean;
+		shouldAutoLogout: boolean;
+	} => {
 		if (!isAuthenticated || isLoading) {
-			return;
+			return {
+				countdownSeconds: 0,
+				isWarningVisible: false,
+				shouldAutoLogout: false,
+			};
 		}
 
 		const lastBackendActivityAt = getLastBackendActivityAt();
 		if (lastBackendActivityAt === null) {
-			if (warningDeadlineMs !== null) {
-				setWarningDeadlineMs(null);
-			}
-			return;
+			return {
+				countdownSeconds: 0,
+				isWarningVisible: false,
+				shouldAutoLogout: false,
+			};
 		}
 
-		const inactivityDuration = nowMs - lastBackendActivityAt;
 		const { countdownMs, warningAfterMs } = inactivityTimeoutConfig;
-
-		if (warningDeadlineMs === null) {
-			if (inactivityDuration >= warningAfterMs) {
-				setWarningDeadlineMs(nowMs + countdownMs);
-			}
-			return;
-		}
+		const inactivityDuration = nowMs - lastBackendActivityAt;
 
 		if (inactivityDuration < warningAfterMs) {
-			setWarningDeadlineMs(null);
+			return {
+				countdownSeconds: 0,
+				isWarningVisible: false,
+				shouldAutoLogout: false,
+			};
+		}
+
+		const warningDeadlineMs =
+			lastBackendActivityAt + warningAfterMs + countdownMs;
+		return {
+			countdownSeconds: Math.max(
+				0,
+				Math.ceil((warningDeadlineMs - nowMs) / 1000)
+			),
+			isWarningVisible: true,
+			shouldAutoLogout: nowMs >= warningDeadlineMs,
+		};
+	}, [isAuthenticated, isLoading, nowMs]);
+
+	useEffect(() => {
+		if (!warningState.shouldAutoLogout) {
 			return;
 		}
 
-		if (nowMs >= warningDeadlineMs && !hasTriggeredAutoLogoutRef.current) {
+		if (!hasTriggeredAutoLogoutRef.current) {
 			hasTriggeredAutoLogoutRef.current = true;
 			setIsLoggingOut(true);
 			void performLogout();
 		}
-	}, [isAuthenticated, isLoading, nowMs, performLogout, warningDeadlineMs]);
+	}, [performLogout, warningState.shouldAutoLogout]);
 
 	const handleContinueSession = useCallback(async (): Promise<void> => {
 		if (isContinuing || isLoggingOut) {
@@ -116,7 +133,6 @@ export const InactivitySessionGuard = (): FunctionComponent => {
 			}
 
 			hasTriggeredAutoLogoutRef.current = false;
-			setWarningDeadlineMs(null);
 			setNowMs(Date.now());
 		} catch {
 			setIsLoggingOut(true);
@@ -135,15 +151,7 @@ export const InactivitySessionGuard = (): FunctionComponent => {
 		void performLogout();
 	}, [isLoggingOut, performLogout]);
 
-	const countdownSeconds = useMemo((): number => {
-		if (warningDeadlineMs === null) {
-			return 0;
-		}
-
-		return Math.max(0, Math.ceil((warningDeadlineMs - nowMs) / 1000));
-	}, [nowMs, warningDeadlineMs]);
-
-	if (!isAuthenticated || warningDeadlineMs === null) {
+	if (!isAuthenticated || !warningState.isWarningVisible) {
 		return null;
 	}
 
@@ -184,7 +192,7 @@ export const InactivitySessionGuard = (): FunctionComponent => {
 		>
 			<Text ariaLive="polite" marginBottom="0">
 				{t("sessionTimeout.countdownLabel", {
-					time: formatCountdown(countdownSeconds),
+					time: formatCountdown(warningState.countdownSeconds),
 				})}
 			</Text>
 		</Modal>

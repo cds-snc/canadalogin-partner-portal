@@ -27,7 +27,22 @@ function createMemoryStorage(): Storage {
 	};
 }
 
-if (typeof globalThis.localStorage === "undefined") {
+function isStorageLike(value: unknown): value is Storage {
+	if (typeof value !== "object" || value === null) {
+		return false;
+	}
+
+	const candidate = value as Partial<Storage>;
+	return (
+		typeof candidate.getItem === "function" &&
+		typeof candidate.setItem === "function" &&
+		typeof candidate.removeItem === "function" &&
+		typeof candidate.clear === "function" &&
+		typeof candidate.key === "function"
+	);
+}
+
+if (!isStorageLike(globalThis.localStorage)) {
 	Object.defineProperty(globalThis, "localStorage", {
 		configurable: true,
 		value: createMemoryStorage(),
@@ -35,7 +50,7 @@ if (typeof globalThis.localStorage === "undefined") {
 	});
 }
 
-if (typeof globalThis.sessionStorage === "undefined") {
+if (!isStorageLike(globalThis.sessionStorage)) {
 	Object.defineProperty(globalThis, "sessionStorage", {
 		configurable: true,
 		value: createMemoryStorage(),
