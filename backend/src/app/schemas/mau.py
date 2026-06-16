@@ -52,4 +52,5 @@ class MAUReportResponse(BaseModel):
     application_name: str
     start_date: date
     end_date: date
+    department_name: str | None = None
     records: list[MAUReportItem]
