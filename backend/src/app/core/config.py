@@ -63,7 +63,6 @@ class OIDCSettings(BaseSettings):
     OIDC_APPLICATION_OWNERS_GROUP_NAME: str = "application owners"
     CLPP_ADMIN_ROLE_NAME: str = "admin"
     CLPP_APPLICATION_OWNERS_ROLE_NAME: str = "application owners"
-    LOCAL_PASSWORD_LOGIN_ENABLED: bool = False
 
 
 class GCNotifySettings(BaseSettings):

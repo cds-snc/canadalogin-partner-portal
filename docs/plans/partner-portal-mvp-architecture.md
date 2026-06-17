@@ -22,7 +22,7 @@ flowchart LR
 
     subgraph portal["CanadaLogin Partner Portal (MVP)"]
         fe["Frontend SPA<br/>Vite + React + TanStack"]
-        be["Backend API<br/>FastAPI"]
+        be["Backend BFF<br/>FastAPI"]
     end
 
     oidc["OIDC Identity Provider"]
@@ -56,9 +56,9 @@ flowchart TB
     end
 
     subgraph api["Backend Service (FastAPI)"]
-        routes["api/v1 routers<br/>auth, workspaces, rp-apps,<br/>secrets, usage, health"]
+        routes["api/v1 routers<br/>auth/session, profile, rp-apps,<br/>secrets, usage, health"]
         mw["middleware<br/>session, CORS, error envelope"]
-        services["services<br/>auth, workspace, secret,<br/>usage, verify integration"]
+        services["services<br/>OIDC session, profile sync, secret,<br/>usage, verify integration"]
         repos["repositories<br/>FastCRUD adapters,<br/>IBM SV client"]
         models["SQLAlchemy 2.0 models"]
         workers["ARQ workers<br/>(async tasks)"]
@@ -111,6 +111,26 @@ flowchart TB
 | Models | User, Department, WorkspaceProfile, RpApplication, SecretRotation, TermsAcceptance |
 | Casbin guards | Role-based authorization for developer view / edit-rotate operations |
 | ARQ workers | Async jobs (Verify sync, OTP send, MAU refresh) |
+
+### Backend As BFF
+
+The backend is the browser-facing BFF for the portal SPA, not a generic public API. It owns the browser session, turns OIDC identity claims into the portal user context, and shapes Verify and MAU data into frontend-ready responses.
+
+The BFF layer is responsible for:
+
+- OIDC login and callback handling for browser users
+- Redis-backed session lifecycle and current-user resolution
+- Aggregating IBM Security Verify, department, and usage data behind one browser contract
+- Keeping the SPA from calling external identity systems directly
+- Enforcing access control before any browser-visible mutation or secret operation
+
+The browser only receives an opaque session cookie. The cookie value is the Redis session identifier, not the OIDC token itself, and the backend regenerates that session identifier after the OIDC callback. The server-side session then holds the portal identity context, including the mapped `user_uuid`, the OIDC token bundle returned from the provider, and logout hints such as the `id_token` and `sid` used to complete single sign-out.
+
+That means:
+
+- The session cookie is the browser's login state; the SPA uses it on every request, but it never needs to read or store OIDC tokens directly.
+- The user token state lives in the backend session, where the BFF can exchange it for user context, build logout redirects, and clear it on sign-out.
+- Frontend requests stay same-origin and session-based, which keeps the portal contract simple while still preserving OIDC claims for server-side authorization and logout handling.
 
 ### Data Stores
 

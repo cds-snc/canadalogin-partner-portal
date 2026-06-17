@@ -1,32 +1,7 @@
-from unittest.mock import AsyncMock, patch
-
-import pytest
-
-from src.app.core.security import authenticate_user
 from src.app.models.access_policy import AccessPolicy
 from src.app.models.role import Role
 from src.app.schemas.access_policy import AccessPolicyOut
 from src.app.schemas.user import UserCreateInternal, UserRead
-
-
-class TestLocalPasswordAuthentication:
-    @pytest.mark.asyncio
-    async def test_authenticate_user_rejects_external_user_without_password(self, mock_db):
-        user_uuid = "019cfc22-bff2-7168-ae43-387a301d8fcb"
-        external_user = {
-            "id": 1,
-            "uuid": user_uuid,
-            "username": "oidcuser",
-            "email": "oidc.user@example.com",
-            "hashed_password": None,
-        }
-
-        with patch("src.app.core.security.crud_users") as mock_crud:
-            mock_crud.get = AsyncMock(return_value=external_user)
-
-            result = await authenticate_user(user_uuid, "irrelevant", mock_db)
-
-            assert result is False
 
 
 class TestExternalIdentitySchemas:

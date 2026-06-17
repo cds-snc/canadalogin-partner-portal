@@ -34,7 +34,6 @@ These are the Python packages actually used in MVP-scoped code. Source: `backend
 | `arq` | Async worker queue (Verify import, OTP send, MAU refresh) |
 | `Authlib`, `PyJWT`, `itsdangerous` | OIDC client + token / cookie signing |
 | `casbin-fastapi-decorator[db]` | Authorization guards for secret operations |
-| `bcrypt` | Password hashing |
 | `httpx` | Outbound calls to IBM Security Verify, OTP provider, D&R pipeline |
 | `structlog`, `rich` | Structured logging |
 | `uuid`, `uuid6` | Identifier generation |
