@@ -10,7 +10,7 @@ const { mockedUseQuery } = vi.hoisted(() => ({
 
 vi.mock("react-i18next", () => ({
 	useTranslation: (): { t: (key: string, options?: Record<string, unknown>) => string } => ({
-		t: (key: string, options?: Record<string, unknown>): string => {
+		t: (key: string, _options?: Record<string, unknown>): string => {
 			const translations: Record<string, string> = {
 				"dashboard.department": "Department",
 				"dashboard.email": "Email",

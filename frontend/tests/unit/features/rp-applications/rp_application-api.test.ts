@@ -15,7 +15,7 @@ import {
 	updateRPApplication,
 } from "@/fetch/rp-applications";
 
-describe("workspaces-api", () => {
+describe("rp_application-api", () => {
 	afterEach(() => {
 		vi.restoreAllMocks();
 	});
@@ -234,6 +234,7 @@ describe("workspaces-api", () => {
 					{
 						description: "April rotation",
 						expiredAt: 1775692800,
+						path: "/rotatedSecrets/0",
 						rotatedAt: 1773100800,
 						secretId: "/rotatedSecrets/0",
 						value: "{sha512}redacted",
@@ -256,6 +257,7 @@ describe("workspaces-api", () => {
 			})
 		);
 		expect(response[0]?.secretId).toBe("/rotatedSecrets/0");
+		expect(response[0]?.path).toBe("/rotatedSecrets/0");
 	});
 
 	it("creates a current-user rotated client secret through the backend API", async () => {
@@ -296,11 +298,11 @@ describe("workspaces-api", () => {
 
 		const response = await deleteCurrentUserRPApplicationRotatedClientSecret(
 			applicationUuid,
-			"/rotatedSecrets/0"
+			"{sha512}redacted"
 		);
 
 		expect(fetchMock).toHaveBeenCalledWith(
-			`http://localhost:8000/api/v1/rp-applications/mine/${applicationUuid}/client/rotated-secrets/%2FrotatedSecrets%2F0`,
+			`http://localhost:8000/api/v1/rp-applications/mine/${applicationUuid}/client/rotated-secrets/%7Bsha512%7Dredacted`,
 			expect.objectContaining({
 				credentials: "include",
 				method: "DELETE",

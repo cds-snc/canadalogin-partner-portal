@@ -30,6 +30,7 @@ import { Route as ProfileSetupRouteImport } from './routes/profile/setup'
 import { Route as RpApplicationsMineRpApplicationUuidRouteImport } from './routes/rp-applications/mine/$rpApplicationUuid'
 import { Route as RpApplicationsMineRpApplicationUuidIndexRouteImport } from './routes/rp-applications/mine/$rpApplicationUuid/index'
 import { Route as RpApplicationsMineRpApplicationUuidMauReportRouteImport } from './routes/rp-applications/mine/$rpApplicationUuid/mau-report'
+import { Route as RpApplicationsMineRpApplicationUuidClientSecretsRouteImport } from './routes/rp-applications/mine/$rpApplicationUuid/client-secrets'
 
 const UsersRoute = UsersRouteImport.update({
   id: '/users',
@@ -140,6 +141,12 @@ const RpApplicationsMineRpApplicationUuidMauReportRoute =
     path: '/mau-report',
     getParentRoute: () => RpApplicationsMineRpApplicationUuidRoute,
   } as any)
+const RpApplicationsMineRpApplicationUuidClientSecretsRoute =
+  RpApplicationsMineRpApplicationUuidClientSecretsRouteImport.update({
+    id: '/client-secrets',
+    path: '/client-secrets',
+    getParentRoute: () => RpApplicationsMineRpApplicationUuidRoute,
+  } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -161,6 +168,7 @@ export interface FileRoutesByFullPath {
   '/users': typeof UsersRoute
   '/profile/setup': typeof ProfileSetupRoute
   '/rp-applications/mine/$rpApplicationUuid': typeof RpApplicationsMineRpApplicationUuidRouteWithChildren
+  '/rp-applications/mine/$rpApplicationUuid/client-secrets': typeof RpApplicationsMineRpApplicationUuidClientSecretsRoute
   '/rp-applications/mine/$rpApplicationUuid/mau-report': typeof RpApplicationsMineRpApplicationUuidMauReportRoute
   '/rp-applications/mine/$rpApplicationUuid/': typeof RpApplicationsMineRpApplicationUuidIndexRoute
 }
@@ -183,6 +191,7 @@ export interface FileRoutesByTo {
   '/tiers': typeof TiersRoute
   '/users': typeof UsersRoute
   '/profile/setup': typeof ProfileSetupRoute
+  '/rp-applications/mine/$rpApplicationUuid/client-secrets': typeof RpApplicationsMineRpApplicationUuidClientSecretsRoute
   '/rp-applications/mine/$rpApplicationUuid/mau-report': typeof RpApplicationsMineRpApplicationUuidMauReportRoute
   '/rp-applications/mine/$rpApplicationUuid': typeof RpApplicationsMineRpApplicationUuidIndexRoute
 }
@@ -207,6 +216,7 @@ export interface FileRoutesById {
   '/users': typeof UsersRoute
   '/profile/setup': typeof ProfileSetupRoute
   '/rp-applications/mine/$rpApplicationUuid': typeof RpApplicationsMineRpApplicationUuidRouteWithChildren
+  '/rp-applications/mine/$rpApplicationUuid/client-secrets': typeof RpApplicationsMineRpApplicationUuidClientSecretsRoute
   '/rp-applications/mine/$rpApplicationUuid/mau-report': typeof RpApplicationsMineRpApplicationUuidMauReportRoute
   '/rp-applications/mine/$rpApplicationUuid/': typeof RpApplicationsMineRpApplicationUuidIndexRoute
 }
@@ -232,6 +242,7 @@ export interface FileRouteTypes {
     | '/users'
     | '/profile/setup'
     | '/rp-applications/mine/$rpApplicationUuid'
+    | '/rp-applications/mine/$rpApplicationUuid/client-secrets'
     | '/rp-applications/mine/$rpApplicationUuid/mau-report'
     | '/rp-applications/mine/$rpApplicationUuid/'
   fileRoutesByTo: FileRoutesByTo
@@ -254,6 +265,7 @@ export interface FileRouteTypes {
     | '/tiers'
     | '/users'
     | '/profile/setup'
+    | '/rp-applications/mine/$rpApplicationUuid/client-secrets'
     | '/rp-applications/mine/$rpApplicationUuid/mau-report'
     | '/rp-applications/mine/$rpApplicationUuid'
   id:
@@ -277,6 +289,7 @@ export interface FileRouteTypes {
     | '/users'
     | '/profile/setup'
     | '/rp-applications/mine/$rpApplicationUuid'
+    | '/rp-applications/mine/$rpApplicationUuid/client-secrets'
     | '/rp-applications/mine/$rpApplicationUuid/mau-report'
     | '/rp-applications/mine/$rpApplicationUuid/'
   fileRoutesById: FileRoutesById
@@ -452,16 +465,26 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof RpApplicationsMineRpApplicationUuidMauReportRouteImport
       parentRoute: typeof RpApplicationsMineRpApplicationUuidRoute
     }
+    '/rp-applications/mine/$rpApplicationUuid/client-secrets': {
+      id: '/rp-applications/mine/$rpApplicationUuid/client-secrets'
+      path: '/client-secrets'
+      fullPath: '/rp-applications/mine/$rpApplicationUuid/client-secrets'
+      preLoaderRoute: typeof RpApplicationsMineRpApplicationUuidClientSecretsRouteImport
+      parentRoute: typeof RpApplicationsMineRpApplicationUuidRoute
+    }
   }
 }
 
 interface RpApplicationsMineRpApplicationUuidRouteChildren {
+  RpApplicationsMineRpApplicationUuidClientSecretsRoute: typeof RpApplicationsMineRpApplicationUuidClientSecretsRoute
   RpApplicationsMineRpApplicationUuidMauReportRoute: typeof RpApplicationsMineRpApplicationUuidMauReportRoute
   RpApplicationsMineRpApplicationUuidIndexRoute: typeof RpApplicationsMineRpApplicationUuidIndexRoute
 }
 
 const RpApplicationsMineRpApplicationUuidRouteChildren: RpApplicationsMineRpApplicationUuidRouteChildren =
   {
+    RpApplicationsMineRpApplicationUuidClientSecretsRoute:
+      RpApplicationsMineRpApplicationUuidClientSecretsRoute,
     RpApplicationsMineRpApplicationUuidMauReportRoute:
       RpApplicationsMineRpApplicationUuidMauReportRoute,
     RpApplicationsMineRpApplicationUuidIndexRoute:

@@ -1,4 +1,5 @@
 import { useMemo, type ReactElement, type ReactNode } from "react";
+import Button from "./Button";
 import Table, { type TableColumn } from "./Table";
 
 export type DataTableColumn<Row extends Record<string, unknown>> = {
@@ -15,6 +16,7 @@ export type DataTableColumn<Row extends Record<string, unknown>> = {
 export type DataTableAction<Row extends Record<string, unknown>> = {
 	buttonId?: (row: Row) => string | undefined;
 	buttonLabel: string;
+	buttonRole?: "primary" | "secondary" | "danger" | "start";
 	isVisible?: (row: Row) => boolean;
 	onAction: (row: Row) => void;
 	screenReaderLabel?: (row: Row) => string;
@@ -103,23 +105,42 @@ const DataTable = <Row extends Record<string, unknown>>({
 					return (
 						<div className="flex gap-100">
 							{visibleActions.map((a, index) => (
-								<a
-									key={index}
-									className="gcds-button-link"
-									href="#"
-									onClick={(e) => {
-										e.preventDefault();
-										a.onAction(rowData);
-									}}
-								>
-									{a.buttonLabel}
-									{a.screenReaderLabel ? (
-										<span className="gcds-sr-only">
-											{" "}
-											{a.screenReaderLabel(rowData)}
-										</span>
-									) : null}
-								</a>
+								a.variant === "button" ? (
+									<Button
+										key={index}
+										buttonRole={a.buttonRole ?? "secondary"}
+										type="button"
+										onGcdsClick={() => {
+											a.onAction(rowData);
+										}}
+									>
+										{a.buttonLabel}
+										{a.screenReaderLabel ? (
+											<span className="gcds-sr-only">
+												{" "}
+												{a.screenReaderLabel(rowData)}
+											</span>
+										) : null}
+									</Button>
+								) : (
+									<a
+										key={index}
+										className="gcds-button-link"
+										href="#"
+										onClick={(e) => {
+											e.preventDefault();
+											a.onAction(rowData);
+										}}
+									>
+										{a.buttonLabel}
+										{a.screenReaderLabel ? (
+											<span className="gcds-sr-only">
+												{" "}
+												{a.screenReaderLabel(rowData)}
+											</span>
+										) : null}
+									</a>
+								)
 							))}
 						</div>
 					);

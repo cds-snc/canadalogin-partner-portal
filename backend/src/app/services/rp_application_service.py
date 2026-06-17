@@ -16,6 +16,10 @@ from ..repositories.crud_rp_applications import crud_rp_applications
 from ..repositories.ibm_sv_admin import IBMVerifyAdminClient
 from ..schemas.audit_log import AuditLogCreateInternal
 from ..schemas.rp_application import (
+    RPApplicationClientCredentialsRead,
+    RPApplicationClientRotatedSecretCreateRequest,
+    RPApplicationClientRotatedSecretRead,
+    RPApplicationClientSecretRotateRequest,
     RPApplicationCreate,
     RPApplicationCreateInternal,
     RPApplicationCurrentUserOAuthSetupRead,
@@ -124,6 +128,140 @@ class RPApplicationService:
                     return extracted_secret
 
         return None
+
+    def _extract_client_secret_id(self, value: Any) -> str | None:
+        value_dict = self._as_dict(value)
+
+        direct_secret_id = self._first_string_value(
+            value_dict,
+            (
+                "clientSecretId",
+                "client_secret_id",
+                "secretId",
+                "secret_id",
+                "id",
+            ),
+        )
+        if direct_secret_id is not None:
+            return direct_secret_id
+
+        for key in ("clientSecrets", "client_secrets", "secrets", "rotatedSecrets"):
+            secrets = value_dict.get(key)
+            if not isinstance(secrets, list):
+                continue
+
+            for secret_entry in secrets:
+                extracted_secret_id = self._first_string_value(
+                    secret_entry,
+                    (
+                        "clientSecretId",
+                        "client_secret_id",
+                        "secretId",
+                        "secret_id",
+                        "id",
+                    ),
+                )
+                if extracted_secret_id is not None:
+                    return extracted_secret_id
+
+        return None
+
+    def _normalize_epoch_seconds(self, value: Any) -> int | None:
+        if value is None:
+            return None
+
+        if isinstance(value, bool):
+            return int(value)
+
+        if isinstance(value, int):
+            return value
+
+        if isinstance(value, float):
+            return int(value)
+
+        normalized = str(value).strip()
+        if not normalized:
+            return None
+
+        try:
+            return int(float(normalized))
+        except ValueError:
+            return None
+
+    def _extract_rotated_secret_entries(self, value: Any) -> list[dict[str, Any]]:
+        value_dict = self._as_dict(value)
+        rotated_secrets: list[Any] = []
+
+        for key in ("rotatedSecrets", "rotated_secrets"):
+            candidate = value_dict.get(key)
+            if isinstance(candidate, list):
+                rotated_secrets.extend(candidate)
+
+        additional_config = self._as_dict(value_dict.get("additionalConfig"))
+        for key in ("rotatedSecrets", "rotated_secrets"):
+            candidate = additional_config.get(key)
+            if isinstance(candidate, list):
+                rotated_secrets.extend(candidate)
+
+        normalized_entries: list[dict[str, Any]] = []
+        for index, secret_entry in enumerate(rotated_secrets):
+            entry_dict = self._as_dict(secret_entry)
+            delete_path = self._first_string_value(
+                entry_dict,
+                ("path", "secretId", "secret_id", "id"),
+            ) or f"/rotatedSecrets/{index}"
+            normalized_entries.append(
+                RPApplicationClientRotatedSecretRead(
+                    description=self._first_string_value(entry_dict, ("description",)),
+                    expiredAt=self._normalize_epoch_seconds(entry_dict.get("expiredAt") or entry_dict.get("expired_at")),
+                    rotatedAt=self._normalize_epoch_seconds(entry_dict.get("rotatedAt") or entry_dict.get("rotated_at")),
+                    value=self._first_string_value(entry_dict, ("value", "secret", "clientSecret")),
+                    secretId=self._first_string_value(
+                        entry_dict,
+                        ("secretId", "secret_id", "id"),
+                    )
+                    or delete_path,
+                ).model_dump(by_alias=True)
+            )
+
+        return normalized_entries
+
+    async def _create_audit_log_entry(
+        self,
+        db: AsyncSession,
+        current_user: dict[str, Any],
+        rp_application_data: dict[str, Any],
+        operation: str,
+        description: str,
+    ) -> None:
+        await crud_audit_log.create(
+            db=db,
+            object=AuditLogCreateInternal(
+                user=current_user.get("name") or current_user.get("email", ""),
+                user_uuid=current_user.get("uuid"),
+                target="rp_application",
+                target_uuid=rp_application_data.get("uuid"),
+                operation=operation,
+                description=description,
+            ),
+        )
+
+    async def _read_client_credentials(
+        self,
+        ibm_admin_client: IBMVerifyAdminClient,
+        client_id: str,
+    ) -> dict[str, Any]:
+        client_secret_response = await ibm_admin_client.get_client_secret(client_id)
+        client_secret = self._extract_client_secret(client_secret_response)
+        if client_secret is None:
+            raise RuntimeError("IBM Verify application detail missing client secret")
+
+        response = RPApplicationClientCredentialsRead(
+            client_id=client_id,
+            client_secret=client_secret,
+            client_secret_id=self._extract_client_secret_id(client_secret_response),
+        )
+        return response.model_dump(by_alias=True)
 
     def _extract_application_id(self, application: Any) -> str | None:
         if isinstance(application, Mapping):
@@ -361,59 +499,17 @@ class RPApplicationService:
         current_user: dict[str, Any],
         ibm_admin_client: IBMVerifyAdminClient,
     ) -> dict[str, Any]:
-        current_user_email = self._extract_current_user_email(current_user)
-        if current_user_email is None:
-            raise ForbiddenException("Only RP application owners can view OAuth setup")
-
-        rp_application = await crud_rp_applications.get(
+        rp_application_data, detail_data, _ = await self._get_current_user_secret_context(
             db=db,
-            uuid=rp_application_uuid,
-            is_deleted=False,
-            schema_to_select=RPApplicationRead,
+            rp_application_uuid=rp_application_uuid,
+            current_user=current_user,
+            ibm_admin_client=ibm_admin_client,
         )
-        if rp_application is None:
-            raise NotFoundException("RP application not found")
-
-        rp_application_data = self._as_dict(rp_application)
-        if not self._is_owner_email_match(
-            rp_application_data.get("application_owner"),
-            current_user_email,
-        ):
-            raise ForbiddenException("Only RP application owners can view OAuth setup")
-
-        ibm_application_id = self._first_string_value(
-            rp_application_data,
-            ("ibm_sv_application_id", "ibmSvApplicationId"),
-        )
-        if ibm_application_id is None:
-            raise NotFoundException("IBM Verify application not found for RP application")
-
-        ibm_application_detail = await ibm_admin_client.get_application_detail(
-            ibm_application_id
-        )
-        detail_data = self._as_dict(ibm_application_detail)
 
         providers = self._as_dict(detail_data.get("providers"))
         oidc_provider = self._as_dict(providers.get("oidc"))
         oidc_properties = self._as_dict(oidc_provider.get("properties"))
         additional_config = self._as_dict(oidc_properties.get("additionalConfig"))
-
-        client_id = self._first_string_value(
-            oidc_properties,
-            ("clientId", "client_id"),
-        )
-        if client_id is None:
-            client_id = self._first_string_value(
-                detail_data,
-                ("clientId", "client_id"),
-            )
-        if client_id is None:
-            raise RuntimeError("IBM Verify application detail missing client ID")
-
-        client_secret_response = await ibm_admin_client.get_client_secret(client_id)
-        client_secret = self._extract_client_secret(client_secret_response)
-        if client_secret is None:
-            raise RuntimeError("IBM Verify application detail missing client secret")
 
         application_state = detail_data.get("applicationState")
         if isinstance(application_state, bool):
@@ -457,14 +553,241 @@ class RPApplicationService:
             status=status,
             application_url=application_url,
             discovery_endpoint=settings.OIDC_SERVER_METADATA_URL,
-            client_id=client_id,
-            client_secret=client_secret,
             pkce_enabled=pkce_enabled,
             redirect_uris=redirect_uris,
             logout_uri=logout_uri,
             logout_redirect_uris=logout_redirect_uris,
         )
         return response.model_dump(by_alias=True)
+
+    async def _get_current_user_secret_context(
+        self,
+        db: AsyncSession,
+        rp_application_uuid: uuid_pkg.UUID | str,
+        current_user: dict[str, Any],
+        ibm_admin_client: IBMVerifyAdminClient,
+    ) -> tuple[dict[str, Any], dict[str, Any], str]:
+        current_user_email = self._extract_current_user_email(current_user)
+        if current_user_email is None:
+            raise ForbiddenException("Only RP application owners can view client information")
+
+        rp_application = await crud_rp_applications.get(
+            db=db,
+            uuid=rp_application_uuid,
+            is_deleted=False,
+            schema_to_select=RPApplicationRead,
+        )
+        if rp_application is None:
+            raise NotFoundException("RP application not found")
+
+        rp_application_data = self._as_dict(rp_application)
+        if not self._is_owner_email_match(
+            rp_application_data.get("application_owner"),
+            current_user_email,
+        ):
+            raise ForbiddenException("Only RP application owners can view client information")
+
+        ibm_application_id = self._first_string_value(
+            rp_application_data,
+            ("ibm_sv_application_id", "ibmSvApplicationId"),
+        )
+        if ibm_application_id is None:
+            raise NotFoundException("IBM Verify application not found for RP application")
+
+        ibm_application_detail = await ibm_admin_client.get_application_detail(
+            ibm_application_id
+        )
+        detail_data = self._as_dict(ibm_application_detail)
+        providers = self._as_dict(detail_data.get("providers"))
+        oidc_provider = self._as_dict(providers.get("oidc"))
+        oidc_properties = self._as_dict(oidc_provider.get("properties"))
+
+        client_id = self._first_string_value(
+            oidc_properties,
+            ("clientId", "client_id"),
+        )
+        if client_id is None:
+            client_id = self._first_string_value(
+                detail_data,
+                ("clientId", "client_id"),
+            )
+        if client_id is None:
+            raise RuntimeError("IBM Verify application detail missing client ID")
+
+        return rp_application_data, detail_data, client_id
+
+    async def get_current_user_rp_application_client_credentials(
+        self,
+        db: AsyncSession,
+        rp_application_uuid: uuid_pkg.UUID | str,
+        current_user: dict[str, Any],
+        ibm_admin_client: IBMVerifyAdminClient,
+    ) -> dict[str, Any]:
+        rp_application_data, _, client_id = await self._get_current_user_secret_context(
+            db=db,
+            rp_application_uuid=rp_application_uuid,
+            current_user=current_user,
+            ibm_admin_client=ibm_admin_client,
+        )
+
+        await self._create_audit_log_entry(
+            db=db,
+            current_user=current_user,
+            rp_application_data=rp_application_data,
+            operation="REVEAL_SECRET",
+            description=(
+                f"Revealed client credentials for RP application '{rp_application_data.get('dnr_app_name', '')}'"
+            ),
+        )
+
+        return await self._read_client_credentials(
+            ibm_admin_client=ibm_admin_client,
+            client_id=client_id,
+        )
+
+    async def list_current_user_rp_application_rotated_secrets(
+        self,
+        db: AsyncSession,
+        rp_application_uuid: uuid_pkg.UUID | str,
+        current_user: dict[str, Any],
+        ibm_admin_client: IBMVerifyAdminClient,
+    ) -> list[dict[str, Any]]:
+        rp_application_data, _, client_id = await self._get_current_user_secret_context(
+            db=db,
+            rp_application_uuid=rp_application_uuid,
+            current_user=current_user,
+            ibm_admin_client=ibm_admin_client,
+        )
+
+        client_secret_response = await ibm_admin_client.get_client_secret(client_id)
+        await self._create_audit_log_entry(
+            db=db,
+            current_user=current_user,
+            rp_application_data=rp_application_data,
+            operation="VIEW_ROTATED",
+            description=(
+                f"Viewed rotated client secrets for RP application '{rp_application_data.get('dnr_app_name', '')}'"
+            ),
+        )
+
+        return self._extract_rotated_secret_entries(client_secret_response)
+
+    async def rotate_current_user_rp_application_client_secret(
+        self,
+        db: AsyncSession,
+        rp_application_uuid: uuid_pkg.UUID | str,
+        current_user: dict[str, Any],
+        payload: RPApplicationClientSecretRotateRequest,
+        ibm_admin_client: IBMVerifyAdminClient,
+    ) -> dict[str, Any]:
+        rp_application_data, _, client_id = await self._get_current_user_secret_context(
+            db=db,
+            rp_application_uuid=rp_application_uuid,
+            current_user=current_user,
+            ibm_admin_client=ibm_admin_client,
+        )
+
+        await ibm_admin_client.update_client_secret(
+            client_id,
+            payload.model_dump(by_alias=True),
+        )
+        operation = "ROTATE_SECRET"
+        description = (
+            f"Rotated client secret for RP application '{rp_application_data.get('dnr_app_name', '')}'"
+        )
+        if payload.description.strip() == "" and payload.rotated_secret_expired_at == 0:
+            operation = "REGENERATE"
+            description = (
+                f"Regenerated client secret for RP application '{rp_application_data.get('dnr_app_name', '')}'"
+            )
+
+        await self._create_audit_log_entry(
+            db=db,
+            current_user=current_user,
+            rp_application_data=rp_application_data,
+            operation=operation,
+            description=description,
+        )
+
+        return await self._read_client_credentials(
+            ibm_admin_client=ibm_admin_client,
+            client_id=client_id,
+        )
+
+    async def create_current_user_rp_application_rotated_secret(
+        self,
+        db: AsyncSession,
+        rp_application_uuid: uuid_pkg.UUID | str,
+        current_user: dict[str, Any],
+        payload: RPApplicationClientRotatedSecretCreateRequest,
+        ibm_admin_client: IBMVerifyAdminClient,
+    ) -> list[dict[str, Any]]:
+        rp_application_data, _, client_id = await self._get_current_user_secret_context(
+            db=db,
+            rp_application_uuid=rp_application_uuid,
+            current_user=current_user,
+            ibm_admin_client=ibm_admin_client,
+        )
+
+        await ibm_admin_client.update_client_secret(
+            client_id,
+            {
+                "deleteRotatedSecrets": False,
+                "description": payload.description,
+                "rotatedSecretExpiredAt": payload.rotated_secret_expired_at,
+            },
+        )
+        await self._create_audit_log_entry(
+            db=db,
+            current_user=current_user,
+            rp_application_data=rp_application_data,
+            operation="ROTATE_SECRET",
+            description=(
+                f"Created rotated client secret for RP application '{rp_application_data.get('dnr_app_name', '')}'"
+            ),
+        )
+
+        client_secret_response = await ibm_admin_client.get_client_secret(client_id)
+        return self._extract_rotated_secret_entries(client_secret_response)
+
+    async def delete_current_user_rp_application_rotated_secret(
+        self,
+        db: AsyncSession,
+        rp_application_uuid: uuid_pkg.UUID | str,
+        current_user: dict[str, Any],
+        value: str,
+        ibm_admin_client: IBMVerifyAdminClient,
+    ) -> bool:
+        rp_application_data, _, client_id = await self._get_current_user_secret_context(
+            db=db,
+            rp_application_uuid=rp_application_uuid,
+            current_user=current_user,
+            ibm_admin_client=ibm_admin_client,
+        )
+
+        delete_path = value
+
+        client_secret_response = await ibm_admin_client.get_client_secret(client_id)
+        rotated_secrets = self._extract_rotated_secret_entries(client_secret_response)
+        # check if delete_path exists in rotated_secrets
+        if not any(secret.get("value") == delete_path for secret in rotated_secrets):
+                raise NotFoundException("Rotated client secret not found")
+
+        deleted = await ibm_admin_client.delete_rotated_client_secrets(
+            client_id,
+            [delete_path],
+        )
+        await self._create_audit_log_entry(
+            db=db,
+            current_user=current_user,
+            rp_application_data=rp_application_data,
+            operation="DELETE_ROTATED",
+            description=(
+                f"Deleted rotated client secret for RP application '{rp_application_data.get('dnr_app_name', '')}'"
+            ),
+        )
+
+        return deleted
 
     async def sync_rp_applications_from_ibm_verify(
         self,

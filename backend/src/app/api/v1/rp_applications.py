@@ -21,6 +21,10 @@ from ...repositories.dependencies import get_ibm_sv_admin_client
 from ...repositories.ibm_sv_admin import IBMVerifyAdminClient
 from ...schemas.mau import MAUReportItem, MAUReportResponse
 from ...schemas.rp_application import (
+    RPApplicationClientCredentialsRead,
+    RPApplicationClientRotatedSecretCreateRequest,
+    RPApplicationClientRotatedSecretRead,
+    RPApplicationClientSecretRotateRequest,
     RPApplicationCreate,
     RPApplicationCurrentUserOAuthSetupRead,
     RPApplicationCurrentUserRead,
@@ -105,6 +109,137 @@ async def read_current_user_rp_application_oauth_setup(
         ibm_admin_client=ibm_admin_client,
     )
     return RPApplicationCurrentUserOAuthSetupRead.model_validate(oauth_setup)
+
+
+@router.get(
+    "/rp-applications/mine/{rp_application_uuid}/client",
+    response_model=RPApplicationClientCredentialsRead,
+    responses=error_responses(403, 404, 500),
+)
+async def read_current_user_rp_application_client_credentials(
+    request: Request,
+    rp_application_uuid: uuid_pkg.UUID,
+    db: Annotated[AsyncSession, Depends(async_get_db)],
+    current_user: Annotated[dict, Depends(get_current_user)],
+    service: Annotated[RPApplicationService, Depends(get_rp_application_service)],
+    ibm_admin_client: Annotated[
+        IBMVerifyAdminClient, Depends(get_ibm_sv_admin_client)
+    ],
+) -> RPApplicationClientCredentialsRead:
+    credentials = await service.get_current_user_rp_application_client_credentials(
+        db=db,
+        rp_application_uuid=rp_application_uuid,
+        current_user=current_user,
+        ibm_admin_client=ibm_admin_client,
+    )
+    return RPApplicationClientCredentialsRead.model_validate(credentials)
+
+
+@router.get(
+    "/rp-applications/mine/{rp_application_uuid}/client/rotated-secrets",
+    response_model=list[RPApplicationClientRotatedSecretRead],
+    responses=error_responses(403, 404, 500),
+)
+async def read_current_user_rp_application_rotated_secrets(
+    request: Request,
+    rp_application_uuid: uuid_pkg.UUID,
+    db: Annotated[AsyncSession, Depends(async_get_db)],
+    current_user: Annotated[dict, Depends(get_current_user)],
+    service: Annotated[RPApplicationService, Depends(get_rp_application_service)],
+    ibm_admin_client: Annotated[
+        IBMVerifyAdminClient, Depends(get_ibm_sv_admin_client)
+    ],
+) -> list[RPApplicationClientRotatedSecretRead]:
+    rotated_secrets = await service.list_current_user_rp_application_rotated_secrets(
+        db=db,
+        rp_application_uuid=rp_application_uuid,
+        current_user=current_user,
+        ibm_admin_client=ibm_admin_client,
+    )
+    return [
+        RPApplicationClientRotatedSecretRead.model_validate(secret)
+        for secret in rotated_secrets
+    ]
+
+
+@router.post(
+    "/rp-applications/mine/{rp_application_uuid}/client/rotate-secret",
+    response_model=RPApplicationClientCredentialsRead,
+    responses=error_responses(400, 403, 404, 500),
+)
+async def rotate_current_user_rp_application_client_secret(
+    request: Request,
+    rp_application_uuid: uuid_pkg.UUID,
+    payload: RPApplicationClientSecretRotateRequest,
+    db: Annotated[AsyncSession, Depends(async_get_db)],
+    current_user: Annotated[dict, Depends(get_current_user)],
+    service: Annotated[RPApplicationService, Depends(get_rp_application_service)],
+    ibm_admin_client: Annotated[
+        IBMVerifyAdminClient, Depends(get_ibm_sv_admin_client)
+    ],
+) -> RPApplicationClientCredentialsRead:
+    credentials = await service.rotate_current_user_rp_application_client_secret(
+        db=db,
+        rp_application_uuid=rp_application_uuid,
+        current_user=current_user,
+        payload=payload,
+        ibm_admin_client=ibm_admin_client,
+    )
+    return RPApplicationClientCredentialsRead.model_validate(credentials)
+
+
+@router.post(
+    "/rp-applications/mine/{rp_application_uuid}/client/rotated-secrets",
+    response_model=list[RPApplicationClientRotatedSecretRead],
+    responses=error_responses(400, 403, 404, 500),
+)
+async def create_current_user_rp_application_rotated_secret(
+    request: Request,
+    rp_application_uuid: uuid_pkg.UUID,
+    payload: RPApplicationClientRotatedSecretCreateRequest,
+    db: Annotated[AsyncSession, Depends(async_get_db)],
+    current_user: Annotated[dict, Depends(get_current_user)],
+    service: Annotated[RPApplicationService, Depends(get_rp_application_service)],
+    ibm_admin_client: Annotated[
+        IBMVerifyAdminClient, Depends(get_ibm_sv_admin_client)
+    ],
+) -> list[RPApplicationClientRotatedSecretRead]:
+    rotated_secrets = await service.create_current_user_rp_application_rotated_secret(
+        db=db,
+        rp_application_uuid=rp_application_uuid,
+        current_user=current_user,
+        payload=payload,
+        ibm_admin_client=ibm_admin_client,
+    )
+    return [
+        RPApplicationClientRotatedSecretRead.model_validate(secret)
+        for secret in rotated_secrets
+    ]
+
+
+@router.delete(
+    "/rp-applications/mine/{rp_application_uuid}/client/rotated-secrets/{value}",
+    responses=error_responses(403, 404, 500),
+)
+async def delete_current_user_rp_application_rotated_secret(
+    request: Request,
+    rp_application_uuid: uuid_pkg.UUID,
+    value: str,
+    db: Annotated[AsyncSession, Depends(async_get_db)],
+    current_user: Annotated[dict, Depends(get_current_user)],
+    service: Annotated[RPApplicationService, Depends(get_rp_application_service)],
+    ibm_admin_client: Annotated[
+        IBMVerifyAdminClient, Depends(get_ibm_sv_admin_client)
+    ],
+) -> dict[str, str]:
+    await service.delete_current_user_rp_application_rotated_secret(
+        db=db,
+        rp_application_uuid=rp_application_uuid,
+        current_user=current_user,
+        value=value,
+        ibm_admin_client=ibm_admin_client,
+    )
+    return {"message": "Rotated client secret deleted"}
 
 
 @router.get(
