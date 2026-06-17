@@ -13,12 +13,12 @@ vi.mock("react-i18next", () => ({
 			const translations: Record<string, string> = {
 				"nav.dashboard": "Dashboard",
 				"nav.health": "Health",
+				"home.title": "CanadaLogin Partner Portal",
 				"nav.home": "Home",
 				"nav.label": "Primary navigation",
 				"nav.login": "Sign in",
 				"nav.logout": "Sign out",
 				"nav.policies": "Policies",
-				"nav.profile": "Profile",
 				"nav.roles": "Roles",
 				"nav.tiers": "Tiers",
 				"nav.users": "Users",
@@ -33,8 +33,31 @@ vi.mock("@tanstack/react-router", () => ({
 	useRouterState: ({
 		select,
 	}: {
-		select: (state: { location: { pathname: string } }) => string;
-	}): string => select({ location: { pathname: "/users" } }),
+		select: (state: {
+			location: { pathname: string };
+			matches: Array<{
+				context?: {
+					breadcrumbs?: Array<{
+						href: string;
+						label: string;
+					}>;
+				};
+			}>;
+		}) => unknown;
+	}): unknown =>
+		select({
+			location: { pathname: "/users" },
+			matches: [
+				{
+					context: {
+						breadcrumbs: [
+							{ href: "/", label: "Home" },
+							{ href: "/users", label: "Users" },
+						],
+					},
+				},
+			],
+		}),
 }));
 
 vi.mock("@/hooks", () => ({
@@ -42,6 +65,12 @@ vi.mock("@/hooks", () => ({
 }));
 
 vi.mock("@gcds-core/components-react", () => ({
+	GcdsBreadcrumbs: ({ children }: { children: ReactNode }): ReactElement => (
+		<div>{children}</div>
+	),
+	GcdsBreadcrumbsItem: ({ children }: { children: ReactNode }): ReactElement => (
+		<span>{children}</span>
+	),
 	GcdsHeader: ({ children }: { children: ReactNode }): ReactElement => (
 		<header>{children}</header>
 	),

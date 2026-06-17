@@ -30,8 +30,8 @@ const Table = <T extends Record<string, unknown>>({
 	<GcdsTable
 		captionSlot={caption}
 		className={className}
-		columns={columns as Array<ReactTableColumn> | undefined}
-		data={data as Array<Record<string, unknown>> | undefined}
+		columns={columns}
+		data={data}
 		filter={filter}
 		pagination={pagination}
 		sort={sort}

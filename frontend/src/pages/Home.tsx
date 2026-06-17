@@ -27,7 +27,7 @@ export const Home = (): FunctionComponent => {
 	};
 
 	return (
-		<CenteredPageLayout className="max-w-6xl gap-700 py-300">
+		<div>
 			<section className="border border-[var(--gcds-border-default)] bg-[var(--gcds-bg-light)] px-500 py-600 md:px-650 md:py-700">
 				<div className="max-w-3xl">
 					<span className="text-sm font-semibold tracking-[0.12em] text-[var(--gcds-text-secondary)] uppercase">
@@ -87,12 +87,6 @@ export const Home = (): FunctionComponent => {
 							href="/about"
 						/>
 						<Card
-							cardTitle={t("home.federalCardTitle")}
-							cardTitleTag="h3"
-							description={t("home.federalCardDescription")}
-							href="/health"
-						/>
-						<Card
 							cardTitle={t("home.optionalCardTitle")}
 							cardTitleTag="h3"
 							description={t("home.optionalCardDescription")}
@@ -101,6 +95,6 @@ export const Home = (): FunctionComponent => {
 					</Grid>
 				</div>
 			</section>
-		</CenteredPageLayout>
+		</div>
 	);
 };

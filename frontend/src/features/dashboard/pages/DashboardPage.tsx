@@ -1,8 +1,7 @@
 import type { ReactElement } from "react";
 import { useTranslation } from "react-i18next";
 import type { FunctionComponent } from "@/common/types";
-import { Breadcrumbs, CenteredPageLayout } from "@/components/layout";
-import { Heading, Link, Notice, Text } from "@/components/ui";
+import { Container, Grid, Heading, Link, Notice, Text } from "@/components/ui";
 import { getRequestErrorNotice } from "@/fetch";
 import { getDepartment } from "@/fetch/departments";
 import {
@@ -11,9 +10,6 @@ import {
 } from "@/fetch/rp-applications";
 import { useQuery } from "@tanstack/react-query";
 import { useRoles, useSession } from "@/hooks";
-
-const summaryCardClasses =
-	"rounded-sm border border-[var(--gcds-border-default)] bg-[var(--gcds-bg-white)] px-400 py-350 shadow-[0_14px_28px_rgba(38,55,74,0.06)]";
 
 export const DashboardPage = (): FunctionComponent => {
 	const { t } = useTranslation();
@@ -86,13 +82,7 @@ export const DashboardPage = (): FunctionComponent => {
 	};
 
 	return (
-		<CenteredPageLayout className="max-w-6xl gap-600">
-			<Breadcrumbs
-				items={[
-					{ href: "/", label: t("nav.home") },
-					{ href: "/dashboard", label: t("dashboard.title") },
-				]}
-			/>
+		<section>
 			<div className="max-w-3xl">
 				<Heading tag="h1">{t("dashboard.title")}</Heading>
 				<Text>{t("dashboard.summary")}</Text>
@@ -120,41 +110,32 @@ export const DashboardPage = (): FunctionComponent => {
 
 			{currentUser ? (
 				<>
-					<section className="grid gap-300 lg:grid-cols-[minmax(0,1.4fr)_360px] lg:items-start">
-						<div className="flex flex-col gap-300">
-							<div className="max-w-3xl">
-								<p className="text-xs font-semibold uppercase tracking-[0.14em] text-[var(--gcds-text-secondary)]">
-									{t("dashboard.resourcesEyebrow")}
-								</p>
-								<Heading tag="h2">{t("dashboard.resourcesTitle")}</Heading>
-								<Text>{t("dashboard.resourcesSummary")}</Text>
-							</div>
+					<Grid
+						columns="1fr"
+						columnsDesktop="minmax(0,1.4fr) 360px"
+						tag="section"
+					>
+						<Container border id="dashboard-rp-applications" padding="300" tag="section">
+							<Heading marginTop="0" tag="h3">
+								{t("dashboard.rpApplicationsListTitle")}
+							</Heading>
+							{(rpApplications ?? []).length > 0 ? (
+								<ul className="mt-150 flex flex-col gap-100">
+									{(rpApplications ?? []).map((application) => (
+										<li key={application.uuid}>
+											{renderApplicationLink(application)}
+										</li>
+									))}
+								</ul>
+							) : (
+								<Text>{t("dashboard.noRPApplications")}</Text>
+							)}
+						</Container>
 
-							<div className="flex flex-col gap-300" role="presentation">
-								<section className={summaryCardClasses}>
-									<Heading tag="h3">
-										{t("dashboard.rpApplicationsListTitle")}
-									</Heading>
-									<Text>{t("dashboard.rpApplicationsDescription")}</Text>
-									{(rpApplications ?? []).length > 0 ? (
-										<ul className="mt-150 flex flex-col gap-100">
-											{(rpApplications ?? []).map((application) => (
-												<li key={application.uuid}>
-													{renderApplicationLink(application)}
-												</li>
-											))}
-										</ul>
-									) : (
-										<Text>{t("dashboard.noRPApplications")}</Text>
-									)}
-								</section>
-							</div>
-						</div>
-
-						<aside className={summaryCardClasses}>
-							<p className="text-xs font-semibold uppercase tracking-[0.14em] text-[var(--gcds-text-secondary)]">
+						<Container border id="dashboard-profile" padding="300" tag="aside">
+							<Heading marginTop="0" tag="h3">
 								{t("dashboard.profileEyebrow")}
-							</p>
+							</Heading>
 							<div className="mt-150 flex flex-col gap-150">
 								<Text>{t("dashboard.name", { value: currentUser.name })}</Text>
 								<Text>
@@ -183,10 +164,10 @@ export const DashboardPage = (): FunctionComponent => {
 									)}
 								</div>
 							</div>
-						</aside>
-					</section>
+						</Container>
+					</Grid>
 				</>
 			) : null}
-		</CenteredPageLayout>
+		</section>
 	);
 };

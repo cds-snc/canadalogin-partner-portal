@@ -21,9 +21,6 @@ vi.mock("react-i18next", () => ({
 				"dashboard.noRPApplications": "No RP applications found.",
 				"dashboard.noRoles": "No roles assigned",
 				"dashboard.profileEyebrow": "Signed-in profile",
-				"dashboard.resourcesEyebrow": "Service resources",
-				"dashboard.resourcesSummary": "Jump into the RP applications you use most often from one place.",
-				"dashboard.resourcesTitle": "RP applications",
 				"dashboard.rpApplicationsDescription": "Review the RP applications available to your account.",
 				"dashboard.rpApplicationsListTitle": "RP Applications",
 				"dashboard.roles": "Roles",
@@ -49,6 +46,9 @@ vi.mock("@/components/layout", () => ({
 }));
 
 vi.mock("@/components/ui", () => ({
+	Container: ({ children }: PropsWithChildren): ReactElement => (
+		<section>{children}</section>
+	),
 	Grid: ({ children }: PropsWithChildren): ReactElement => <section>{children}</section>,
 	Heading: ({ children }: PropsWithChildren): ReactElement => <h1>{children}</h1>,
 	Link: ({ children, href }: PropsWithChildren<{ href: string }>): ReactElement => (
@@ -128,7 +128,6 @@ describe("DashboardPage", () => {
 				{ created_at: "2024-01-01T00:00:00Z", uuid: "role-uuid-2", name: "Editor" },
 			],
 		});
-
 		render(<DashboardPage />);
 
 		expect(screen.getByRole("heading", { name: /dashboard/i })).toBeTruthy();
@@ -138,9 +137,10 @@ describe("DashboardPage", () => {
 		expect(screen.getByText(/^roles$/i)).toBeTruthy();
 		expect(screen.getByText(/administrator/i)).toBeTruthy();
 		expect(screen.getByText(/editor/i)).toBeTruthy();
-		expect(screen.getByText(/^RP applications$/)).toBeTruthy();
-		expect(screen.getByText(/jump into the rp applications you use most often from one place/i)).toBeTruthy();
 		expect(screen.getByText(/^RP Applications$/)).toBeTruthy();
+		expect(
+			screen.getByText(/review the rp applications available to your account/i)
+		).toBeTruthy();
 		expect(screen.getByRole("link", { name: /^benefits portal$/i })).toBeTruthy();
 		expect(screen.getByRole("link", { name: /^claims service$/i })).toBeTruthy();
 		expect(

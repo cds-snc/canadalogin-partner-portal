@@ -3,7 +3,7 @@ import { useParams } from "@tanstack/react-router";
 import { useTranslation } from "react-i18next";
 import type { FunctionComponent } from "@/common/types";
 import { MAUDailyTrendLineChart } from "@/components/charts/line/MAUDailyTrendLineChart";
-import { Breadcrumbs, CenteredPageLayout } from "@/components/layout";
+import { CenteredPageLayout } from "@/components/layout";
 import { Button, DataTable, DateInput, Heading, Notice, Text } from "@/components/ui";
 import type { DataTableColumn } from "@/components/ui/DataTable";
 import { getRequestErrorNotice } from "@/fetch";
@@ -221,17 +221,6 @@ export const MAUReportPage = (): FunctionComponent => {
 
 	return (
 		<CenteredPageLayout className="max-w-6xl gap-600">
-			<Breadcrumbs
-				items={[
-					{ href: "/", label: t("nav.home") },
-					{ href: "/dashboard", label: t("nav.dashboard") },
-					{
-						href: `/rp-applications/mine/${rpApplicationUuidValue}/mau-report`,
-						label: t("mauReport.title"),
-					},
-				]}
-			/>
-
 			<div className="max-w-4xl">
 				<Heading tag="h1">{t("mauReport.title")}</Heading>
 				<Text>
