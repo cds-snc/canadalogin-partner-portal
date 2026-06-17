@@ -317,10 +317,58 @@ sequenceDiagram
     Note over BE,R: Idle + absolute timeouts enforced<br/>Session purged on expiry → 401 → re-auth
 ```
 
+
+## DFD-10: Audit Log Writes For Secret And Terms Actions
+
+```mermaid
+sequenceDiagram
+    autonumber
+    participant U as User Browser
+    participant FE as Frontend SPA
+    participant BE as Backend API
+    participant C as Casbin Guard
+    participant V as IBM Security Verify
+    participant DB as PostgreSQL
+    participant AL as Audit Log Sink
+
+    alt accept Terms & Conditions
+        FE->>BE: POST /api/v1/users/me/terms-acceptance
+        BE->>DB: Insert TermsAcceptance(ts, version)
+        BE->>AL: Write audit event (user, action=terms.accept, outcome=success)
+        BE-->>FE: 200 OK, onboarding ready for workspace setup
+    else view current client secret
+        FE->>BE: GET /api/v1/rp-applications/{uuid}/secret
+        BE->>C: enforce(user, "secret:view")
+        BE->>V: GET application/{rp_id}/credentials (metadata only)
+        V-->>BE: Client ID, masked secret metadata
+        BE->>AL: Write audit event (user, rp_id, action=secret.view, outcome=success)
+        BE-->>FE: View payload (no plaintext secret value)
+    else rotate client secret with delayed expiry
+        FE->>BE: POST /api/v1/rp-applications/{uuid}/secret/rotate {expires_at}
+        BE->>C: enforce(user, "secret:rotate")
+        BE->>V: POST rotation (new secret, old secret expires_at)
+        V-->>BE: New secret value + rotation id
+        BE->>DB: Insert SecretRotation(rp_id, rotation_id, expires_at)
+        BE->>AL: Write audit event (user, rp_id, action=secret.rotate, outcome=success)
+        BE-->>FE: 200 OK (one-time secret value)
+    else regenerate client secret immediately
+        FE->>BE: POST /api/v1/rp-applications/{uuid}/secret/regenerate
+        BE->>C: enforce(user, "secret:rotate")
+        BE->>V: DELETE current secret
+        BE->>V: POST new secret
+        V-->>BE: New secret value
+        BE->>DB: Insert SecretRotation(rp_id, kind="regenerate")
+        BE->>AL: Write audit event (user, rp_id, action=secret.regenerate, outcome=success)
+        BE-->>FE: 200 OK (one-time secret value)
+    end
+```
+
+The audit trail is built from the server-side authenticated session, so the event records the OIDC-authenticated user, the target RP application when applicable, the action name, and the outcome instead of relying on the browser cookie alone.
+
 ## Threat Modeling Hand-Off Notes
 
 When importing these DFDs into Valentine, treat the following as primary assets and trust crossings:
 
 - **Assets**: user identity, passkey credentials, OTP codes, session cookies, client secrets, MAU aggregates, terms acceptance records.
 - **Trust crossings**: Browser → CDN, CDN → API, API → IBM Security Verify, API → D&R pipeline, API → Email provider, API → OIDC.
-- **Highest-risk flows**: DFD-5 and DFD-6 (secret material handling) and DFD-3 (ownership mutation in Verify).
+- **Highest-risk flows**: DFD-5 and DFD-6 (secret material handling), and DFD-3 (ownership mutation in Verify).
