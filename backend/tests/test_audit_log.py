@@ -150,3 +150,26 @@ class TestAuditService:
         call_kwargs = mock_get_multi.call_args.kwargs
         assert call_kwargs["created_at__gte"] == created_at_gte
         assert call_kwargs["created_at__lte"] == created_at_lte
+
+    @pytest.mark.asyncio
+    async def test_list_audit_logs_orders_by_newest_first(self, mock_db):
+        service = AuditService()
+
+        with (
+            patch("src.app.services.audit_service.crud_audit_log.get_multi") as mock_get_multi,
+            patch("src.app.services.audit_service.paginated_response") as mock_paginated,
+        ):
+            mock_get_multi.return_value = Mock(data=[], total_count=0)
+            mock_paginated.return_value = {"data": [], "total_count": 0, "has_more": False, "page": 1, "items_per_page": 10}
+
+            result = await service.list_audit_logs(
+                db=mock_db,
+                page=1,
+                items_per_page=10,
+            )
+
+        assert isinstance(result, PaginatedListResponse)
+        mock_get_multi.assert_awaited_once()
+        call_kwargs = mock_get_multi.call_args.kwargs
+        assert call_kwargs["sort_columns"] == "created_at"
+        assert call_kwargs["sort_orders"] == "DESC"

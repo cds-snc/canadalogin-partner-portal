@@ -181,7 +181,7 @@ export const MAUReportPage = (): FunctionComponent => {
 
 	const trendPoints = useMemo(
 		() =>
-			orderedRecords.map((record) => ({
+			[...orderedRecords].reverse().map((record) => ({
 				date: record.date,
 				totalLogins: record.total_logins,
 				uniqueUsers: record.unique_users,

@@ -62,6 +62,8 @@ class AuditService:
             db=db,
             offset=compute_offset(page, items_per_page),
             limit=items_per_page,
+            sort_columns="created_at",
+            sort_orders="DESC",
             schema_to_select=AuditLogRead,
             **filters,
         )
