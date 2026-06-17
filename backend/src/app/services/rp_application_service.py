@@ -11,10 +11,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from ..core.config import settings
 from ..core.exceptions.http_exceptions import ForbiddenException, NotFoundException
-from ..repositories.crud_audit_log import crud_audit_log
 from ..repositories.crud_rp_applications import crud_rp_applications
 from ..repositories.ibm_sv_admin import IBMVerifyAdminClient
-from ..schemas.audit_log import AuditLogCreateInternal
 from ..schemas.rp_application import (
     RPApplicationClientCredentialsRead,
     RPApplicationClientRotatedSecretCreateRequest,
@@ -29,6 +27,7 @@ from ..schemas.rp_application import (
     RPApplicationRead,
     RPApplicationUpdate,
 )
+from .audit_service import AuditService
 from .ibm_sv_user_service import IBMVerifyUserService
 
 logger = logging.getLogger(__name__)
@@ -234,16 +233,14 @@ class RPApplicationService:
         operation: str,
         description: str,
     ) -> None:
-        await crud_audit_log.create(
+        await AuditService().log_action(
             db=db,
-            object=AuditLogCreateInternal(
-                user=current_user.get("name") or current_user.get("email", ""),
-                user_uuid=current_user.get("uuid"),
-                target="rp_application",
-                target_uuid=rp_application_data.get("uuid"),
-                operation=operation,
-                description=description,
-            ),
+            user=current_user.get("name") or current_user.get("email", ""),
+            user_uuid=current_user.get("uuid"),
+            target="rp_application",
+            target_uuid=rp_application_data.get("uuid"),
+            operation=operation,
+            description=description,
         )
 
     async def _read_client_credentials(
@@ -410,16 +407,12 @@ class RPApplicationService:
         if created is None:
             raise NotFoundException("Failed to create RP application")
 
-        await crud_audit_log.create(
+        await self._create_audit_log_entry(
             db=db,
-            object=AuditLogCreateInternal(
-                user=current_user.get("name", ""),
-                user_uuid=current_user["uuid"],
-                target="rp_application",
-                target_uuid=created["uuid"],
-                operation="CREATE",
-                description=f"Created RP application '{rp_application.dnr_app_name}'",
-            ),
+            current_user=dict(current_user),
+            rp_application_data=created,
+            operation="CREATE",
+            description=f"Created RP application '{rp_application.dnr_app_name}'",
         )
         return created
 
@@ -925,16 +918,12 @@ class RPApplicationService:
 
         changed_keys = ", ".join(updated_fields.keys())
         audit_target_uuid = uuid_pkg.UUID(str(rp_application_uuid)) if isinstance(rp_application_uuid, str) else rp_application_uuid
-        await crud_audit_log.create(
+        await self._create_audit_log_entry(
             db=db,
-            object=AuditLogCreateInternal(
-                user=current_user.get("name", ""),
-                user_uuid=current_user["uuid"],
-                target="rp_application",
-                target_uuid=audit_target_uuid,
-                operation="UPDATE",
-                description=f"Updated RP application '{existing.get('dnr_app_name', '')}': {changed_keys}",
-            ),
+            current_user=dict(current_user),
+            rp_application_data={**existing, "uuid": audit_target_uuid},
+            operation="UPDATE",
+            description=f"Updated RP application '{existing.get('dnr_app_name', '')}': {changed_keys}",
         )
         return {"message": "RP application updated"}
 
@@ -948,15 +937,11 @@ class RPApplicationService:
         await crud_rp_applications.delete(db=db, uuid=rp_application_uuid)
 
         audit_target_uuid = uuid_pkg.UUID(str(rp_application_uuid)) if isinstance(rp_application_uuid, str) else rp_application_uuid
-        await crud_audit_log.create(
+        await self._create_audit_log_entry(
             db=db,
-            object=AuditLogCreateInternal(
-                user=current_user.get("name", ""),
-                user_uuid=current_user["uuid"],
-                target="rp_application",
-                target_uuid=audit_target_uuid,
-                operation="DELETE",
-                description=f"Deleted RP application '{existing.get('dnr_app_name', '')}'",
-            ),
+            current_user=dict(current_user),
+            rp_application_data={**existing, "uuid": audit_target_uuid},
+            operation="DELETE",
+            description=f"Deleted RP application '{existing.get('dnr_app_name', '')}'",
         )
         return {"message": "RP application deleted"}

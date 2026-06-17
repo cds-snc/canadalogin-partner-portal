@@ -35,6 +35,8 @@ class TestCurrentUserRPOAuthSetupAPI:
         app.dependency_overrides[get_current_user] = lambda: {
             "email": "owner@example.gc.ca",
             "id": 42,
+            "username": "owner@example.gc.ca",
+            "is_superuser": True,
             "uuid": "018f6f83-0000-0000-0000-000000000111",
         }
         app.dependency_overrides[get_rp_application_service] = lambda: service
@@ -77,6 +79,8 @@ class TestCurrentUserRPOAuthSetupAPI:
         app.dependency_overrides[get_current_user] = lambda: {
             "email": "owner@example.gc.ca",
             "id": 42,
+            "username": "owner@example.gc.ca",
+            "is_superuser": True,
             "uuid": "018f6f83-0000-0000-0000-000000000111",
         }
         app.dependency_overrides[get_rp_application_service] = lambda: service
@@ -117,6 +121,8 @@ class TestCurrentUserRPOAuthSetupAPI:
         app.dependency_overrides[get_current_user] = lambda: {
             "email": "owner@example.gc.ca",
             "id": 42,
+            "username": "owner@example.gc.ca",
+            "is_superuser": True,
             "uuid": "018f6f83-0000-0000-0000-000000000111",
         }
         app.dependency_overrides[get_rp_application_service] = lambda: service
@@ -156,6 +162,8 @@ class TestCurrentUserRPOAuthSetupAPI:
         app.dependency_overrides[get_current_user] = lambda: {
             "email": "owner@example.gc.ca",
             "id": 42,
+            "username": "owner@example.gc.ca",
+            "is_superuser": True,
             "uuid": "018f6f83-0000-0000-0000-000000000111",
         }
         app.dependency_overrides[get_rp_application_service] = lambda: service
@@ -192,6 +200,8 @@ class TestCurrentUserRPOAuthSetupAPI:
         app.dependency_overrides[get_current_user] = lambda: {
             "email": "owner@example.gc.ca",
             "id": 42,
+            "username": "owner@example.gc.ca",
+            "is_superuser": True,
             "uuid": "018f6f83-0000-0000-0000-000000000111",
         }
         app.dependency_overrides[get_rp_application_service] = lambda: service
@@ -229,6 +239,8 @@ class TestCurrentUserRPOAuthSetupAPI:
         app.dependency_overrides[get_current_user] = lambda: {
             "email": "viewer@example.gc.ca",
             "id": 43,
+            "username": "viewer@example.gc.ca",
+            "is_superuser": True,
             "uuid": "018f6f83-0000-0000-0000-000000000112",
         }
         app.dependency_overrides[get_rp_application_service] = lambda: service
@@ -256,6 +268,8 @@ class TestCurrentUserRPOAuthSetupAPI:
         app.dependency_overrides[get_current_user] = lambda: {
             "email": "owner@example.gc.ca",
             "id": 42,
+            "username": "owner@example.gc.ca",
+            "is_superuser": True,
             "uuid": "018f6f83-0000-0000-0000-000000000111",
         }
         app.dependency_overrides[get_rp_application_service] = lambda: service
@@ -333,7 +347,7 @@ class TestCurrentUserRPOAuthSetupService:
         ibm_admin_client.get_client_secret = AsyncMock(return_value={})
 
         original_get = rp_application_module.crud_rp_applications.get
-        original_create_audit_log = rp_application_module.crud_audit_log.create
+        original_log_action = rp_application_module.AuditService.log_action
         rp_application_module.crud_rp_applications.get = AsyncMock(
             return_value={
                 "uuid": "018f6f83-0000-0000-0000-000000000337",
@@ -344,7 +358,7 @@ class TestCurrentUserRPOAuthSetupService:
                 },
             }
         )
-        rp_application_module.crud_audit_log.create = AsyncMock()
+        rp_application_module.AuditService.log_action = AsyncMock()
 
         try:
             with pytest.raises(RuntimeError):
@@ -356,7 +370,7 @@ class TestCurrentUserRPOAuthSetupService:
                 )
         finally:
             rp_application_module.crud_rp_applications.get = original_get
-            rp_application_module.crud_audit_log.create = original_create_audit_log
+            rp_application_module.AuditService.log_action = original_log_action
 
         ibm_admin_client.get_application_detail.assert_awaited_once_with("ibm-app-337")
         ibm_admin_client.get_client_secret.assert_awaited_once_with("client-id-337")
@@ -393,7 +407,7 @@ class TestCurrentUserRPOAuthSetupService:
         )
 
         original_get = rp_application_module.crud_rp_applications.get
-        original_create_audit_log = rp_application_module.crud_audit_log.create
+        original_log_action = rp_application_module.AuditService.log_action
         rp_application_module.crud_rp_applications.get = AsyncMock(
             return_value={
                 "uuid": "018f6f83-0000-0000-0000-000000000338",
@@ -404,7 +418,7 @@ class TestCurrentUserRPOAuthSetupService:
                 },
             }
         )
-        rp_application_module.crud_audit_log.create = AsyncMock()
+        rp_application_module.AuditService.log_action = AsyncMock()
 
         try:
             result = await service.list_current_user_rp_application_rotated_secrets(
@@ -415,7 +429,7 @@ class TestCurrentUserRPOAuthSetupService:
             )
         finally:
             rp_application_module.crud_rp_applications.get = original_get
-            rp_application_module.crud_audit_log.create = original_create_audit_log
+            rp_application_module.AuditService.log_action = original_log_action
 
         assert result == [
             {
@@ -460,7 +474,7 @@ class TestCurrentUserRPOAuthSetupService:
         ibm_admin_client.delete_rotated_client_secrets = AsyncMock(return_value=True)
 
         original_get = rp_application_module.crud_rp_applications.get
-        original_create_audit_log = rp_application_module.crud_audit_log.create
+        original_log_action = rp_application_module.AuditService.log_action
         rp_application_module.crud_rp_applications.get = AsyncMock(
             return_value={
                 "uuid": "018f6f83-0000-0000-0000-000000000339",
@@ -471,7 +485,7 @@ class TestCurrentUserRPOAuthSetupService:
                 },
             }
         )
-        rp_application_module.crud_audit_log.create = AsyncMock()
+        rp_application_module.AuditService.log_action = AsyncMock()
 
         try:
             result = await service.delete_current_user_rp_application_rotated_secret(
@@ -483,7 +497,7 @@ class TestCurrentUserRPOAuthSetupService:
             )
         finally:
             rp_application_module.crud_rp_applications.get = original_get
-            rp_application_module.crud_audit_log.create = original_create_audit_log
+            rp_application_module.AuditService.log_action = original_log_action
 
         assert result is True
         ibm_admin_client.delete_rotated_client_secrets.assert_awaited_once_with(
