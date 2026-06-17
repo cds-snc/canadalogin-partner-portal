@@ -56,14 +56,18 @@ const config = ({ mode }: { mode: string }) => {
 			react(),
 			tailwindcss(),
 			TanStackRouterVite(),
-			viteStaticCopy({
-				targets: [
-					{
-						src: normalizePath(path.resolve("./src/assets/locales")),
-						dest: normalizePath(path.resolve("./dist")),
-					},
-				],
-			}),
+			...(mode === "production"
+				? [
+						viteStaticCopy({
+							targets: [
+								{
+									src: normalizePath(path.resolve("./src/assets/locales")),
+									dest: normalizePath(path.resolve("./dist")),
+								},
+							],
+						}),
+					]
+				: []),
 		],
 		resolve: {
 			alias: {

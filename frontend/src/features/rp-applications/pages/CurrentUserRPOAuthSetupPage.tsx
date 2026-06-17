@@ -2,7 +2,7 @@ import { useParams } from "@tanstack/react-router";
 import { useEffect, useMemo, useState, type ReactNode } from "react";
 import { useTranslation } from "react-i18next";
 import type { FunctionComponent } from "@/common/types";
-import { Breadcrumbs, CenteredPageLayout } from "@/components/layout";
+import { CenteredPageLayout } from "@/components/layout";
 import {
 	Button,
 	Container,
@@ -137,14 +137,6 @@ export const CurrentUserRPOAuthSetupPage = (): FunctionComponent => {
 
 	return (
 		<CenteredPageLayout className="max-w-5xl gap-500">
-			<Breadcrumbs
-				items={[
-					{ href: "/", label: t("nav.home") },
-					{ href: "/dashboard", label: t("nav.dashboard") },
-					{ href: globalThis.location.pathname, label: applicationName },
-				]}
-			/>
-
 			<div className="max-w-4xl">
 				<Heading tag="h1">{applicationName}</Heading>
 			</div>

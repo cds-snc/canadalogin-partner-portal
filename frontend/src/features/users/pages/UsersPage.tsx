@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import type { FunctionComponent } from "@/common/types";
-import { Breadcrumbs, CenteredPageLayout } from "@/components/layout";
+import { CenteredPageLayout } from "@/components/layout";
 import type { DataTableColumn } from "@/components/ui/DataTable";
 import {
 	Button,
@@ -399,12 +399,6 @@ export const UsersPage = (): FunctionComponent => {
 
 	return (
 		<CenteredPageLayout className="max-w-5xl">
-			<Breadcrumbs
-				items={[
-					{ href: "/", label: t("nav.home") },
-					{ href: "/users", label: t("users.title") },
-				]}
-			/>
 			<Heading tag="h1">{t("users.title")}</Heading>
 			<Text>{t("users.summary")}</Text>
 

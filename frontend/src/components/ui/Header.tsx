@@ -1,6 +1,8 @@
 import { useNavigate, useRouterState } from "@tanstack/react-router";
 import { useTranslation } from "react-i18next";
 import {
+	GcdsBreadcrumbs,
+	GcdsBreadcrumbsItem,
 	GcdsHeader,
 	GcdsLangToggle,
 	GcdsNavLink,
@@ -8,6 +10,7 @@ import {
 } from "@gcds-core/components-react";
 import type { FunctionComponent } from "@/common/types";
 import { useSession } from "@/hooks";
+import type { RouteBreadcrumbItem } from "@/types/route-breadcrumbs";
 
 type NavigationItem = {
 	href: string;
@@ -22,6 +25,47 @@ const isCurrentPath = (pathname: string, href: string): boolean => {
 	return pathname === href || pathname.startsWith(`${href}/`);
 };
 
+const isRouteBreadcrumbItem = (
+	value: unknown
+): value is RouteBreadcrumbItem => {
+	if (typeof value !== "object" || value === null) {
+		return false;
+	}
+
+	const candidate = value as {
+		href?: unknown;
+		label?: unknown;
+	};
+
+	return (
+		typeof candidate.href === "string" && typeof candidate.label === "string"
+	);
+};
+
+const selectBreadcrumbs = (
+	routeMatches: Array<{ context?: unknown }>
+): Array<RouteBreadcrumbItem> => {
+	for (let index = routeMatches.length - 1; index >= 0; index -= 1) {
+		const match = routeMatches[index];
+
+		if (!match || typeof match.context !== "object" || match.context === null) {
+			continue;
+		}
+
+		const context = match.context as {
+			breadcrumbs?: unknown;
+		};
+
+		if (!Array.isArray(context.breadcrumbs)) {
+			continue;
+		}
+
+		return context.breadcrumbs.filter(isRouteBreadcrumbItem);
+	}
+
+	return [];
+};
+
 const Header = (): FunctionComponent => {
 	const { t, i18n } = useTranslation();
 	const navigate = useNavigate();
@@ -29,9 +73,10 @@ const Header = (): FunctionComponent => {
 	const pathname = useRouterState({
 		select: (state) => state.location.pathname,
 	});
-	const serviceName =
-		import.meta.env.VITE_APP_TITLE?.trim() ||
-		"Digital service delivery starter";
+	const breadcrumbs = useRouterState({
+		select: (state) => selectBreadcrumbs(state.matches),
+	});
+	const serviceName = t("home.title");
 
 	const lang = i18n.language?.startsWith("fr") ? "fr" : "en";
 	const targetLang = lang === "en" ? "fr" : "en";
@@ -43,12 +88,10 @@ const Header = (): FunctionComponent => {
 
 	const commonItems: Array<NavigationItem> = [
 		{ href: "/", label: t("nav.home") },
-		{ href: "/health", label: t("nav.health") },
 	];
 
 	const authItems: Array<NavigationItem> = [
 		{ href: "/dashboard", label: t("nav.dashboard") },
-		{ href: "/profile", label: t("nav.profile") },
 	];
 
 	const superuserItems: Array<NavigationItem> = [
@@ -80,8 +123,25 @@ const Header = (): FunctionComponent => {
 
 	return (
 		<GcdsHeader signatureHasLink skipToHref="#main-content">
-			<GcdsLangToggle href="#" lang={lang} slot="toggle" onClick={handleLangToggle} />
-			<GcdsTopNav alignment="start" label={t("nav.label")} slot="menu">
+			<GcdsLangToggle
+				href="#"
+				lang={lang}
+				slot="toggle"
+				onClick={handleLangToggle}
+			/>
+			{breadcrumbs.length > 0 ? (
+				<GcdsBreadcrumbs slot="breadcrumb">
+					{breadcrumbs.map((item) => (
+						<GcdsBreadcrumbsItem
+							key={`${item.href}-${item.label}`}
+							href={item.href}
+						>
+							{item.label}
+						</GcdsBreadcrumbsItem>
+					))}
+				</GcdsBreadcrumbs>
+			) : null}
+			<GcdsTopNav alignment="end" label={t("nav.label")} slot="menu">
 				<GcdsNavLink href="/" slot="home">
 					{serviceName}
 				</GcdsNavLink>

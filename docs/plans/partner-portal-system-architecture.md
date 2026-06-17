@@ -128,7 +128,7 @@ These should be stored in AWS Secrets Manager or an equivalent secret store, not
 - OIDC metadata and client ID values
 - IBM Security Verify base URL and client ID
 - GC Notify template IDs and invite expiry settings
-- Frontend variables: `VITE_APP_ENVIRONMENT`, `VITE_APP_TITLE`, `VITE_API_BASE_URL`, `VITE_AUTH_POST_LOGIN_PATH`
+- Frontend variables: `VITE_APP_ENVIRONMENT`, `VITE_API_BASE_URL`, `VITE_AUTH_POST_LOGIN_PATH`
 
 ### 7.3 Production Recommendations
 

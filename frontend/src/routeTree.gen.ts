@@ -13,12 +13,10 @@ import { Route as UsersRouteImport } from './routes/users'
 import { Route as TiersRouteImport } from './routes/tiers'
 import { Route as TermsAndConditionsRouteImport } from './routes/terms-and-conditions'
 import { Route as RolesRouteImport } from './routes/roles'
-import { Route as ProfileRouteImport } from './routes/profile'
 import { Route as PoliciesRouteImport } from './routes/policies'
 import { Route as OptionalHolidaysRouteImport } from './routes/optional-holidays'
 import { Route as LogoutRouteImport } from './routes/logout'
 import { Route as LoginRouteImport } from './routes/login'
-import { Route as HealthRouteImport } from './routes/health'
 import { Route as FederalAndProvincialHolidaysRouteImport } from './routes/federal-and-provincial-holidays'
 import { Route as ErrorRouteImport } from './routes/error'
 import { Route as DepartmentsRouteImport } from './routes/departments'
@@ -53,11 +51,6 @@ const RolesRoute = RolesRouteImport.update({
   path: '/roles',
   getParentRoute: () => rootRouteImport,
 } as any)
-const ProfileRoute = ProfileRouteImport.update({
-  id: '/profile',
-  path: '/profile',
-  getParentRoute: () => rootRouteImport,
-} as any)
 const PoliciesRoute = PoliciesRouteImport.update({
   id: '/policies',
   path: '/policies',
@@ -76,11 +69,6 @@ const LogoutRoute = LogoutRouteImport.update({
 const LoginRoute = LoginRouteImport.update({
   id: '/login',
   path: '/login',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const HealthRoute = HealthRouteImport.update({
-  id: '/health',
-  path: '/health',
   getParentRoute: () => rootRouteImport,
 } as any)
 const FederalAndProvincialHolidaysRoute =
@@ -130,9 +118,9 @@ const IndexRoute = IndexRouteImport.update({
   getParentRoute: () => rootRouteImport,
 } as any)
 const ProfileSetupRoute = ProfileSetupRouteImport.update({
-  id: '/setup',
-  path: '/setup',
-  getParentRoute: () => ProfileRoute,
+  id: '/profile/setup',
+  path: '/profile/setup',
+  getParentRoute: () => rootRouteImport,
 } as any)
 const RpApplicationsMineRpApplicationUuidRoute =
   RpApplicationsMineRpApplicationUuidRouteImport.update({
@@ -163,12 +151,10 @@ export interface FileRoutesByFullPath {
   '/departments': typeof DepartmentsRoute
   '/error': typeof ErrorRoute
   '/federal-and-provincial-holidays': typeof FederalAndProvincialHolidaysRoute
-  '/health': typeof HealthRoute
   '/login': typeof LoginRoute
   '/logout': typeof LogoutRoute
   '/optional-holidays': typeof OptionalHolidaysRoute
   '/policies': typeof PoliciesRoute
-  '/profile': typeof ProfileRouteWithChildren
   '/roles': typeof RolesRoute
   '/terms-and-conditions': typeof TermsAndConditionsRoute
   '/tiers': typeof TiersRoute
@@ -188,12 +174,10 @@ export interface FileRoutesByTo {
   '/departments': typeof DepartmentsRoute
   '/error': typeof ErrorRoute
   '/federal-and-provincial-holidays': typeof FederalAndProvincialHolidaysRoute
-  '/health': typeof HealthRoute
   '/login': typeof LoginRoute
   '/logout': typeof LogoutRoute
   '/optional-holidays': typeof OptionalHolidaysRoute
   '/policies': typeof PoliciesRoute
-  '/profile': typeof ProfileRouteWithChildren
   '/roles': typeof RolesRoute
   '/terms-and-conditions': typeof TermsAndConditionsRoute
   '/tiers': typeof TiersRoute
@@ -213,12 +197,10 @@ export interface FileRoutesById {
   '/departments': typeof DepartmentsRoute
   '/error': typeof ErrorRoute
   '/federal-and-provincial-holidays': typeof FederalAndProvincialHolidaysRoute
-  '/health': typeof HealthRoute
   '/login': typeof LoginRoute
   '/logout': typeof LogoutRoute
   '/optional-holidays': typeof OptionalHolidaysRoute
   '/policies': typeof PoliciesRoute
-  '/profile': typeof ProfileRouteWithChildren
   '/roles': typeof RolesRoute
   '/terms-and-conditions': typeof TermsAndConditionsRoute
   '/tiers': typeof TiersRoute
@@ -240,12 +222,10 @@ export interface FileRouteTypes {
     | '/departments'
     | '/error'
     | '/federal-and-provincial-holidays'
-    | '/health'
     | '/login'
     | '/logout'
     | '/optional-holidays'
     | '/policies'
-    | '/profile'
     | '/roles'
     | '/terms-and-conditions'
     | '/tiers'
@@ -265,12 +245,10 @@ export interface FileRouteTypes {
     | '/departments'
     | '/error'
     | '/federal-and-provincial-holidays'
-    | '/health'
     | '/login'
     | '/logout'
     | '/optional-holidays'
     | '/policies'
-    | '/profile'
     | '/roles'
     | '/terms-and-conditions'
     | '/tiers'
@@ -289,12 +267,10 @@ export interface FileRouteTypes {
     | '/departments'
     | '/error'
     | '/federal-and-provincial-holidays'
-    | '/health'
     | '/login'
     | '/logout'
     | '/optional-holidays'
     | '/policies'
-    | '/profile'
     | '/roles'
     | '/terms-and-conditions'
     | '/tiers'
@@ -315,16 +291,15 @@ export interface RootRouteChildren {
   DepartmentsRoute: typeof DepartmentsRoute
   ErrorRoute: typeof ErrorRoute
   FederalAndProvincialHolidaysRoute: typeof FederalAndProvincialHolidaysRoute
-  HealthRoute: typeof HealthRoute
   LoginRoute: typeof LoginRoute
   LogoutRoute: typeof LogoutRoute
   OptionalHolidaysRoute: typeof OptionalHolidaysRoute
   PoliciesRoute: typeof PoliciesRoute
-  ProfileRoute: typeof ProfileRouteWithChildren
   RolesRoute: typeof RolesRoute
   TermsAndConditionsRoute: typeof TermsAndConditionsRoute
   TiersRoute: typeof TiersRoute
   UsersRoute: typeof UsersRoute
+  ProfileSetupRoute: typeof ProfileSetupRoute
   RpApplicationsMineRpApplicationUuidRoute: typeof RpApplicationsMineRpApplicationUuidRouteWithChildren
 }
 
@@ -358,13 +333,6 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof RolesRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/profile': {
-      id: '/profile'
-      path: '/profile'
-      fullPath: '/profile'
-      preLoaderRoute: typeof ProfileRouteImport
-      parentRoute: typeof rootRouteImport
-    }
     '/policies': {
       id: '/policies'
       path: '/policies'
@@ -391,13 +359,6 @@ declare module '@tanstack/react-router' {
       path: '/login'
       fullPath: '/login'
       preLoaderRoute: typeof LoginRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/health': {
-      id: '/health'
-      path: '/health'
-      fullPath: '/health'
-      preLoaderRoute: typeof HealthRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/federal-and-provincial-holidays': {
@@ -465,10 +426,10 @@ declare module '@tanstack/react-router' {
     }
     '/profile/setup': {
       id: '/profile/setup'
-      path: '/setup'
+      path: '/profile/setup'
       fullPath: '/profile/setup'
       preLoaderRoute: typeof ProfileSetupRouteImport
-      parentRoute: typeof ProfileRoute
+      parentRoute: typeof rootRouteImport
     }
     '/rp-applications/mine/$rpApplicationUuid': {
       id: '/rp-applications/mine/$rpApplicationUuid'
@@ -493,17 +454,6 @@ declare module '@tanstack/react-router' {
     }
   }
 }
-
-interface ProfileRouteChildren {
-  ProfileSetupRoute: typeof ProfileSetupRoute
-}
-
-const ProfileRouteChildren: ProfileRouteChildren = {
-  ProfileSetupRoute: ProfileSetupRoute,
-}
-
-const ProfileRouteWithChildren =
-  ProfileRoute._addFileChildren(ProfileRouteChildren)
 
 interface RpApplicationsMineRpApplicationUuidRouteChildren {
   RpApplicationsMineRpApplicationUuidMauReportRoute: typeof RpApplicationsMineRpApplicationUuidMauReportRoute
@@ -533,16 +483,15 @@ const rootRouteChildren: RootRouteChildren = {
   DepartmentsRoute: DepartmentsRoute,
   ErrorRoute: ErrorRoute,
   FederalAndProvincialHolidaysRoute: FederalAndProvincialHolidaysRoute,
-  HealthRoute: HealthRoute,
   LoginRoute: LoginRoute,
   LogoutRoute: LogoutRoute,
   OptionalHolidaysRoute: OptionalHolidaysRoute,
   PoliciesRoute: PoliciesRoute,
-  ProfileRoute: ProfileRouteWithChildren,
   RolesRoute: RolesRoute,
   TermsAndConditionsRoute: TermsAndConditionsRoute,
   TiersRoute: TiersRoute,
   UsersRoute: UsersRoute,
+  ProfileSetupRoute: ProfileSetupRoute,
   RpApplicationsMineRpApplicationUuidRoute:
     RpApplicationsMineRpApplicationUuidRouteWithChildren,
 }

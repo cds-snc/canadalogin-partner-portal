@@ -7,6 +7,10 @@
 		min-height: 100%;
 	}
 
+	.gcds-breadcrumbs-item::before {
+		margin: var(--gcds-breadcrumbs-item-arrow-margin);
+	}
+
 	body {
 		background: var(--gcds-bg-white);
 		color: var(--gcds-text-primary);

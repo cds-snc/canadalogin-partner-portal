@@ -6,8 +6,8 @@ interface LangToggleProps {
 	href: string;
 }
 
-const LangToggle: React.FC<LangToggleProps> = React.memo(
-	({ lang, href }) => <GcdsLangToggle href={href} lang={lang} />
-);
+const LangToggle: React.FC<LangToggleProps> = React.memo(({ lang, href }) => (
+	<GcdsLangToggle href={href} lang={lang} />
+));
 
 export default LangToggle;

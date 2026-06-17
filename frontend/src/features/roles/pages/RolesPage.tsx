@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import type { FunctionComponent } from "@/common/types";
-import { Breadcrumbs, CenteredPageLayout } from "@/components/layout";
+import { CenteredPageLayout } from "@/components/layout";
 import {
 	Button,
 	ConfirmDialog,
@@ -156,12 +156,6 @@ export const RolesPage = (): FunctionComponent => {
 
 	return (
 		<CenteredPageLayout className="max-w-5xl">
-			<Breadcrumbs
-				items={[
-					{ href: "/", label: t("nav.home") },
-					{ href: "/roles", label: t("roles.title") },
-				]}
-			/>
 			<Heading tag="h1">{t("roles.title")}</Heading>
 			<Text>{t("roles.summary")}</Text>
 

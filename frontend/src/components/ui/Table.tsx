@@ -1,8 +1,5 @@
 import type React from "react";
-import {
-	GcdsTable,
-	type ReactTableColumn,
-} from "@gcds-core/components-react";
+import { GcdsTable, type ReactTableColumn } from "@gcds-core/components-react";
 
 export type TableColumn<T = Record<string, unknown>> = ReactTableColumn<T>;
 
@@ -30,8 +27,10 @@ const Table = <T extends Record<string, unknown>>({
 	<GcdsTable
 		captionSlot={caption}
 		className={className}
-		columns={columns as Array<ReactTableColumn> | undefined}
-		data={data as Array<Record<string, unknown>> | undefined}
+		columns={
+			columns as Array<ReactTableColumn<Record<string, unknown>>> | undefined
+		}
+		data={data}
 		filter={filter}
 		pagination={pagination}
 		sort={sort}
