@@ -4,8 +4,10 @@ import uuid as uuid_pkg
 from unittest.mock import AsyncMock, Mock, patch
 
 import pytest
+from fastcrud import PaginatedListResponse
 
 from src.app.api.v1.audit_logs import read_audit_logs
+from src.app.schemas.audit_log import AuditLogRead
 from src.app.services.audit_service import AuditService
 
 
@@ -129,7 +131,7 @@ class TestAuditService:
             patch("src.app.services.audit_service.paginated_response") as mock_paginated,
         ):
             mock_get_multi.return_value = Mock(data=[], total_count=0)
-            mock_paginated.return_value = {"data": [], "total_count": 0, "page": 1, "items_per_page": 10}
+            mock_paginated.return_value = {"data": [], "total_count": 0, "has_more": False, "page": 1, "items_per_page": 10}
 
             result = await service.list_audit_logs(
                 db=mock_db,
@@ -139,7 +141,11 @@ class TestAuditService:
                 created_at_lte=created_at_lte,
             )
 
-        assert result == {"data": [], "total_count": 0, "page": 1, "items_per_page": 10}
+        assert isinstance(result, PaginatedListResponse)
+        assert result.data == []
+        assert result.total_count == 0
+        assert result.page == 1
+        assert result.items_per_page == 10
         mock_get_multi.assert_awaited_once()
         call_kwargs = mock_get_multi.call_args.kwargs
         assert call_kwargs["created_at__gte"] == created_at_gte

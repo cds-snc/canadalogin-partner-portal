@@ -3,9 +3,10 @@ import type { FunctionComponent } from "@/common/types";
 
 export type MAUDailyTrendPoint = {
 	date: string;
-	successRate: number;
 	totalLogins: number;
 	uniqueUsers: number;
+	successLogins: number;
+	failedLogins: number;
 };
 
 type MAUDailyTrendLineChartProps = {
@@ -25,8 +26,12 @@ export const MAUDailyTrendLineChart = ({
 			data: points.map((point) => ({ x: point.date, y: point.uniqueUsers })),
 		},
 		{
-			id: "success_rate",
-			data: points.map((point) => ({ x: point.date, y: point.successRate })),
+			id: "success_logins",
+			data: points.map((point) => ({ x: point.date, y: point.successLogins })),
+		},
+		{
+			id: "failed_logins",
+			data: points.map((point) => ({ x: point.date, y: point.failedLogins })),
 		},
 	];
 
@@ -34,7 +39,7 @@ export const MAUDailyTrendLineChart = ({
 		<div className="h-[360px] w-full">
 			<ResponsiveLine
 				useMesh
-				colors={["#0F4C81", "#2D5D34", "#A0443E"]}
+				colors={["#0F4C81", "#2D5D34", "#A0443E", "#D4A017"]}
 				curve="monotoneX"
 				data={data}
 				enableArea={false}

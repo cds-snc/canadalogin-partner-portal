@@ -7,7 +7,7 @@ import { Breadcrumbs, CenteredPageLayout } from "@/components/layout";
 import { Button, DataTable, DateInput, Heading, Notice, Text } from "@/components/ui";
 import type { DataTableColumn } from "@/components/ui/DataTable";
 import { getRequestErrorNotice } from "@/fetch";
-import type { MAUReportItemRead } from "@/fetch/mau-report";
+import type { MAUReportItemRead, MAUReportResponseRead } from "@/fetch/mau-report";
 import { useMauReport } from "../hooks/use-mau-report";
 
 type KPI = {
@@ -47,8 +47,9 @@ const toSuccessRate = (record: MAUReportItemRead): number => {
 	);
 };
 
-const kpiCardClasses =
-	"rounded-sm border border-[var(--gcds-border-default)] bg-[var(--gcds-bg-white)] px-300 py-250";
+const formatDisplayDate = (value: string): string => {
+	return value;
+};
 
 const exportToCSV = (
 	records: Array<MAUReportItemRead>,
@@ -110,24 +111,26 @@ export const MAUReportPage = (): FunctionComponent => {
 		activeEndDate
 	);
 
+	const responseData = data as MAUReportResponseRead | null;
+
 	const errorNotice = getRequestErrorNotice(error, {
 		bodyKey: "mauReport.errorBody",
 		titleKey: "mauReport.errorTitle",
 	});
 
 	const orderedRecords = useMemo(() => {
-		const records = data?.records ?? [];
+		const records = responseData?.records ?? [];
 		return [...records].sort(
 			(a, b) => parseDateValue(b.date) - parseDateValue(a.date)
 		);
-	}, [data?.records]);
+	}, [responseData?.records]);
 
 	const latestRecord = useMemo(() => {
 		if (orderedRecords.length === 0) {
 			return null;
 		}
 
-		return orderedRecords[orderedRecords.length - 1] ?? null;
+		return orderedRecords[0] ?? null;
 	}, [orderedRecords]);
 
 	const kpis = useMemo<Array<KPI>>(() => {
@@ -159,13 +162,22 @@ export const MAUReportPage = (): FunctionComponent => {
 		];
 	}, [latestRecord, t]);
 
+	const sectionDate = useMemo(() => {
+		if (!latestRecord) {
+			return "";
+		}
+
+		return formatDisplayDate(latestRecord.date);
+	}, [latestRecord]);
+
 	const trendPoints = useMemo(
 		() =>
 			orderedRecords.map((record) => ({
 				date: record.date,
-				successRate: toSuccessRate(record),
 				totalLogins: record.total_logins,
 				uniqueUsers: record.unique_users,
+				successLogins: record.successful_logins,
+				failedLogins: record.failed_logins,
 			})),
 		[orderedRecords]
 	);
@@ -219,6 +231,9 @@ export const MAUReportPage = (): FunctionComponent => {
 		setActiveEndDate(draftEndDate);
 	};
 
+	const applicationName = responseData?.application_name ?? "";
+	const departmentName = responseData?.department_name ?? null;
+
 	return (
 		<CenteredPageLayout className="max-w-6xl gap-600">
 			<Breadcrumbs
@@ -232,14 +247,14 @@ export const MAUReportPage = (): FunctionComponent => {
 				]}
 			/>
 
-			<div className="max-w-4xl">
-				<Heading tag="h1">{t("mauReport.title")}</Heading>
-				<Text>
-					{t("mauReport.subtitle", {
-						application: data?.application_name ?? t("mauReport.unknownApplication"),
-					})}
-				</Text>
-			</div>
+			<Heading tag="h1">
+				{applicationName
+					? t("mauReport.pageTitle", { applicationName })
+					: t("mauReport.title")}
+			</Heading>
+			{departmentName ? (
+				<Text>{t("mauReport.departmentLabel", { department: departmentName })}</Text>
+			) : null}
 
 			<div className="mt-200 flex w-full justify-end">
 				<Button
@@ -249,6 +264,54 @@ export const MAUReportPage = (): FunctionComponent => {
 					{t("workspaces.backToApplication")}
 				</Button>
 			</div>
+
+			{isLoading || isRefetching ? (
+				<Notice
+					noticeRole="info"
+					noticeTitle={t("mauReport.loadingTitle")}
+					noticeTitleTag="h2"
+				>
+					<Text>{t("mauReport.loadingBody")}</Text>
+				</Notice>
+			) : null}
+
+			{errorNotice ? (
+				<Notice
+					noticeRole={errorNotice.noticeRole}
+					noticeTitle={t(errorNotice.titleKey as never)}
+					noticeTitleTag="h2"
+				>
+					<Text>{errorNotice.bodyText ?? t(errorNotice.bodyKey as never)}</Text>
+				</Notice>
+			) : null}
+
+			{!isLoading && !errorNotice && latestRecord && sectionDate ? (
+				<section>
+					<Heading tag="h2">
+						{t("mauReport.sectionTitle", { date: sectionDate })}
+					</Heading>
+					<div className="mt-300 grid gap-200 md:grid-cols-3 lg:grid-cols-5">
+						{kpis.map((kpi) => (
+							<div key={kpi.label} className="rounded-sm border border-[var(--gcds-border-default)] bg-[var(--gcds-bg-white)] p-300">
+								<h3 className="gcds-heading gcds-heading--h3">{kpi.label}</h3>
+								<p className="mt-100 text-2xl font-semibold text-[var(--gcds-text-primary)]">
+									{kpi.value.toLocaleString()}
+								</p>
+							</div>
+						))}
+					</div>
+				</section>
+			) : null}
+
+			{!isLoading && !errorNotice && orderedRecords.length === 0 ? (
+				<Notice
+					noticeRole="info"
+					noticeTitle={t("mauReport.emptyTitle")}
+					noticeTitleTag="h2"
+				>
+					<Text>{t("mauReport.emptyBody")}</Text>
+				</Notice>
+			) : null}
 
 			<form className="flex flex-col gap-300 rounded-sm border border-[var(--gcds-border-default)] bg-[var(--gcds-bg-white)] p-300" onSubmit={handleFilterSubmit}>
 				<div className="grid gap-300 md:grid-cols-2">
@@ -281,51 +344,6 @@ export const MAUReportPage = (): FunctionComponent => {
 					</Button>
 				</div>
 			</form>
-
-			{isLoading || isRefetching ? (
-				<Notice
-					noticeRole="info"
-					noticeTitle={t("mauReport.loadingTitle")}
-					noticeTitleTag="h2"
-				>
-					<Text>{t("mauReport.loadingBody")}</Text>
-				</Notice>
-			) : null}
-
-			{errorNotice ? (
-				<Notice
-					noticeRole={errorNotice.noticeRole}
-					noticeTitle={t(errorNotice.titleKey as never)}
-					noticeTitleTag="h2"
-				>
-					<Text>{errorNotice.bodyText ?? t(errorNotice.bodyKey as never)}</Text>
-				</Notice>
-			) : null}
-
-			{!isLoading && !errorNotice && latestRecord ? (
-				<section className="grid gap-200 md:grid-cols-3 lg:grid-cols-5">
-					{kpis.map((kpi) => (
-						<div key={kpi.label} className={kpiCardClasses}>
-							<p className="text-xs uppercase tracking-[0.08em] text-[var(--gcds-text-secondary)]">
-								{kpi.label}
-							</p>
-							<p className="mt-100 text-2xl font-semibold text-[var(--gcds-text-primary)]">
-								{kpi.value.toLocaleString()}
-							</p>
-						</div>
-					))}
-				</section>
-			) : null}
-
-			{!isLoading && !errorNotice && orderedRecords.length === 0 ? (
-				<Notice
-					noticeRole="info"
-					noticeTitle={t("mauReport.emptyTitle")}
-					noticeTitleTag="h2"
-				>
-					<Text>{t("mauReport.emptyBody")}</Text>
-				</Notice>
-			) : null}
 
 			{!isLoading && !errorNotice && orderedRecords.length > 0 ? (
 				<section className="rounded-sm border border-[var(--gcds-border-default)] bg-[var(--gcds-bg-white)] p-300">

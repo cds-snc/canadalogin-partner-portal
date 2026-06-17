@@ -12,6 +12,7 @@ export type MAUReportItemRead = {
 
 export type MAUReportResponseRead = {
 	application_name: string;
+	department_name?: string | null;
 	end_date: string;
 	records: Array<MAUReportItemRead>;
 	start_date: string;

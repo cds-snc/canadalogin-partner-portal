@@ -62,6 +62,11 @@ export {
 	type UsersState,
 } from "../features/users/hooks/use-users";
 export {
+	useAuditLogs,
+	auditLogsQueryKey,
+	type AuditLogsState,
+} from "../features/audit-logs/hooks/use-audit-logs";
+export {
 	useAppPreferencesState,
 	type AppPreferencesState,
 	useAdminListState,

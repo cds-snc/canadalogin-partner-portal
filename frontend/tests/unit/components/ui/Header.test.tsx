@@ -30,6 +30,8 @@ vi.mock("react-i18next", () => ({
 }));
 
 vi.mock("@tanstack/react-router", () => ({
+	useNavigate: (): ((options: { to: string }) => void) =>
+		vi.fn() as unknown as (options: { to: string }) => void,
 	useRouterState: ({
 		select,
 	}: {

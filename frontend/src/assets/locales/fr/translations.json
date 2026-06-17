@@ -144,6 +144,7 @@
 		"logout": "Fermer la session",
 		"policies": "Politiques",
 		"profile": "Profil",
+		"auditLogs": "Registres d'audit",
 		"departments": "Departements",
 		"roles": "Roles",
 		"tiers": "Paliers",
@@ -175,6 +176,7 @@
 	},
 	"mauReport": {
 		"dailyListTitle": "Mesures MAU quotidiennes",
+		"departmentLabel": "Ministère : {{department}}",
 		"exportCsv": "Exporter en CSV",
 		"emptyBody": "Aucune donnée MAU n'a été renvoyée pour la plage de dates sélectionnée.",
 		"emptyTitle": "Aucune donnée MAU",
@@ -194,7 +196,8 @@
 			"totalLogin": "Connexions totales",
 			"uniqueUser": "Utilisateurs uniques"
 		},
-		"subtitle": "Rapport pour {{application}}.",
+		"pageTitle": "{{applicationName}} — Rapport d'utilisation",
+		"sectionTitle": "Le : {{date}}",
 		"table": {
 			"date": "Date",
 			"failedLogin": "Connexions échouées",
@@ -777,5 +780,25 @@
 		"accepting": "Traitement en cours...",
 		"error": "Une erreur s'est produite lors de l'acceptation des conditions. Veuillez réessayer.",
 		"success": "Conditions acceptées avec succès"
+	},
+	"auditLogs": {
+		"createdAtLabel": "Créé le",
+		"descriptionLabel": "Description",
+		"emptyBody": "Le serveur n'a retourné aucun registre d'audit pour la requête actuelle.",
+		"emptyTitle": "Aucun registre d'audit trouvé",
+		"endDateLabel": "Date de fin",
+		"errorBody": "La demande de registres d'audit n'a pas pu être complétée.",
+		"errorTitle": "Impossible de charger les registres d'audit",
+		"filterAction": "Appliquer la période",
+		"loadingBody": "Chargement des registres d'audit.",
+		"loadingTitle": "Chargement des registres d'audit",
+		"operationLabel": "Opération",
+		"startDateLabel": "Date de début",
+		"summary": "Consultez les registres d'audit du serveur.",
+		"targetLabel": "Cible",
+		"targetUuidLabel": "UUID de la cible",
+		"title": "Registres d'audit",
+		"userLabel": "Utilisateur",
+		"userUuidLabel": "UUID de l'utilisateur"
 	}
 }
