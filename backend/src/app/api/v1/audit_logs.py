@@ -1,12 +1,13 @@
 import uuid as uuid_pkg
 from datetime import datetime
-from typing import Annotated, Any
+from typing import Annotated
 
 from fastapi import APIRouter, Depends, Query, Request
 from fastcrud import PaginatedListResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from ...api.dependencies import get_audit_service, get_current_user
+from ...core.access_control import casbin_guard
 from ...core.db.database import async_get_db
 from ...schemas.audit_log import AuditLogRead
 from ...services.audit_service import AuditService
@@ -15,6 +16,7 @@ router = APIRouter(tags=["audit-logs"])
 
 
 @router.get("/audit-logs", response_model=PaginatedListResponse[AuditLogRead])
+@casbin_guard.require_permission("audit_log", "read")
 async def read_audit_logs(
     request: Request,
     db: Annotated[AsyncSession, Depends(async_get_db)],
@@ -28,7 +30,7 @@ async def read_audit_logs(
     target_uuid: uuid_pkg.UUID | None = Query(None),
     created_at_gte: datetime | None = Query(None),
     created_at_lte: datetime | None = Query(None),
-) -> dict[str, Any]:
+) -> PaginatedListResponse[AuditLogRead]:
     return await service.list_audit_logs(
         db=db,
         page=page,

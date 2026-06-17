@@ -16,6 +16,7 @@ from ...core.access_control import casbin_guard
 from ...core.db.database import async_get_db
 from ...core.exceptions.http_exceptions import BadRequestException
 from ...core.exceptions.openapi import error_responses
+from ...repositories.crud_departments import crud_departments
 from ...repositories.dependencies import get_ibm_sv_admin_client
 from ...repositories.ibm_sv_admin import IBMVerifyAdminClient
 from ...schemas.mau import MAUReportItem, MAUReportResponse
@@ -141,6 +142,13 @@ async def read_current_user_rp_application_mau_report(
             "RP application does not have a mapped MAU application name"
         )
 
+    department_name: str | None = None
+    department_id = application.get("department_id")
+    if department_id is not None:
+        department = await crud_departments.get(db=db, id=department_id)
+        if department:
+            department_name = department.get("name")
+
     resolved_end = end_date or date.today()
     resolved_start = start_date or (resolved_end - timedelta(days=30))
     records = await mau_service.get_mau_by_application(
@@ -153,6 +161,7 @@ async def read_current_user_rp_application_mau_report(
         application_name=application_name,
         start_date=resolved_start,
         end_date=resolved_end,
+        department_name=department_name,
         records=[
             MAUReportItem(
                 date=record.date,

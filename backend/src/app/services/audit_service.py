@@ -2,7 +2,7 @@ import uuid as uuid_pkg
 from datetime import datetime
 from typing import Any
 
-from fastcrud import compute_offset, paginated_response
+from fastcrud import PaginatedListResponse, compute_offset, paginated_response
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from ..repositories.crud_audit_log import crud_audit_log
@@ -43,7 +43,7 @@ class AuditService:
         target_uuid: uuid_pkg.UUID | None = None,
         created_at_gte: datetime | None = None,
         created_at_lte: datetime | None = None,
-    ) -> dict[str, Any]:
+    ) -> PaginatedListResponse[AuditLogRead]:
         filters: dict[str, Any] = {}
         if user_uuid is not None:
             filters["user_uuid"] = user_uuid
@@ -65,4 +65,5 @@ class AuditService:
             schema_to_select=AuditLogRead,
             **filters,
         )
-        return paginated_response(crud_data=audit_logs_data, page=page, items_per_page=items_per_page)
+        raw = paginated_response(crud_data=audit_logs_data, page=page, items_per_page=items_per_page)
+        return PaginatedListResponse[AuditLogRead].model_validate(raw)

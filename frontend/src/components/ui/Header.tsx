@@ -1,4 +1,4 @@
-import { useRouterState } from "@tanstack/react-router";
+import { useNavigate, useRouterState } from "@tanstack/react-router";
 import { useTranslation } from "react-i18next";
 import {
 	GcdsBreadcrumbs,
@@ -69,6 +69,7 @@ const selectBreadcrumbs = (
 
 const Header = (): FunctionComponent => {
 	const { t, i18n } = useTranslation();
+	const navigate = useNavigate();
 	const { currentUser, isAuthenticated, isLoading } = useSession();
 	const pathname = useRouterState({
 		select: (state) => state.location.pathname,
@@ -79,7 +80,12 @@ const Header = (): FunctionComponent => {
 	const serviceName = t("home.title");
 
 	const lang = i18n.language?.startsWith("fr") ? "fr" : "en";
-	const langHref = lang === "en" ? "/fr" : "/en";
+	const targetLang = lang === "en" ? "fr" : "en";
+	const handleLangToggle = (): void => {
+		localStorage.setItem("i18nextLng", targetLang);
+		void navigate({ to: pathname });
+		globalThis.location.reload();
+	};
 
 	const commonItems: Array<NavigationItem> = [
 		{ href: "/", label: t("nav.home") },
@@ -95,6 +101,7 @@ const Header = (): FunctionComponent => {
 		{ href: "/policies", label: t("nav.policies") },
 		{ href: "/roles", label: t("nav.roles") },
 		{ href: "/tiers", label: t("nav.tiers") },
+		{ href: "/audit-logs", label: t("nav.auditLogs") },
 	];
 
 	const publicItems: Array<NavigationItem> = [
@@ -116,8 +123,8 @@ const Header = (): FunctionComponent => {
 	}
 
 	return (
-		<GcdsHeader signatureHasLink langHref={langHref} skipToHref="#main-content">
-			<GcdsLangToggle href={langHref} lang={lang} slot="toggle" />
+		<GcdsHeader signatureHasLink skipToHref="#main-content">
+			<GcdsLangToggle href="#" lang={lang} slot="toggle" onClick={handleLangToggle} />
 			{breadcrumbs.length > 0 ? (
 				<GcdsBreadcrumbs slot="breadcrumb">
 					{breadcrumbs.map((item) => (

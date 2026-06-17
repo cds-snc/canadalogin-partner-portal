@@ -142,6 +142,8 @@
 		"login": "Sign in",
 		"logout": "Sign out",
 		"policies": "Policies",
+		"profile": "Profile",
+		"auditLogs": "Audit Logs",
 		"departments": "Departments",
 		"roles": "Roles",
 		"tiers": "Tiers",
@@ -169,6 +171,7 @@
 	},
 	"mauReport": {
 		"dailyListTitle": "Daily MAU metrics",
+		"departmentLabel": "Department: {{department}}",
 		"exportCsv": "Export to CSV",
 		"emptyBody": "No MAU records were returned for the selected date range.",
 		"emptyTitle": "No MAU data",
@@ -188,7 +191,8 @@
 			"totalLogin": "Total login",
 			"uniqueUser": "Unique user"
 		},
-		"subtitle": "Reporting on {{application}}.",
+		"pageTitle": "{{applicationName}} — Usage Report",
+		"sectionTitle": "On: {{date}}",
 		"table": {
 			"date": "Date",
 			"failedLogin": "Failed login",
@@ -746,7 +750,7 @@
 	},
 	"termsAndConditions": {
 		"title": "Terms and Conditions",
-		"intro": "Please read and accept the terms and conditions to continue using this application.",
+		"intro": "Please read and accept the Terms and Conditions to continue using this application.",
 		"section1Title": "Acceptance of Terms",
 		"section1Body": "By using this service, you agree to comply with and be bound by these terms and conditions. If you do not agree to these terms, you should not use this service.",
 		"section2Title": "Privacy and Data Protection",
@@ -758,5 +762,25 @@
 		"accepting": "Processing...",
 		"error": "An error occurred while accepting the terms. Please try again.",
 		"success": "Terms accepted successfully"
+	},
+	"auditLogs": {
+		"createdAtLabel": "Created at",
+		"descriptionLabel": "Description",
+		"emptyBody": "The backend returned no audit logs for the current query.",
+		"emptyTitle": "No audit logs found",
+		"endDateLabel": "End date",
+		"errorBody": "The audit logs request could not be completed from the frontend.",
+		"errorTitle": "Unable to load audit logs",
+		"filterAction": "Apply Date Range",
+		"loadingBody": "Loading audit logs from the backend.",
+		"loadingTitle": "Loading audit logs",
+		"operationLabel": "Operation",
+		"startDateLabel": "Start date",
+		"summary": "Review backend audit log entries.",
+		"targetLabel": "Target",
+		"targetUuidLabel": "Target UUID",
+		"title": "Audit Logs",
+		"userLabel": "User",
+		"userUuidLabel": "User UUID"
 	}
 }
