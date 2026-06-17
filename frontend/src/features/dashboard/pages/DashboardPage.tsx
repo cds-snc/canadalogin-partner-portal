@@ -1,4 +1,4 @@
-import type { ReactElement } from "react";
+import type { ReactElement, ReactNode } from "react";
 import { useTranslation } from "react-i18next";
 import type { FunctionComponent } from "@/common/types";
 import { Container, Grid, Heading, Link, Notice, Text } from "@/components/ui";
@@ -10,6 +10,20 @@ import {
 } from "@/fetch/rp-applications";
 import { useQuery } from "@tanstack/react-query";
 import { useRoles, useSession } from "@/hooks";
+
+type LabelValueRowProps = {
+	label: string;
+	value: ReactNode;
+};
+
+const LabelValueRow = ({ label, value }: LabelValueRowProps): ReactNode => (
+	<div className="mb-300 last:mb-0">
+		<Text marginBottom="0">
+			<strong>{label}:</strong>
+		</Text>
+		<div>{value}</div>
+	</div>
+);
 
 export const DashboardPage = (): FunctionComponent => {
 	const { t } = useTranslation();
@@ -115,7 +129,12 @@ export const DashboardPage = (): FunctionComponent => {
 						columnsDesktop="minmax(0,1.4fr) 360px"
 						tag="section"
 					>
-						<Container border id="dashboard-rp-applications" padding="300" tag="section">
+						<Container
+							border
+							id="dashboard-rp-applications"
+							padding="300"
+							tag="section"
+						>
 							<Heading marginTop="0" tag="h3">
 								{t("dashboard.rpApplicationsListTitle")}
 							</Heading>
@@ -136,33 +155,38 @@ export const DashboardPage = (): FunctionComponent => {
 							<Heading marginTop="0" tag="h3">
 								{t("dashboard.profileEyebrow")}
 							</Heading>
-							<div className="mt-150 flex flex-col gap-150">
-								<Text>{t("dashboard.name", { value: currentUser.name })}</Text>
-								<Text>
-									{t("dashboard.email", { value: currentUser.email })}
-								</Text>
-								<Text>
-									{t("dashboard.department", {
-										value: departmentLabel,
-									})}
-								</Text>
-								<div>
-									<Text>{t("dashboard.roles")}</Text>
-									{roleNames.length > 0 ? (
-										<ul className="mt-100 flex flex-wrap gap-100">
-											{roleNames.map((roleName) => (
-												<li
-													key={roleName}
-													className="rounded-full border border-[var(--gcds-border-default)] bg-[rgba(255,255,255,0.88)] px-200 py-100 text-sm text-[var(--gcds-text-primary)]"
-												>
-													{roleName}
-												</li>
-											))}
-										</ul>
-									) : (
-										<Text>{t("dashboard.noRoles")}</Text>
-									)}
-								</div>
+							<div className="mt-150">
+								<LabelValueRow
+									label={t("dashboard.name")}
+									value={<Text marginBottom="0">{currentUser.name}</Text>}
+								/>
+								<LabelValueRow
+									label={t("dashboard.email")}
+									value={<Text marginBottom="0">{currentUser.email}</Text>}
+								/>
+								<LabelValueRow
+									label={t("dashboard.department")}
+									value={<Text marginBottom="0">{departmentLabel}</Text>}
+								/>
+								<LabelValueRow
+									label={t("dashboard.roles")}
+									value={
+										roleNames.length > 0 ? (
+											<ul className="flex flex-wrap gap-100">
+												{roleNames.map((roleName) => (
+													<li
+														key={roleName}
+														className="rounded-full border border-[var(--gcds-border-default)] bg-[rgba(255,255,255,0.88)] px-200 py-100 text-sm text-[var(--gcds-text-primary)]"
+													>
+														{roleName}
+													</li>
+												))}
+											</ul>
+										) : (
+											<Text marginBottom="0">{t("dashboard.noRoles")}</Text>
+										)
+									}
+								/>
 							</div>
 						</Container>
 					</Grid>

@@ -2,7 +2,13 @@ import { useStore } from "zustand";
 import { createJSONStorage, persist } from "zustand/middleware";
 import { createStore } from "zustand/vanilla";
 
-type AdminListKey = "audit-logs" | "departments" | "policies" | "roles" | "tiers" | "users";
+type AdminListKey =
+	| "audit-logs"
+	| "departments"
+	| "policies"
+	| "roles"
+	| "tiers"
+	| "users";
 
 type AdminListViewState = {
 	page: number;

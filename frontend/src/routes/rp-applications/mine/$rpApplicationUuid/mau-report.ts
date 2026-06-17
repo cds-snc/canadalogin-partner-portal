@@ -5,8 +5,9 @@ import type { RouteBreadcrumbContext } from "@/types/route-breadcrumbs";
 import { requireAuthenticatedUser } from "../../../../features/auth/auth-routing";
 
 const MAUReportPage = lazy(async () => ({
-	default: (await import("../../../../features/mau-reports/pages/MAUReportPage"))
-		.MAUReportPage,
+	default: (
+		await import("../../../../features/mau-reports/pages/MAUReportPage")
+	).MAUReportPage,
 }));
 
 export const Route = createFileRoute(
@@ -21,10 +22,6 @@ export const Route = createFileRoute(
 			breadcrumbs: [
 				{ href: "/", label: i18n.t("nav.home") },
 				{ href: "/dashboard", label: i18n.t("nav.dashboard") },
-				{
-					href: `/rp-applications/mine/${params.rpApplicationUuid}`,
-					label: i18n.t("dashboard.rpApplicationsListTitle"),
-				},
 				{
 					href: `/rp-applications/mine/${params.rpApplicationUuid}/mau-report`,
 					label: i18n.t("mauReport.title"),

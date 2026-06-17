@@ -23,7 +23,10 @@ type MAUReportQuery = {
 	startDate?: string;
 };
 
-const buildMauReportQuery = ({ endDate, startDate }: MAUReportQuery): string => {
+const buildMauReportQuery = ({
+	endDate,
+	startDate,
+}: MAUReportQuery): string => {
 	const params = new URLSearchParams();
 
 	if (startDate && startDate.trim().length > 0) {

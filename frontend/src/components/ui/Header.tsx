@@ -38,8 +38,7 @@ const isRouteBreadcrumbItem = (
 	};
 
 	return (
-		typeof candidate.href === "string" &&
-		typeof candidate.label === "string"
+		typeof candidate.href === "string" && typeof candidate.label === "string"
 	);
 };
 
@@ -49,7 +48,7 @@ const selectBreadcrumbs = (
 	for (let index = routeMatches.length - 1; index >= 0; index -= 1) {
 		const match = routeMatches[index];
 
-		if (typeof match.context !== "object" || match.context === null) {
+		if (!match || typeof match.context !== "object" || match.context === null) {
 			continue;
 		}
 
@@ -124,11 +123,19 @@ const Header = (): FunctionComponent => {
 
 	return (
 		<GcdsHeader signatureHasLink skipToHref="#main-content">
-			<GcdsLangToggle href="#" lang={lang} slot="toggle" onClick={handleLangToggle} />
+			<GcdsLangToggle
+				href="#"
+				lang={lang}
+				slot="toggle"
+				onClick={handleLangToggle}
+			/>
 			{breadcrumbs.length > 0 ? (
 				<GcdsBreadcrumbs slot="breadcrumb">
 					{breadcrumbs.map((item) => (
-						<GcdsBreadcrumbsItem key={`${item.href}-${item.label}`} href={item.href}>
+						<GcdsBreadcrumbsItem
+							key={`${item.href}-${item.label}`}
+							href={item.href}
+						>
 							{item.label}
 						</GcdsBreadcrumbsItem>
 					))}

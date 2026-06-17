@@ -3,11 +3,20 @@ import { useParams } from "@tanstack/react-router";
 import { useTranslation } from "react-i18next";
 import type { FunctionComponent } from "@/common/types";
 import { MAUDailyTrendLineChart } from "@/components/charts/line/MAUDailyTrendLineChart";
-import { CenteredPageLayout } from "@/components/layout";
-import { Button, DataTable, DateInput, Heading, Notice, Text } from "@/components/ui";
+import {
+	Button,
+	DataTable,
+	DateInput,
+	Heading,
+	Notice,
+	Text,
+} from "@/components/ui";
 import type { DataTableColumn } from "@/components/ui/DataTable";
 import { getRequestErrorNotice } from "@/fetch";
-import type { MAUReportItemRead, MAUReportResponseRead } from "@/fetch/mau-report";
+import type {
+	MAUReportItemRead,
+	MAUReportResponseRead,
+} from "@/fetch/mau-report";
 import { useMauReport } from "../hooks/use-mau-report";
 
 type KPI = {
@@ -235,25 +244,16 @@ export const MAUReportPage = (): FunctionComponent => {
 	const departmentName = responseData?.department_name ?? null;
 
 	return (
-		<CenteredPageLayout className="max-w-6xl gap-600">
-			<Breadcrumbs
-				items={[
-					{ href: "/", label: t("nav.home") },
-					{ href: "/dashboard", label: t("nav.dashboard") },
-					{
-						href: `/rp-applications/mine/${rpApplicationUuidValue}/mau-report`,
-						label: t("mauReport.title"),
-					},
-				]}
-			/>
-
+		<>
 			<Heading tag="h1">
 				{applicationName
 					? t("mauReport.pageTitle", { applicationName })
 					: t("mauReport.title")}
 			</Heading>
 			{departmentName ? (
-				<Text>{t("mauReport.departmentLabel", { department: departmentName })}</Text>
+				<Text>
+					{t("mauReport.departmentLabel", { department: departmentName })}
+				</Text>
 			) : null}
 
 			<div className="mt-200 flex w-full justify-end">
@@ -292,7 +292,10 @@ export const MAUReportPage = (): FunctionComponent => {
 					</Heading>
 					<div className="mt-300 grid gap-200 md:grid-cols-3 lg:grid-cols-5">
 						{kpis.map((kpi) => (
-							<div key={kpi.label} className="rounded-sm border border-[var(--gcds-border-default)] bg-[var(--gcds-bg-white)] p-300">
+							<div
+								key={kpi.label}
+								className="rounded-sm border border-[var(--gcds-border-default)] bg-[var(--gcds-bg-white)] p-300"
+							>
 								<h3 className="gcds-heading gcds-heading--h3">{kpi.label}</h3>
 								<p className="mt-100 text-2xl font-semibold text-[var(--gcds-text-primary)]">
 									{kpi.value.toLocaleString()}
@@ -313,7 +316,10 @@ export const MAUReportPage = (): FunctionComponent => {
 				</Notice>
 			) : null}
 
-			<form className="flex flex-col gap-300 rounded-sm border border-[var(--gcds-border-default)] bg-[var(--gcds-bg-white)] p-300" onSubmit={handleFilterSubmit}>
+			<form
+				className="flex flex-col gap-300 rounded-sm border border-[var(--gcds-border-default)] bg-[var(--gcds-bg-white)] p-300"
+				onSubmit={handleFilterSubmit}
+			>
 				<div className="grid gap-300 md:grid-cols-2">
 					<DateInput
 						required
@@ -380,6 +386,6 @@ export const MAUReportPage = (): FunctionComponent => {
 					</div>
 				</section>
 			) : null}
-		</CenteredPageLayout>
+		</>
 	);
 };

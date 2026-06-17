@@ -27,7 +27,7 @@ export const Home = (): FunctionComponent => {
 	};
 
 	return (
-		<div>
+		<>
 			<section className="border border-[var(--gcds-border-default)] bg-[var(--gcds-bg-light)] px-500 py-600 md:px-650 md:py-700">
 				<div className="max-w-3xl">
 					<span className="text-sm font-semibold tracking-[0.12em] text-[var(--gcds-text-secondary)] uppercase">
@@ -95,6 +95,6 @@ export const Home = (): FunctionComponent => {
 					</Grid>
 				</div>
 			</section>
-		</div>
+		</>
 	);
 };

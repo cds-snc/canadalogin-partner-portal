@@ -12,16 +12,15 @@ vi.mock("react-i18next", () => ({
 	useTranslation: (): { t: (key: string, options?: Record<string, unknown>) => string } => ({
 		t: (key: string, options?: Record<string, unknown>): string => {
 			const translations: Record<string, string> = {
-				"dashboard.department": `Department: ${options?.["value"] ?? ""}`,
-				"dashboard.email": `Email: ${options?.["value"] ?? ""}`,
+				"dashboard.department": "Department",
+				"dashboard.email": "Email",
 				"dashboard.loadingBody": "Loading your profile, department, and roles.",
 				"dashboard.loadingTitle": "Loading dashboard",
-				"dashboard.name": `Name: ${options?.["value"] ?? ""}`,
+				"dashboard.name": "Name",
 				"dashboard.noDepartment": "No department assigned",
 				"dashboard.noRPApplications": "No RP applications found.",
 				"dashboard.noRoles": "No roles assigned",
 				"dashboard.profileEyebrow": "Signed-in profile",
-				"dashboard.rpApplicationsDescription": "Review the RP applications available to your account.",
 				"dashboard.rpApplicationsListTitle": "RP Applications",
 				"dashboard.roles": "Roles",
 				"dashboard.summary": "Overview of your account.",
@@ -131,16 +130,16 @@ describe("DashboardPage", () => {
 		render(<DashboardPage />);
 
 		expect(screen.getByRole("heading", { name: /dashboard/i })).toBeTruthy();
-		expect(screen.getByText(/name: jane doe/i)).toBeTruthy();
-		expect(screen.getByText(/email: jane@example.com/i)).toBeTruthy();
-		expect(screen.getByText(/department: hc - health canada/i)).toBeTruthy();
-		expect(screen.getByText(/^roles$/i)).toBeTruthy();
+		expect(screen.getByText(/^name:/i)).toBeTruthy();
+		expect(screen.getByText(/^email:/i)).toBeTruthy();
+		expect(screen.getByText(/^department:/i)).toBeTruthy();
+		expect(screen.getByText(/^jane doe$/i)).toBeTruthy();
+		expect(screen.getByText(/^jane@example.com$/i)).toBeTruthy();
+		expect(screen.getByText(/^hc - health canada$/i)).toBeTruthy();
+		expect(screen.getByText(/roles\s*:/i)).toBeTruthy();
 		expect(screen.getByText(/administrator/i)).toBeTruthy();
 		expect(screen.getByText(/editor/i)).toBeTruthy();
 		expect(screen.getByText(/^RP Applications$/)).toBeTruthy();
-		expect(
-			screen.getByText(/review the rp applications available to your account/i)
-		).toBeTruthy();
 		expect(screen.getByRole("link", { name: /^benefits portal$/i })).toBeTruthy();
 		expect(screen.getByRole("link", { name: /^claims service$/i })).toBeTruthy();
 		expect(
