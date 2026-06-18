@@ -17,8 +17,6 @@ import {
 	type CurrentUserRPOAuthSetupRead,
 } from "@/fetch/rp-applications";
 
-const maskedSecretPlaceholder = "********";
-
 const toStatusLabel = (status: string): string => {
 	const normalizedStatus = status.trim().toLowerCase();
 	if (normalizedStatus.length === 0) {
@@ -58,7 +56,6 @@ export const CurrentUserRPOAuthSetupPage = (): FunctionComponent => {
 	const [oauthSetup, setOauthSetup] =
 		useState<CurrentUserRPOAuthSetupRead | null>(null);
 	const [isLoading, setIsLoading] = useState(true);
-	const [isSecretVisible, setIsSecretVisible] = useState(false);
 
 	useEffect((): (() => void) => {
 		let isMounted = true;
@@ -180,35 +177,15 @@ export const CurrentUserRPOAuthSetupPage = (): FunctionComponent => {
 				<Heading marginTop="0" tag="h2">
 					{t("rpOAuthSetup.oauthSectionTitle")}
 				</Heading>
+				<div className="mb-300 flex justify-end">
+					<Button
+						href={`/rp-applications/mine/${rpApplicationUuid}/client-secrets`}
+						type="link"
+					>
+						{t("workspaces.clientCredentials")}
+					</Button>
+				</div>
 				<div>
-					<LabelValueRow
-						label={t("rpOAuthSetup.clientIdLabel")}
-						value={oauthSetup.clientId}
-					/>
-					<LabelValueRow
-						label={t("rpOAuthSetup.clientSecretLabel")}
-						value={
-							<div className="flex items-center gap-150">
-								<Text marginBottom="0">
-									{isSecretVisible
-										? oauthSetup.clientSecret
-										: maskedSecretPlaceholder}
-								</Text>
-								<Button
-									buttonRole="secondary"
-									size="small"
-									type="button"
-									onGcdsClick={() => {
-										setIsSecretVisible((current) => !current);
-									}}
-								>
-									{isSecretVisible
-										? t("rpOAuthSetup.hideSecretAction")
-										: t("rpOAuthSetup.revealSecretAction")}
-								</Button>
-							</div>
-						}
-					/>
 					<LabelValueRow
 						label={t("rpOAuthSetup.discoveryEndpointLabel")}
 						value={

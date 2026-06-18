@@ -27,13 +27,13 @@ const Table = <T extends Record<string, unknown>>({
 	<GcdsTable
 		captionSlot={caption}
 		className={className}
-		columns={
-			columns as Array<ReactTableColumn<Record<string, unknown>>> | undefined
-		}
 		data={data}
 		filter={filter}
 		pagination={pagination}
 		sort={sort}
+		columns={
+			columns as Array<ReactTableColumn<Record<string, unknown>>> | undefined
+		}
 	>
 		{children}
 	</GcdsTable>

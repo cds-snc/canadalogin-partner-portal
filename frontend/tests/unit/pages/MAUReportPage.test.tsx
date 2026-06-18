@@ -8,6 +8,8 @@ const { mockUseQuery } = vi.hoisted(() => ({
 	mockUseQuery: vi.fn(),
 }));
 
+const mockMAUDailyTrendLineChart = vi.fn();
+
 vi.mock("@tanstack/react-router", () => ({
 	useParams: vi.fn(),
 }));
@@ -155,7 +157,10 @@ vi.mock("@/components/ui", () => ({
 }));
 
 vi.mock("@/components/charts/line/MAUDailyTrendLineChart", () => ({
-	MAUDailyTrendLineChart: (): ReactElement => <div>MAU Chart</div>,
+	MAUDailyTrendLineChart: (props: { points: Array<{ date: string }> }): ReactElement => {
+		mockMAUDailyTrendLineChart(props);
+		return <div>MAU Chart</div>;
+	},
 }));
 
 const mockedUseParams = vi.mocked(useParams);
@@ -166,6 +171,7 @@ describe("MAUReportPage", () => {
 			rpApplicationUuid: "application-uuid-1",
 		});
 		mockUseQuery.mockReset();
+		mockMAUDailyTrendLineChart.mockReset();
 	});
 
 	it("shows loading state", () => {
@@ -340,6 +346,14 @@ describe("MAUReportPage", () => {
 				end_date: "2026-01-31",
 				records: [
 					{
+						date: "2026-01-17",
+						total_logins: 90,
+						unique_users: 45,
+						successful_logins: 70,
+						failed_logins: 20,
+						mtd_unique_users: 210,
+					},
+					{
 						date: "2026-01-15",
 						total_logins: 100,
 						unique_users: 50,
@@ -359,6 +373,11 @@ describe("MAUReportPage", () => {
 		expect(screen.getByText("Daily sign-in trend")).toBeTruthy();
 		expect(screen.getByText("MAU Chart")).toBeTruthy();
 		expect(screen.getByText("Daily MAU metrics")).toBeTruthy();
+		expect(mockMAUDailyTrendLineChart).toHaveBeenCalledTimes(1);
+		expect(mockMAUDailyTrendLineChart.mock.calls[0]?.[0]?.points.map((point: { date: string }) => point.date)).toEqual([
+			"2026-01-15",
+			"2026-01-17",
+		]);
 	});
 
 	it("shows back to application link", () => {

@@ -1,8 +1,7 @@
 import uuid as uuid_pkg
 from datetime import datetime
-from typing import Literal
 
-from pydantic import BaseModel, ConfigDict, EmailStr, Field
+from pydantic import BaseModel, ConfigDict, Field
 from pydantic.alias_generators import to_camel
 
 from ..core.schemas import PersistentDeletion, UUIDSchema
@@ -78,8 +77,6 @@ class RPApplicationCurrentUserOAuthSetupRead(BaseModel):
     status: str
     application_url: str | None = None
     discovery_endpoint: str | None = None
-    client_id: str
-    client_secret: str
     pkce_enabled: bool | None = None
     redirect_uris: list[str] = Field(default_factory=list)
     logout_uri: str | None = None
@@ -133,84 +130,6 @@ class RPApplicationUpdateInternal(BaseModel):
 
 class RPApplicationDelete(PersistentDeletion):
     pass
-
-
-class RPApplicationDeveloperInvitationCreate(BaseModel):
-    model_config = ConfigDict(
-        extra="forbid",
-        validate_by_name=True,
-        validate_by_alias=True,
-        alias_generator=to_camel,
-        populate_by_name=True,
-    )
-
-    email: EmailStr
-
-
-class RPApplicationDeveloperInvitationAccept(BaseModel):
-    model_config = ConfigDict(
-        extra="forbid",
-        validate_by_name=True,
-        validate_by_alias=True,
-        alias_generator=to_camel,
-        populate_by_name=True,
-    )
-
-    token: str = Field(..., min_length=1)
-
-
-class RPApplicationDeveloperInvitationCreateInternal(BaseModel):
-    model_config = ConfigDict(arbitrary_types_allowed=True)
-
-    workspace_id: int
-    rp_application_id: int
-    invited_email: str
-    invited_by: int | None = None
-    role: str = "developer"
-    token_hash: str
-    invite_expires_at: datetime
-    gc_notify_notification_id: str | None = None
-
-
-class RPApplicationDeveloperInvitationUpdateInternal(BaseModel):
-    model_config = ConfigDict(arbitrary_types_allowed=True)
-
-    accepted_at: datetime | None = None
-    revoked_at: datetime | None = None
-    gc_notify_notification_id: str | None = None
-    updated_at: datetime
-
-
-RPApplicationDeveloperInvitationStatus = Literal[
-    "pending", "accepted", "revoked", "expired"
-]
-
-
-class RPApplicationDeveloperInvitationRead(UUIDSchema, PersistentDeletion):
-    id: int
-    workspace_id: int
-    rp_application_id: int
-    invited_email: str
-    invited_by: int | None = None
-    role: str
-    invite_expires_at: datetime
-    accepted_at: datetime | None = None
-    revoked_at: datetime | None = None
-    gc_notify_notification_id: str | None = None
-    created_at: datetime
-    updated_at: datetime | None = None
-    model_config = ConfigDict(
-        validate_by_name=True,
-        validate_by_alias=True,
-        alias_generator=to_camel,
-        populate_by_name=True,
-    )
-
-
-class RPApplicationDeveloperInvitationManagementRead(
-    RPApplicationDeveloperInvitationRead
-):
-    status: RPApplicationDeveloperInvitationStatus
 
 
 class RPApplicationClientCredentialsRead(BaseModel):

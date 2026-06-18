@@ -1,5 +1,5 @@
 import type { PropsWithChildren, ReactElement } from "react";
-import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { render, screen, waitFor } from "@testing-library/react";
 import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from "vitest";
 import { CurrentUserRPOAuthSetupPage } from "@/features/rp-applications/pages/CurrentUserRPOAuthSetupPage";
 import { HttpRequestError } from "@/fetch/errors";
@@ -22,10 +22,7 @@ vi.mock("react-i18next", () => ({
 				"nav.dashboard": "Dashboard",
 				"rpOAuthSetup.applicationSectionTitle": "Application details",
 				"rpOAuthSetup.applicationUrlLabel": "Application URL",
-				"rpOAuthSetup.clientIdLabel": "Client ID",
-				"rpOAuthSetup.clientSecretLabel": "Client secret",
 				"rpOAuthSetup.discoveryEndpointLabel": "Discovery endpoint",
-				"rpOAuthSetup.hideSecretAction": "Hide secret",
 				"rpOAuthSetup.loadingBody": "Loading OAuth setup details for this RP application.",
 				"rpOAuthSetup.loadingTitle": "Loading OAuth setup",
 				"rpOAuthSetup.logoutRedirectUrisLabel": "Logout redirect URIs",
@@ -39,10 +36,10 @@ vi.mock("react-i18next", () => ({
 				"rpOAuthSetup.pkceEnabled": "Enabled",
 				"rpOAuthSetup.pkceEnabledLabel": "PKCE",
 				"rpOAuthSetup.redirectUrisLabel": "Redirect URIs",
-				"rpOAuthSetup.revealSecretAction": "Reveal secret",
 				"rpOAuthSetup.statusLabel": "Status",
 				"rpOAuthSetup.summary": "Review this RP application's read-only OAuth setup details.",
 				"rpOAuthSetup.title": "RP OAuth setup",
+				"workspaces.clientCredentials": "Client credentials",
 			};
 
 			return map[key] ?? key;
@@ -122,13 +119,11 @@ describe("CurrentUserRPOAuthSetupPage", () => {
 		});
 	});
 
-	it("renders read-only OAuth setup with application section first and secret reveal/hide", async () => {
+	it("renders read-only OAuth setup with a link to the dedicated client info page", async () => {
 		mockedGetCurrentUserRPOAuthSetup.mockResolvedValue({
 			applicationUrl: "https://benefits.example.gc.ca",
 			discoveryEndpoint:
 				"https://cds-gcsignin-dev.verify.ibm.com/oauth2/.well-known/openid-configuration",
-			clientId: "client-id-1",
-			clientSecret: "very-secret-value",
 			logoutRedirectUris: [
 				"https://benefits.example.gc.ca/logout-complete",
 			],
@@ -142,8 +137,6 @@ describe("CurrentUserRPOAuthSetupPage", () => {
 		render(<CurrentUserRPOAuthSetupPage />);
 
 		await screen.findByRole("heading", { name: "Benefits Portal" });
-		expect(screen.getByText("Client ID:")).toBeTruthy();
-		expect(screen.getByText("client-id-1")).toBeTruthy();
 		expect(screen.getByText("Discovery endpoint:")).toBeTruthy();
 		expect(
 			screen.getByText(
@@ -158,18 +151,11 @@ describe("CurrentUserRPOAuthSetupPage", () => {
 		expect(
 			screen.getByText("https://benefits.example.gc.ca/logout-complete")
 		).toBeTruthy();
-		expect(screen.getByText("Client secret:")).toBeTruthy();
-		expect(screen.getByText("********")).toBeTruthy();
+		expect(screen.getByRole("button", { name: "Client credentials" })).toBeTruthy();
 
 		const sectionHeadings = screen.getAllByRole("heading", { level: 2 });
 		expect(sectionHeadings[0]?.textContent).toBe("Application details");
 		expect(sectionHeadings[1]?.textContent).toBe("OAuth setup");
-
-		fireEvent.click(screen.getByRole("button", { name: "Reveal secret" }));
-		expect(screen.getByText("very-secret-value")).toBeTruthy();
-
-		fireEvent.click(screen.getByRole("button", { name: "Hide secret" }));
-		expect(screen.getByText("********")).toBeTruthy();
 	});
 
 	it("redirects 403 to access denied", async () => {

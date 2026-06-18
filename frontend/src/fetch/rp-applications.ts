@@ -58,8 +58,6 @@ export type CurrentUserRPApplicationRead = {
 	settings?: RPApplicationSettings | null;
 	ibm_sv_application_id?: string | null;
 	departmentId?: number | null;
-	workspaceName?: string;
-	workspaceUuid?: string;
 	applicationOwner?: {
 		owners: Array<{ email: string }>;
 	} | null;
@@ -70,66 +68,25 @@ export type CurrentUserRPOAuthSetupRead = {
 	status: string;
 	applicationUrl?: string | null;
 	discoveryEndpoint?: string | null;
-	clientId: string;
-	clientSecret: string;
 	pkceEnabled?: boolean | null;
 	redirectUris: Array<string>;
 	logoutUri?: string | null;
 	logoutRedirectUris: Array<string>;
 };
 
-export type RPApplicationDeveloperInvitationRead = {
-	accepted_at?: string | null;
-	created_at: string;
-	gc_notify_notification_id?: string | null;
-	id: number;
-	invited_by?: number | null;
-	invited_email: string;
-	invite_expires_at?: string;
-	rp_application_id: number;
-	role: string;
-	revoked_at?: string | null;
-	uuid: string;
-	workspace_id: number;
-};
-
-export type RPApplicationDeveloperInvitationManagementRead = {
-	acceptedAt?: string | null;
-	createdAt: string;
-	gcNotifyNotificationId?: string | null;
-	id: number;
-	invitedBy?: number | null;
-	invitedEmail: string;
-	inviteExpiresAt?: string;
-	rpApplicationId: number;
-	role: string;
-	revokedAt?: string | null;
-	status: "pending" | "accepted" | "revoked" | "expired";
-	uuid: string;
-	workspaceId: number;
-};
-
-export const rpApplicationDeveloperInvitationsQueryKey = (
-	workspaceUuid: string,
-	rpApplicationUuid: string
-): Array<string> => [
-	"rp-application-developer-invitations",
-	workspaceUuid,
-	rpApplicationUuid,
-];
-
 export type RPApplicationClientCredentialsRead = {
-	client_id: string;
-	client_secret: string | null;
-	client_secret_id: string | null;
+	clientId: string;
+	clientSecret: string | null;
+	clientSecretId: string | null;
 };
 
 export type RPApplicationRotatedSecretRead = {
 	description: string | null;
-	expired_at: number | null;
-	rotated_at?: number | null;
+	expiredAt: number | null;
+	path?: string | null;
+	rotatedAt?: number | null;
 	value?: string | null;
-	secret_id?: string | null;
+	secretId?: string | null;
 };
 
 export type RPApplicationRotatedSecretCreateRequest = {
@@ -213,22 +170,6 @@ export const getCurrentUserRPApplications = async (): Promise<
 	return result ?? [];
 };
 
-export const acceptRPApplicationDeveloperInvitation = async (
-	token: string
-): Promise<RPApplicationDeveloperInvitationRead> => {
-	const result = await requestJson<RPApplicationDeveloperInvitationRead | null>(
-		"/api/v1/rp-application-developer-invitations/accept",
-		{
-			body: JSON.stringify({ token }),
-			method: "POST",
-		}
-	);
-	if (!result) {
-		throw new Error("Failed to accept RP application invitation");
-	}
-	return result;
-};
-
 export const getCurrentUserRPApplication = async (
 	rpApplicationUuid: string
 ): Promise<CurrentUserRPApplicationRead> => {
@@ -274,75 +215,6 @@ export const updateCurrentUserRPApplication = async (
 	);
 	if (!result) {
 		throw new Error("Failed to update RP application");
-	}
-	return result;
-};
-
-export const inviteRPApplicationDeveloper = async (
-	workspaceUuid: string,
-	rpApplicationUuid: string,
-	email: string
-): Promise<RPApplicationDeveloperInvitationRead> => {
-	const result = await requestJson<RPApplicationDeveloperInvitationRead | null>(
-		`/api/v1/workspaces/${encodeURIComponent(workspaceUuid)}/applications/${encodeURIComponent(rpApplicationUuid)}/developers/invite`,
-		{
-			body: JSON.stringify({ email }),
-			method: "POST",
-		}
-	);
-	if (!result) {
-		throw new Error("Failed to invite RP application developer");
-	}
-	return result;
-};
-
-export const getRPApplicationDeveloperInvitations = async (
-	workspaceUuid: string,
-	rpApplicationUuid: string
-): Promise<Array<RPApplicationDeveloperInvitationManagementRead>> => {
-	const result =
-		await requestJson<Array<RPApplicationDeveloperInvitationManagementRead> | null>(
-			`/api/v1/workspaces/${encodeURIComponent(workspaceUuid)}/applications/${encodeURIComponent(rpApplicationUuid)}/developer-invitations`,
-			{
-				cache: "no-store",
-				method: "GET",
-			}
-		);
-	return result ?? [];
-};
-
-export const revokeRPApplicationDeveloperInvitation = async (
-	workspaceUuid: string,
-	rpApplicationUuid: string,
-	invitationUuid: string
-): Promise<RPApplicationDeveloperInvitationManagementRead> => {
-	const result =
-		await requestJson<RPApplicationDeveloperInvitationManagementRead | null>(
-			`/api/v1/workspaces/${encodeURIComponent(workspaceUuid)}/applications/${encodeURIComponent(rpApplicationUuid)}/developer-invitations/${encodeURIComponent(invitationUuid)}`,
-			{
-				method: "DELETE",
-			}
-		);
-	if (!result) {
-		throw new Error("Failed to revoke RP application developer invitation");
-	}
-	return result;
-};
-
-export const resendRPApplicationDeveloperInvitation = async (
-	workspaceUuid: string,
-	rpApplicationUuid: string,
-	invitationUuid: string
-): Promise<RPApplicationDeveloperInvitationManagementRead> => {
-	const result =
-		await requestJson<RPApplicationDeveloperInvitationManagementRead | null>(
-			`/api/v1/workspaces/${encodeURIComponent(workspaceUuid)}/applications/${encodeURIComponent(rpApplicationUuid)}/developer-invitations/${encodeURIComponent(invitationUuid)}/resend`,
-			{
-				method: "POST",
-			}
-		);
-	if (!result) {
-		throw new Error("Failed to resend RP application developer invitation");
 	}
 	return result;
 };
@@ -411,12 +283,11 @@ export const deleteRPApplication = async (
 	return result;
 };
 
-export const getRPApplicationClientCredentials = async (
-	workspaceUuid: string,
+export const getCurrentUserRPApplicationClientCredentials = async (
 	rpApplicationUuid: string
 ): Promise<RPApplicationClientCredentialsRead> => {
 	const result = await requestJson<RPApplicationClientCredentialsRead | null>(
-		`/api/v1/workspaces/${encodeURIComponent(workspaceUuid)}/applications/${encodeURIComponent(rpApplicationUuid)}/client`,
+		`/api/v1/rp-applications/mine/${encodeURIComponent(rpApplicationUuid)}/client`,
 		{
 			cache: "no-store",
 			method: "GET",
@@ -428,13 +299,12 @@ export const getRPApplicationClientCredentials = async (
 	return result;
 };
 
-export const getRPApplicationRotatedClientSecrets = async (
-	workspaceUuid: string,
+export const getCurrentUserRPApplicationRotatedClientSecrets = async (
 	rpApplicationUuid: string
 ): Promise<Array<RPApplicationRotatedSecretRead>> => {
 	const result =
 		await requestJson<Array<RPApplicationRotatedSecretRead> | null>(
-			`/api/v1/workspaces/${encodeURIComponent(workspaceUuid)}/applications/${encodeURIComponent(rpApplicationUuid)}/client/rotated-secrets`,
+			`/api/v1/rp-applications/mine/${encodeURIComponent(rpApplicationUuid)}/client/rotated-secrets`,
 			{
 				cache: "no-store",
 				method: "GET",
@@ -443,14 +313,13 @@ export const getRPApplicationRotatedClientSecrets = async (
 	return result ?? [];
 };
 
-export const createRPApplicationRotatedClientSecret = async (
-	workspaceUuid: string,
+export const createCurrentUserRPApplicationRotatedClientSecret = async (
 	rpApplicationUuid: string,
 	payload: RPApplicationRotatedSecretCreateRequest
 ): Promise<Array<RPApplicationRotatedSecretRead>> => {
 	const result =
 		await requestJson<Array<RPApplicationRotatedSecretRead> | null>(
-			`/api/v1/workspaces/${encodeURIComponent(workspaceUuid)}/applications/${encodeURIComponent(rpApplicationUuid)}/client/rotated-secrets`,
+			`/api/v1/rp-applications/mine/${encodeURIComponent(rpApplicationUuid)}/client/rotated-secrets`,
 			{
 				body: JSON.stringify(payload),
 				method: "POST",
@@ -459,13 +328,12 @@ export const createRPApplicationRotatedClientSecret = async (
 	return result ?? [];
 };
 
-export const deleteRPApplicationRotatedClientSecret = async (
-	workspaceUuid: string,
+export const deleteCurrentUserRPApplicationRotatedClientSecret = async (
 	rpApplicationUuid: string,
-	rotatedSecretId: string
+	value: string
 ): Promise<ApiMessageResponse> => {
 	const result = await requestJson<ApiMessageResponse | null>(
-		`/api/v1/workspaces/${encodeURIComponent(workspaceUuid)}/applications/${encodeURIComponent(rpApplicationUuid)}/client/rotated-secrets/${encodeURIComponent(rotatedSecretId)}`,
+		`/api/v1/rp-applications/mine/${encodeURIComponent(rpApplicationUuid)}/client/rotated-secrets/${encodeURIComponent(value)}`,
 		{
 			method: "DELETE",
 		}
@@ -476,8 +344,7 @@ export const deleteRPApplicationRotatedClientSecret = async (
 	return result;
 };
 
-export const rotateRPApplicationClientSecret = async (
-	workspaceUuid: string,
+export const rotateCurrentUserRPApplicationClientSecret = async (
 	rpApplicationUuid: string,
 	payload?: RPApplicationClientSecretRotateRequest
 ): Promise<RPApplicationClientCredentialsRead> => {
@@ -487,7 +354,7 @@ export const rotateRPApplicationClientSecret = async (
 		rotatedSecretExpiredAt: 0,
 	};
 	const result = await requestJson<RPApplicationClientCredentialsRead | null>(
-		`/api/v1/workspaces/${encodeURIComponent(workspaceUuid)}/applications/${encodeURIComponent(rpApplicationUuid)}/client/rotate-secret`,
+		`/api/v1/rp-applications/mine/${encodeURIComponent(rpApplicationUuid)}/client/rotate-secret`,
 		{
 			body: JSON.stringify(requestPayload),
 			method: "POST",
