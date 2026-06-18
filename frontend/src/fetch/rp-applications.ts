@@ -68,6 +68,8 @@ export type CurrentUserRPOAuthSetupRead = {
 	status: string;
 	applicationUrl?: string | null;
 	discoveryEndpoint?: string | null;
+	departmentName?: string | null;
+	departmentNameFr?: string | null;
 	pkceEnabled?: boolean | null;
 	redirectUris: Array<string>;
 	logoutUri?: string | null;
@@ -104,6 +106,17 @@ export type RPApplicationUsageSummaryRead = {
 	failed: number;
 	succeeded: number;
 	total: number;
+};
+
+export type CurrentUserRPApplicationSummaryRead = {
+	id: number;
+	uuid: string;
+	dnrAppName: string;
+	departmentId: number | null;
+};
+
+export type CurrentUserRPApplicationDepartmentAssignRequest = {
+	departmentUuid: string;
 };
 
 export type RPApplicationUsageAuditEventRead = {
@@ -198,6 +211,39 @@ export const getCurrentUserRPOAuthSetup = async (
 	);
 	if (!result) {
 		throw new Error("Failed to load RP OAuth setup");
+	}
+	return result;
+};
+
+export const getCurrentUserRPApplicationDepartment = async (
+	rpApplicationUuid: string
+): Promise<CurrentUserRPApplicationSummaryRead> => {
+	const result = await requestJson<CurrentUserRPApplicationSummaryRead | null>(
+		`/api/v1/rp-applications/mine/${encodeURIComponent(rpApplicationUuid)}/department`,
+		{
+			cache: "no-store",
+			method: "GET",
+		}
+	);
+	if (!result) {
+		throw new Error("Failed to load RP application department");
+	}
+	return result;
+};
+
+export const assignCurrentUserRPApplicationDepartment = async (
+	rpApplicationUuid: string,
+	payload: CurrentUserRPApplicationDepartmentAssignRequest
+): Promise<CurrentUserRPApplicationSummaryRead> => {
+	const result = await requestJson<CurrentUserRPApplicationSummaryRead | null>(
+		`/api/v1/rp-applications/mine/${encodeURIComponent(rpApplicationUuid)}/department`,
+		{
+			body: JSON.stringify(payload),
+			method: "PATCH",
+		}
+	);
+	if (!result) {
+		throw new Error("Failed to assign RP application department");
 	}
 	return result;
 };

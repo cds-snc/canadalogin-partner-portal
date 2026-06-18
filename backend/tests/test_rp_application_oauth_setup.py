@@ -21,6 +21,8 @@ class TestCurrentUserRPOAuthSetupAPI:
                 "status": "active",
                 "applicationUrl": "https://benefits.example.gc.ca",
                 "discoveryEndpoint": "https://cds-gcsignin-dev.verify.ibm.com/oauth2/.well-known/openid-configuration",
+                "departmentName": None,
+                "departmentNameFr": None,
                 "pkceEnabled": True,
                 "redirectUris": [
                     "https://benefits.example.gc.ca/callback",
@@ -58,6 +60,8 @@ class TestCurrentUserRPOAuthSetupAPI:
             "status": "active",
             "applicationUrl": "https://benefits.example.gc.ca",
             "discoveryEndpoint": "https://cds-gcsignin-dev.verify.ibm.com/oauth2/.well-known/openid-configuration",
+            "departmentName": None,
+            "departmentNameFr": None,
             "pkceEnabled": True,
             "redirectUris": ["https://benefits.example.gc.ca/callback"],
             "logoutUri": "https://benefits.example.gc.ca/backchannel-logout",

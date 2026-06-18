@@ -77,6 +77,17 @@
 		"unexpectedBody": "An unexpected error occurred while loading this page. Try again from the dashboard.",
 		"unexpectedTitle": "Unexpected error"
 	},
+	"rpDepartmentSetup": {
+		"chooseDepartment": "Choose a department",
+		"errorLoading": "Failed to load departments",
+		"errorSaving": "Failed to assign department",
+		"intro": "This RP application does not have an assigned department. Select a department to continue.",
+		"loading": "Loading departments",
+		"noDepartments": "No departments available",
+		"save": "Assign department",
+		"departmentLabel": "Department",
+		"title": "Assign application department"
+	},
 	"rpOAuthSetup": {
 		"applicationNameLabel": "Application name",
 		"applicationSectionTitle": "Application details",
@@ -84,6 +95,7 @@
 		"applicationUuidLabel": "RP application UUID",
 		"clientIdLabel": "Client ID",
 		"clientSecretLabel": "Client secret",
+		"departmentLabel": "Department",
 		"discoveryEndpointLabel": "Discovery endpoint",
 		"hideSecretAction": "Hide secret",
 		"ibmApplicationIdLabel": "IBM application ID",
@@ -244,8 +256,7 @@
 		"loading": "Loading departments",
 		"noDepartments": "No departments available",
 		"save": "Save",
-		"selectDepartment": "Select your department",
-		"setupInstruction": "Please select your department to continue",
+		"departmentLabel": "Department",
 		"setupIntro": "To complete your profile, please select the department you work for.",
 		"setupTitle": "Profile Setup",
 		"errorSaving": "Error saving department"

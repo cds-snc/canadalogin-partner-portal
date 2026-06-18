@@ -1,4 +1,4 @@
-import { useMemo, useState, type FormEvent } from "react";
+import { useEffect, useMemo, useState, type FormEvent } from "react";
 import { useParams } from "@tanstack/react-router";
 import { useTranslation } from "react-i18next";
 import type { FunctionComponent } from "@/common/types";
@@ -13,6 +13,7 @@ import {
 } from "@/components/ui";
 import type { DataTableColumn } from "@/components/ui/DataTable";
 import { getRequestErrorNotice } from "@/fetch";
+import { HttpRequestError } from "@/fetch/errors";
 import type {
 	MAUReportItemRead,
 	MAUReportResponseRead,
@@ -119,6 +120,18 @@ export const MAUReportPage = (): FunctionComponent => {
 		activeStartDate,
 		activeEndDate
 	);
+
+	useEffect(() => {
+		if (
+			error instanceof HttpRequestError &&
+			error.status === 409 &&
+			error.code === "rp_application_department_required"
+		) {
+			globalThis.location.replace(
+				`/rp-applications/mine/${rpApplicationUuidValue}/department-setup`
+			);
+		}
+	}, [error, rpApplicationUuidValue]);
 
 	const responseData = data as MAUReportResponseRead | null;
 

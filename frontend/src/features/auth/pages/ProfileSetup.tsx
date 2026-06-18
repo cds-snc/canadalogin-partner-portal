@@ -111,44 +111,35 @@ export const ProfileSetup = (): ReactElement => {
 				</Notice>
 			) : null}
 
-			<Notice
-				noticeRole="info"
-				noticeTitle={t("profile.setupInstruction")}
-				noticeTitleTag="h2"
-			>
-				<div className="flex flex-col gap-200">
-					<label htmlFor="department-select">
-						{t("profile.selectDepartment")}
-					</label>
-					<Select
-						label={t("profile.selectDepartment")}
-						name="department"
-						selectId="department-select"
-						value={selected}
-						onInput={(e) => {
-							setSelected((e.target as HTMLSelectElement).value);
-						}}
-					>
-						<option value="">{t("profile.chooseDepartment")}</option>
-						{sortedDepartments.map((d) => (
-							<option key={d.uuid} value={d.uuid}>
-								{d.name}
-							</option>
-						))}
-					</Select>
+			<div className="flex flex-col gap-200">
+				<Select
+					label={t("profile.departmentLabel")}
+					name="department"
+					selectId="department-select"
+					value={selected}
+					onInput={(e) => {
+						setSelected((e.target as HTMLSelectElement).value);
+					}}
+				>
+					<option value="">{t("profile.chooseDepartment")}</option>
+					{sortedDepartments.map((d) => (
+						<option key={d.uuid} value={d.uuid}>
+							{d.name}
+						</option>
+					))}
+				</Select>
 
-					<div>
-						<Button
-							buttonRole="primary"
-							disabled={!selected || isSubmitting}
-							type="button"
-							onGcdsClick={handleSubmit}
-						>
-							{isSubmitting ? t("profile.loading") : t("profile.save")}
-						</Button>
-					</div>
+				<div>
+					<Button
+						buttonRole="primary"
+						disabled={!selected || isSubmitting}
+						type="button"
+						onGcdsClick={handleSubmit}
+					>
+						{isSubmitting ? t("profile.loading") : t("profile.save")}
+					</Button>
 				</div>
-			</Notice>
+			</div>
 		</CenteredPageLayout>
 	);
 };

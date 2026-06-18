@@ -15,13 +15,15 @@ vi.mock("@tanstack/react-router", () => ({
 }));
 
 vi.mock("react-i18next", () => ({
-	useTranslation: (): { t: (key: string) => string } => ({
+	useTranslation: (): { i18n: { language: string }; t: (key: string) => string } => ({
+		i18n: { language: "en" },
 		t: (key: string): string => {
 			const map: Record<string, string> = {
 				"nav.home": "Home",
 				"nav.dashboard": "Dashboard",
 				"rpOAuthSetup.applicationSectionTitle": "Application details",
 				"rpOAuthSetup.applicationUrlLabel": "Application URL",
+				"rpOAuthSetup.departmentLabel": "Department",
 				"rpOAuthSetup.discoveryEndpointLabel": "Discovery endpoint",
 				"rpOAuthSetup.loadingBody": "Loading OAuth setup details for this RP application.",
 				"rpOAuthSetup.loadingTitle": "Loading OAuth setup",
@@ -190,5 +192,66 @@ describe("CurrentUserRPOAuthSetupPage", () => {
 		await waitFor(() => {
 			expect(replaceMock).toHaveBeenCalledWith("/error?kind=unexpected");
 		});
+	});
+
+	it("redirects 409 rp_application_department_required to department-setup", async () => {
+		mockedGetCurrentUserRPOAuthSetup.mockRejectedValue(
+			new HttpRequestError({
+				status: 409,
+				code: "rp_application_department_required",
+				message: "RP application department assignment is required",
+			})
+		);
+
+		render(<CurrentUserRPOAuthSetupPage />);
+
+		await waitFor(() => {
+			expect(replaceMock).toHaveBeenCalledWith(
+				"/rp-applications/mine/application-uuid-1/department-setup"
+			);
+		});
+	});
+
+	it("renders department row when department name is present", async () => {
+		mockedGetCurrentUserRPOAuthSetup.mockResolvedValue({
+			applicationUrl: null,
+			discoveryEndpoint: null,
+			departmentName: "Treasury Board of Canada Secretariat",
+			departmentNameFr: null,
+			logoutRedirectUris: [],
+			logoutUri: null,
+			pkceEnabled: null,
+			rpApplicationName: "Benefits Portal",
+			redirectUris: [],
+			status: "active",
+		});
+
+		render(<CurrentUserRPOAuthSetupPage />);
+
+		await screen.findByRole("heading", { name: "Benefits Portal" });
+		expect(screen.getByText("Department:")).toBeTruthy();
+		expect(
+			screen.getByText("Treasury Board of Canada Secretariat")
+		).toBeTruthy();
+	});
+
+	it("does not render department row when department name is null", async () => {
+		mockedGetCurrentUserRPOAuthSetup.mockResolvedValue({
+			applicationUrl: null,
+			discoveryEndpoint: null,
+			departmentName: null,
+			departmentNameFr: null,
+			logoutRedirectUris: [],
+			logoutUri: null,
+			pkceEnabled: null,
+			rpApplicationName: "Benefits Portal",
+			redirectUris: [],
+			status: "active",
+		});
+
+		render(<CurrentUserRPOAuthSetupPage />);
+
+		await screen.findByRole("heading", { name: "Benefits Portal" });
+		expect(screen.queryByText("Department:")).toBeNull();
 	});
 });

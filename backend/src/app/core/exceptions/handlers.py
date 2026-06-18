@@ -10,6 +10,7 @@ from starlette.exceptions import HTTPException as StarletteHTTPException
 from ..logger import logging
 from ..schemas import ErrorDetail, ErrorResponse
 from .cache_exceptions import CacheIdentificationInferenceError, InvalidRequestError, MissingClientError
+from .http_exceptions import RPApplicationDepartmentRequiredException
 from .ibm_sv_exceptions import IBMVerifyException
 
 logger = logging.getLogger(__name__)
@@ -122,6 +123,17 @@ def register_exception_handlers(application: FastAPI) -> None:
             code="validation_error",
             message=_validation_message(exc),
             details=exc.errors(),
+        )
+
+    @application.exception_handler(RPApplicationDepartmentRequiredException)
+    async def rp_application_department_required_handler(
+        request: Request, exc: RPApplicationDepartmentRequiredException
+    ) -> JSONResponse:
+        return _serialize_error_response(
+            request=request,
+            status_code=409,
+            code="rp_application_department_required",
+            message=exc.message,
         )
 
     @application.exception_handler(IBMVerifyException)
