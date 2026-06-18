@@ -1,47 +1,23 @@
-from datetime import timedelta
 from typing import Any
 
 from jwt import PyJWTError
 from sqlalchemy.ext.asyncio import AsyncSession
 from starlette.requests import Request
 
-from ..core.config import settings
 from ..core.exceptions.http_exceptions import UnauthorizedException
 from ..core.oidc import get_oidc_client
 from ..core.security import (
-    ACCESS_TOKEN_EXPIRE_MINUTES,
     TokenType,
-    authenticate_user,
     blacklist_tokens,
     create_access_token,
-    create_refresh_token,
     verify_token,
-    )
+)
 from .oidc_logout_service import OidcLogoutService
 
 
 class AuthService:
     def __init__(self, logout_service: OidcLogoutService | None = None) -> None:
         self.logout_service = logout_service or OidcLogoutService()
-
-    async def login(self, form_data: Any, db: AsyncSession) -> dict[str, Any]:
-        if not settings.LOCAL_PASSWORD_LOGIN_ENABLED:
-            raise UnauthorizedException("Local password login is disabled.")
-
-        user = await authenticate_user(identifier=form_data.username, password=form_data.password, db=db)
-        if not user:
-            raise UnauthorizedException("Wrong credentials.")
-        access_token_expires = timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
-        subject = str(user["uuid"])
-        access_token = await create_access_token(data={"sub": subject}, expires_delta=access_token_expires)
-        refresh_token = await create_refresh_token(data={"sub": subject})
-        max_age = settings.REFRESH_TOKEN_EXPIRE_DAYS * 24 * 60 * 60
-        return {
-            "access_token": access_token,
-            "token_type": "bearer",
-            "refresh_token": refresh_token,
-            "max_age": max_age,
-        }
 
     async def refresh_access_token(self, request: Request, db: AsyncSession) -> dict[str, str]:
         refresh_token = request.cookies.get("refresh_token")

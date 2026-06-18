@@ -166,7 +166,7 @@ Let's test the main features of your API.
 ### Authentication Flow
 
 Users authenticate through the OIDC browser flow at `/api/v1/auth/oidc/login`.
-There is no local username/password login path in this OIDC-only setup.
+There is no local credential login path in this OIDC-only setup.
 
 #### 1a. Seed default Casbin policies
 
@@ -188,26 +188,13 @@ open http://localhost:8000/api/v1/auth/oidc/login
 
 After a successful callback, the backend stores the authenticated user in the server-side session cookie.
 
-#### 2. Create a New User
+#### 2. Test a Protected Endpoint
+
+After the callback creates the browser session, call a protected endpoint with the session cookie:
 
 ```bash
-curl -X POST "http://localhost:8000/api/v1/users" \
-  -H "Content-Type: application/json" \
-  -d '{
-    "name": "John Doe",
-    "username": "johndoe", 
-    "email": "john@example.com",
-    "password": "securepassword123"
-  }'
-```
-
-#### 3. Test Protected Endpoint
-
-Use the access token from step 1:
-
-```bash
-curl -X GET "http://localhost:8000/api/v1/users/me" \
-  -H "Authorization: Bearer YOUR_ACCESS_TOKEN_HERE"
+curl -X GET "http://localhost:8000/api/v1/user/me/" \
+  -H "Cookie: YOUR_SESSION_COOKIE_HERE"
 ```
 
 ### CRUD Operations

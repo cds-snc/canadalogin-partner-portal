@@ -107,10 +107,10 @@ Congratulations! You now have a fully functional FastAPI application with:
 - REST API with automatic documentation
 - PostgreSQL database with migrations
 - Redis caching and job queues
-- JWT authentication system
+- OIDC authentication with server-side sessions
 - Background task processing
 - Rate limiting
-- Admin user created
+- Admin access controlled by Casbin policies
 
 ## Test Your API
 
@@ -126,23 +126,17 @@ curl http://localhost:8000/api/v1/health
 curl http://localhost:8000/api/v1/ready
 ```
 
-### 3. Create a User
+### 3. Start the OIDC Login Flow
 ```bash
-curl -X POST "http://localhost:8000/api/v1/users" \
-  -H "Content-Type: application/json" \
-  -d '{
-    "name": "John Doe",
-    "username": "johndoe",
-    "email": "john@example.com",
-    "password": "securepassword"
-  }'
+open http://localhost:8000/api/v1/auth/oidc/login
 ```
 
-### 4. Login
+### 4. Check the Authenticated Session
+After completing the callback, call a protected endpoint such as:
+
 ```bash
-curl -X POST "http://localhost:8000/api/v1/login" \
-  -H "Content-Type: application/x-www-form-urlencoded" \
-  -d "username=johndoe&password=securepassword"
+curl http://localhost:8000/api/v1/user/me/ \
+  -H "Cookie: <your-session-cookie>"
 ```
 
 ## Next Steps
