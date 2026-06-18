@@ -77,6 +77,17 @@
 		"unexpectedBody": "Une erreur inattendue est survenue lors du chargement de cette page. Réessayez à partir du tableau de bord.",
 		"unexpectedTitle": "Erreur inattendue"
 	},
+	"rpDepartmentSetup": {
+		"chooseDepartment": "Choisir un ministère",
+		"errorLoading": "Échec du chargement des ministères",
+		"errorSaving": "Échec de l'attribution du ministère",
+		"intro": "Cette application RP n'a pas de ministère attribué. Sélectionnez un ministère pour continuer.",
+		"loading": "Chargement des ministères",
+		"noDepartments": "Aucun ministère disponible",
+		"save": "Attribuer le ministère",
+		"departmentLabel": "Ministère",
+		"title": "Attribuer le ministère de l'application"
+	},
 	"rpOAuthSetup": {
 		"applicationNameLabel": "Nom de l'application",
 		"applicationSectionTitle": "Détails de l'application",
@@ -84,6 +95,7 @@
 		"applicationUuidLabel": "UUID de l'application RP",
 		"clientIdLabel": "ID client",
 		"clientSecretLabel": "Secret client",
+		"departmentLabel": "Ministère",
 		"discoveryEndpointLabel": "Point de terminaison de découverte",
 		"hideSecretAction": "Masquer le secret",
 		"ibmApplicationIdLabel": "ID d'application IBM",
@@ -244,8 +256,7 @@
 		"loading": "Chargement des ministères",
 		"noDepartments": "Aucun ministère disponible",
 		"save": "Enregistrer",
-		"selectDepartment": "Sélectionnez votre ministère",
-		"setupInstruction": "Veuillez sélectionner votre ministère pour continuer",
+		"departmentLabel": "Ministère",
 		"setupIntro": "Pour compléter votre profil, veuillez sélectionner le ministère pour lequel vous travaillez.",
 		"setupTitle": "Configuration du profil",
 		"errorSaving": "Erreur lors de l'enregistrement du ministère"

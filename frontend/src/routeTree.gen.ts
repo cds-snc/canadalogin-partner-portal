@@ -30,6 +30,7 @@ import { Route as ProfileSetupRouteImport } from './routes/profile/setup'
 import { Route as RpApplicationsMineRpApplicationUuidRouteImport } from './routes/rp-applications/mine/$rpApplicationUuid'
 import { Route as RpApplicationsMineRpApplicationUuidIndexRouteImport } from './routes/rp-applications/mine/$rpApplicationUuid/index'
 import { Route as RpApplicationsMineRpApplicationUuidMauReportRouteImport } from './routes/rp-applications/mine/$rpApplicationUuid/mau-report'
+import { Route as RpApplicationsMineRpApplicationUuidDepartmentSetupRouteImport } from './routes/rp-applications/mine/$rpApplicationUuid/department-setup'
 import { Route as RpApplicationsMineRpApplicationUuidClientSecretsRouteImport } from './routes/rp-applications/mine/$rpApplicationUuid/client-secrets'
 
 const UsersRoute = UsersRouteImport.update({
@@ -141,6 +142,12 @@ const RpApplicationsMineRpApplicationUuidMauReportRoute =
     path: '/mau-report',
     getParentRoute: () => RpApplicationsMineRpApplicationUuidRoute,
   } as any)
+const RpApplicationsMineRpApplicationUuidDepartmentSetupRoute =
+  RpApplicationsMineRpApplicationUuidDepartmentSetupRouteImport.update({
+    id: '/department-setup',
+    path: '/department-setup',
+    getParentRoute: () => RpApplicationsMineRpApplicationUuidRoute,
+  } as any)
 const RpApplicationsMineRpApplicationUuidClientSecretsRoute =
   RpApplicationsMineRpApplicationUuidClientSecretsRouteImport.update({
     id: '/client-secrets',
@@ -169,6 +176,7 @@ export interface FileRoutesByFullPath {
   '/profile/setup': typeof ProfileSetupRoute
   '/rp-applications/mine/$rpApplicationUuid': typeof RpApplicationsMineRpApplicationUuidRouteWithChildren
   '/rp-applications/mine/$rpApplicationUuid/client-secrets': typeof RpApplicationsMineRpApplicationUuidClientSecretsRoute
+  '/rp-applications/mine/$rpApplicationUuid/department-setup': typeof RpApplicationsMineRpApplicationUuidDepartmentSetupRoute
   '/rp-applications/mine/$rpApplicationUuid/mau-report': typeof RpApplicationsMineRpApplicationUuidMauReportRoute
   '/rp-applications/mine/$rpApplicationUuid/': typeof RpApplicationsMineRpApplicationUuidIndexRoute
 }
@@ -192,6 +200,7 @@ export interface FileRoutesByTo {
   '/users': typeof UsersRoute
   '/profile/setup': typeof ProfileSetupRoute
   '/rp-applications/mine/$rpApplicationUuid/client-secrets': typeof RpApplicationsMineRpApplicationUuidClientSecretsRoute
+  '/rp-applications/mine/$rpApplicationUuid/department-setup': typeof RpApplicationsMineRpApplicationUuidDepartmentSetupRoute
   '/rp-applications/mine/$rpApplicationUuid/mau-report': typeof RpApplicationsMineRpApplicationUuidMauReportRoute
   '/rp-applications/mine/$rpApplicationUuid': typeof RpApplicationsMineRpApplicationUuidIndexRoute
 }
@@ -217,6 +226,7 @@ export interface FileRoutesById {
   '/profile/setup': typeof ProfileSetupRoute
   '/rp-applications/mine/$rpApplicationUuid': typeof RpApplicationsMineRpApplicationUuidRouteWithChildren
   '/rp-applications/mine/$rpApplicationUuid/client-secrets': typeof RpApplicationsMineRpApplicationUuidClientSecretsRoute
+  '/rp-applications/mine/$rpApplicationUuid/department-setup': typeof RpApplicationsMineRpApplicationUuidDepartmentSetupRoute
   '/rp-applications/mine/$rpApplicationUuid/mau-report': typeof RpApplicationsMineRpApplicationUuidMauReportRoute
   '/rp-applications/mine/$rpApplicationUuid/': typeof RpApplicationsMineRpApplicationUuidIndexRoute
 }
@@ -243,6 +253,7 @@ export interface FileRouteTypes {
     | '/profile/setup'
     | '/rp-applications/mine/$rpApplicationUuid'
     | '/rp-applications/mine/$rpApplicationUuid/client-secrets'
+    | '/rp-applications/mine/$rpApplicationUuid/department-setup'
     | '/rp-applications/mine/$rpApplicationUuid/mau-report'
     | '/rp-applications/mine/$rpApplicationUuid/'
   fileRoutesByTo: FileRoutesByTo
@@ -266,6 +277,7 @@ export interface FileRouteTypes {
     | '/users'
     | '/profile/setup'
     | '/rp-applications/mine/$rpApplicationUuid/client-secrets'
+    | '/rp-applications/mine/$rpApplicationUuid/department-setup'
     | '/rp-applications/mine/$rpApplicationUuid/mau-report'
     | '/rp-applications/mine/$rpApplicationUuid'
   id:
@@ -290,6 +302,7 @@ export interface FileRouteTypes {
     | '/profile/setup'
     | '/rp-applications/mine/$rpApplicationUuid'
     | '/rp-applications/mine/$rpApplicationUuid/client-secrets'
+    | '/rp-applications/mine/$rpApplicationUuid/department-setup'
     | '/rp-applications/mine/$rpApplicationUuid/mau-report'
     | '/rp-applications/mine/$rpApplicationUuid/'
   fileRoutesById: FileRoutesById
@@ -465,6 +478,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof RpApplicationsMineRpApplicationUuidMauReportRouteImport
       parentRoute: typeof RpApplicationsMineRpApplicationUuidRoute
     }
+    '/rp-applications/mine/$rpApplicationUuid/department-setup': {
+      id: '/rp-applications/mine/$rpApplicationUuid/department-setup'
+      path: '/department-setup'
+      fullPath: '/rp-applications/mine/$rpApplicationUuid/department-setup'
+      preLoaderRoute: typeof RpApplicationsMineRpApplicationUuidDepartmentSetupRouteImport
+      parentRoute: typeof RpApplicationsMineRpApplicationUuidRoute
+    }
     '/rp-applications/mine/$rpApplicationUuid/client-secrets': {
       id: '/rp-applications/mine/$rpApplicationUuid/client-secrets'
       path: '/client-secrets'
@@ -477,6 +497,7 @@ declare module '@tanstack/react-router' {
 
 interface RpApplicationsMineRpApplicationUuidRouteChildren {
   RpApplicationsMineRpApplicationUuidClientSecretsRoute: typeof RpApplicationsMineRpApplicationUuidClientSecretsRoute
+  RpApplicationsMineRpApplicationUuidDepartmentSetupRoute: typeof RpApplicationsMineRpApplicationUuidDepartmentSetupRoute
   RpApplicationsMineRpApplicationUuidMauReportRoute: typeof RpApplicationsMineRpApplicationUuidMauReportRoute
   RpApplicationsMineRpApplicationUuidIndexRoute: typeof RpApplicationsMineRpApplicationUuidIndexRoute
 }
@@ -485,6 +506,8 @@ const RpApplicationsMineRpApplicationUuidRouteChildren: RpApplicationsMineRpAppl
   {
     RpApplicationsMineRpApplicationUuidClientSecretsRoute:
       RpApplicationsMineRpApplicationUuidClientSecretsRoute,
+    RpApplicationsMineRpApplicationUuidDepartmentSetupRoute:
+      RpApplicationsMineRpApplicationUuidDepartmentSetupRoute,
     RpApplicationsMineRpApplicationUuidMauReportRoute:
       RpApplicationsMineRpApplicationUuidMauReportRoute,
     RpApplicationsMineRpApplicationUuidIndexRoute:

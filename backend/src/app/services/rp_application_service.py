@@ -3,17 +3,20 @@ import re
 import uuid as uuid_pkg
 from collections.abc import Mapping
 from datetime import UTC, datetime
-from typing import Any
+from typing import Any, Optional
 
 from fastcrud import compute_offset, paginated_response
 from ibm_verify_community_sdk.applications.models import ListApplicationsResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from ..core.config import settings
-from ..core.exceptions.http_exceptions import ForbiddenException, NotFoundException
+from ..core.exceptions.http_exceptions import ForbiddenException, NotFoundException, RPApplicationDepartmentRequiredException
+from ..repositories.crud_departments import crud_departments
 from ..repositories.crud_rp_applications import crud_rp_applications
 from ..repositories.ibm_sv_admin import IBMVerifyAdminClient
 from ..schemas.rp_application import (
+    CurrentUserRPApplicationDepartmentAssignRequest,
+    CurrentUserRPApplicationSummaryRead,
     RPApplicationClientCredentialsRead,
     RPApplicationClientRotatedSecretCreateRequest,
     RPApplicationClientRotatedSecretRead,
@@ -485,6 +488,135 @@ class RPApplicationService:
 
         raise NotFoundException("RP application not found")
 
+    async def get_current_user_rp_application_department_preflight(
+        self,
+        db: AsyncSession,
+        rp_application_uuid: uuid_pkg.UUID | str,
+        current_user: dict[str, Any],
+    ) -> dict[str, Any]:
+        """Return a lightweight department preflight record from local DB only.
+        Does NOT call IBM Verify SDK. Raises 403 for non-owners, 404 for unknown."""
+        current_user_email = self._extract_current_user_email(current_user)
+        if current_user_email is None:
+            raise ForbiddenException("Only RP application owners can access this resource")
+
+        rp_application = await crud_rp_applications.get(
+            db=db,
+            uuid=rp_application_uuid,
+            is_deleted=False,
+            schema_to_select=RPApplicationRead,
+        )
+        if rp_application is None:
+            raise NotFoundException("RP application not found")
+
+        rp_application_data = self._as_dict(rp_application)
+        if not self._is_owner_email_match(
+            rp_application_data.get("application_owner"),
+            current_user_email,
+        ):
+            raise ForbiddenException("Only RP application owners can access this resource")
+
+        response = CurrentUserRPApplicationSummaryRead(
+            id=rp_application_data["id"],
+            uuid=rp_application_data["uuid"],
+            dnr_app_name=rp_application_data["dnr_app_name"],
+            department_id=rp_application_data.get("department_id"),
+        )
+        return response.model_dump(by_alias=True)
+
+    async def assign_current_user_rp_application_department(
+        self,
+        db: AsyncSession,
+        rp_application_uuid: uuid_pkg.UUID | str,
+        current_user: dict[str, Any],
+        payload: CurrentUserRPApplicationDepartmentAssignRequest,
+    ) -> dict[str, Any]:
+        """Assign a department to an RP application for the first time (one-time).
+        Raises 409 conflict if department already assigned, 404 for unknown department."""
+        current_user_email = self._extract_current_user_email(current_user)
+        if current_user_email is None:
+            raise ForbiddenException("Only RP application owners can access this resource")
+
+        rp_application = await crud_rp_applications.get(
+            db=db,
+            uuid=rp_application_uuid,
+            is_deleted=False,
+            schema_to_select=RPApplicationRead,
+        )
+        if rp_application is None:
+            raise NotFoundException("RP application not found")
+
+        rp_application_data = self._as_dict(rp_application)
+        if not self._is_owner_email_match(
+            rp_application_data.get("application_owner"),
+            current_user_email,
+        ):
+            raise ForbiddenException("Only RP application owners can access this resource")
+
+        if rp_application_data.get("department_id") is not None:
+            from fastcrud.exceptions.http_exceptions import CustomException
+            raise CustomException(status_code=409, detail="RP application already has a department assigned")
+
+        department = await crud_departments.get(
+            db=db,
+            uuid=payload.department_uuid,
+            is_deleted=False,
+        )
+        if department is None:
+            raise NotFoundException("Department not found")
+
+        department_data = self._as_dict(department)
+        department_id = department_data.get("id")
+
+        now = datetime.now(UTC)
+        await crud_rp_applications.update(
+            db=db,
+            object={
+                "department_id": department_id,
+                "updated_at": now,
+            },
+            uuid=rp_application_uuid,
+            is_deleted=False,
+        )
+
+        updated = await crud_rp_applications.get(
+            db=db,
+            uuid=rp_application_uuid,
+            is_deleted=False,
+            schema_to_select=RPApplicationRead,
+        )
+        if updated is None:
+            raise NotFoundException("RP application not found after update")
+
+        updated_data = self._as_dict(updated)
+
+        await self._create_audit_log_entry(
+            db=db,
+            current_user=current_user,
+            rp_application_data=updated_data,
+            operation="UPDATE",
+            description=(
+                f"Assigned department id={department_id} to RP application "
+                f"'{updated_data.get('dnr_app_name', '')}'"
+            ),
+        )
+
+        response = CurrentUserRPApplicationSummaryRead(
+            id=updated_data["id"],
+            uuid=updated_data["uuid"],
+            dnr_app_name=updated_data["dnr_app_name"],
+            department_id=updated_data.get("department_id"),
+        )
+        return response.model_dump(by_alias=True)
+
+    async def _require_rp_application_department(
+        self,
+        rp_application_data: dict[str, Any],
+    ) -> None:
+        """Raise RPApplicationDepartmentRequiredException if department_id is null."""
+        if rp_application_data.get("department_id") is None:
+            raise RPApplicationDepartmentRequiredException()
+
     async def get_current_user_rp_application_oauth_setup(
         self,
         db: AsyncSession,
@@ -498,6 +630,8 @@ class RPApplicationService:
             current_user=current_user,
             ibm_admin_client=ibm_admin_client,
         )
+
+        await self._require_rp_application_department(rp_application_data)
 
         providers = self._as_dict(detail_data.get("providers"))
         oidc_provider = self._as_dict(providers.get("oidc"))
@@ -541,11 +675,23 @@ class RPApplicationService:
             oidc_provider.get("requirePkceVerification")
         )
 
+        department_name: Optional[str] = None
+        department_name_fr: Optional[str] = None
+        department_id = rp_application_data.get("department_id")
+        if department_id is not None:
+            department = await crud_departments.get(db=db, id=department_id)
+            if department:
+                dept_data = self._as_dict(department)
+                department_name = dept_data.get("name") or None
+                department_name_fr = dept_data.get("name_fr") or None
+
         response = RPApplicationCurrentUserOAuthSetupRead(
             rp_application_name=rp_application_data["dnr_app_name"],
             status=status,
             application_url=application_url,
             discovery_endpoint=settings.OIDC_SERVER_METADATA_URL,
+            department_name=department_name,
+            department_name_fr=department_name_fr,
             pkce_enabled=pkce_enabled,
             redirect_uris=redirect_uris,
             logout_uri=logout_uri,

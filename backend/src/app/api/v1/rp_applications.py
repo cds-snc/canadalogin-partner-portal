@@ -22,6 +22,8 @@ from ...repositories.dependencies import get_ibm_sv_admin_client
 from ...repositories.ibm_sv_admin import IBMVerifyAdminClient
 from ...schemas.mau import MAUReportItem, MAUReportResponse
 from ...schemas.rp_application import (
+    CurrentUserRPApplicationDepartmentAssignRequest,
+    CurrentUserRPApplicationSummaryRead,
     RPApplicationClientCredentialsRead,
     RPApplicationClientRotatedSecretCreateRequest,
     RPApplicationClientRotatedSecretRead,
@@ -91,9 +93,53 @@ async def read_current_user_rp_applications(
 
 
 @router.get(
+    "/rp-applications/mine/{rp_application_uuid}/department",
+    response_model=CurrentUserRPApplicationSummaryRead,
+    responses=error_responses(403, 404, 500),
+)
+@casbin_guard.require_permission("rp_applications", "read")
+async def read_current_user_rp_application_department(
+    request: Request,
+    rp_application_uuid: uuid_pkg.UUID,
+    db: Annotated[AsyncSession, Depends(async_get_db)],
+    current_user: Annotated[dict, Depends(get_current_user)],
+    service: Annotated[RPApplicationService, Depends(get_rp_application_service)],
+) -> CurrentUserRPApplicationSummaryRead:
+    preflight = await service.get_current_user_rp_application_department_preflight(
+        db=db,
+        rp_application_uuid=rp_application_uuid,
+        current_user=current_user,
+    )
+    return CurrentUserRPApplicationSummaryRead.model_validate(preflight)
+
+
+@router.patch(
+    "/rp-applications/mine/{rp_application_uuid}/department",
+    response_model=CurrentUserRPApplicationSummaryRead,
+    responses=error_responses(403, 404, 409, 500),
+)
+@casbin_guard.require_permission("rp_applications", "write")
+async def assign_current_user_rp_application_department(
+    request: Request,
+    rp_application_uuid: uuid_pkg.UUID,
+    payload: CurrentUserRPApplicationDepartmentAssignRequest,
+    db: Annotated[AsyncSession, Depends(async_get_db)],
+    current_user: Annotated[dict, Depends(get_current_user)],
+    service: Annotated[RPApplicationService, Depends(get_rp_application_service)],
+) -> CurrentUserRPApplicationSummaryRead:
+    result = await service.assign_current_user_rp_application_department(
+        db=db,
+        rp_application_uuid=rp_application_uuid,
+        current_user=current_user,
+        payload=payload,
+    )
+    return CurrentUserRPApplicationSummaryRead.model_validate(result)
+
+
+@router.get(
     "/rp-applications/mine/{rp_application_uuid}/oauth-setup",
     response_model=RPApplicationCurrentUserOAuthSetupRead,
-    responses=error_responses(403, 404, 500),
+    responses=error_responses(403, 404, 409, 500),
 )
 @casbin_guard.require_permission("rp_applications", "read")
 async def read_current_user_rp_application_oauth_setup(
@@ -255,6 +301,7 @@ async def delete_current_user_rp_application_rotated_secret(
 @router.get(
     "/rp-applications/mine/{rp_application_uuid}/mau-report",
     response_model=MAUReportResponse,
+    responses=error_responses(400, 403, 404, 409, 500),
 )
 @casbin_guard.require_permission("mau_report", "read")
 async def read_current_user_rp_application_mau_report(
@@ -280,6 +327,9 @@ async def read_current_user_rp_application_mau_report(
         rp_application_uuid=rp_application_uuid,
         ibm_user_service=ibm_user_service,
     )
+
+    await service._require_rp_application_department(application)
+
     application_name = application.get("dnr_app_name")
     if not isinstance(application_name, str) or application_name.strip() == "":
         # Keep a clear user-facing failure when data is incomplete.

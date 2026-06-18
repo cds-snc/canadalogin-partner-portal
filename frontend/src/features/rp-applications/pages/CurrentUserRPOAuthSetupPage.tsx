@@ -51,7 +51,7 @@ export const CurrentUserRPOAuthSetupPage = (): FunctionComponent => {
 	const { rpApplicationUuid } = useParams({
 		from: "/rp-applications/mine/$rpApplicationUuid",
 	});
-	const { t } = useTranslation();
+	const { i18n, t } = useTranslation();
 
 	const [oauthSetup, setOauthSetup] =
 		useState<CurrentUserRPOAuthSetupRead | null>(null);
@@ -79,6 +79,16 @@ export const CurrentUserRPOAuthSetupPage = (): FunctionComponent => {
 				}
 				if (error instanceof HttpRequestError && error.status === 404) {
 					globalThis.location.replace("/error?kind=not_found");
+					return;
+				}
+				if (
+					error instanceof HttpRequestError &&
+					error.status === 409 &&
+					error.code === "rp_application_department_required"
+				) {
+					globalThis.location.replace(
+						`/rp-applications/mine/${rpApplicationUuid}/department-setup`
+					);
 					return;
 				}
 
@@ -125,6 +135,11 @@ export const CurrentUserRPOAuthSetupPage = (): FunctionComponent => {
 	const applicationUrl = oauthSetup.applicationUrl?.trim();
 	const discoveryEndpoint = oauthSetup.discoveryEndpoint?.trim() ?? "";
 	const logoutUri = oauthSetup.logoutUri?.trim();
+	const isFrench = i18n.language?.startsWith("fr");
+	const departmentDisplayName =
+		(isFrench
+			? (oauthSetup.departmentNameFr ?? oauthSetup.departmentName)
+			: (oauthSetup.departmentName ?? oauthSetup.departmentNameFr)) ?? null;
 	const pkceLabel =
 		oauthSetup.pkceEnabled === true
 			? t("rpOAuthSetup.pkceEnabled")
@@ -165,6 +180,12 @@ export const CurrentUserRPOAuthSetupPage = (): FunctionComponent => {
 						label={t("rpOAuthSetup.statusLabel")}
 						value={toStatusLabel(oauthSetup.status)}
 					/>
+					{departmentDisplayName ? (
+						<LabelValueRow
+							label={t("rpOAuthSetup.departmentLabel")}
+							value={departmentDisplayName}
+						/>
+					) : null}
 				</div>
 			</Container>
 

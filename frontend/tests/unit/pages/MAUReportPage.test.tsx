@@ -1,8 +1,9 @@
 import type { PropsWithChildren, ReactElement } from "react";
-import { render, screen } from "@testing-library/react";
+import { render, screen, waitFor } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { useParams } from "@tanstack/react-router";
 import { MAUReportPage } from "@/features/mau-reports/pages/MAUReportPage";
+import { HttpRequestError } from "@/fetch/errors";
 
 const { mockUseQuery } = vi.hoisted(() => ({
 	mockUseQuery: vi.fn(),
@@ -400,5 +401,41 @@ describe("MAUReportPage", () => {
 		expect(backLink.getAttribute("href")).toBe(
 			"/rp-applications/mine/application-uuid-1"
 		);
+	});
+
+	it("redirects to department-setup when 409 rp_application_department_required received", async () => {
+		const replaceMock = vi.fn();
+		const originalLocation = globalThis.location;
+		Object.defineProperty(globalThis, "location", {
+			configurable: true,
+			value: {
+				pathname: "/rp-applications/mine/application-uuid-1/mau-report",
+				replace: replaceMock,
+			} as Pick<Location, "pathname" | "replace">,
+		});
+
+		mockUseQuery.mockReturnValue({
+			data: null,
+			error: new HttpRequestError({
+				status: 409,
+				code: "rp_application_department_required",
+				message: "RP application department assignment is required",
+			}),
+			isLoading: false,
+			isRefetching: false,
+		});
+
+		render(<MAUReportPage />);
+
+		await waitFor(() => {
+			expect(replaceMock).toHaveBeenCalledWith(
+				"/rp-applications/mine/application-uuid-1/department-setup"
+			);
+		});
+
+		Object.defineProperty(globalThis, "location", {
+			configurable: true,
+			value: originalLocation,
+		});
 	});
 });
