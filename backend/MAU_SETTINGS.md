@@ -13,7 +13,7 @@ D&R AWS Account (data owner)           Dev/Prod AWS Account (app runner)
 ┌─────────────────────┐               ┌──────────────────────────────────┐
 │ S3 Bucket           │               │ Partner Portal (ECS / local)     │
 │  └─ {folder}/       │  STS AssumeRole│   ┌─────────────────────────┐   │
-│     └─ date=YYYY-   │◄──────────────│───│ boto3 S3Repository      │   │
+│     └─ date=YYYY-   │──────────────>│───│ boto3 S3Repository      │   │
 │        MM-DD/       │               │   │   ↓ csv.DictReader      │   │
 │         app_login_  │               │   │   ↓ MAUCsvRow model     │   │
 │         counts.csv  │               │   │   ↓ Redis cache          │   │
