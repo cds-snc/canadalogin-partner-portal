@@ -1,0 +1,19 @@
+services:
+  frontend:
+    container_name: canadalogin-partner-portal-frontend
+    image: canadalogin-partner-portal-frontend
+    env_file:
+      - ./.env
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        VITE_API_BASE_URL: ${VITE_API_BASE_URL}
+        VITE_APP_ENVIRONMENT: ${VITE_APP_ENVIRONMENT}
+        VITE_APP_TITLE: ${VITE_APP_TITLE}
+        VITE_AUTH_POST_LOGIN_PATH: ${VITE_AUTH_POST_LOGIN_PATH}
+        VITE_SESSION_WARNING_AFTER_MINUTES: ${VITE_SESSION_WARNING_AFTER_MINUTES}
+        VITE_SESSION_COUNTDOWN_MINUTES: ${VITE_SESSION_COUNTDOWN_MINUTES}
+    ports:
+      - "3000:80"
+    restart: unless-stopped

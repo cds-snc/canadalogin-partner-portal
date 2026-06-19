@@ -55,6 +55,7 @@ class OIDCSettings(BaseSettings):
     OIDC_CLIENT_ID: str | None = None
     OIDC_CLIENT_SECRET: SecretStr | None = None
     OIDC_SCOPES: str = "openid profile email"
+    OIDC_REDIRECT_URI: str | None = None
     OIDC_REDIRECT_PATH: str = "/api/v1/auth/oidc/callback"
     OIDC_POST_LOGIN_REDIRECT: str = "/auth-complete"
     OIDC_ACCESS_DENIED_REDIRECT: str = "/access-denied"
@@ -190,6 +191,7 @@ class DefaultRateLimitSettings(BaseSettings):
 class WorkerCronSettings(BaseSettings):
     TIMEZONE: str = "America/Toronto"
     LOAD_MAU_ENABLED: bool = False
+    START_ARQ_ON_STARTUP: bool = True
 
 
 class IBMVerifySettings(BaseSettings):

@@ -46,6 +46,12 @@ def get_oidc_client():
 
 
 def build_oidc_redirect_uri(request) -> str:
+    configured_redirect_uri = settings.OIDC_REDIRECT_URI
+    if configured_redirect_uri:
+        normalized_redirect_uri = configured_redirect_uri.strip().rstrip("/")
+        if normalized_redirect_uri:
+            return normalized_redirect_uri
+
     return str(request.url_for("oidc_callback"))
 
 

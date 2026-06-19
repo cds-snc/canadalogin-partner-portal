@@ -93,11 +93,13 @@ OIDC_SERVER_METADATA_URL="https://your-idp/.well-known/openid-configuration"
 OIDC_CLIENT_ID="your-client-id"
 OIDC_CLIENT_SECRET="your-client-secret"
 OIDC_SCOPES="openid profile email"
+OIDC_REDIRECT_URI="http://127.0.0.1:8000/api/v1/auth/oidc/callback"
 OIDC_POST_LOGIN_REDIRECT="http://localhost:3000/auth-complete"
 
 ```
 
 - Set `OIDC_ENABLED=true` to enable `/api/v1/auth/oidc/login` and `/api/v1/auth/oidc/callback`.
+- If your IdP strictly validates callback host and port, set `OIDC_REDIRECT_URI` to the exact pre-registered callback URL to avoid `redirect_uri` mismatch errors.
 - For split-origin local development, set `OIDC_POST_LOGIN_REDIRECT` to the frontend origin, for example `http://localhost:3000/auth-complete`, so the backend callback returns the browser to the SPA instead of the backend host.
 - `REDIS_SESSION_DB=1` keeps session records separate from the cache, queue, and rate-limit Redis keys while still allowing a shared local Redis server.
 - `REDIS_SESSION_PREFIX` lets you distinguish session keys during local inspection and cleanup.

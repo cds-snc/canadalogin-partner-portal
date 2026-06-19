@@ -6,7 +6,7 @@ ROOT_DIR := $(CURDIR)
 ROOT_VENV := $(ROOT_DIR)/.venv
 UV_PROJECT_ENVIRONMENT := $(ROOT_VENV)
 
-.PHONY: help install test lint format typecheck dev
+.PHONY: help install test lint format typecheck dev backend-image frontend-image bk-image ft-image
 .PHONY: frontend-install frontend-build frontend-dev frontend-test frontend-lint frontend-format frontend-preview
 
 # Common helpers
@@ -27,6 +27,10 @@ help:
 	@echo "  format            - run ruff to auto-fix lint issues in backend source"
 	@echo "  typecheck         - run mypy over backend sources"
 	@echo "  dev               - run backend API with uvicorn (reload)"
+	@echo "  backend-image     - build backend Docker image"
+	@echo "  frontend-image    - build frontend Docker image"
+	@echo "  bk-image          - shortcut for backend-image"
+	@echo "  ft-image          - shortcut for frontend-image"
 	@echo "  frontend-install  - pnpm install in frontend/"
 	@echo "  frontend-build    - pnpm run build in frontend/"
 	@echo "  frontend-dev      - pnpm run dev in frontend/"
@@ -62,6 +66,18 @@ typecheck:
 dev:
 	@echo "Starting backend API server"
 	cd $(BACKEND_DIR) && UV_PROJECT_ENVIRONMENT=$(UV_PROJECT_ENVIRONMENT) $(UV) run uvicorn src.app.main:app --reload --host 127.0.0.1 --port 8000
+
+backend-image:
+	@echo "Building backend Docker image"
+	cd $(BACKEND_DIR) && docker build --pull -t canadalogin-partner-portal-backend .
+
+frontend-image:
+	@echo "Building frontend Docker image"
+	cd $(FRONTEND_DIR) && $(PNPM) run build && docker build --pull -t canadalogin-partner-portal-frontend .
+
+bk-image: backend-image
+
+ft-image: frontend-image
 
 # Frontend targets
 FRONTEND_DIR := frontend

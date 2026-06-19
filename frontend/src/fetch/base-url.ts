@@ -37,10 +37,6 @@ const normalizeLocalConfiguredBaseUrl = (configuredBaseUrl: string): string => {
 			return configuredBaseUrl;
 		}
 
-		if (!isTestMode && location.origin) {
-			return location.origin;
-		}
-
 		configuredUrl.hostname = location.hostname.trim();
 
 		return configuredUrl.toString().replace(/\/$/, "");

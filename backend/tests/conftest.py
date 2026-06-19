@@ -1,6 +1,7 @@
 from collections.abc import Callable, Generator
+from contextlib import ExitStack
 from typing import Any
-from unittest.mock import AsyncMock, Mock
+from unittest.mock import AsyncMock, Mock, patch
 
 import pytest
 from faker import Faker
@@ -9,6 +10,7 @@ from sqlalchemy import create_engine
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy.orm.session import Session
+from starsessions import InMemoryStore
 
 from src.app.core.config import settings
 from src.app.main import app
@@ -30,8 +32,35 @@ def _create_local_session() -> tuple[Any, Any]:
 fake = Faker()
 
 
+@pytest.fixture(scope="session", autouse=True)
+def mock_redis_services() -> Generator[None, Any, None]:
+    """Mock Redis-dependent startup hooks so tests run without a live Redis service."""
+    with ExitStack() as stack:
+        stack.enter_context(patch("src.app.core.setup.create_redis_cache_pool", new=AsyncMock()))
+        stack.enter_context(patch("src.app.core.setup.close_redis_cache_pool", new=AsyncMock()))
+        stack.enter_context(patch("src.app.core.setup.create_redis_queue_pool", new=AsyncMock()))
+        stack.enter_context(patch("src.app.core.setup.close_redis_queue_pool", new=AsyncMock()))
+        stack.enter_context(patch("src.app.core.setup.create_redis_rate_limit_pool", new=AsyncMock()))
+        stack.enter_context(patch("src.app.core.setup.close_redis_rate_limit_pool", new=AsyncMock()))
+        stack.enter_context(patch("src.app.core.setup.create_redis_session_pool", new=AsyncMock()))
+        stack.enter_context(patch("src.app.core.setup.close_redis_session_pool", new=AsyncMock()))
+        stack.enter_context(patch("src.app.core.setup.get_redis_session_store", return_value=InMemoryStore()))
+        yield
+
+
+@pytest.fixture(autouse=True)
+def suppress_arq_startup_in_tests(request) -> Generator[None, Any, None]:
+    """Avoid background ARQ worker startup in tests that do not explicitly verify it."""
+    if request.node.nodeid.startswith("tests/test_session_setup.py"):
+        yield
+        return
+
+    with patch("src.app.core.setup.start_arq_service_on_startup", new=Mock()):
+        yield
+
+
 @pytest.fixture(scope="session")
-def client() -> Generator[TestClient, Any, None]:
+def client(mock_redis_services) -> Generator[TestClient, Any, None]:
     sync_engine, _ = _create_local_session()
     with TestClient(app) as _client:
         yield _client

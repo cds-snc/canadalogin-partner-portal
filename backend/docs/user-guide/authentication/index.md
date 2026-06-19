@@ -13,6 +13,8 @@ The only login path is OIDC. After a successful callback, the backend stores the
 
 When the frontend and backend run on different origins in development, configure `OIDC_POST_LOGIN_REDIRECT` as an absolute frontend URL such as `http://localhost:3000/auth-complete`. A backend-relative path like `/auth-complete` would keep the browser on the backend origin.
 
+If your identity provider returns `redirect_uri` mismatch errors (for example `CSIAQ0167E`), set `OIDC_REDIRECT_URI` in backend configuration to the exact callback URL registered for your OAuth client, including scheme, host, port, and path.
+
 ```python
 @router.get("/auth/oidc/login")
 async def oidc_login(request: Request):

@@ -6,7 +6,7 @@ from starlette.requests import Request
 from src.app.api.v1.oidc import oidc_callback, oidc_login
 from src.app.core.config import settings
 from src.app.core.exceptions.http_exceptions import ForbiddenException
-from src.app.core.oidc import sync_oidc_user
+from src.app.core.oidc import build_oidc_redirect_uri, sync_oidc_user
 
 
 def make_request(session: dict | None = None) -> Request:
@@ -187,3 +187,22 @@ class TestOidcCallback:
 
         assert result is response
         mock_service.callback.assert_awaited_once_with(request=request, db=mock_db)
+
+
+class TestBuildOidcRedirectUri:
+    def test_uses_explicit_redirect_uri_when_configured(self):
+        request = make_request()
+
+        with patch.object(settings, "OIDC_REDIRECT_URI", "http://127.0.0.1:8000/api/v1/auth/oidc/callback"):
+            redirect_uri = build_oidc_redirect_uri(request)
+
+        assert redirect_uri == "http://127.0.0.1:8000/api/v1/auth/oidc/callback"
+
+    def test_falls_back_to_request_callback_route_when_no_explicit_redirect_uri(self):
+        request = Mock()
+        request.url_for = Mock(return_value="http://localhost:8000/api/v1/auth/oidc/callback")
+
+        with patch.object(settings, "OIDC_REDIRECT_URI", None):
+            redirect_uri = build_oidc_redirect_uri(request)
+
+        assert redirect_uri == "http://localhost:8000/api/v1/auth/oidc/callback"

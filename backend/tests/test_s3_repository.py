@@ -1,3 +1,4 @@
+import asyncio
 from unittest.mock import MagicMock, call, patch
 
 import pytest
@@ -17,6 +18,7 @@ class TestS3RepositoryInit:
             with patch.object(settings, "AWS_S3_PROFILE", ""):
                 with patch("src.app.repositories.s3_repository.boto3.Session", return_value=mock_session):
                     repo = S3Repository()
+                    asyncio.run(repo._get_client())
 
         mock_session.client.assert_called_once_with("s3", region_name="ca-central-1")
         assert repo.bucket == settings.S3_MAU_BUCKET_NAME
@@ -32,6 +34,7 @@ class TestS3RepositoryInit:
                 with patch("src.app.repositories.s3_repository.boto3.Session") as mock_session_cls:
                     mock_session_cls.return_value = mock_session
                     repo = S3Repository()
+                    asyncio.run(repo._get_client())
 
         mock_session_cls.assert_called_once_with(profile_name="cl-pp-dev")
         mock_session.client.assert_called_once_with("s3", region_name="ca-central-1")
@@ -61,6 +64,7 @@ class TestS3RepositoryInit:
                 with patch("src.app.repositories.s3_repository.boto3.Session", return_value=mock_session):
                     with patch("src.app.repositories.s3_repository.boto3.client", return_value=mock_s3):
                         repo = S3Repository()
+                        asyncio.run(repo._get_client())
 
         mock_session.client.assert_called_once_with("sts", region_name="ca-central-1")
         mock_sts.assume_role.assert_called_once_with(
@@ -86,7 +90,9 @@ class TestS3RepositoryInit:
             with patch.object(settings, "AWS_S3_PROFILE", ""):
                 with patch("src.app.repositories.s3_repository.boto3.Session", return_value=mock_session):
                     repo = S3Repository()
+                    client = asyncio.run(repo._get_client())
 
+        assert client is mock_s3
         assert repo.client is mock_s3
         assert mock_session.client.mock_calls == [
             call("sts", region_name="ca-central-1"),
@@ -111,12 +117,12 @@ class TestS3RepositoryGetCsvFile:
         mock_session = MagicMock()
         mock_session.client.return_value = mock_s3
 
+        rows = None
         with patch.object(settings, "AWS_S3_ROLE_ARN", ""):
             with patch.object(settings, "AWS_S3_PROFILE", ""):
                 with patch("src.app.repositories.s3_repository.boto3.Session", return_value=mock_session):
                     repo = S3Repository()
-
-        rows = await repo.get_csv_file("date=2026-06-11/app_login_counts.csv")
+                    rows = await repo.get_csv_file("date=2026-06-11/app_login_counts.csv")
 
         assert rows is not None
         assert len(rows) == 2
@@ -147,11 +153,11 @@ class TestS3RepositoryGetCsvFile:
         mock_session = MagicMock()
         mock_session.client.return_value = mock_s3
 
+        rows = None
         with patch.object(settings, "AWS_S3_ROLE_ARN", ""):
             with patch.object(settings, "AWS_S3_PROFILE", ""):
                 with patch("src.app.repositories.s3_repository.boto3.Session", return_value=mock_session):
                     repo = S3Repository()
-
-        rows = await repo.get_csv_file("date=2026-06-11/missing.csv")
+                    rows = await repo.get_csv_file("date=2026-06-11/missing.csv")
 
         assert rows is None
