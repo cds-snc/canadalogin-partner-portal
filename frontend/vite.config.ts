@@ -61,8 +61,11 @@ const config = ({ mode }: { mode: string }) => {
 						viteStaticCopy({
 							targets: [
 								{
-									src: normalizePath(path.resolve("./src/assets/locales")),
-									dest: normalizePath(path.resolve("./dist")),
+									src: "src/assets/locales/*/translations.json",
+									dest: "locales",
+									rename: {
+										stripBase: 3,
+									},
 								},
 							],
 						}),

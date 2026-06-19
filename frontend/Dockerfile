@@ -1,9 +1,34 @@
-FROM nginx:stable-alpine
+FROM node:20-alpine AS build
 
 WORKDIR /app
 
+COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
+
+RUN corepack enable \
+	&& corepack prepare pnpm@10.17.1 --activate \
+	&& pnpm install --frozen-lockfile
+
 COPY . .
 
-RUN cp -r /app/dist/* /usr/share/nginx/html
+ARG VITE_API_BASE_URL
+ARG VITE_APP_ENVIRONMENT
+ARG VITE_APP_TITLE
+ARG VITE_AUTH_POST_LOGIN_PATH
+ARG VITE_SESSION_WARNING_AFTER_MINUTES
+ARG VITE_SESSION_COUNTDOWN_MINUTES
+
+ENV VITE_API_BASE_URL=${VITE_API_BASE_URL}
+ENV VITE_APP_ENVIRONMENT=${VITE_APP_ENVIRONMENT}
+ENV VITE_APP_TITLE=${VITE_APP_TITLE}
+ENV VITE_AUTH_POST_LOGIN_PATH=${VITE_AUTH_POST_LOGIN_PATH}
+ENV VITE_SESSION_WARNING_AFTER_MINUTES=${VITE_SESSION_WARNING_AFTER_MINUTES}
+ENV VITE_SESSION_COUNTDOWN_MINUTES=${VITE_SESSION_COUNTDOWN_MINUTES}
+
+RUN pnpm build
+
+FROM nginx:stable-alpine
+
+COPY nginx.conf /etc/nginx/conf.d/default.conf
+COPY --from=build /app/dist /usr/share/nginx/html
 
 EXPOSE 80
