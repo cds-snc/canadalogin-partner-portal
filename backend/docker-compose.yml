@@ -1,17 +1,83 @@
+x-backend-build-args: &backend-build-args
+  ENVIRONMENT: ${ENVIRONMENT:-local}
+  APP_NAME: ${APP_NAME:-FastAPI app}
+  APP_DESCRIPTION: ${APP_DESCRIPTION:-}
+  APP_VERSION: ${APP_VERSION:-}
+  CONTACT_NAME: ${CONTACT_NAME:-}
+  CONTACT_EMAIL: ${CONTACT_EMAIL:-}
+  LICENSE_NAME: ${LICENSE_NAME:-}
+  TERMS_VERSION: ${TERMS_VERSION:-v1}
+  POSTGRES_USER: ${POSTGRES_USER:-postgres}
+  POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
+  POSTGRES_SERVER: ${DOCKER_POSTGRES_SERVER:-db}
+  POSTGRES_PORT: ${POSTGRES_PORT:-5432}
+  POSTGRES_DB: ${POSTGRES_DB:-postgres}
+  SESSION_COOKIE_NAME: ${SESSION_COOKIE_NAME:-app_session}
+  SESSION_COOKIE_SECURE: ${SESSION_COOKIE_SECURE:-false}
+  SESSION_MAX_AGE: ${SESSION_MAX_AGE:-28800}
+  SESSION_ROLLING: ${SESSION_ROLLING:-false}
+  REDIS_SESSION_HOST: ${DOCKER_REDIS_SESSION_HOST:-redis}
+  REDIS_SESSION_PORT: ${REDIS_SESSION_PORT:-6379}
+  REDIS_SESSION_DB: ${REDIS_SESSION_DB:-1}
+  REDIS_SESSION_PASSWORD: ${REDIS_SESSION_PASSWORD:-}
+  REDIS_SESSION_SSL: ${REDIS_SESSION_SSL:-false}
+  REDIS_SESSION_PREFIX: ${REDIS_SESSION_PREFIX:-app.sessions.}
+  REDIS_SESSION_GC_TTL: ${REDIS_SESSION_GC_TTL:-2592000}
+  OIDC_ENABLED: ${OIDC_ENABLED:-false}
+  OIDC_PROVIDER_NAME: ${OIDC_PROVIDER_NAME:-oidc}
+  OIDC_SERVER_METADATA_URL: ${OIDC_SERVER_METADATA_URL:-}
+  OIDC_CLIENT_ID: ${OIDC_CLIENT_ID:-}
+  OIDC_CLIENT_SECRET: ${OIDC_CLIENT_SECRET:-}
+  OIDC_SCOPES: ${OIDC_SCOPES:-openid profile email}
+  OIDC_REDIRECT_URI: ${OIDC_REDIRECT_URI:-}
+  OIDC_REDIRECT_PATH: ${OIDC_REDIRECT_PATH:-/api/v1/auth/oidc/callback}
+  OIDC_POST_LOGIN_REDIRECT: ${OIDC_POST_LOGIN_REDIRECT:-/auth-complete}
+  OIDC_ACCESS_DENIED_REDIRECT: ${OIDC_ACCESS_DENIED_REDIRECT:-/access-denied}
+  OIDC_GROUP_CLAIM_KEY: ${OIDC_GROUP_CLAIM_KEY:-groupIds}
+  OIDC_ADMIN_GROUP_NAME: ${OIDC_ADMIN_GROUP_NAME:-admin}
+  OIDC_APPLICATION_OWNERS_GROUP_NAME: "${OIDC_APPLICATION_OWNERS_GROUP_NAME:-application owners}"
+  CLPP_ADMIN_ROLE_NAME: ${CLPP_ADMIN_ROLE_NAME:-admin}
+  CLPP_APPLICATION_OWNERS_ROLE_NAME: "${CLPP_APPLICATION_OWNERS_ROLE_NAME:-application owners}"
+  IBM_SV_ADMIN_BASE_URL: ${IBM_SV_ADMIN_BASE_URL:-}
+  IBM_SV_ADMIN_CLIENT_ID: ${IBM_SV_ADMIN_CLIENT_ID:-}
+  IBM_SV_ADMIN_CLIENT_SECRET: ${IBM_SV_ADMIN_CLIENT_SECRET:-}
+  REDIS_CACHE_HOST: ${DOCKER_REDIS_CACHE_HOST:-redis}
+  REDIS_CACHE_PORT: ${REDIS_CACHE_PORT:-6379}
+  REDIS_QUEUE_HOST: ${DOCKER_REDIS_QUEUE_HOST:-redis}
+  REDIS_QUEUE_PORT: ${REDIS_QUEUE_PORT:-6379}
+  REDIS_RATE_LIMIT_HOST: ${DOCKER_REDIS_RATE_LIMIT_HOST:-redis}
+  REDIS_RATE_LIMIT_PORT: ${REDIS_RATE_LIMIT_PORT:-6379}
+  TIMEZONE: ${TIMEZONE:-America/Toronto}
+  LOAD_MAU_ENABLED: ${LOAD_MAU_ENABLED:-false}
+  START_ARQ_ON_STARTUP: ${START_ARQ_ON_STARTUP:-false}
+  DEFAULT_RATE_LIMIT_LIMIT: ${DEFAULT_RATE_LIMIT_LIMIT:-10}
+  DEFAULT_RATE_LIMIT_PERIOD: ${DEFAULT_RATE_LIMIT_PERIOD:-3600}
+  CORS_ORIGINS: '${CORS_ORIGINS:-["*"]}'
+  CORS_METHODS: '${CORS_METHODS:-["*"]}'
+  CORS_HEADERS: '${CORS_HEADERS:-["*"]}'
+  CLIENT_CACHE_MAX_AGE: ${CLIENT_CACHE_MAX_AGE:-30}
+  AWS_S3_REGION: ${AWS_S3_REGION:-ca-central-1}
+  AWS_S3_ROLE_ARN: ${AWS_S3_ROLE_ARN:-}
+  AWS_S3_PROFILE: ${AWS_S3_PROFILE:-}
+  S3_MAU_BUCKET_NAME: ${S3_MAU_BUCKET_NAME:-}
+  S3_MAU_FOLDER: ${S3_MAU_FOLDER:-ibm_verify/app_login_counts/}
+
+x-backend-environment: &backend-environment
+  <<: *backend-build-args
+
 services:
   web:
-    build: 
+    build:
       context: .
       dockerfile: Dockerfile
+      args: *backend-build-args
     # -------- Both of the following commands should be commented to run with nginx --------
 
     # -------- replace with comment to run with gunicorn --------
     command: sh -c "alembic -c /code/alembic.ini upgrade head && uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload"
     # command: gunicorn app.main:app -w 4 -k uvicorn.workers.UvicornWorker -b 0.0.0.0:8000
-    env_file:
-      - ./.env
     environment:
-      START_ARQ_ON_STARTUP: "false"
+      <<: *backend-environment
     # -------- replace ports with expose if you are using nginx --------
     # ports:
     #    - "8000:8000"
@@ -24,26 +90,27 @@ services:
       - ./src/app:/code/app
       - ./src/migrations:/code/migrations
       - ./src/alembic.ini:/code/alembic.ini
-      - ./.env:/code/.env
 
   worker:
     build:
       context: .
       dockerfile: Dockerfile
+      args: *backend-build-args
     command: arq app.core.worker.settings.WorkerSettings
-    env_file:
-      - ./.env
+    environment:
+      <<: *backend-environment
     depends_on:
       - db
       - redis
     volumes:
       - ./src/app:/code/app
-      - ./.env:/code/.env
 
   db:
     image: postgres:13
-    env_file:
-      - ./.env
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-postgres}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
+      POSTGRES_DB: ${POSTGRES_DB:-postgres}
     volumes:
       - postgres-data:/var/lib/postgresql/data
     expose:
