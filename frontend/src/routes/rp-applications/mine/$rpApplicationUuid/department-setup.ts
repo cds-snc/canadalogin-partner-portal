@@ -7,9 +7,7 @@ import { requireAuthenticatedUser } from "../../../../features/auth/auth-routing
 
 const RPApplicationDepartmentSetupPage = lazy(async () => ({
 	default: (
-		await import(
-			"../../../../features/rp-applications/pages/RPApplicationDepartmentSetupPage"
-		)
+		await import("../../../../features/rp-applications/pages/RPApplicationDepartmentSetupPage")
 	).RPApplicationDepartmentSetupPage,
 }));
 

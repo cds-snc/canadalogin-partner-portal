@@ -12,8 +12,11 @@ from ..schemas import ErrorDetail, ErrorResponse
 from .cache_exceptions import CacheIdentificationInferenceError, InvalidRequestError, MissingClientError
 from .http_exceptions import RPApplicationDepartmentRequiredException
 from .ibm_sv_exceptions import IBMVerifyException
+from .standardized_logger import StandardizedLogger
 
 logger = logging.getLogger(__name__)
+
+standardized_logger = StandardizedLogger()
 
 _CACHE_EXCEPTION_STATUS = {
     CacheIdentificationInferenceError: 500,
@@ -117,65 +120,77 @@ def _ibm_message_and_details(exc: IBMVerifyException) -> tuple[str, Any]:
 def register_exception_handlers(application: FastAPI) -> None:
     @application.exception_handler(RequestValidationError)
     async def validation_exception_handler(request: Request, exc: RequestValidationError) -> JSONResponse:
-        return _serialize_error_response(
+        response = _serialize_error_response(
             request=request,
             status_code=422,
             code="validation_error",
             message=_validation_message(exc),
             details=exc.errors(),
         )
+        standardized_logger.log(request, response)
+        return response
 
     @application.exception_handler(RPApplicationDepartmentRequiredException)
     async def rp_application_department_required_handler(
         request: Request, exc: RPApplicationDepartmentRequiredException
     ) -> JSONResponse:
-        return _serialize_error_response(
+        response = _serialize_error_response(
             request=request,
             status_code=409,
             code="rp_application_department_required",
             message=exc.message,
         )
+        standardized_logger.log(request, response)
+        return response
 
     @application.exception_handler(IBMVerifyException)
     async def ibm_verify_exception_handler(request: Request, exc: IBMVerifyException) -> JSONResponse:
         message, details = _ibm_message_and_details(exc)
-        return _serialize_error_response(
+        response = _serialize_error_response(
             request=request,
             status_code=exc.status_code,
             code=_class_name_to_error_code(exc.__class__.__name__).replace("i_b_m_verify", "ibm_verify"),
             message=message,
             details=details,
         )
+        standardized_logger.log(request, response)
+        return response
 
     @application.exception_handler(CacheIdentificationInferenceError)
     @application.exception_handler(InvalidRequestError)
     @application.exception_handler(MissingClientError)
     async def cache_exception_handler(request: Request, exc: Exception) -> JSONResponse:
         status_code = _CACHE_EXCEPTION_STATUS.get(type(exc), 500)
-        return _serialize_error_response(
+        response = _serialize_error_response(
             request=request,
             status_code=status_code,
             code=type(exc).__name__.replace("Error", "").replace("Exception", "").lower(),
             message=str(exc),
         )
+        standardized_logger.log(request, response)
+        return response
 
     @application.exception_handler(StarletteHTTPException)
     async def http_exception_handler(request: Request, exc: StarletteHTTPException) -> JSONResponse:
         message, details = _http_message_and_details(exc)
-        return _serialize_error_response(
+        response = _serialize_error_response(
             request=request,
             status_code=exc.status_code,
             code=_status_code_to_error_code(exc.status_code),
             message=message,
             details=details,
         )
+        standardized_logger.log(request, response)
+        return response
 
     @application.exception_handler(Exception)
     async def unexpected_exception_handler(request: Request, exc: Exception) -> JSONResponse:
         logger.exception("Unhandled application error", exc_info=exc)
-        return _serialize_error_response(
+        response = _serialize_error_response(
             request=request,
             status_code=500,
             code="internal_server_error",
             message="An unexpected error occurred.",
         )
+        standardized_logger.log(request, response)
+        return response

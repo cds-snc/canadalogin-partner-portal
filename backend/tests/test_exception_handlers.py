@@ -1,7 +1,7 @@
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
 from typing import Annotated, Any
-from unittest.mock import Mock, patch
+from unittest.mock import MagicMock, Mock, patch
 
 import casbin
 from fastapi import APIRouter, Depends
@@ -215,3 +215,31 @@ def test_bad_request_exceptions_from_api_or_service_validation_return_unified_ba
         expected_message="department_uuid is required",
         expected_request_id="value-error-test",
     )
+
+
+def test_standardized_logger_is_called_on_4xx_handler() -> None:
+    client = build_test_client(build_router())
+
+    mock_logger = MagicMock()
+    with patch("src.app.core.exceptions.handlers.standardized_logger", mock_logger):
+        with client:
+            response = client.get("/value-error", headers={"X-Request-ID": "logger-4xx-test"})
+
+    assert response.status_code == 400
+    mock_logger.log.assert_called_once()
+    _request, logged_response = mock_logger.log.call_args[0]
+    assert logged_response.status_code == 400
+
+
+def test_standardized_logger_is_called_on_5xx_handler() -> None:
+    client = build_test_client(build_router(), raise_server_exceptions=False)
+
+    mock_logger = MagicMock()
+    with patch("src.app.core.exceptions.handlers.standardized_logger", mock_logger):
+        with client:
+            response = client.get("/boom", headers={"X-Request-ID": "logger-5xx-test"})
+
+    assert response.status_code == 500
+    mock_logger.log.assert_called_once()
+    _request, logged_response = mock_logger.log.call_args[0]
+    assert logged_response.status_code == 500

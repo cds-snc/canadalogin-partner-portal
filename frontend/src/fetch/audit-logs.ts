@@ -51,7 +51,10 @@ export const getAuditLogs = async (
 	const searchParameters = new URLSearchParams();
 	searchParameters.set("items_per_page", String(itemsPerPage));
 	searchParameters.set("page", String(page));
-	const normalizedCreatedAtGte = normalizeAuditLogBoundary(createdAtGte, "start");
+	const normalizedCreatedAtGte = normalizeAuditLogBoundary(
+		createdAtGte,
+		"start"
+	);
 	const normalizedCreatedAtLte = normalizeAuditLogBoundary(createdAtLte, "end");
 
 	if (normalizedCreatedAtGte) {

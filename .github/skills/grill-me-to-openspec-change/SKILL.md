@@ -113,6 +113,17 @@ From the proposal Capabilities section:
 - Write normative, testable statements (SHALL/MUST).
 - Ensure every requirement has at least one scenario.
 
+Every technical artifact discussed in the grill-me conversation **must be fully specified** in the appropriate spec file. This includes, but is not limited to:
+
+- **DTOs and schemas** — all request/response shapes, field names, types, and nullability
+- **Data models** — new or modified database fields, relationships, and constraints
+- **API endpoints** — HTTP method, path, request body, response body, status codes, and error codes
+- **Access control** — Casbin permissions, role requirements, and ownership rules
+- **Error contracts** — error codes, HTTP status codes, and conditions under which each is returned
+- **State transitions** — any workflow or lifecycle behavior discussed
+
+If a technical detail was agreed in conversation but is ambiguous in the specs, resolve it explicitly rather than leaving it to implementer interpretation.
+
 ### 6) Completion gate
 
 Run:

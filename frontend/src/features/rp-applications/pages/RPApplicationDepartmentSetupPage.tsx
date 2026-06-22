@@ -32,9 +32,8 @@ export const RPApplicationDepartmentSetupPage = (): ReactElement => {
 		let isMounted = true;
 		const loadContext = async (): Promise<void> => {
 			try {
-				const preflight = await getCurrentUserRPApplicationDepartment(
-					rpApplicationUuid
-				);
+				const preflight =
+					await getCurrentUserRPApplicationDepartment(rpApplicationUuid);
 				if (!isMounted) return;
 				setApplicationName(preflight.dnrAppName);
 				setIsContextLoading(false);
@@ -82,8 +81,7 @@ export const RPApplicationDepartmentSetupPage = (): ReactElement => {
 				departmentUuid: selected,
 			});
 			const redirectTarget =
-				search.redirect ??
-				`/rp-applications/mine/${rpApplicationUuid}`;
+				search.redirect ?? `/rp-applications/mine/${rpApplicationUuid}`;
 			await navigate({ to: redirectTarget, replace: true });
 		} catch (error) {
 			if (error instanceof HttpRequestError && error.status === 409) {
@@ -121,9 +119,7 @@ export const RPApplicationDepartmentSetupPage = (): ReactElement => {
 					noticeTitle={t("rpDepartmentSetup.errorLoading")}
 					noticeTitleTag="h2"
 				>
-					<Text>
-						{departmentsError.message ?? String(departmentsError)}
-					</Text>
+					<Text>{departmentsError.message ?? String(departmentsError)}</Text>
 				</Notice>
 			</CenteredPageLayout>
 		);
@@ -174,9 +170,7 @@ export const RPApplicationDepartmentSetupPage = (): ReactElement => {
 						setSelected((e.target as HTMLSelectElement).value);
 					}}
 				>
-					<option value="">
-						{t("rpDepartmentSetup.chooseDepartment")}
-					</option>
+					<option value="">{t("rpDepartmentSetup.chooseDepartment")}</option>
 					{sortedDepartments.map((d) => (
 						<option key={d.uuid} value={d.uuid}>
 							{d.name}
