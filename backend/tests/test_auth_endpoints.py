@@ -131,7 +131,10 @@ def build_logout_app(store: TrackingInMemoryStore) -> TestClient:
     async def noop_lifespan(_: object) -> AsyncIterator[None]:
         yield
 
-    with patch("src.app.core.setup.get_redis_session_store", return_value=store):
+    with (
+        patch("src.app.core.setup.get_redis_session_store", return_value=store),
+        patch.object(settings, "SESSION_COOKIE_DOMAIN", None),
+    ):
         app = create_application(router, settings=settings, create_tables_on_start=False, lifespan=noop_lifespan)
 
     app.dependency_overrides[async_get_db] = lambda: Mock()
