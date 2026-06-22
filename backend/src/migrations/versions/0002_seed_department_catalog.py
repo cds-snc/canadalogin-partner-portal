@@ -44,7 +44,7 @@ def load_seed_rows() -> list[dict[str, object]]:
         reader = csv.DictReader(csv_file)
         return [
             {
-                "abbreviation": abbreviation,
+                "abbreviation": normalize_text(row.get("abbreviation")),
                 "abbreviation_fr": normalize_text(row.get("abreviation")),
                 "gc_org_id": parse_gc_org_id(row.get("gc_orgID")),
                 "lead_department_name": normalize_text(row.get("lead_department")),
@@ -53,7 +53,7 @@ def load_seed_rows() -> list[dict[str, object]]:
                 "name_fr": normalize_text(row.get("nom_harmonisé")) or normalize_text(row.get("appellation_légale")),
             }
             for row in reader
-            if (abbreviation := normalize_text(row.get("gc_orgID"))) is not None
+            if (gc_org_id := parse_gc_org_id(row.get("gc_orgID"))) is not None
         ]
 
 

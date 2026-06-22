@@ -92,6 +92,12 @@ export const Home = (): FunctionComponent => {
 							description={t("home.optionalCardDescription")}
 							href="/terms-and-conditions"
 						/>
+						<Card
+							cardTitle={t("home.supportCardTitle")}
+							cardTitleTag="h3"
+							description={t("home.supportCardDescription")}
+							href="/support"
+						/>
 					</Grid>
 				</div>
 			</section>

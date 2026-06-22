@@ -202,6 +202,8 @@ class IBMVerifySettings(BaseSettings):
 
 class EnvironmentOption(str, Enum):
     LOCAL = "local"
+    DEVELOPMENT = "dev"
+    TESTING = "test"
     STAGING = "staging"
     PRODUCTION = "production"
 

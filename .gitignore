@@ -21,7 +21,6 @@ htmlcov/
 coverage/
 instance/
 .env
-.env.dockercompose
 celerybeat-schedule
 *.sqlite3
 

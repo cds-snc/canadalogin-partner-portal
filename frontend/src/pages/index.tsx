@@ -3,3 +3,4 @@ export { default as FederalAndProvincialHolidays } from "./FederalAndProvincialH
 export { Home } from "./Home";
 export { default as NotFound } from "./NotFound";
 export { default as OptionalHolidays } from "./OptionalHolidays";
+export { default as Support } from "./Support";

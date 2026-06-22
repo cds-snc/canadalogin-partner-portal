@@ -20,6 +20,8 @@
 		"logoutPageLink": "Fermer la session",
 		"optionalCardDescription": "Consultez les conditions d'utilisation du Portail partenaire.",
 		"optionalCardTitle": "Conditions d'utilisation",
+		"supportCardDescription": "Obtenez de l'aide et ouvrez une demande de soutien via le portail de service.",
+		"supportCardTitle": "Soutien",
 		"panelEyebrow": "Ouverture de session",
 		"panelTitle": "Utilisez un compte existant",
 		"policiesPageLink": "Politiques",
@@ -54,6 +56,17 @@
 		"sectionSupportTitle": "Soutien",
 		"summary": "Un carrefour central pour la gestion des applications de partie de confiance connectées au service CanadaLogin.",
 		"title": "À propos du Portail partenaire CanadaLogin"
+	},
+	"support": {
+		"cardPortalDescription": "Ouvrez le portail de service pour soumettre ou suivre des demandes de soutien.",
+		"cardPortalTitle": "Ouvrir le portail de soutien",
+		"intro": "Utilisez cette page pour trouver des ressources de soutien pour le Portail partenaire CanadaLogin.",
+		"sectionGettingHelpBody": "Contenu temporaire : ajoutez ici les canaux de soutien, les heures de service et l'escalade.",
+		"sectionGettingHelpTitle": "Obtenir de l'aide",
+		"sectionRequestBody": "Contenu temporaire : expliquez comment soumettre une demande et quels détails inclure.",
+		"sectionRequestTitle": "Soumettre une demande",
+		"summary": "Ressources de soutien pour les administrateurs d'applications RP.",
+		"title": "Soutien"
 	},
 	"authComplete": {
 		"noticeTitle": "Finalisation de votre ouverture de session",
@@ -153,6 +166,7 @@
 		"label": "Navigation principale",
 		"login": "Ouvrir une session",
 		"logout": "Fermer la session",
+		"support": "Soutien",
 		"policies": "Politiques",
 		"profile": "Profil",
 		"auditLogs": "Registres d'audit",
