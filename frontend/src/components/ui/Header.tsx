@@ -93,9 +93,8 @@ const Header = (): FunctionComponent => {
 	];
 
 	const supportItem: NavigationItem = {
-		href: "https://jtickets.atlassian.net/servicedesk/customer/portal/140",
+		href: "/support",
 		label: t("nav.support"),
-		rel: "noopener noreferrer",
 	};
 
 	const authItems: Array<NavigationItem> = [

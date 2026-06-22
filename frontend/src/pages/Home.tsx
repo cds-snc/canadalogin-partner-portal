@@ -74,10 +74,6 @@ export const Home = (): FunctionComponent => {
 			</section>
 
 			<section>
-				<div className="max-w-2xl">
-					<Heading tag="h2">{t("home.featureSectionTitle")}</Heading>
-					<Text marginBottom="0">{t("home.quickLinksBody")}</Text>
-				</div>
 				<div className="mt-400">
 					<Grid columnsDesktop="1fr 1fr 1fr" columnsTablet="1fr 1fr" tag="div">
 						<Card
