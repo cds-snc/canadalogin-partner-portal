@@ -15,6 +15,8 @@ import type { RouteBreadcrumbItem } from "@/types/route-breadcrumbs";
 type NavigationItem = {
 	href: string;
 	label: string;
+	target?: "_blank";
+	rel?: string;
 };
 
 const isCurrentPath = (pathname: string, href: string): boolean => {
@@ -90,6 +92,12 @@ const Header = (): FunctionComponent => {
 		{ href: "/", label: t("nav.home") },
 	];
 
+	const supportItem: NavigationItem = {
+		href: "https://jtickets.atlassian.net/servicedesk/customer/portal/140",
+		label: t("nav.support"),
+		rel: "noopener noreferrer",
+	};
+
 	const authItems: Array<NavigationItem> = [
 		{ href: "/dashboard", label: t("nav.dashboard") },
 	];
@@ -115,10 +123,11 @@ const Header = (): FunctionComponent => {
 			...commonItems,
 			...authItems,
 			...(currentUser?.isSuperuser ? superuserItems : []),
+			supportItem,
 			{ href: "/logout", label: t("nav.logout") },
 		];
 	} else {
-		items = [...commonItems, ...publicItems];
+		items = [...commonItems, supportItem, ...publicItems];
 	}
 
 	return (
@@ -150,6 +159,7 @@ const Header = (): FunctionComponent => {
 						key={item.href}
 						current={isCurrentPath(pathname, item.href)}
 						href={item.href}
+						rel={item.rel}
 					>
 						{item.label}
 					</GcdsNavLink>

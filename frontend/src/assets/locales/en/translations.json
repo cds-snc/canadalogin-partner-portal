@@ -20,6 +20,8 @@
 		"logoutPageLink": "Sign out",
 		"optionalCardDescription": "Review the terms and conditions for using the Partner Portal.",
 		"optionalCardTitle": "Terms and conditions",
+		"supportCardDescription": "Get help and open a support request through the service desk portal.",
+		"supportCardTitle": "Support",
 		"panelEyebrow": "Sign-in",
 		"panelTitle": "Use an existing account",
 		"policiesPageLink": "Policies",
@@ -54,6 +56,17 @@
 		"sectionSupportTitle": "Support",
 		"summary": "A central hub for managing relying party applications connected to the CanadaLogin service.",
 		"title": "About CanadaLogin Partner Portal"
+	},
+	"support": {
+		"cardPortalDescription": "Open the service desk portal to submit or track support requests.",
+		"cardPortalTitle": "Open support portal",
+		"intro": "Use this page to find support resources for the CanadaLogin Partner Portal.",
+		"sectionGettingHelpBody": "Placeholder content: add support channels, service hours, and escalation guidance here.",
+		"sectionGettingHelpTitle": "Getting help",
+		"sectionRequestBody": "Placeholder content: explain how to submit requests and what details to include.",
+		"sectionRequestTitle": "Submitting a request",
+		"summary": "Support resources for relying party application administrators.",
+		"title": "Support"
 	},
 	"authComplete": {
 		"noticeTitle": "Finalizing your sign-in",
@@ -153,6 +166,7 @@
 		"label": "Primary navigation",
 		"login": "Sign in",
 		"logout": "Sign out",
+		"support": "Support",
 		"policies": "Policies",
 		"profile": "Profile",
 		"auditLogs": "Audit Logs",

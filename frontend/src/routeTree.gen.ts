@@ -12,6 +12,7 @@ import { Route as rootRouteImport } from './routes/__root'
 import { Route as UsersRouteImport } from './routes/users'
 import { Route as TiersRouteImport } from './routes/tiers'
 import { Route as TermsAndConditionsRouteImport } from './routes/terms-and-conditions'
+import { Route as SupportRouteImport } from './routes/support'
 import { Route as RolesRouteImport } from './routes/roles'
 import { Route as PoliciesRouteImport } from './routes/policies'
 import { Route as OptionalHolidaysRouteImport } from './routes/optional-holidays'
@@ -46,6 +47,11 @@ const TiersRoute = TiersRouteImport.update({
 const TermsAndConditionsRoute = TermsAndConditionsRouteImport.update({
   id: '/terms-and-conditions',
   path: '/terms-and-conditions',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const SupportRoute = SupportRouteImport.update({
+  id: '/support',
+  path: '/support',
   getParentRoute: () => rootRouteImport,
 } as any)
 const RolesRoute = RolesRouteImport.update({
@@ -170,6 +176,7 @@ export interface FileRoutesByFullPath {
   '/optional-holidays': typeof OptionalHolidaysRoute
   '/policies': typeof PoliciesRoute
   '/roles': typeof RolesRoute
+  '/support': typeof SupportRoute
   '/terms-and-conditions': typeof TermsAndConditionsRoute
   '/tiers': typeof TiersRoute
   '/users': typeof UsersRoute
@@ -195,6 +202,7 @@ export interface FileRoutesByTo {
   '/optional-holidays': typeof OptionalHolidaysRoute
   '/policies': typeof PoliciesRoute
   '/roles': typeof RolesRoute
+  '/support': typeof SupportRoute
   '/terms-and-conditions': typeof TermsAndConditionsRoute
   '/tiers': typeof TiersRoute
   '/users': typeof UsersRoute
@@ -220,6 +228,7 @@ export interface FileRoutesById {
   '/optional-holidays': typeof OptionalHolidaysRoute
   '/policies': typeof PoliciesRoute
   '/roles': typeof RolesRoute
+  '/support': typeof SupportRoute
   '/terms-and-conditions': typeof TermsAndConditionsRoute
   '/tiers': typeof TiersRoute
   '/users': typeof UsersRoute
@@ -247,6 +256,7 @@ export interface FileRouteTypes {
     | '/optional-holidays'
     | '/policies'
     | '/roles'
+    | '/support'
     | '/terms-and-conditions'
     | '/tiers'
     | '/users'
@@ -272,6 +282,7 @@ export interface FileRouteTypes {
     | '/optional-holidays'
     | '/policies'
     | '/roles'
+    | '/support'
     | '/terms-and-conditions'
     | '/tiers'
     | '/users'
@@ -296,6 +307,7 @@ export interface FileRouteTypes {
     | '/optional-holidays'
     | '/policies'
     | '/roles'
+    | '/support'
     | '/terms-and-conditions'
     | '/tiers'
     | '/users'
@@ -322,6 +334,7 @@ export interface RootRouteChildren {
   OptionalHolidaysRoute: typeof OptionalHolidaysRoute
   PoliciesRoute: typeof PoliciesRoute
   RolesRoute: typeof RolesRoute
+  SupportRoute: typeof SupportRoute
   TermsAndConditionsRoute: typeof TermsAndConditionsRoute
   TiersRoute: typeof TiersRoute
   UsersRoute: typeof UsersRoute
@@ -350,6 +363,13 @@ declare module '@tanstack/react-router' {
       path: '/terms-and-conditions'
       fullPath: '/terms-and-conditions'
       preLoaderRoute: typeof TermsAndConditionsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/support': {
+      id: '/support'
+      path: '/support'
+      fullPath: '/support'
+      preLoaderRoute: typeof SupportRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/roles': {
@@ -534,6 +554,7 @@ const rootRouteChildren: RootRouteChildren = {
   OptionalHolidaysRoute: OptionalHolidaysRoute,
   PoliciesRoute: PoliciesRoute,
   RolesRoute: RolesRoute,
+  SupportRoute: SupportRoute,
   TermsAndConditionsRoute: TermsAndConditionsRoute,
   TiersRoute: TiersRoute,
   UsersRoute: UsersRoute,

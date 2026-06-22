@@ -51,13 +51,16 @@ def upgrade() -> None:
         f"""
         CREATE OR REPLACE VIEW {VIEW_NAME} AS
         SELECT
-            department_id,
-            dnr_app_name AS dnr_application_name,
-            ibm_sv_application_id AS ibm_application_id,
-            created_at,
-            updated_at
-        FROM public.rp_application
-        WHERE is_deleted = FALSE;
+            ra.dnr_app_name AS dnr_application_name,
+            ra.ibm_sv_application_id AS ibm_application_id,
+            d.gc_org_id AS department_id,
+            d.abbreviation AS department_abbreviation,
+            d.name AS department_name,
+            d.abbreviation AS department_abbreviation_fr,
+            d.name AS department_name_fr
+        FROM public.rp_application ra
+        LEFT JOIN public.department d ON ra.department_id = d.id
+        WHERE ra.is_deleted = FALSE;
         """
     )
 
