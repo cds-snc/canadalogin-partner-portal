@@ -104,7 +104,7 @@ const DataTable = <Row extends Record<string, unknown>>({
 
 					return (
 						<div className="flex gap-100">
-							{visibleActions.map((a, index) => (
+							{visibleActions.map((a, index) =>
 								a.variant === "button" ? (
 									<Button
 										key={index}
@@ -141,7 +141,7 @@ const DataTable = <Row extends Record<string, unknown>>({
 										) : null}
 									</a>
 								)
-							))}
+							)}
 						</div>
 					);
 				},

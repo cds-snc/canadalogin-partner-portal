@@ -6,9 +6,7 @@ import { requireAuthenticatedUser } from "../../../../features/auth/auth-routing
 
 const RPApplicationClientSecretsPage = lazy(async () => ({
 	default: (
-		await import(
-			"../../../../features/rp-applications/pages/RPApplicationClientSecretsPage"
-		)
+		await import("../../../../features/rp-applications/pages/RPApplicationClientSecretsPage")
 	).RPApplicationClientSecretsPage,
 }));
 

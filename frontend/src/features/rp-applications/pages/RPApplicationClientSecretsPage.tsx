@@ -107,16 +107,16 @@ export const RPApplicationClientSecretsPage = (): FunctionComponent => {
 		useState<CurrentUserRPOAuthSetupRead | null>(null);
 	const [credentials, setCredentials] =
 		useState<RPApplicationClientCredentialsRead | null>(null);
-	const [rotatedSecrets, setRotatedSecrets] =
-		useState<Array<RPApplicationRotatedSecretRead>>([]);
+	const [rotatedSecrets, setRotatedSecrets] = useState<
+		Array<RPApplicationRotatedSecretRead>
+	>([]);
 	const [isLoading, setIsLoading] = useState(true);
 	const [isSecretVisible, setIsSecretVisible] = useState(false);
 	const [rotationName, setRotationName] = useState("");
 	const [rotationError, setRotationError] = useState<string | null>(null);
 	const [isCreateRotationConfirmOpen, setIsCreateRotationConfirmOpen] =
 		useState(false);
-	const [isRegenerateConfirmOpen, setIsRegenerateConfirmOpen] =
-		useState(false);
+	const [isRegenerateConfirmOpen, setIsRegenerateConfirmOpen] = useState(false);
 	const [isRegenerating, setIsRegenerating] = useState(false);
 	const [isCreatingRotation, setIsCreatingRotation] = useState(false);
 	const [isDeletingRotatedSecret, setIsDeletingRotatedSecret] = useState(false);
@@ -129,12 +129,15 @@ export const RPApplicationClientSecretsPage = (): FunctionComponent => {
 
 		const loadClientData = async (): Promise<void> => {
 			try {
-				const [oauthSetupResponse, credentialsResponse, rotatedSecretsResponse] =
-					await Promise.all([
-						getCurrentUserRPOAuthSetup(rpApplicationUuid),
-						getCurrentUserRPApplicationClientCredentials(rpApplicationUuid),
-						getCurrentUserRPApplicationRotatedClientSecrets(rpApplicationUuid),
-					]);
+				const [
+					oauthSetupResponse,
+					credentialsResponse,
+					rotatedSecretsResponse,
+				] = await Promise.all([
+					getCurrentUserRPOAuthSetup(rpApplicationUuid),
+					getCurrentUserRPApplicationClientCredentials(rpApplicationUuid),
+					getCurrentUserRPApplicationRotatedClientSecrets(rpApplicationUuid),
+				]);
 				if (!isMounted) {
 					return;
 				}
@@ -168,7 +171,9 @@ export const RPApplicationClientSecretsPage = (): FunctionComponent => {
 		};
 	}, [rpApplicationUuid]);
 
-	const rotatedSecretCheckboxOptions = useMemo<Array<RotatedSecretCheckboxOption>>(
+	const rotatedSecretCheckboxOptions = useMemo<
+		Array<RotatedSecretCheckboxOption>
+	>(
 		() =>
 			rotatedSecrets
 				.map((secret) => {
@@ -178,15 +183,14 @@ export const RPApplicationClientSecretsPage = (): FunctionComponent => {
 					}
 
 					return {
-					hint: `${t("workspaces.applicationClientRotatedSecretsExpiresHeader")}: ${formatEpochForDisplay(
-						secret.expiredAt,
-						lang,
-						t("rpOAuthSetup.notAvailable")
-					)}`,
-					id: deleteValue,
-					label:
-						secret.description?.trim() || t("rpOAuthSetup.notAvailable"),
-					value: deleteValue,
+						hint: `${t("workspaces.applicationClientRotatedSecretsExpiresHeader")}: ${formatEpochForDisplay(
+							secret.expiredAt,
+							lang,
+							t("rpOAuthSetup.notAvailable")
+						)}`,
+						id: deleteValue,
+						label: secret.description?.trim() || t("rpOAuthSetup.notAvailable"),
+						value: deleteValue,
 					};
 				})
 				.filter(
@@ -195,7 +199,10 @@ export const RPApplicationClientSecretsPage = (): FunctionComponent => {
 		[lang, rotatedSecrets, t]
 	);
 
-	const copyValue = async (value: string, successMessage: string): Promise<void> => {
+	const copyValue = async (
+		value: string,
+		successMessage: string
+	): Promise<void> => {
 		if (!globalThis.navigator?.clipboard?.writeText) {
 			return;
 		}
@@ -317,12 +324,20 @@ export const RPApplicationClientSecretsPage = (): FunctionComponent => {
 						<Heading tag="h1">{oauthSetup.rpApplicationName}</Heading>
 						<Text>{t("workspaces.applicationClientHelp")}</Text>
 					</div>
-					<Button href={`/rp-applications/mine/${rpApplicationUuid}`} type="link">
+					<Button
+						href={`/rp-applications/mine/${rpApplicationUuid}`}
+						type="link"
+					>
 						{t("workspaces.backToApplication")}
 					</Button>
 				</div>
 
-				<Container border id="rp-application-client-credentials" padding="300" tag="section">
+				<Container
+					border
+					id="rp-application-client-credentials"
+					padding="300"
+					tag="section"
+				>
 					<Heading marginTop="0" tag="h2">
 						{t("workspaces.clientCredentials")}
 					</Heading>
@@ -401,7 +416,12 @@ export const RPApplicationClientSecretsPage = (): FunctionComponent => {
 					</div>
 				</Container>
 
-				<Container border id="rp-application-client-rotation" padding="300" tag="section">
+				<Container
+					border
+					id="rp-application-client-rotation"
+					padding="300"
+					tag="section"
+				>
 					<Heading marginTop="0" tag="h2">
 						{t("workspaces.applicationClientRotateSectionTitle")}
 					</Heading>
@@ -432,14 +452,23 @@ export const RPApplicationClientSecretsPage = (): FunctionComponent => {
 							</p>
 						) : null}
 						<div>
-							<Button buttonRole="danger" disabled={isCreatingRotation} type="submit">
+							<Button
+								buttonRole="danger"
+								disabled={isCreatingRotation}
+								type="submit"
+							>
 								{t("workspaces.applicationClientRotateAddAction")}
 							</Button>
 						</div>
 					</form>
 				</Container>
 
-				<Container border id="rp-application-rotated-secrets" padding="300" tag="section">
+				<Container
+					border
+					id="rp-application-rotated-secrets"
+					padding="300"
+					tag="section"
+				>
 					<Heading marginTop="0" tag="h2">
 						{t("workspaces.applicationClientRotatedSecretsTitle")}
 					</Heading>
