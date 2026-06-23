@@ -240,7 +240,11 @@ export const RPApplicationClientSecretsPage = (): FunctionComponent => {
 						rotatedSecretExpiredAt: expiresAt,
 					}
 				);
+			const nextCredentials =
+				await getCurrentUserRPApplicationClientCredentials(rpApplicationUuid);
 			setRotatedSecrets(nextRotatedSecrets);
+			setCredentials(nextCredentials);
+			setIsSecretVisible(false);
 			setRotationName("");
 			toast.success(t("workspaces.applicationRotateSecretSuccess"));
 		} catch {
@@ -319,11 +323,10 @@ export const RPApplicationClientSecretsPage = (): FunctionComponent => {
 	return (
 		<>
 			<CenteredPageLayout className="max-w-5xl gap-500">
-				<div className="flex items-start justify-between gap-300">
-					<div className="max-w-4xl">
-						<Heading tag="h1">{oauthSetup.rpApplicationName}</Heading>
-						<Text>{t("workspaces.applicationClientHelp")}</Text>
-					</div>
+				<div className="flex flex-wrap items-center justify-between gap-300">
+					<Heading marginBottom="0" tag="h1">
+						{oauthSetup.rpApplicationName}
+					</Heading>
 					<Button
 						href={`/rp-applications/mine/${rpApplicationUuid}`}
 						type="link"
@@ -331,6 +334,7 @@ export const RPApplicationClientSecretsPage = (): FunctionComponent => {
 						{t("workspaces.backToApplication")}
 					</Button>
 				</div>
+				<Text>{t("workspaces.applicationClientHelp")}</Text>
 
 				<Container
 					border
@@ -472,36 +476,37 @@ export const RPApplicationClientSecretsPage = (): FunctionComponent => {
 					<Heading marginTop="0" tag="h2">
 						{t("workspaces.applicationClientRotatedSecretsTitle")}
 					</Heading>
-					<div className="mb-300 flex justify-end">
-						<Button
-							buttonRole="danger"
-							disabled={selectedSecretId === null}
-							type="button"
-							onGcdsClick={() => {
-								if (selectedSecretId) {
-									setDeleteSecretId(selectedSecretId);
-								}
-							}}
-						>
-							{t("workspaces.applicationClientDeleteAction")}
-						</Button>
-					</div>
 					{rotatedSecretCheckboxOptions.length === 0 ? (
 						<Text>{t("workspaces.applicationClientRotatedSecretsEmpty")}</Text>
 					) : (
-						<Checkboxes
-							hideLegend
-							className="mt-300"
-							legend={t("workspaces.applicationClientRotatedSecretsTitle")}
-							name="rotated-secret-selection"
-							options={rotatedSecretCheckboxOptions}
-							value={selectedSecretId ? [selectedSecretId] : []}
-							onInput={(event): void => {
-								setSelectedSecretId(
-									event.target.value[event.target.value.length - 1] ?? null
-								);
-							}}
-						/>
+						<>
+							<Checkboxes
+								hideLegend
+								legend={t("workspaces.applicationClientRotatedSecretsTitle")}
+								name="rotated-secret-selection"
+								options={rotatedSecretCheckboxOptions}
+								value={selectedSecretId ? [selectedSecretId] : []}
+								onInput={(event): void => {
+									setSelectedSecretId(
+										event.target.value[event.target.value.length - 1] ?? null
+									);
+								}}
+							/>
+							<div className="mt-300">
+								<Button
+									buttonRole="danger"
+									disabled={selectedSecretId === null}
+									type="button"
+									onGcdsClick={() => {
+										if (selectedSecretId) {
+											setDeleteSecretId(selectedSecretId);
+										}
+									}}
+								>
+									{t("workspaces.applicationClientDeleteAction")}
+								</Button>
+							</div>
+						</>
 					)}
 				</Container>
 			</CenteredPageLayout>

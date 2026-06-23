@@ -49,9 +49,8 @@ const ConfirmDialog = ({
 			</>
 		}
 		onClose={onClose}
-	>
-		<p>{description}</p>
-	</Modal>
+	/>
+
 );
 
 export default ConfirmDialog;

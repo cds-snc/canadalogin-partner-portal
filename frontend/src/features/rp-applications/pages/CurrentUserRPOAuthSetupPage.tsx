@@ -17,13 +17,25 @@ import {
 	type CurrentUserRPOAuthSetupRead,
 } from "@/fetch/rp-applications";
 
-const toStatusLabel = (status: string): string => {
-	const normalizedStatus = status.trim().toLowerCase();
-	if (normalizedStatus.length === 0) {
-		return "unknown";
-	}
+const statusBadgeColors: Record<string, string> = {
+	active:
+		"border-[var(--gcds-color-green-200)] bg-[var(--gcds-color-green-50)] text-[var(--gcds-color-green-900)]",
+	inactive:
+		"border-[var(--gcds-border-default)] bg-[var(--gcds-color-neutral-100)] text-[var(--gcds-text-secondary)]",
+};
 
-	return normalizedStatus;
+const StatusBadge = ({ status }: { status: string }): ReactNode => {
+	const normalized = status.trim().toLowerCase() || "unknown";
+	const colorClass =
+		statusBadgeColors[normalized] ??
+		"border-[var(--gcds-border-default)] bg-[var(--gcds-color-neutral-100)] text-[var(--gcds-text-secondary)]";
+	return (
+		<span
+			className={`inline-block rounded-full border px-200 py-100 text-sm font-medium ${colorClass}`}
+		>
+			{normalized}
+		</span>
+	);
 };
 
 type LabelValueRowProps = {
@@ -149,45 +161,54 @@ export const CurrentUserRPOAuthSetupPage = (): FunctionComponent => {
 
 	return (
 		<CenteredPageLayout className="max-w-5xl gap-500">
-			<div className="max-w-4xl">
-				<Heading tag="h1">{applicationName}</Heading>
-			</div>
-
-			<div className="flex justify-end">
-				<Button
-					href={`/rp-applications/mine/${rpApplicationUuid}/mau-report`}
-					type="link"
-				>
-					{t("rpOAuthSetup.usageReportAction")}
-				</Button>
-			</div>
-
-			<Container
-				border
-				id="rp-oauth-setup-application-context"
-				padding="300"
-				tag="section"
-			>
-				<Heading marginTop="0" tag="h2">
-					{t("rpOAuthSetup.applicationSectionTitle")}
-				</Heading>
-				<div>
-					<LabelValueRow
-						label={t("rpOAuthSetup.applicationUrlLabel")}
-						value={applicationUrl ?? t("rpOAuthSetup.notAvailable")}
-					/>
-					<LabelValueRow
-						label={t("rpOAuthSetup.statusLabel")}
-						value={toStatusLabel(oauthSetup.status)}
-					/>
-					{departmentDisplayName ? (
-						<LabelValueRow
-							label={t("rpOAuthSetup.departmentLabel")}
-							value={departmentDisplayName}
-						/>
-					) : null}
+			<div className="flex flex-wrap items-center justify-between gap-300">
+				<Heading marginBottom="0" tag="h1">{applicationName}</Heading>
+				<div className="flex shrink-0 gap-200">
+					<Button
+						href={`/rp-applications/mine/${rpApplicationUuid}/mau-report`}
+						type="link"
+					>
+						{t("rpOAuthSetup.usageReportAction")}
+					</Button>
+					<Button
+						href={`/rp-applications/mine/${rpApplicationUuid}/client-secrets`}
+						type="link"
+					>
+						{t("workspaces.clientCredentials")}
+					</Button>
 				</div>
-			</Container>
+			</div>
+
+			<div className="flex flex-wrap gap-x-500 gap-y-200">
+				<div>
+					<span className="mb-100 block text-sm font-medium text-[var(--gcds-text-secondary)]">
+						{t("rpOAuthSetup.statusLabel")}
+					</span>
+					<StatusBadge status={oauthSetup.status} />
+				</div>
+				{applicationUrl ? (
+					<div>
+						<span className="mb-100 block text-sm font-medium text-[var(--gcds-text-secondary)]">
+							{t("rpOAuthSetup.applicationUrlLabel")}
+						</span>
+						<a
+							href={applicationUrl}
+							rel="noopener noreferrer"
+							target="_blank"
+						>
+							{applicationUrl}
+						</a>
+					</div>
+				) : null}
+				{departmentDisplayName ? (
+					<div>
+						<span className="mb-100 block text-sm font-medium text-[var(--gcds-text-secondary)]">
+							{t("rpOAuthSetup.departmentLabel")}
+						</span>
+						<span>{departmentDisplayName}</span>
+					</div>
+				) : null}
+			</div>
 
 			<Container
 				border
@@ -198,14 +219,6 @@ export const CurrentUserRPOAuthSetupPage = (): FunctionComponent => {
 				<Heading marginTop="0" tag="h2">
 					{t("rpOAuthSetup.oauthSectionTitle")}
 				</Heading>
-				<div className="mb-300 flex justify-end">
-					<Button
-						href={`/rp-applications/mine/${rpApplicationUuid}/client-secrets`}
-						type="link"
-					>
-						{t("workspaces.clientCredentials")}
-					</Button>
-				</div>
 				<div>
 					<LabelValueRow
 						label={t("rpOAuthSetup.discoveryEndpointLabel")}
