@@ -100,6 +100,11 @@ services:
     command: arq app.core.worker.settings.WorkerSettings
     environment:
       <<: *backend-environment
+      LOAD_MAU_ENABLED: true
+      START_ARQ_ON_STARTUP: true
+      AWS_ACCESS_KEY_ID: "your_aws_access_key_id"
+      AWS_SECRET_ACCESS_KEY: "your_aws_secret_access_key"
+      AWS_SESSION_TOKEN: "your_aws_session_token"
     depends_on:
       - db
       - redis

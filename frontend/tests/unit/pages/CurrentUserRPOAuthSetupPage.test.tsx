@@ -156,8 +156,8 @@ describe("CurrentUserRPOAuthSetupPage", () => {
 		expect(screen.getByRole("button", { name: "Client credentials" })).toBeTruthy();
 
 		const sectionHeadings = screen.getAllByRole("heading", { level: 2 });
-		expect(sectionHeadings[0]?.textContent).toBe("Application details");
-		expect(sectionHeadings[1]?.textContent).toBe("OAuth setup");
+		expect(sectionHeadings).toHaveLength(1);
+		expect(sectionHeadings[0]?.textContent).toBe("OAuth setup");
 	});
 
 	it("redirects 403 to access denied", async () => {
@@ -229,7 +229,7 @@ describe("CurrentUserRPOAuthSetupPage", () => {
 		render(<CurrentUserRPOAuthSetupPage />);
 
 		await screen.findByRole("heading", { name: "Benefits Portal" });
-		expect(screen.getByText("Department:")).toBeTruthy();
+		expect(screen.getByText("Department")).toBeTruthy();
 		expect(
 			screen.getByText("Treasury Board of Canada Secretariat")
 		).toBeTruthy();
@@ -252,6 +252,6 @@ describe("CurrentUserRPOAuthSetupPage", () => {
 		render(<CurrentUserRPOAuthSetupPage />);
 
 		await screen.findByRole("heading", { name: "Benefits Portal" });
-		expect(screen.queryByText("Department:")).toBeNull();
+		expect(screen.queryByText("Department")).toBeNull();
 	});
 });
