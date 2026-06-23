@@ -334,8 +334,12 @@ describe("MAUReportPage", () => {
 
 		expect(screen.getByRole("heading", { level: 3, name: "Total login" })).toBeTruthy();
 		expect(screen.getByRole("heading", { level: 3, name: "Unique user" })).toBeTruthy();
-		expect(screen.getByRole("heading", { level: 3, name: "Success login" })).toBeTruthy();
-		expect(screen.getByRole("heading", { level: 3, name: "Failed login" })).toBeTruthy();
+		expect(
+			screen.queryByRole("heading", { level: 3, name: "Success login" })
+		).toBeNull();
+		expect(
+			screen.queryByRole("heading", { level: 3, name: "Failed login" })
+		).toBeNull();
 		expect(screen.getByRole("heading", { level: 3, name: "MTD unique user" })).toBeTruthy();
 	});
 
@@ -374,6 +378,15 @@ describe("MAUReportPage", () => {
 		expect(screen.getByText("Daily sign-in trend")).toBeTruthy();
 		expect(screen.getByText("MAU Chart")).toBeTruthy();
 		expect(screen.getByText("Daily MAU metrics")).toBeTruthy();
+		expect(
+			screen.queryByRole("columnheader", { name: "Success login" })
+		).toBeNull();
+		expect(
+			screen.queryByRole("columnheader", { name: "Failed login" })
+		).toBeNull();
+		expect(
+			screen.queryByRole("columnheader", { name: "Success rate" })
+		).toBeNull();
 		expect(mockMAUDailyTrendLineChart).toHaveBeenCalledTimes(1);
 		expect(mockMAUDailyTrendLineChart.mock.calls[0]?.[0]?.points.map((point: { date: string }) => point.date)).toEqual([
 			"2026-01-15",

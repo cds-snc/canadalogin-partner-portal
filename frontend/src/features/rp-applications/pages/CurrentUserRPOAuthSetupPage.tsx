@@ -162,7 +162,9 @@ export const CurrentUserRPOAuthSetupPage = (): FunctionComponent => {
 	return (
 		<CenteredPageLayout className="max-w-5xl gap-500">
 			<div className="flex flex-wrap items-center justify-between gap-300">
-				<Heading marginBottom="0" tag="h1">{applicationName}</Heading>
+				<Heading marginBottom="0" tag="h1">
+					{applicationName}
+				</Heading>
 				<div className="flex shrink-0 gap-200">
 					<Button
 						href={`/rp-applications/mine/${rpApplicationUuid}/mau-report`}
@@ -191,11 +193,7 @@ export const CurrentUserRPOAuthSetupPage = (): FunctionComponent => {
 						<span className="mb-100 block text-sm font-medium text-[var(--gcds-text-secondary)]">
 							{t("rpOAuthSetup.applicationUrlLabel")}
 						</span>
-						<a
-							href={applicationUrl}
-							rel="noopener noreferrer"
-							target="_blank"
-						>
+						<a href={applicationUrl} rel="noopener noreferrer" target="_blank">
 							{applicationUrl}
 						</a>
 					</div>

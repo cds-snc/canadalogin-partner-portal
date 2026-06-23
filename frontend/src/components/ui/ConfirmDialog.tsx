@@ -50,7 +50,6 @@ const ConfirmDialog = ({
 		}
 		onClose={onClose}
 	/>
-
 );
 
 export default ConfirmDialog;

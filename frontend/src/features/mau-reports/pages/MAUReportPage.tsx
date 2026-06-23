@@ -47,16 +47,6 @@ const parseDateValue = (value: string): number => {
 	return Date.parse(`${value}T00:00:00.000Z`);
 };
 
-const toSuccessRate = (record: MAUReportItemRead): number => {
-	if (record.total_logins <= 0) {
-		return 0;
-	}
-
-	return Number(
-		((record.successful_logins / record.total_logins) * 100).toFixed(2)
-	);
-};
-
 const formatDisplayDate = (value: string): string => {
 	return value;
 };
@@ -65,15 +55,7 @@ const exportToCSV = (
 	records: Array<MAUReportItemRead>,
 	filename: string
 ): void => {
-	const headers = [
-		"date",
-		"total_logins",
-		"unique_users",
-		"successful_logins",
-		"failed_logins",
-		"mtd_unique_users",
-		"success_rate",
-	];
+	const headers = ["date", "total_logins", "unique_users", "mtd_unique_users"];
 	const csvRows = [headers.join(",")];
 
 	for (const record of records) {
@@ -82,10 +64,7 @@ const exportToCSV = (
 				record.date,
 				record.total_logins,
 				record.unique_users,
-				record.successful_logins,
-				record.failed_logins,
 				record.mtd_unique_users,
-				`${toSuccessRate(record)}%`,
 			].join(",")
 		);
 	}
@@ -170,14 +149,6 @@ export const MAUReportPage = (): FunctionComponent => {
 				value: latestRecord.unique_users,
 			},
 			{
-				label: t("mauReport.metrics.successLogin"),
-				value: latestRecord.successful_logins,
-			},
-			{
-				label: t("mauReport.metrics.failedLogin"),
-				value: latestRecord.failed_logins,
-			},
-			{
 				label: t("mauReport.metrics.mtdUniqueUser"),
 				value: latestRecord.mtd_unique_users,
 			},
@@ -198,8 +169,6 @@ export const MAUReportPage = (): FunctionComponent => {
 				date: record.date,
 				totalLogins: record.total_logins,
 				uniqueUsers: record.unique_users,
-				successLogins: record.successful_logins,
-				failedLogins: record.failed_logins,
 			})),
 		[orderedRecords]
 	);
@@ -220,28 +189,10 @@ export const MAUReportPage = (): FunctionComponent => {
 				sortable: true,
 			},
 			{
-				cellRenderer: (row): string => row.successful_logins.toLocaleString(),
-				field: "successful_logins",
-				headerName: t("mauReport.table.successLogin"),
-				sortable: true,
-			},
-			{
-				cellRenderer: (row): string => row.failed_logins.toLocaleString(),
-				field: "failed_logins",
-				headerName: t("mauReport.table.failedLogin"),
-				sortable: true,
-			},
-			{
 				cellRenderer: (row): string => row.mtd_unique_users.toLocaleString(),
 				field: "mtd_unique_users",
 				headerName: t("mauReport.table.mtdUniqueUser"),
 				sortable: true,
-			},
-			{
-				cellRenderer: (row): string => `${toSuccessRate(row)}%`,
-				field: "successful_logins",
-				headerName: t("mauReport.table.successRate"),
-				sortable: false,
 			},
 		],
 		[t]
@@ -302,7 +253,7 @@ export const MAUReportPage = (): FunctionComponent => {
 					<Heading tag="h2">
 						{t("mauReport.sectionTitle", { date: sectionDate })}
 					</Heading>
-					<div className="mt-300 grid gap-200 md:grid-cols-3 lg:grid-cols-5">
+					<div className="mt-300 grid gap-200 md:grid-cols-3 lg:grid-cols-3">
 						{kpis.map((kpi) => (
 							<div
 								key={kpi.label}
