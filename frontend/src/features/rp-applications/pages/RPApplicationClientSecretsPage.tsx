@@ -323,11 +323,10 @@ export const RPApplicationClientSecretsPage = (): FunctionComponent => {
 	return (
 		<>
 			<CenteredPageLayout className="max-w-5xl gap-500">
-				<div className="flex items-start justify-between gap-300">
-					<div className="max-w-4xl">
-						<Heading tag="h1">{oauthSetup.rpApplicationName}</Heading>
-						<Text>{t("workspaces.applicationClientHelp")}</Text>
-					</div>
+				<div className="flex flex-wrap items-center justify-between gap-300">
+					<Heading marginBottom="0" tag="h1">
+						{oauthSetup.rpApplicationName}
+					</Heading>
 					<Button
 						href={`/rp-applications/mine/${rpApplicationUuid}`}
 						type="link"
@@ -335,6 +334,7 @@ export const RPApplicationClientSecretsPage = (): FunctionComponent => {
 						{t("workspaces.backToApplication")}
 					</Button>
 				</div>
+				<Text>{t("workspaces.applicationClientHelp")}</Text>
 
 				<Container
 					border
