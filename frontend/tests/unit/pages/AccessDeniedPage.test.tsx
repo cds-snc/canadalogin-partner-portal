@@ -1,12 +1,7 @@
 import type { PropsWithChildren, ReactElement } from "react";
 import { act, fireEvent, render, screen, waitFor } from "@testing-library/react";
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { AccessDeniedPage } from "@/features/auth/pages/AccessDeniedPage";
-
-const logoutMock = vi.fn<() => Promise<void>>(() => Promise.resolve());
-const navigateMock = vi.fn<
-	(options: { replace: boolean; to: string }) => Promise<void>
->(() => Promise.resolve());
 
 vi.mock("react-i18next", () => ({
 	useTranslation: (): {
@@ -30,15 +25,6 @@ vi.mock("react-i18next", () => ({
 			return translations[key] ?? key;
 		},
 	}),
-}));
-
-vi.mock("@tanstack/react-router", () => ({
-	useNavigate: (): ((options: { replace: boolean; to: string }) => Promise<void>) =>
-		navigateMock,
-}));
-
-vi.mock("@/hooks", () => ({
-	useSession: (): { logout: () => Promise<void> } => ({ logout: logoutMock }),
 }));
 
 vi.mock("@/components/layout", () => ({
@@ -70,9 +56,25 @@ afterEach(() => {
 });
 
 describe("AccessDeniedPage", () => {
+	let locationHref = "";
+
+	beforeEach(() => {
+		locationHref = "";
+
+		Object.defineProperty(window, "location", {
+			configurable: true,
+			value: {
+				get href(): string {
+					return locationHref;
+				},
+				set href(value: string) {
+					locationHref = value;
+				},
+			},
+		});
+	});
+
 	it("renders denied content and a sign-out action", async () => {
-		logoutMock.mockClear();
-		navigateMock.mockClear();
 		render(<AccessDeniedPage />);
 
 		expect(screen.getByRole("heading", { name: /access denied/i })).toBeTruthy();
@@ -92,15 +94,12 @@ describe("AccessDeniedPage", () => {
 		fireEvent.click(signOutButton);
 
 		await waitFor(() => {
-			expect(logoutMock).toHaveBeenCalledTimes(1);
-			expect(navigateMock).toHaveBeenCalledWith({ replace: true, to: "/" });
+			expect(locationHref).toBe("/logout");
 		});
 	});
 
 	it("auto-signs out after 10 seconds and navigates home", async () => {
 		vi.useFakeTimers();
-		logoutMock.mockClear();
-		navigateMock.mockClear();
 
 		render(<AccessDeniedPage />);
 		await act(async () => {
@@ -109,7 +108,6 @@ describe("AccessDeniedPage", () => {
 		await Promise.resolve();
 		await Promise.resolve();
 
-		expect(logoutMock).toHaveBeenCalledTimes(1);
-		expect(navigateMock).toHaveBeenCalledWith({ replace: true, to: "/" });
+		expect(locationHref).toBe("/logout");
 	});
 });

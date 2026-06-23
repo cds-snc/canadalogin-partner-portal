@@ -4,11 +4,11 @@ from jwt import PyJWTError
 from sqlalchemy.ext.asyncio import AsyncSession
 from starlette.requests import Request
 
+from ..core.config import settings
 from ..core.exceptions.http_exceptions import UnauthorizedException
 from ..core.oidc import get_oidc_client
 from ..core.security import (
     TokenType,
-    blacklist_tokens,
     create_access_token,
     verify_token,
 )
@@ -34,9 +34,6 @@ class AuthService:
     async def logout(
         self,
         request: Request,
-        access_token: str | None,
-        refresh_token: str | None,
-        db: AsyncSession,
     ) -> dict[str, Any]:
         try:
             oidc_logout = None
@@ -46,6 +43,14 @@ class AuthService:
             except AssertionError:
                 pass
 
+            if oidc_logout:
+                sid = oidc_logout.get("sid")
+                if sid:
+                    session_id = await self.logout_service.get_session_id(sid)
+                    await self.logout_service.remove_session(sid)
+                    if session_id:
+                        await self.logout_service.remove_local_session(session_id)
+
             payload = {
                 "message": "Logged out successfully",
                 "clear_cookies": True,
@@ -53,10 +58,6 @@ class AuthService:
             oidc_logout_payload = await self._build_oidc_logout_payload(oidc_logout)
             if oidc_logout_payload is not None:
                 payload["oidc_logout"] = oidc_logout_payload
-
-            if access_token and refresh_token:
-                await blacklist_tokens(access_token=access_token, refresh_token=refresh_token, db=db)
-                return payload
 
             if request.session == {}:
                 return payload
@@ -69,10 +70,6 @@ class AuthService:
         if not oidc_logout:
             return None
 
-        sid = oidc_logout.get("sid")
-        if sid:
-            await self.logout_service.remove_session(sid)
-
         client = get_oidc_client()
         end_session_endpoint = client.server_metadata.get("end_session_endpoint")
         if not end_session_endpoint:
@@ -81,5 +78,5 @@ class AuthService:
         return {
             "end_session_endpoint": end_session_endpoint,
             "id_token_hint": oidc_logout.get("id_token"),
-            "post_logout_redirect_uri": None,
+            "post_logout_redirect_uri": settings.OIDC_POST_LOGOUT_REDIRECT_URI,
         }

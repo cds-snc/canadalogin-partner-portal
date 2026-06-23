@@ -233,7 +233,7 @@
 		"unknownApplication": "application inconnue"
 	},
 	"logout": {
-		"summary": "Fermeture de la session backend en cours.",
+		"summary": "En attente... Fermeture de la session depuis CanadaLogin.",
 		"title": "Fermeture de votre session"
 	},
 	"sessionTimeout": {

@@ -6,7 +6,7 @@ import { useSession } from "@/hooks";
 
 export const Home = (): FunctionComponent => {
 	const { t } = useTranslation();
-	const { isAuthenticated, isLoading, login, logout } = useSession();
+	const { isAuthenticated, isLoading, login } = useSession();
 
 	if (isLoading) {
 		return (
@@ -23,7 +23,7 @@ export const Home = (): FunctionComponent => {
 	}
 
 	const onLogoutClick = (): void => {
-		void logout();
+		window.location.href = "/logout";
 	};
 
 	return (

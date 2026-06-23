@@ -1,15 +1,8 @@
 import type { ReactElement, ReactNode } from "react";
 import { StrictMode } from "react";
 import { render, waitFor } from "@testing-library/react";
-import { describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { LogoutPage } from "@/features/auth/pages/LogoutPage";
-import { useSession } from "@/hooks";
-
-const navigate = vi.fn((options: { to: string }): Promise<void> => {
-	void options;
-
-	return Promise.resolve();
-});
 
 vi.mock("react-i18next", () => ({
 	useTranslation: (): { t: (key: string) => string } => ({
@@ -29,48 +22,48 @@ vi.mock("@gcds-core/components-react", () => ({
 	GcdsText: ({ children }: { children?: ReactNode }): ReactElement => <p>{children}</p>,
 }));
 
-vi.mock("@/hooks", () => ({
-	useSession: vi.fn(),
+const { resetMock } = vi.hoisted(() => ({
+	resetMock: vi.fn(),
 }));
 
-vi.mock("@tanstack/react-router", () => ({
-	useNavigate: (): typeof navigate => navigate,
+vi.mock("@/store", () => ({
+	useAuthStore: (selector: (state: Record<string, unknown>) => unknown): unknown =>
+		selector({ reset: resetMock }),
 }));
 
 describe("LogoutPage", (): void => {
-	it("logs the user out on mount", async (): Promise<void> => {
-		const logout = vi.fn((): Promise<void> => Promise.resolve());
-		vi.mocked(useSession).mockReturnValue({
-			currentUser: null,
-			isLoading: false,
-			isAuthenticated: false,
-			login: vi.fn(),
-			logout,
-			refreshSession: vi.fn((): Promise<null> => Promise.resolve(null)),
-		});
+	let locationHref = "";
 
-		render(<LogoutPage />);
+	beforeEach(() => {
+		resetMock.mockReset();
+		locationHref = "";
 
-		await waitFor((): void => {
-			expect(logout).toHaveBeenCalledTimes(1);
-		});
-		await waitFor((): void => {
-			expect(navigate).toHaveBeenCalledWith({ replace: true, to: "/" });
+		Object.defineProperty(window, "location", {
+			configurable: true,
+			value: {
+				get href(): string {
+					return locationHref;
+				},
+				set href(value: string) {
+					locationHref = value;
+				},
+			},
 		});
 	});
 
-	it("redirects after logout when effects are replayed in strict mode", async (): Promise<void> => {
-		const logout = vi.fn((): Promise<void> => Promise.resolve());
+	afterEach(() => {
+		vi.useRealTimers();
+	});
 
-		vi.mocked(useSession).mockReturnValue({
-			currentUser: null,
-			isLoading: false,
-			isAuthenticated: false,
-			login: vi.fn(),
-			logout,
-			refreshSession: vi.fn((): Promise<null> => Promise.resolve(null)),
+	it("resets auth state on mount", async (): Promise<void> => {
+		render(<LogoutPage />);
+
+		await waitFor((): void => {
+			expect(resetMock).toHaveBeenCalledTimes(1);
 		});
+	});
 
+	it("resets auth state when effects are replayed in strict mode", async (): Promise<void> => {
 		render(
 			<StrictMode>
 				<LogoutPage />
@@ -78,35 +71,16 @@ describe("LogoutPage", (): void => {
 		);
 
 		await waitFor((): void => {
-			expect(logout).toHaveBeenCalledTimes(1);
-		});
-		await waitFor((): void => {
-			expect(navigate).toHaveBeenCalledWith({ replace: true, to: "/" });
+			expect(resetMock).toHaveBeenCalled();
 		});
 	});
 
-	it("does not log out again on rerender when the hook returns a new logout function", async (): Promise<void> => {
-		const logout = vi.fn((): Promise<void> => Promise.resolve());
+	it("navigates to backend logout after 2 seconds", async (): Promise<void> => {
+		vi.useFakeTimers();
+		render(<LogoutPage />);
 
-		vi.mocked(useSession).mockImplementation(() => ({
-			currentUser: null,
-			isAuthenticated: false,
-			isLoading: false,
-			login: vi.fn(),
-			logout: () => logout(),
-			refreshSession: vi.fn((): Promise<null> => Promise.resolve(null)),
-		}));
+		await vi.advanceTimersByTimeAsync(2000);
 
-		const { rerender } = render(<LogoutPage />);
-
-		await waitFor((): void => {
-			expect(logout).toHaveBeenCalledTimes(1);
-		});
-
-		rerender(<LogoutPage />);
-
-		await waitFor((): void => {
-			expect(logout).toHaveBeenCalledTimes(1);
-		});
+		expect(locationHref).toBe("/api/v1/logout");
 	});
 });

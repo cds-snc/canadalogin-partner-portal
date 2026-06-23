@@ -1,4 +1,3 @@
-import { useNavigate } from "@tanstack/react-router";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import type { FunctionComponent } from "@/common/types";
@@ -22,22 +21,17 @@ const formatCountdown = (totalSeconds: number): string => {
 
 export const InactivitySessionGuard = (): FunctionComponent => {
 	const { t } = useTranslation();
-	const navigate = useNavigate();
-	const { isAuthenticated, isLoading, logout, refreshSession } = useSession();
+	const { isAuthenticated, isLoading, refreshSession } = useSession();
 	const [nowMs, setNowMs] = useState<number>(() => Date.now());
 	const [isContinuing, setIsContinuing] = useState(false);
 	const [isLoggingOut, setIsLoggingOut] = useState(false);
 	const hasTriggeredAutoLogoutRef = useRef(false);
 
-	const performLogout = useCallback(async (): Promise<void> => {
-		try {
-			await logout();
-			await navigate({ replace: true, to: "/" });
-		} finally {
-			hasTriggeredAutoLogoutRef.current = false;
-			setIsLoggingOut(false);
-		}
-	}, [logout, navigate]);
+	const performLogout = useCallback((): void => {
+		hasTriggeredAutoLogoutRef.current = false;
+		setIsLoggingOut(false);
+		window.location.href = "/logout";
+	}, []);
 
 	useEffect(() => {
 		if (!isAuthenticated || isLoading) {
@@ -112,7 +106,7 @@ export const InactivitySessionGuard = (): FunctionComponent => {
 		if (!hasTriggeredAutoLogoutRef.current) {
 			hasTriggeredAutoLogoutRef.current = true;
 			setIsLoggingOut(true);
-			void performLogout();
+			performLogout();
 		}
 	}, [performLogout, warningState.shouldAutoLogout]);
 
@@ -128,7 +122,7 @@ export const InactivitySessionGuard = (): FunctionComponent => {
 
 			if (!currentUser) {
 				setIsLoggingOut(true);
-				await performLogout();
+				performLogout();
 				return;
 			}
 
@@ -136,7 +130,7 @@ export const InactivitySessionGuard = (): FunctionComponent => {
 			setNowMs(Date.now());
 		} catch {
 			setIsLoggingOut(true);
-			await performLogout();
+			performLogout();
 		} finally {
 			setIsContinuing(false);
 		}
@@ -148,7 +142,7 @@ export const InactivitySessionGuard = (): FunctionComponent => {
 		}
 
 		setIsLoggingOut(true);
-		void performLogout();
+		performLogout();
 	}, [isLoggingOut, performLogout]);
 
 	if (!isAuthenticated || !warningState.isWarningVisible) {

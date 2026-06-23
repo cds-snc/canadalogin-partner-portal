@@ -1,29 +1,25 @@
-import { useNavigate } from "@tanstack/react-router";
-import { useEffect, useRef } from "react";
+import { useEffect } from "react";
 import { useTranslation } from "react-i18next";
 import type { FunctionComponent } from "@/common/types";
 import { Heading, Text } from "@/components/ui";
 import { CenteredPageLayout } from "@/components/layout";
-import { useSession } from "@/hooks";
+import { useAuthStore } from "@/store";
 
 export const LogoutPage = (): FunctionComponent => {
 	const { t } = useTranslation();
-	const { logout } = useSession();
-	const navigate = useNavigate();
-	const hasTriggeredLogout = useRef(false);
+	const reset = useAuthStore((state) => state.reset);
 
 	useEffect(() => {
-		if (hasTriggeredLogout.current) {
-			return;
-		}
+		reset();
 
-		hasTriggeredLogout.current = true;
+		const timer = globalThis.setTimeout(() => {
+			window.location.href = "/api/v1/logout";
+		}, 2000);
 
-		void (async (): Promise<void> => {
-			await logout();
-			await navigate({ replace: true, to: "/" });
-		})();
-	}, [logout, navigate]);
+		return (): void => {
+			globalThis.clearTimeout(timer);
+		};
+	}, [reset]);
 
 	return (
 		<CenteredPageLayout className="max-w-2xl">
