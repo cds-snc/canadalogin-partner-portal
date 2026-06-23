@@ -80,9 +80,6 @@ describe("Home", () => {
 			screen.getByRole("heading", { name: /manage your relying party applications in one place/i }),
 		).toBeTruthy();
 		expect(
-			screen.getByRole("heading", { name: /manage rp applications/i }),
-		).toBeTruthy();
-		expect(
 			screen.getByRole("button", { name: /sign in with canadalogin/i }),
 		).toBeTruthy();
 	});

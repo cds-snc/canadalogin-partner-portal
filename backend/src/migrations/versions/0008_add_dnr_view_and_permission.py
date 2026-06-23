@@ -56,8 +56,8 @@ def upgrade() -> None:
             d.gc_org_id AS department_id,
             d.abbreviation AS department_abbreviation,
             d.name AS department_name,
-            d.abbreviation AS department_abbreviation_fr,
-            d.name AS department_name_fr
+            d.abbreviation_fr AS department_abbreviation_fr,
+            d.name_fr AS department_name_fr
         FROM public.rp_application ra
         LEFT JOIN public.department d ON ra.department_id = d.id
         WHERE ra.is_deleted = FALSE;

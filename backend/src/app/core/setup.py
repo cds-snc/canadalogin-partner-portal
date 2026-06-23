@@ -357,6 +357,7 @@ def create_application(
             rolling=settings.SESSION_ROLLING,
             cookie_name=settings.SESSION_COOKIE_NAME,
             cookie_https_only=settings.SESSION_COOKIE_SECURE,
+            cookie_domain=settings.SESSION_COOKIE_DOMAIN,
             cookie_same_site="lax",
         )
 
