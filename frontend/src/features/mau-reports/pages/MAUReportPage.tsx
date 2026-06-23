@@ -257,19 +257,13 @@ export const MAUReportPage = (): FunctionComponent => {
 	const departmentName = responseData?.department_name ?? null;
 
 	return (
-		<>
-			<Heading tag="h1">
-				{applicationName
-					? t("mauReport.pageTitle", { applicationName })
-					: t("mauReport.title")}
-			</Heading>
-			{departmentName ? (
-				<Text>
-					{t("mauReport.departmentLabel", { department: departmentName })}
-				</Text>
-			) : null}
-
-			<div className="mt-200 flex w-full justify-end">
+		<div className="flex flex-col gap-400">
+			<div className="flex flex-wrap items-center justify-between gap-300">
+				<Heading marginBottom="0" tag="h1">
+					{applicationName
+						? t("mauReport.pageTitle", { applicationName })
+						: t("mauReport.title")}
+				</Heading>
 				<Button
 					href={`/rp-applications/mine/${rpApplicationUuidValue}`}
 					type="link"
@@ -277,6 +271,11 @@ export const MAUReportPage = (): FunctionComponent => {
 					{t("workspaces.backToApplication")}
 				</Button>
 			</div>
+			{departmentName ? (
+				<Text>
+					{t("mauReport.departmentLabel", { department: departmentName })}
+				</Text>
+			) : null}
 
 			{isLoading || isRefetching ? (
 				<Notice
@@ -319,16 +318,6 @@ export const MAUReportPage = (): FunctionComponent => {
 				</section>
 			) : null}
 
-			{!isLoading && !errorNotice && orderedRecords.length === 0 ? (
-				<Notice
-					noticeRole="info"
-					noticeTitle={t("mauReport.emptyTitle")}
-					noticeTitleTag="h2"
-				>
-					<Text>{t("mauReport.emptyBody")}</Text>
-				</Notice>
-			) : null}
-
 			<form
 				className="flex flex-col gap-300 rounded-sm border border-[var(--gcds-border-default)] bg-[var(--gcds-bg-white)] p-300"
 				onSubmit={handleFilterSubmit}
@@ -363,6 +352,16 @@ export const MAUReportPage = (): FunctionComponent => {
 					</Button>
 				</div>
 			</form>
+
+			{!isLoading && !errorNotice && orderedRecords.length === 0 ? (
+				<Notice
+					noticeRole="info"
+					noticeTitle={t("mauReport.emptyTitle")}
+					noticeTitleTag="h2"
+				>
+					<Text>{t("mauReport.emptyBody")}</Text>
+				</Notice>
+			) : null}
 
 			{!isLoading && !errorNotice && orderedRecords.length > 0 ? (
 				<section className="rounded-sm border border-[var(--gcds-border-default)] bg-[var(--gcds-bg-white)] p-300">
@@ -399,6 +398,6 @@ export const MAUReportPage = (): FunctionComponent => {
 					</div>
 				</section>
 			) : null}
-		</>
+		</div>
 	);
 };

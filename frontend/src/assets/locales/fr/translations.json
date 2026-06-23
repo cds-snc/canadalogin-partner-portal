@@ -505,7 +505,7 @@
 		"applicationClientRegenerateConfirmTitle": "Régénérer le secret ?",
 		"applicationClientSelectLegend": "Sélectionnez le secret rotatif à supprimer",
 		"applicationClientSelectLabel": "Sélectionner",
-		"applicationClientDeleteConfirmBody": "Supprimer ce secret rotatif ?",
+		"applicationClientDeleteConfirmBody": "Cette action est irréversible. Toute application utilisant encore ce secret rotatif ne pourra plus s'authentifier.",
 		"applicationClientDeleteConfirmTitle": "Supprimer le secret rotatif ?",
 		"applicationClientDeleteAction": "Supprimer la sélection",
 		"applicationClientDeletedSuccess": "Secret rotatif supprimé",
