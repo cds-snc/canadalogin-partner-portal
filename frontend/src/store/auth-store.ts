@@ -1,14 +1,7 @@
 import { useStore } from "zustand";
 import { createStore } from "zustand/vanilla";
 import { clearBackendActivity } from "@/lib/backend-activity";
-import {
-	buildOidcLogoutUrl,
-	getCurrentUser,
-	getOidcLoginUrl,
-	logoutCurrentUser,
-	type LogoutResponse,
-	type UserRead,
-} from "@/fetch/auth";
+import { getCurrentUser, getOidcLoginUrl, type UserRead } from "@/fetch/auth";
 
 type AuthStoreState = {
 	currentUser: UserRead | null;
@@ -97,23 +90,13 @@ const authStore = createStore<AuthStoreState>()((set, get) => {
 		login: (): void => {
 			window.location.assign(getOidcLoginUrl());
 		},
-		logout: async (): Promise<void> => {
+		logout: (): Promise<void> => {
 			sessionVersion += 1;
 			inFlightHydration = null;
 			clearBackendActivity();
 			set((state) => ({ ...state, ...createSessionSnapshot(null) }));
-
-			const logoutResponse: LogoutResponse | null =
-				await logoutCurrentUser().finally(() => {
-					sessionVersion += 1;
-					inFlightHydration = null;
-					clearBackendActivity();
-					set((state) => ({ ...state, ...createSessionSnapshot(null) }));
-				});
-
-			if (logoutResponse?.oidcLogout) {
-				window.location.assign(buildOidcLogoutUrl(logoutResponse.oidcLogout));
-			}
+			window.location.href = "/api/v1/logout";
+			return Promise.resolve();
 		},
 		refreshSession: (): Promise<UserRead | null> => runHydration(true),
 		reset: (): void => {

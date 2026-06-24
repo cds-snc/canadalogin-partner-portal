@@ -1,12 +1,13 @@
 from typing import Any
 
-from joserfc import jwt
+from joserfc import jwk, jwt
 from joserfc.errors import JoseError
 from joserfc.jwt import JWTClaimsRegistry
 from starsessions.stores.base import SessionStore
 
 from ..core.config import settings
 from ..core.exceptions.http_exceptions import UnauthorizedException
+from ..core.oidc import get_oidc_client
 
 
 class OidcLogoutService:
@@ -47,8 +48,6 @@ class OidcLogoutService:
         if not logout_token:
             raise UnauthorizedException("Invalid logout token.")
 
-        from ..core.oidc import get_oidc_client
-
         client = get_oidc_client()
         metadata = await client.load_server_metadata()
         jwks = await client.fetch_jwk_set()
@@ -71,10 +70,11 @@ class OidcLogoutService:
             claims_registry = JWTClaimsRegistry()
 
         try:
-            token = jwt.decode(logout_token, jwks)
+            key_set = jwks if isinstance(jwks, jwk.KeySet) else jwk.KeySet.import_key_set(jwks)
+            token = jwt.decode(logout_token, key_set)
             claims = token.claims
             claims_registry.validate(claims)
-        except JoseError as exc:
+        except (JoseError, TypeError, ValueError) as exc:
             raise UnauthorizedException("Invalid logout token.") from exc
 
         events = claims.get("events") or {}

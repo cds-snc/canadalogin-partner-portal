@@ -233,7 +233,7 @@
 		"unknownApplication": "unknown application"
 	},
 	"logout": {
-		"summary": "Closing the current backend session.",
+		"summary": "Waiting... Closing the current session from CanadaLogin.",
 		"title": "Signing you out"
 	},
 	"sessionTimeout": {

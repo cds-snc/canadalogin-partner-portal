@@ -2,30 +2,26 @@ from unittest.mock import AsyncMock, Mock, patch
 
 import pytest
 
+from src.app.core.config import settings
 from src.app.services.auth_service import AuthService
 
 
 class TestAuthService:
     @pytest.mark.asyncio
-    async def test_logout_blacklists_tokens_when_present(self, mock_db) -> None:
+    async def test_logout_returns_basic_payload_with_empty_session(self) -> None:
         service = AuthService()
         request = Mock(session={})
 
-        with patch("src.app.services.auth_service.blacklist_tokens", new_callable=AsyncMock) as mock_blacklist:
-            result = await service.logout(
-                request=request,
-                access_token="access-token",
-                refresh_token="refresh-token",
-                db=mock_db,
-            )
+        result = await service.logout(request=request)
 
         assert result == {"message": "Logged out successfully", "clear_cookies": True}
-        mock_blacklist.assert_awaited_once_with(access_token="access-token", refresh_token="refresh-token", db=mock_db)
 
     @pytest.mark.asyncio
-    async def test_logout_returns_oidc_logout_details_and_clears_logout_index(self, mock_db) -> None:
+    async def test_logout_returns_oidc_logout_details_and_clears_session(self) -> None:
         logout_service = Mock()
         logout_service.remove_session = AsyncMock()
+        logout_service.get_session_id = AsyncMock(return_value="session-id-456")
+        logout_service.remove_local_session = AsyncMock()
         service = AuthService(logout_service=logout_service)
         request = Mock(
             session={
@@ -42,12 +38,7 @@ class TestAuthService:
         }
 
         with patch("src.app.services.auth_service.get_oidc_client", return_value=client):
-            result = await service.logout(
-                request=request,
-                access_token=None,
-                refresh_token=None,
-                db=mock_db,
-            )
+            result = await service.logout(request=request)
 
         assert result == {
             "message": "Logged out successfully",
@@ -55,10 +46,12 @@ class TestAuthService:
             "oidc_logout": {
                 "end_session_endpoint": "https://example.verify.ibm.com/logout",
                 "id_token_hint": "id-token-value",
-                "post_logout_redirect_uri": None,
+                "post_logout_redirect_uri": settings.OIDC_POST_LOGOUT_REDIRECT_URI,
             },
         }
+        logout_service.get_session_id.assert_awaited_once_with("sid-123")
         logout_service.remove_session.assert_awaited_once_with("sid-123")
+        logout_service.remove_local_session.assert_awaited_once_with("session-id-456")
 
     @pytest.mark.asyncio
     async def test_refresh_access_token_requires_cookie(self, mock_db) -> None:

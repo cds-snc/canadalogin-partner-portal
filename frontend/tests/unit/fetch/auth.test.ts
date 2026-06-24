@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { ServerRequestError, getApiBaseUrl } from "@/fetch";
-import { getCurrentUser, getOidcLoginUrl, logoutCurrentUser } from "@/fetch/auth";
+import { getCurrentUser, getOidcLoginUrl } from "@/fetch/auth";
 
 const createUserFixture = (): Record<string, string | number> => ({
 	uuid: "018f6f83-0f2b-7b0f-b2fb-96c4d8a4b102",
@@ -94,39 +94,6 @@ describe("fetch auth", () => {
 		}) as typeof fetch;
 
 		await expect(getCurrentUser()).rejects.toBeInstanceOf(ServerRequestError);
-	});
-
-	it("posts to logout with credentials included", async () => {
-		globalThis.fetch = vi.fn().mockResolvedValue({
-			ok: true,
-			json: () =>
-				Promise.resolve({
-					message: "Logged out successfully",
-					oidcLogout: {
-						endSessionEndpoint: "https://example.verify.ibm.com/oidc/logout",
-						idTokenHint: "id-token-value",
-						postLogoutRedirectUri: "https://portal.example.gc.ca/logout-complete",
-					},
-				}),
-			headers: new Headers({ "content-type": "application/json" }),
-		}) as typeof fetch;
-
-		await expect(logoutCurrentUser()).resolves.toEqual({
-			message: "Logged out successfully",
-			oidcLogout: {
-				endSessionEndpoint: "https://example.verify.ibm.com/oidc/logout",
-				idTokenHint: "id-token-value",
-				postLogoutRedirectUri: "https://portal.example.gc.ca/logout-complete",
-			},
-		});
-
-		expect(globalThis.fetch).toHaveBeenCalledWith(
-			"http://localhost:8000/api/v1/logout",
-			expect.objectContaining({
-				credentials: "include",
-				method: "POST",
-			}),
-		);
 	});
 
 	it("derives the fallback backend origin from the current local hostname", () => {

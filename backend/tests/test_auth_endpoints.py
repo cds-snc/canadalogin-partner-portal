@@ -3,7 +3,7 @@ from contextlib import asynccontextmanager
 from unittest.mock import AsyncMock, Mock, patch
 
 import pytest
-from fastapi import APIRouter, Response
+from fastapi import APIRouter
 from fastapi.testclient import TestClient
 from starlette.requests import Request
 from starsessions import InMemoryStore
@@ -28,60 +28,21 @@ def make_request(session: dict | None = None) -> Request:
     )
 
 
-
-
 class TestLogoutEndpoint:
     @pytest.mark.asyncio
     async def test_logout_route_delegates_to_service(self, mock_db):
         request = make_request(session={"user_uuid": "019cfc22-bff2-7168-ae43-387a301d8fcb"})
-        response = Response()
         mock_service = Mock()
         mock_service.logout = AsyncMock(return_value={"message": "Logged out successfully", "clear_cookies": True})
 
-        result = await logout(request, response, None, None, mock_db, mock_service)
+        result = await logout(request, mock_service)
 
         assert result == LogoutResponse(message="Logged out successfully")
-        expected_cookie = f"{settings.SESSION_COOKIE_NAME}=".encode()
-        assert any(expected_cookie in header for _, header in response.raw_headers)
-        mock_service.logout.assert_awaited_once_with(
-            request=request,
-            access_token=None,
-            refresh_token=None,
-            db=mock_db,
-        )
-
-    @pytest.mark.asyncio
-    async def test_logout_clears_cookies_with_matching_security_attributes(self, mock_db):
-        request = make_request(session={"user_uuid": "019cfc22-bff2-7168-ae43-387a301d8fcb"})
-        response = Response()
-        mock_service = Mock()
-        mock_service.logout = AsyncMock(return_value={"message": "Logged out successfully", "clear_cookies": True})
-
-        await logout(request, response, None, None, mock_db, mock_service)
-
-        set_cookie_headers = [header.decode() for key, header in response.raw_headers if key == b"set-cookie"]
-
-        refresh_cookie_header = next(header for header in set_cookie_headers if header.startswith("refresh_token="))
-        session_cookie_header = next(
-            header for header in set_cookie_headers if header.startswith(f"{settings.SESSION_COOKIE_NAME}=")
-        )
-
-        assert "Max-Age=0" in refresh_cookie_header
-        assert "Path=/" in refresh_cookie_header
-        assert "SameSite=lax" in refresh_cookie_header
-        assert "HttpOnly" in refresh_cookie_header
-        assert "Secure" in refresh_cookie_header
-
-        assert "Max-Age=0" in session_cookie_header
-        assert "Path=/" in session_cookie_header
-        assert "SameSite=lax" in session_cookie_header
-        if settings.SESSION_COOKIE_SECURE:
-            assert "Secure" in session_cookie_header
+        mock_service.logout.assert_awaited_once_with(request=request)
 
     @pytest.mark.asyncio
     async def test_logout_returns_oidc_logout_details_when_service_provides_them(self, mock_db):
         request = make_request(session={"user_uuid": "019cfc22-bff2-7168-ae43-387a301d8fcb"})
-        response = Response()
         mock_service = Mock()
         mock_service.logout = AsyncMock(
             return_value={
@@ -95,7 +56,7 @@ class TestLogoutEndpoint:
             }
         )
 
-        result = await logout(request, response, None, None, mock_db, mock_service)
+        result = await logout(request, mock_service)
 
         assert result == LogoutResponse(
             message="Logged out successfully",

@@ -1,27 +1,22 @@
-import { useNavigate } from "@tanstack/react-router";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import type { FunctionComponent } from "@/common/types";
 import { CenteredPageLayout } from "@/components/layout";
 import { Button, Heading, Notice, Text } from "@/components/ui";
-import { useSession } from "@/hooks";
 
 export const AccessDeniedPage = (): FunctionComponent => {
 	const { t } = useTranslation();
-	const { logout } = useSession();
-	const navigate = useNavigate();
 	const [secondsRemaining, setSecondsRemaining] = useState(10);
 	const hasSignedOut = useRef(false);
 
-	const triggerSignOut = useCallback(async (): Promise<void> => {
+	const triggerSignOut = useCallback((): void => {
 		if (hasSignedOut.current) {
 			return;
 		}
 
 		hasSignedOut.current = true;
-		await logout();
-		await navigate({ replace: true, to: "/" });
-	}, [logout, navigate]);
+		window.location.href = "/logout";
+	}, []);
 
 	useEffect((): (() => void) => {
 		const countdownInterval = globalThis.setInterval(() => {
@@ -45,11 +40,11 @@ export const AccessDeniedPage = (): FunctionComponent => {
 			return;
 		}
 
-		void triggerSignOut();
+		triggerSignOut();
 	}, [secondsRemaining, triggerSignOut]);
 
 	const onSignOutClick = (): void => {
-		void triggerSignOut();
+		triggerSignOut();
 	};
 
 	return (
