@@ -195,7 +195,7 @@
 		"title": "Dashboard"
 	},
 	"mauReport": {
-		"dailyListTitle": "Daily MAU metrics",
+		"dailyListTitle": "Usage report metrics",
 		"departmentLabel": "Department: {{department}}",
 		"exportCsv": "Export to CSV",
 		"emptyBody": "No MAU records were returned for the selected date range.",
@@ -217,7 +217,7 @@
 			"uniqueUser": "Unique user"
 		},
 		"pageTitle": "{{applicationName}} — Usage Report",
-		"sectionTitle": "On: {{date}}",
+		"sectionTitle": "Latest day — {{date}}",
 		"table": {
 			"date": "Date",
 			"failedLogin": "Failed login",
@@ -227,7 +227,7 @@
 			"totalLogin": "Total login",
 			"uniqueUser": "Unique user"
 		},
-		"title": "MAU report",
+		"title": "Usage report",
 		"trendChartBody": "Daily sign-in attempts, unique users, and success rate.",
 		"trendChartTitle": "Daily sign-in trend",
 		"unknownApplication": "unknown application"
@@ -757,6 +757,7 @@
 	"termsAndConditions": {
 		"title": "Terms and Conditions",
 		"intro": "Please read and accept the Terms and Conditions to continue using this application.",
+		"alreadyAccepted": "You have already accepted these Terms and Conditions.",
 		"section1Title": "Acceptance of Terms",
 		"section1Body": "By using this service, you agree to comply with and be bound by these terms and conditions. If you do not agree to these terms, you should not use this service.",
 		"section2Title": "Privacy and Data Protection",
