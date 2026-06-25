@@ -16,7 +16,8 @@ const TermsAndConditionsPage = (): ReactElement => {
 	};
 	const navigate = useNavigate();
 	const search = useSearch({ from: "/terms-and-conditions" });
-	const { refreshSession } = useSession();
+	const { refreshSession, currentUser } = useSession();
+	const hasAlreadyAccepted = currentUser?.acceptedTermsAt != null;
 	const toast = useToast();
 
 	const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
@@ -67,36 +68,40 @@ const TermsAndConditionsPage = (): ReactElement => {
 
 			{submitError ? <p className="gcds-error-message">{submitError}</p> : null}
 
-			<div className="flex flex-col gap-200">
-				<label
-					className="flex items-start gap-200"
-					htmlFor="terms-accept-checkbox"
-				>
-					<input
-						checked={isAccepted}
-						className="mt-100"
-						id="terms-accept-checkbox"
-						type="checkbox"
-						onChange={(e) => {
-							setIsAccepted(e.target.checked);
-						}}
-					/>
-					<Text>{t("termsAndConditions.checkboxLabel")}</Text>
-				</label>
-
-				<div>
-					<Button
-						buttonRole="primary"
-						disabled={!isAccepted || isSubmitting}
-						type="button"
-						onGcdsClick={handleAccept}
+			{hasAlreadyAccepted ? (
+				<Text>{t("termsAndConditions.alreadyAccepted")}</Text>
+			) : (
+				<div className="flex flex-col gap-200">
+					<label
+						className="flex items-start gap-200"
+						htmlFor="terms-accept-checkbox"
 					>
-						{isSubmitting
-							? t("termsAndConditions.accepting")
-							: t("termsAndConditions.acceptButton")}
-					</Button>
+						<input
+							checked={isAccepted}
+							className="mt-100"
+							id="terms-accept-checkbox"
+							type="checkbox"
+							onChange={(e) => {
+								setIsAccepted(e.target.checked);
+							}}
+						/>
+						<Text>{t("termsAndConditions.checkboxLabel")}</Text>
+					</label>
+
+					<div>
+						<Button
+							buttonRole="primary"
+							disabled={!isAccepted || isSubmitting}
+							type="button"
+							onGcdsClick={handleAccept}
+						>
+							{isSubmitting
+								? t("termsAndConditions.accepting")
+								: t("termsAndConditions.acceptButton")}
+						</Button>
+					</div>
 				</div>
-			</div>
+			)}
 		</CenteredPageLayout>
 	);
 };

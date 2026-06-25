@@ -195,7 +195,7 @@
 		"title": "Tableau de bord"
 	},
 	"mauReport": {
-		"dailyListTitle": "Mesures MAU quotidiennes",
+		"dailyListTitle": "Mesures du rapport d'utilisation",
 		"departmentLabel": "Ministère : {{department}}",
 		"exportCsv": "Exporter en CSV",
 		"emptyBody": "Aucune donnée MAU n'a été renvoyée pour la plage de dates sélectionnée.",
@@ -217,7 +217,7 @@
 			"uniqueUser": "Utilisateurs uniques"
 		},
 		"pageTitle": "{{applicationName}} — Rapport d'utilisation",
-		"sectionTitle": "Le : {{date}}",
+		"sectionTitle": "Dernier jour — {{date}}",
 		"table": {
 			"date": "Date",
 			"failedLogin": "Connexions échouées",
@@ -227,7 +227,7 @@
 			"totalLogin": "Connexions totales",
 			"uniqueUser": "Utilisateurs uniques"
 		},
-		"title": "Rapport MAU",
+		"title": "Rapport d'utilisation",
 		"trendChartBody": "Tentatives quotidiennes de connexion, utilisateurs uniques et taux de réussite.",
 		"trendChartTitle": "Tendance quotidienne des connexions",
 		"unknownApplication": "application inconnue"
@@ -757,6 +757,7 @@
 	"termsAndConditions": {
 		"title": "Conditions d'utilisation",
 		"intro": "Veuillez lire et accepter les conditions d'utilisation pour continuer à utiliser cette application.",
+		"alreadyAccepted": "Vous avez déjà accepté ces conditions d'utilisation.",
 		"section1Title": "Acceptation des conditions",
 		"section1Body": "En utilisant ce service, vous acceptez de vous conformer aux présentes conditions d'utilisation. Si vous n'acceptez pas ces conditions, vous ne devez pas utiliser ce service.",
 		"section2Title": "Confidentialité et protection des données",

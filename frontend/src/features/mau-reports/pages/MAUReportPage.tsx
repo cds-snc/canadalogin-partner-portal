@@ -47,10 +47,6 @@ const parseDateValue = (value: string): number => {
 	return Date.parse(`${value}T00:00:00.000Z`);
 };
 
-const formatDisplayDate = (value: string): string => {
-	return value;
-};
-
 const exportToCSV = (
 	records: Array<MAUReportItemRead>,
 	filename: string
@@ -155,13 +151,7 @@ export const MAUReportPage = (): FunctionComponent => {
 		];
 	}, [latestRecord, t]);
 
-	const sectionDate = useMemo(() => {
-		if (!latestRecord) {
-			return "";
-		}
-
-		return formatDisplayDate(latestRecord.date);
-	}, [latestRecord]);
+	const latestDate = latestRecord?.date ?? "";
 
 	const trendPoints = useMemo(
 		() =>
@@ -228,47 +218,6 @@ export const MAUReportPage = (): FunctionComponent => {
 				</Text>
 			) : null}
 
-			{isLoading || isRefetching ? (
-				<Notice
-					noticeRole="info"
-					noticeTitle={t("mauReport.loadingTitle")}
-					noticeTitleTag="h2"
-				>
-					<Text>{t("mauReport.loadingBody")}</Text>
-				</Notice>
-			) : null}
-
-			{errorNotice ? (
-				<Notice
-					noticeRole={errorNotice.noticeRole}
-					noticeTitle={t(errorNotice.titleKey as never)}
-					noticeTitleTag="h2"
-				>
-					<Text>{errorNotice.bodyText ?? t(errorNotice.bodyKey as never)}</Text>
-				</Notice>
-			) : null}
-
-			{!isLoading && !errorNotice && latestRecord && sectionDate ? (
-				<section>
-					<Heading tag="h2">
-						{t("mauReport.sectionTitle", { date: sectionDate })}
-					</Heading>
-					<div className="mt-300 grid gap-200 md:grid-cols-3 lg:grid-cols-3">
-						{kpis.map((kpi) => (
-							<div
-								key={kpi.label}
-								className="rounded-sm border border-[var(--gcds-border-default)] bg-[var(--gcds-bg-white)] p-300"
-							>
-								<h3 className="gcds-heading gcds-heading--h3">{kpi.label}</h3>
-								<p className="mt-100 text-2xl font-semibold text-[var(--gcds-text-primary)]">
-									{kpi.value.toLocaleString()}
-								</p>
-							</div>
-						))}
-					</div>
-				</section>
-			) : null}
-
 			<form
 				className="flex flex-col gap-300 rounded-sm border border-[var(--gcds-border-default)] bg-[var(--gcds-bg-white)] p-300"
 				onSubmit={handleFilterSubmit}
@@ -304,7 +253,49 @@ export const MAUReportPage = (): FunctionComponent => {
 				</div>
 			</form>
 
-			{!isLoading && !errorNotice && orderedRecords.length === 0 ? (
+			{isLoading || isRefetching ? (
+				<Notice
+					noticeRole="info"
+					noticeTitle={t("mauReport.loadingTitle")}
+					noticeTitleTag="h2"
+				>
+					<Text>{t("mauReport.loadingBody")}</Text>
+				</Notice>
+			) : null}
+
+			{errorNotice ? (
+				<Notice
+					noticeRole={errorNotice.noticeRole}
+					noticeTitle={t(errorNotice.titleKey as never)}
+					noticeTitleTag="h2"
+				>
+					<Text>{errorNotice.bodyText ?? t(errorNotice.bodyKey as never)}</Text>
+				</Notice>
+			) : null}
+
+			{!isLoading && !isRefetching && !errorNotice && latestRecord ? (
+				<section>
+					<Heading tag="h2">
+						{t("mauReport.sectionTitle", { date: latestDate })}
+					</Heading>
+					<div className="mt-300 grid gap-200 md:grid-cols-3 lg:grid-cols-3">
+						{kpis.map((kpi) => (
+							<div
+								key={kpi.label}
+								className="rounded-sm border border-[var(--gcds-border-default)] bg-[var(--gcds-bg-white)] p-300"
+							>
+								<h3 className="gcds-heading gcds-heading--h3">{kpi.label}</h3>
+								<p className="mt-100 text-2xl font-semibold text-[var(--gcds-text-primary)]">
+									{kpi.value.toLocaleString()}
+								</p>
+
+							</div>
+						))}
+					</div>
+				</section>
+			) : null}
+
+			{!isLoading && !isRefetching && !errorNotice && orderedRecords.length === 0 ? (
 				<Notice
 					noticeRole="info"
 					noticeTitle={t("mauReport.emptyTitle")}
@@ -314,7 +305,7 @@ export const MAUReportPage = (): FunctionComponent => {
 				</Notice>
 			) : null}
 
-			{!isLoading && !errorNotice && orderedRecords.length > 0 ? (
+			{!isLoading && !isRefetching && !errorNotice && orderedRecords.length > 0 ? (
 				<section className="rounded-sm border border-[var(--gcds-border-default)] bg-[var(--gcds-bg-white)] p-300">
 					<Heading tag="h2">{t("mauReport.trendChartTitle")}</Heading>
 					<Text>{t("mauReport.trendChartBody")}</Text>
@@ -322,7 +313,7 @@ export const MAUReportPage = (): FunctionComponent => {
 				</section>
 			) : null}
 
-			{!isLoading && !errorNotice && orderedRecords.length > 0 ? (
+			{!isLoading && !isRefetching && !errorNotice && orderedRecords.length > 0 ? (
 				<section className="rounded-sm border border-[var(--gcds-border-default)] bg-[var(--gcds-bg-white)] p-300">
 					<div className="flex items-center justify-between">
 						<Heading tag="h2">{t("mauReport.dailyListTitle")}</Heading>
