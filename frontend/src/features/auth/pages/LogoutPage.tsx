@@ -14,7 +14,7 @@ export const LogoutPage = (): FunctionComponent => {
 
 		const timer = globalThis.setTimeout(() => {
 			window.location.href = "/api/v1/logout";
-		}, 2000);
+		}, 1000);
 
 		return (): void => {
 			globalThis.clearTimeout(timer);

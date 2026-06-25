@@ -1,0 +1,44 @@
+# =============================================================================
+# CanadaLogin Partner Portal — Wave 1 (Infra) Configuration
+# =============================================================================
+# Copy this to terraform.tfvars and fill in the required values.
+#
+# Required: oidc_server_metadata_url, oidc_client_id, oidc_client_secret
+# Optional: all others have sensible defaults
+# =============================================================================
+
+# ----- General -----
+# aws_region          = "ca-central-1"
+# environment         = "scratch"
+# app_name            = "gc-signin-partner-portal"
+
+# ----- OIDC (required) -----
+oidc_enabled               = true
+oidc_provider_name         = "CanadaLogin"
+# oidc_server_metadata_url  = "https://{tenant}.ibm.com/oauth2/.well-known/openid-configuration"
+# oidc_client_id            = "your-client-id"
+# oidc_client_secret        = "your-client-secret"
+# oidc_scopes               = "openid profile email"
+
+# ----- IBM Security Verify (required for admin API) -----
+# ibm_sv_admin_base_url      = "https://{tenant}.ibm.com"
+# ibm_sv_admin_client_id     = "your-sv-client-id"
+# ibm_sv_admin_client_secret = "your-sv-client-secret"
+
+# ----- Session -----
+# session_cookie_name  = "app_session"
+# session_max_age      = 28800
+# session_rolling      = false
+
+# ----- CORS -----
+# cors_origins = "[\"*\"]"
+# cors_methods = "[\"*\"]"
+# cors_headers = "[\"*\"]"
+
+# ----- S3 MAU (optional — local bucket auto-created) -----
+# aws_s3_role_arn = "arn:aws:iam::123456789012:role/cl-pp-mau-s3-read"
+
+# ----- Misc -----
+# timezone           = "America/Toronto"
+# load_mau_enabled   = true
+# client_cache_max_age = 30
