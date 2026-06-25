@@ -778,6 +778,8 @@ class RPApplicationService:
                 f"Revealed client credentials for RP application '{rp_application_data.get('dnr_app_name', '')}'"
             ),
         )
+        
+        logger.warning(f"User '{current_user.get('uuid', '')}' revealing client credentials for RP application '{rp_application_data.get('dnr_app_name', '')}'")
 
         return await self._read_client_credentials(
             ibm_admin_client=ibm_admin_client,
@@ -808,6 +810,8 @@ class RPApplicationService:
                 f"Viewed rotated client secrets for RP application '{rp_application_data.get('dnr_app_name', '')}'"
             ),
         )
+        
+        logger.warning(f"User '{current_user.get('uuid', '')}' Viewed rotated client secrets for RP application '{rp_application_data.get('dnr_app_name', '')}'")
 
         return self._extract_rotated_secret_entries(client_secret_response)
 
@@ -847,6 +851,8 @@ class RPApplicationService:
             operation=operation,
             description=description,
         )
+        
+        logger.warning(f"User '{current_user.get('uuid', '')}' Regenerated client secret for RP application '{rp_application_data.get('dnr_app_name', '')}'")
 
         return await self._read_client_credentials(
             ibm_admin_client=ibm_admin_client,
@@ -885,6 +891,8 @@ class RPApplicationService:
                 f"Created rotated client secret for RP application '{rp_application_data.get('dnr_app_name', '')}'"
             ),
         )
+        
+        logger.warning(f"User '{current_user.get('uuid', '')}' Rotated client secret for RP application '{rp_application_data.get('dnr_app_name', '')}'")
 
         client_secret_response = await ibm_admin_client.get_client_secret(client_id)
         return self._extract_rotated_secret_entries(client_secret_response)
@@ -925,6 +933,7 @@ class RPApplicationService:
                 f"Deleted rotated client secret for RP application '{rp_application_data.get('dnr_app_name', '')}'"
             ),
         )
+        logger.warning(f"User '{current_user.get('uuid', '')}' Deleted rotated client secret for RP application '{rp_application_data.get('dnr_app_name', '')}'")
 
         return deleted
 

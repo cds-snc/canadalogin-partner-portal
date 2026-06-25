@@ -72,7 +72,6 @@ locals {
 
     { name = "DEFAULT_RATE_LIMIT_LIMIT",  value = tostring(var.default_rate_limit_limit) },
     { name = "DEFAULT_RATE_LIMIT_PERIOD", value = tostring(var.default_rate_limit_period) },
-    { name = "NO_COLOR", value = "1" },
   ]
 
   common_secrets = [
@@ -96,6 +95,7 @@ locals {
     environment = concat(local.common_env, [
       { name = "LOAD_MAU_ENABLED",      value = "false" },
       { name = "START_ARQ_ON_STARTUP",  value = "false" },
+      { name = "CONSOLE_LOG_FORMAT_JSON", value = "true" },
   
     ])
     secrets = local.common_secrets
@@ -118,6 +118,7 @@ locals {
     environment = concat(local.common_env, [
       { name = "LOAD_MAU_ENABLED",      value = "true" },
       { name = "START_ARQ_ON_STARTUP", value = "true" },
+      { name = "CONSOLE_LOG_FORMAT_JSON", value = "true" },
     ])
     secrets = local.common_secrets
     logConfiguration = {
