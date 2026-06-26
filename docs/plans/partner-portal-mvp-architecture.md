@@ -25,10 +25,9 @@ flowchart LR
         be["Backend BFF<br/>FastAPI"]
     end
 
-    oidc["OIDC Identity Provider"]
-    verify["IBM Security Verify<br/>(RP ownership + secrets)"]
-    notify["Email Delivery<br/>(OTP)"]
-    dnr["D&R MAU Pipeline"]
+    canadalogin["CanadaLogin<br/>(OIDC IdP — login, passkey, OTP)"]
+    verify["IBM Security Verify<br/>(RP registry + secrets)"]
+    s3["D&R MAU Data<br/>(S3)"]
     jira["PSO Jira Intake"]
     gcx["GCExchange / Marketing FAQ"]
     pg[("PostgreSQL")]
@@ -36,12 +35,14 @@ flowchart LR
 
     user --> fe
     fe --> be
-    be --> oidc
+    be --> canadalogin
     be --> verify
-    be --> notify
-    be --> dnr
     be --> pg
     be --> redis
+    worker["ARQ Workers"] --> verify
+    worker --> s3
+    worker --> pg
+    worker --> redis
     fe -.link.-> jira
     fe -.link.-> gcx
     pso --> jira
@@ -67,10 +68,9 @@ flowchart TB
 
     pg[("PostgreSQL")]
     redis[("Redis")]
+    canadalogin["CanadaLogin (OIDC IdP)"]
     verify["IBM Security Verify API"]
-    oidc["OIDC Provider"]
-    notify["Email/OTP Provider"]
-    dnr["D&R MAU Pipeline"]
+    s3["D&R MAU Data (S3)"]
 
     spa -- HTTPS/JSON --> routes
     routes --> mw
@@ -80,11 +80,12 @@ flowchart TB
     repos --> models
     models --> pg
     services --> redis
-    workers --> redis
+    services --> canadalogin
     services --> verify
-    services --> oidc
-    services --> notify
-    services --> dnr
+    workers --> redis
+    workers --> pg
+    workers --> verify
+    workers --> s3
 ```
 
 ## Component Responsibilities
@@ -96,21 +97,21 @@ flowchart TB
 | TanStack Router routes | URL-driven navigation, route guards for auth + onboarding completion |
 | Zustand auth store | Holds current session state and onboarding flags |
 | React Query | Data fetching, caching, and mutation for backend APIs |
-| React Hook Form + Zod | Sign-up forms, department selection, secret rotation forms |
+| React Hook Form + Zod | Department selection, secret rotation and regenerate forms |
 | GCDS components | Accessible, bilingual UI primitives |
-| Feature folders | `auth/`, `workspace-profile/`, `secrets/`, `usage/`, `support/` |
+| Feature folders | `auth/`, `rp-applications/`, `secrets/`, `usage/`, `support/` |
 
 ### Backend (FastAPI)
 
 | Layer | Responsibility |
 |---|---|
-| `api/v1` routers | HTTP surface for auth, workspace profile, RP apps, secrets, usage, health |
-| Middleware | Session cookie handling (Redis-backed), CORS, shared error envelope |
-| Services | Business logic for onboarding, Verify owner sync, secret lifecycle, MAU aggregation |
-| Repositories | FastCRUD adapters over SQLAlchemy and IBM Security Verify HTTP client |
-| Models | User, Department, WorkspaceProfile, RpApplication, SecretRotation, TermsAcceptance |
-| Casbin guards | Role-based authorization for developer view / edit-rotate operations |
-| ARQ workers | Async jobs (Verify sync, OTP send, MAU refresh) |
+| `api/v1` routers | HTTP surface for OIDC auth, departments, RP apps, secrets, MAU report, audit log, health |
+| Middleware | Session cookie handling (Redis/starsessions), CORS, shared error envelope |
+| Services | Business logic for OIDC user sync, department + terms onboarding, secret lifecycle, MAU read |
+| Repositories | FastCRUD adapters over SQLAlchemy, IBM Security Verify admin client, S3 repository |
+| Models | User (includes `accepted_terms_at`, `terms_version`), Department, RpApplication, AuditLog |
+| Casbin guards | Role-based authorization: `rp_client_secret:read` (view) vs. `rp_client_secret:write` (rotate/regenerate) |
+| ARQ workers | Cron: RP config sync from IBM Verify (every 10 min, 06–21 h); MAU load from S3 (hourly at :55, 06–17 h) |
 
 ### Backend As BFF
 
@@ -118,11 +119,11 @@ The backend is the browser-facing BFF for the portal SPA, not a generic public A
 
 The BFF layer is responsible for:
 
-- OIDC login and callback handling for browser users
+- OIDC login and callback handling for browser users (PKCE S256 against CanadaLogin)
 - Redis-backed session lifecycle and current-user resolution
-- Aggregating IBM Security Verify, department, and usage data behind one browser contract
+- Aggregating IBM Security Verify RP data, department info, and pre-loaded MAU data behind one browser contract
 - Keeping the SPA from calling external identity systems directly
-- Enforcing access control before any browser-visible mutation or secret operation
+- Enforcing Casbin access control before any browser-visible mutation or secret operation
 
 The browser only receives an opaque session cookie. The cookie value is the Redis session identifier, not the OIDC token itself, and the backend regenerates that session identifier after the OIDC callback. The server-side session then holds the portal identity context, including the mapped `user_uuid`, the OIDC token bundle returned from the provider, and logout hints such as the `id_token` and `sid` used to complete single sign-out.
 
@@ -136,8 +137,8 @@ That means:
 
 | Store | Use |
 |---|---|
-| PostgreSQL | Persistent state: users, departments, workspace profile, RP app associations, secret rotation history, terms acceptance |
-| Redis | Session store, rate limit counters, ARQ queue, MAU short-term cache |
+| PostgreSQL | Persistent state: users (with `accepted_terms_at` + `terms_version`), departments, RP app configurations, audit log |
+| Redis | Session store (starsessions), ARQ queue, MAU data cache (`mau:{app_name}`) |
 
 ## Deployment View
 
@@ -151,20 +152,18 @@ flowchart LR
     api2 --> pg
     api1 --> redis[("Redis")]
     api2 --> redis
+    api1 --> canadalogin["CanadaLogin (OIDC IdP)"]
     api1 --> verify["IBM Security Verify"]
-    api1 --> oidc["OIDC Provider"]
-    api1 --> notify["Email Provider"]
-    api1 --> dnr["D&R Pipeline"]
     worker["ARQ worker"] --> redis
     worker --> pg
     worker --> verify
-    worker --> notify
+    worker --> s3["D&R MAU Data (S3)"]
 ```
 
 ## Cross-Cutting Concerns
 
-- **AuthN**: OIDC sign-in, server-side session in Redis, passkey second factor, email OTP for first-time verification.
-- **AuthZ**: Casbin policies enforce developer view vs edit-rotate on secret operations; workspace profile is scoped to the owning user.
+- **AuthN**: OIDC sign-in via CanadaLogin (PKCE S256); passkey, OTP, and identity verification are fully managed by CanadaLogin. Server-side session stored in Redis (starsessions). Backchannel logout supported via `POST /auth/oidc/backchannel-logout`.
+- **AuthZ**: Casbin policies enforce `rp_client_secret:read` (view credentials) vs. `rp_client_secret:write` (rotate/regenerate) on secret operations; RP app access scoped to the owning user by email match.
 - **Session timeout**: Reviewed policy applied by session middleware; both idle and absolute expiry to be confirmed (see PRD open questions).
 - **Observability**: structlog-based structured logs; metrics for sign-up funnel, secret operations, MAU fetches; health and readiness endpoints.
 - **Error handling**: Shared `ErrorResponse` envelope from `core/exceptions` registered via the central exception handler.
