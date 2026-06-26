@@ -34,6 +34,7 @@ ARG SESSION_COOKIE_SECURE=true
 ARG SESSION_COOKIE_DOMAIN=.canada.ca
 ARG SESSION_MAX_AGE=1800
 ARG SESSION_ROLLING=true
+ARG SESSION_COOKIE_SAMESITE=lax
 ARG REDIS_CACHE_HOST=redis
 ARG REDIS_CACHE_PORT=6379
 ARG REDIS_QUEUE_HOST=redis
@@ -75,6 +76,7 @@ ARG AWS_S3_PROFILE=
 ARG S3_MAU_BUCKET_NAME=
 ARG S3_MAU_FOLDER=ibm_verify/app_login_counts/
 ARG START_ARQ_ON_STARTUP=false
+ARG CONSOLE_LOG_FORMAT_JSON=true
 
 ENV ENVIRONMENT=${ENVIRONMENT}
 ENV APP_NAME=${APP_NAME}
@@ -94,6 +96,7 @@ ENV SESSION_COOKIE_SECURE=${SESSION_COOKIE_SECURE}
 ENV SESSION_COOKIE_DOMAIN=${SESSION_COOKIE_DOMAIN}
 ENV SESSION_MAX_AGE=${SESSION_MAX_AGE}
 ENV SESSION_ROLLING=${SESSION_ROLLING}
+ENV SESSION_COOKIE_SAMESITE=${SESSION_COOKIE_SAMESITE}
 ENV REDIS_CACHE_HOST=${REDIS_CACHE_HOST}
 ENV REDIS_CACHE_PORT=${REDIS_CACHE_PORT}
 ENV REDIS_QUEUE_HOST=${REDIS_QUEUE_HOST}
@@ -137,15 +140,25 @@ ENV AWS_S3_PROFILE=${AWS_S3_PROFILE}
 ENV S3_MAU_BUCKET_NAME=${S3_MAU_BUCKET_NAME}
 ENV S3_MAU_FOLDER=${S3_MAU_FOLDER}
 ENV START_ARQ_ON_STARTUP=${START_ARQ_ON_STARTUP}
+ENV CONSOLE_LOG_FORMAT_JSON=${CONSOLE_LOG_FORMAT_JSON}
 
 COPY --from=requirements-stage /tmp/requirements.txt /code/requirements.txt
 
 RUN pip install --no-cache-dir --upgrade -r /code/requirements.txt
 
+# Install gunicorn
+RUN pip install gunicorn[gthread] uvicorn[standard]
+
 COPY ./src/app /code/app
 COPY ./src/migrations /code/migrations
 COPY ./src/alembic.ini /code/alembic.ini
 
+# Create non-root user
+RUN adduser --disabled-password --gecos '' appuser \
+    && mkdir -p /code/app/logs \
+    && chown -R appuser:appuser /code/app/logs
+USER appuser
+
 # -------- replace with comment to run with gunicorn --------
-CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000", "--reload"]
-# CMD ["gunicorn", "app.main:app", "-w", "4", "-k", "uvicorn.workers.UvicornWorker", "-b", "0.0.0.0:8000"]
+# CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000", "--reload"]
+CMD ["gunicorn", "app.main:app", "-w", "4", "-k", "uvicorn.workers.UvicornWorker", "-b", "0.0.0.0:8000"]

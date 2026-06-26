@@ -358,7 +358,7 @@ def create_application(
             cookie_name=settings.SESSION_COOKIE_NAME,
             cookie_https_only=settings.SESSION_COOKIE_SECURE,
             cookie_domain=settings.SESSION_COOKIE_DOMAIN,
-            cookie_same_site="lax",
+            cookie_same_site=settings.SESSION_COOKIE_SAMESITE
         )
 
     if isinstance(settings, ClientSideCacheSettings):

@@ -26,6 +26,7 @@ class SessionSettings(BaseSettings):
     SESSION_COOKIE_NAME: str = "app_session"
     SESSION_COOKIE_SECURE: bool = False
     SESSION_COOKIE_DOMAIN: str = ".canada.ca"
+    SESSION_COOKIE_SAMESITE: str = "lax"
     SESSION_MAX_AGE: int = 60 * 60 * 8
     SESSION_ROLLING: bool = False
 

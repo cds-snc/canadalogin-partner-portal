@@ -69,3 +69,11 @@ delorean/
 ### Compound Engineering
 .compound-engineering/*.local.yaml
 .compound-engineering/
+
+### Terraform
+terraform.tfvars
+terraform.tfstate
+terraform.tfstate.backup
+terraform.tfplan
+.terraform*
+.terraform/
