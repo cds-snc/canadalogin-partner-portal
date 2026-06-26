@@ -16,7 +16,7 @@ app_name                             = "cl-pp"
 ecs_cluster_id                       = "arn:aws:ecs:ca-central-1:1234567890:cluster/cl-pp-dev"
 ecs_execution_role_arn               = "arn:aws:iam::1234567890:role/cl-pp-ecs-execution-dev"
 ecs_task_role_arn                    = "arn:aws:iam::1234567890:role/cl-pp-ecs-task-dev"
-target_group_arn                     = "arn:aws:elasticloadbalancing:ca-central-1:1234567890:targetgroup/cl-pp-web-dev/86a531ac9ab6d8a1"
+target_group_arn                     = "arn:aws:elasticloadbalancing:ca-central-1:1234567890:targetgroup/cl-pp-web-dev/1234567890"
 ecs_web_security_group_id            = "sg-026b84797fcb73e66"
 ecs_worker_security_group_id         = "sg-04550c7f14a1a61ef"
 private_subnet_ids                   = ["subnet-0e660204b51575db3", "subnet-0a0e48d837062f46a"]
@@ -31,9 +31,9 @@ cloudwatch_log_group_web             = "/ecs/cl-pp-web-dev"
 cloudwatch_log_group_worker          = "/ecs/cl-pp-worker-dev"
 
 # ----- Secrets -----
-db_password_secret_arn               = "arn:aws:secretsmanager:ca-central-1:1234567890:secret:cl-pp-db-password-dev-NSAteH"
-oidc_client_secret_arn               = "arn:aws:secretsmanager:ca-central-1:1234567890:secret:cl-pp-oidc-client-secret-dev-Xbfuik"
-ibm_sv_admin_client_secret_arn       = "arn:aws:secretsmanager:ca-central-1:1234567890:secret:cl-pp-ibm-sv-secret-dev-W6awZM"
+db_password_secret_arn               = "arn:aws:secretsmanager:ca-central-1:1234567890:secret:cl-pp-db-password-dev-12234"
+oidc_client_secret_arn               = "arn:aws:secretsmanager:ca-central-1:1234567890:secret:cl-pp-oidc-client-secret-123456"
+ibm_sv_admin_client_secret_arn       = "arn:aws:secretsmanager:ca-central-1:1234567890:secret:cl-pp-ibm-sv-secret-dev-123456"
 session_secret_arn                   = "arn:aws:secretsmanager:ca-central-1:1234567890:secret:cl-pp-session-secret-dev-3xgqCu"
 redis_password_secret_arn            = "arn:aws:secretsmanager:ca-central-1:1234567890:secret:cl-pp-redis-password-dev-dSgvrI"
 
@@ -62,7 +62,7 @@ oidc_post_logout_redirect_uri = "https://test.cloudfront.net"
 
 
 # ----- IBM Security Verify (required for admin API) -----
-ibm_sv_admin_base_url      = "https://auth.dev.login-connexion.alpha.canada.ca"
+ibm_sv_admin_base_url      = "https://auth.dev.ibm.com"
 ibm_sv_admin_client_id     = "1234567890"
 
 # ----- Session -----
