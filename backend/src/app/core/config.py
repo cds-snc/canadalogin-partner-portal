@@ -1,7 +1,8 @@
 import os
 from enum import Enum
+from typing import Optional
 
-from pydantic import SecretStr, computed_field
+from pydantic import SecretStr, computed_field, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -158,13 +159,23 @@ class TestSettings(BaseSettings): ...
 
 
 class RedisCacheSettings(BaseSettings):
-    REDIS_CACHE_HOST: str = "localhost"
-    REDIS_CACHE_PORT: int = 6379
+    REDIS_CACHE_HOST: Optional[str] = None
+    REDIS_CACHE_PORT: Optional[int] = None
+    REDIS_CACHE_DB: Optional[int] = None
+    REDIS_CACHE_PASSWORD: Optional[SecretStr] = None
+    REDIS_CACHE_SSL: Optional[bool] = None
 
     @computed_field  # type: ignore[prop-decorator]
     @property
     def REDIS_CACHE_URL(self) -> str:
-        return f"redis://{self.REDIS_CACHE_HOST}:{self.REDIS_CACHE_PORT}"
+        scheme = "rediss" if self.REDIS_CACHE_SSL else "redis"
+        password = ""
+        if self.REDIS_CACHE_PASSWORD is not None:
+            password = f":{self.REDIS_CACHE_PASSWORD.get_secret_value()}@"
+        host = self.REDIS_CACHE_HOST or "localhost"
+        port = self.REDIS_CACHE_PORT or 6379
+        db = f"/{self.REDIS_CACHE_DB}" if self.REDIS_CACHE_DB is not None else ""
+        return f"{scheme}://{password}{host}:{port}{db}"
 
 
 class ClientSideCacheSettings(BaseSettings):
@@ -172,18 +183,43 @@ class ClientSideCacheSettings(BaseSettings):
 
 
 class RedisQueueSettings(BaseSettings):
-    REDIS_QUEUE_HOST: str = "localhost"
-    REDIS_QUEUE_PORT: int = 6379
+    REDIS_QUEUE_HOST: Optional[str] = None
+    REDIS_QUEUE_PORT: Optional[int] = None
+    REDIS_QUEUE_DB: Optional[int] = None
+    REDIS_QUEUE_PASSWORD: Optional[SecretStr] = None
+    REDIS_QUEUE_SSL: Optional[bool] = None
+
+    @computed_field  # type: ignore[prop-decorator]
+    @property
+    def REDIS_QUEUE_URL(self) -> str:
+        scheme = "rediss" if self.REDIS_QUEUE_SSL else "redis"
+        password = ""
+        if self.REDIS_QUEUE_PASSWORD is not None:
+            password = f":{self.REDIS_QUEUE_PASSWORD.get_secret_value()}@"
+        host = self.REDIS_QUEUE_HOST or "localhost"
+        port = self.REDIS_QUEUE_PORT or 6379
+        db = f"/{self.REDIS_QUEUE_DB}" if self.REDIS_QUEUE_DB is not None else ""
+        return f"{scheme}://{password}{host}:{port}{db}"
 
 
 class RedisRateLimiterSettings(BaseSettings):
-    REDIS_RATE_LIMIT_HOST: str = "localhost"
-    REDIS_RATE_LIMIT_PORT: int = 6379
+    REDIS_RATE_LIMIT_HOST: Optional[str] = None
+    REDIS_RATE_LIMIT_PORT: Optional[int] = None
+    REDIS_RATE_LIMIT_DB: Optional[int] = None
+    REDIS_RATE_LIMIT_PASSWORD: Optional[SecretStr] = None
+    REDIS_RATE_LIMIT_SSL: Optional[bool] = None
 
     @computed_field  # type: ignore[prop-decorator]
     @property
     def REDIS_RATE_LIMIT_URL(self) -> str:
-        return f"redis://{self.REDIS_RATE_LIMIT_HOST}:{self.REDIS_RATE_LIMIT_PORT}"
+        scheme = "rediss" if self.REDIS_RATE_LIMIT_SSL else "redis"
+        password = ""
+        if self.REDIS_RATE_LIMIT_PASSWORD is not None:
+            password = f":{self.REDIS_RATE_LIMIT_PASSWORD.get_secret_value()}@"
+        host = self.REDIS_RATE_LIMIT_HOST or "localhost"
+        port = self.REDIS_RATE_LIMIT_PORT or 6379
+        db = f"/{self.REDIS_RATE_LIMIT_DB}" if self.REDIS_RATE_LIMIT_DB is not None else ""
+        return f"{scheme}://{password}{host}:{port}{db}"
 
 
 class DefaultRateLimitSettings(BaseSettings):
@@ -259,6 +295,42 @@ class Settings(
         case_sensitive=True,
         extra="ignore",
     )
+
+    @model_validator(mode="after")
+    def _apply_redis_session_defaults(self) -> "Settings":
+        """Fall back to session Redis connection params for cache/queue/rate-limit when not explicitly set.
+
+        DB number is intentionally NOT cascaded — each client keeps its own default
+        (session=1, cache/queue/rate-limit=0).
+        """
+        if not self.REDIS_CACHE_HOST:
+            self.REDIS_CACHE_HOST = self.REDIS_SESSION_HOST
+        if self.REDIS_CACHE_PORT is None:
+            self.REDIS_CACHE_PORT = self.REDIS_SESSION_PORT
+        if self.REDIS_CACHE_PASSWORD is None:
+            self.REDIS_CACHE_PASSWORD = self.REDIS_SESSION_PASSWORD
+        if self.REDIS_CACHE_SSL is None:
+            self.REDIS_CACHE_SSL = self.REDIS_SESSION_SSL
+
+        if not self.REDIS_QUEUE_HOST:
+            self.REDIS_QUEUE_HOST = self.REDIS_SESSION_HOST
+        if self.REDIS_QUEUE_PORT is None:
+            self.REDIS_QUEUE_PORT = self.REDIS_SESSION_PORT
+        if self.REDIS_QUEUE_PASSWORD is None:
+            self.REDIS_QUEUE_PASSWORD = self.REDIS_SESSION_PASSWORD
+        if self.REDIS_QUEUE_SSL is None:
+            self.REDIS_QUEUE_SSL = self.REDIS_SESSION_SSL
+
+        if not self.REDIS_RATE_LIMIT_HOST:
+            self.REDIS_RATE_LIMIT_HOST = self.REDIS_SESSION_HOST
+        if self.REDIS_RATE_LIMIT_PORT is None:
+            self.REDIS_RATE_LIMIT_PORT = self.REDIS_SESSION_PORT
+        if self.REDIS_RATE_LIMIT_PASSWORD is None:
+            self.REDIS_RATE_LIMIT_PASSWORD = self.REDIS_SESSION_PASSWORD
+        if self.REDIS_RATE_LIMIT_SSL is None:
+            self.REDIS_RATE_LIMIT_SSL = self.REDIS_SESSION_SSL
+
+        return self
 
 
 settings = Settings()

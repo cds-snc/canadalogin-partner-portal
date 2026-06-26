@@ -20,6 +20,10 @@ resource "aws_elasticache_replication_group" "main" {
   automatic_failover_enabled = false
   multi_az_enabled           = false
 
+  transit_encryption_enabled = true
+  at_rest_encryption_enabled = true
+  auth_token                 = random_password.redis_password.result
+
   tags = {
     Environment = var.environment
     App         = var.app_name

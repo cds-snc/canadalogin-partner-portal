@@ -24,10 +24,10 @@ resource "aws_lb_target_group" "web" {
     port                = "8000"
     protocol            = "HTTP"
     healthy_threshold   = 2
-    unhealthy_threshold = 5
+    unhealthy_threshold = 3
     interval            = 30
-    timeout             = 5
-    matcher             = "200-399"
+    timeout             = 10
+    matcher             = "200"
   }
 
   tags = {

@@ -74,6 +74,13 @@ db_password_secret_arn               = "$(extract db_password_secret_arn)"
 oidc_client_secret_arn               = "$(extract oidc_client_secret_arn)"
 ibm_sv_admin_client_secret_arn       = "$(extract ibm_sv_admin_client_secret_arn)"
 session_secret_arn                   = "$(extract session_secret_arn)"
+redis_password_secret_arn            = "$(extract redis_password_secret_arn)"
+
+# ----- Redis TLS (must match infra/elasticache.tf transit_encryption_enabled) -----
+redis_session_ssl                    = true
+redis_cache_ssl                      = true
+redis_queue_ssl                      = true
+redis_rate_limit_ssl                 = true
 EOF
 
 echo "=== Done! Written to: $OUTPUT_FILE ==="
