@@ -143,6 +143,11 @@ output "session_secret_arn" {
   value       = aws_secretsmanager_secret.session_secret.arn
 }
 
+output "redis_password_secret_arn" {
+  description = "Secrets Manager ARN for Redis password"
+  value       = aws_secretsmanager_secret.redis_password.arn
+}
+
 output "cloudwatch_log_group_web" {
   description = "CloudWatch log group name for web service"
   value       = aws_cloudwatch_log_group.web.name

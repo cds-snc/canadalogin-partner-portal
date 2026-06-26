@@ -23,20 +23,23 @@ locals {
     { name = "SESSION_ROLLING",        value = tostring(var.session_rolling) },
     { name = "SESSION_COOKIE_SAMESITE", value = "lax" },
 
-    { name = "REDIS_SESSION_HOST",    value = var.elasticache_endpoint },
-    { name = "REDIS_SESSION_PORT",    value = "6379" },
-    { name = "REDIS_SESSION_DB",      value = tostring(var.redis_session_db) },
-    { name = "REDIS_SESSION_PASSWORD",value = "" },
-    { name = "REDIS_SESSION_SSL",     value = tostring(var.redis_session_ssl) },
-    { name = "REDIS_SESSION_PREFIX",  value = var.redis_session_prefix },
-    { name = "REDIS_SESSION_GC_TTL",  value = tostring(var.redis_session_gc_ttl) },
+    { name = "REDIS_SESSION_HOST",     value = var.elasticache_endpoint },
+    { name = "REDIS_SESSION_PORT",     value = "6379" },
+    { name = "REDIS_SESSION_DB",       value = tostring(var.redis_session_db) },
+    { name = "REDIS_SESSION_SSL",      value = tostring(var.redis_session_ssl) },
+    { name = "REDIS_SESSION_PREFIX",   value = var.redis_session_prefix },
+    { name = "REDIS_SESSION_GC_TTL",   value = tostring(var.redis_session_gc_ttl) },
 
-    { name = "REDIS_CACHE_HOST",      value = var.elasticache_endpoint },
-    { name = "REDIS_CACHE_PORT",      value = "6379" },
-    { name = "REDIS_QUEUE_HOST",      value = var.elasticache_endpoint },
-    { name = "REDIS_QUEUE_PORT",      value = "6379" },
-    { name = "REDIS_RATE_LIMIT_HOST", value = var.elasticache_endpoint },
-    { name = "REDIS_RATE_LIMIT_PORT", value = "6379" },
+
+    { name = "REDIS_CACHE_PORT",         value = "6379" },
+    { name = "REDIS_CACHE_DB",           value = tostring(var.redis_cache_db) },
+    { name = "REDIS_CACHE_SSL",          value = tostring(var.redis_cache_ssl) },
+    { name = "REDIS_QUEUE_PORT",         value = "6379" },
+    { name = "REDIS_QUEUE_DB",           value = tostring(var.redis_queue_db) },
+    { name = "REDIS_QUEUE_SSL",          value = tostring(var.redis_queue_ssl) },
+    { name = "REDIS_RATE_LIMIT_PORT",    value = "6379" },
+    { name = "REDIS_RATE_LIMIT_DB",      value = tostring(var.redis_rate_limit_db) },
+    { name = "REDIS_RATE_LIMIT_SSL",     value = tostring(var.redis_rate_limit_ssl) },
 
     { name = "OIDC_ENABLED",                   value = tostring(var.oidc_enabled) },
     { name = "OIDC_PROVIDER_NAME",             value = var.oidc_provider_name },
@@ -79,6 +82,7 @@ locals {
     { name = "OIDC_CLIENT_SECRET",         valueFrom = var.oidc_client_secret_arn },
     { name = "IBM_SV_ADMIN_CLIENT_SECRET", valueFrom = var.ibm_sv_admin_client_secret_arn },
     { name = "SESSION_SECRET_KEY",         valueFrom = var.session_secret_arn },
+    { name = "REDIS_SESSION_PASSWORD",     valueFrom = var.redis_password_secret_arn },
   ]
 
   web_container = {
@@ -95,7 +99,7 @@ locals {
     environment = concat(local.common_env, [
       { name = "LOAD_MAU_ENABLED",      value = "false" },
       { name = "START_ARQ_ON_STARTUP",  value = "false" },
-      { name = "CONSOLE_LOG_FORMAT_JSON", value = "true" },
+      { name = "CONSOLE_LOG_FORMAT_JSON", value = "false" },
   
     ])
     secrets = local.common_secrets
@@ -118,7 +122,7 @@ locals {
     environment = concat(local.common_env, [
       { name = "LOAD_MAU_ENABLED",      value = "true" },
       { name = "START_ARQ_ON_STARTUP", value = "true" },
-      { name = "CONSOLE_LOG_FORMAT_JSON", value = "true" },
+      { name = "CONSOLE_LOG_FORMAT_JSON", value = "false" },
     ])
     secrets = local.common_secrets
     logConfiguration = {
@@ -198,6 +202,11 @@ resource "aws_ecs_service" "web" {
     container_name   = "web"
     container_port   = 8000
   }
+
+  # Allow time for Alembic migrations + Gunicorn workers to fully start before
+  # ELB begins health checking. Without this, ECS deregisters the task
+  # immediately on the first failed check during startup.
+  health_check_grace_period_seconds = 120
 
   deployment_circuit_breaker {
     enable   = true

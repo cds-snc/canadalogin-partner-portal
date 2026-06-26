@@ -44,6 +44,7 @@ resource "aws_iam_policy" "ecs_execution_secrets" {
           aws_secretsmanager_secret.oidc_client_secret.arn,
           aws_secretsmanager_secret.ibm_sv_admin_client_secret.arn,
           aws_secretsmanager_secret.session_secret.arn,
+          aws_secretsmanager_secret.redis_password.arn,
         ]
       },
       {

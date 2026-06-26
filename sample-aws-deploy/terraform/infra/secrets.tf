@@ -52,6 +52,26 @@ resource "aws_secretsmanager_secret_version" "ibm_sv_admin_client_secret" {
   secret_string = var.ibm_sv_admin_client_secret
 }
 
+# ----- Redis password -----
+
+resource "random_password" "redis_password" {
+  length  = 32
+  special = false
+}
+
+resource "aws_secretsmanager_secret" "redis_password" {
+  name = "${var.app_name}-redis-password-${var.environment}"
+
+  tags = {
+    Environment = var.environment
+  }
+}
+
+resource "aws_secretsmanager_secret_version" "redis_password" {
+  secret_id     = aws_secretsmanager_secret.redis_password.id
+  secret_string = random_password.redis_password.result
+}
+
 # ----- Session secret (fallback key) -----
 
 resource "aws_secretsmanager_secret" "session_secret" {

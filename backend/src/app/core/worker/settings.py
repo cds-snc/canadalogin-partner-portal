@@ -11,8 +11,11 @@ from ...core.config import settings
 from ...core.logger import logging  # noqa: F401
 from .functions import load_mau_data, on_job_end, on_job_start, shutdown, startup, sync_ibm_verify_rp_applications
 
-REDIS_QUEUE_HOST = settings.REDIS_QUEUE_HOST
-REDIS_QUEUE_PORT = settings.REDIS_QUEUE_PORT
+REDIS_QUEUE_HOST = settings.REDIS_QUEUE_HOST or "localhost"
+REDIS_QUEUE_PORT = settings.REDIS_QUEUE_PORT or 6379
+REDIS_QUEUE_PASSWORD = settings.REDIS_QUEUE_PASSWORD.get_secret_value() if settings.REDIS_QUEUE_PASSWORD else None
+REDIS_QUEUE_SSL = settings.REDIS_QUEUE_SSL or False
+REDIS_QUEUE_DB = settings.REDIS_QUEUE_DB or 0
 
 
 class WorkerSettings:
@@ -61,7 +64,13 @@ class WorkerSettings:
             ),
         )
 
-    redis_settings = RedisSettings(host=REDIS_QUEUE_HOST, port=REDIS_QUEUE_PORT)
+    redis_settings = RedisSettings(
+        host=REDIS_QUEUE_HOST,
+        port=REDIS_QUEUE_PORT,
+        database=REDIS_QUEUE_DB,
+        password=REDIS_QUEUE_PASSWORD,
+        ssl=REDIS_QUEUE_SSL,
+    )
     on_startup = startup
     on_shutdown = shutdown
     on_job_start = on_job_start

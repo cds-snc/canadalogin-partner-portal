@@ -272,12 +272,6 @@ variable "redis_session_db" {
   default     = 1
 }
 
-variable "redis_session_password" {
-  description = "Redis session password"
-  type        = string
-  default     = ""
-}
-
 variable "redis_session_ssl" {
   description = "Use SSL for Redis session connection"
   type        = bool
@@ -294,6 +288,46 @@ variable "redis_session_gc_ttl" {
   description = "Redis session garbage collection TTL in seconds"
   type        = number
   default     = 2592000
+}
+
+# ----- Redis cache / queue / rate-limit -----
+# These share the same ElastiCache instance. SSL is enabled by default
+# to match transit_encryption_enabled = true on the ElastiCache resource.
+
+variable "redis_cache_db" {
+  description = "Redis database index for cache client"
+  type        = number
+  default     = 0
+}
+
+variable "redis_cache_ssl" {
+  description = "Use TLS for Redis cache connection"
+  type        = bool
+  default     = true
+}
+
+variable "redis_queue_db" {
+  description = "Redis database index for queue (ARQ) client"
+  type        = number
+  default     = 0
+}
+
+variable "redis_queue_ssl" {
+  description = "Use TLS for Redis queue connection"
+  type        = bool
+  default     = true
+}
+
+variable "redis_rate_limit_db" {
+  description = "Redis database index for rate-limiter client"
+  type        = number
+  default     = 0
+}
+
+variable "redis_rate_limit_ssl" {
+  description = "Use TLS for Redis rate-limiter connection"
+  type        = bool
+  default     = true
 }
 
 # ----- CORS -----
