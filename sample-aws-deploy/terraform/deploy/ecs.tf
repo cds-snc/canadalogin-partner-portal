@@ -83,6 +83,9 @@ locals {
     { name = "IBM_SV_ADMIN_CLIENT_SECRET", valueFrom = var.ibm_sv_admin_client_secret_arn },
     { name = "SESSION_SECRET_KEY",         valueFrom = var.session_secret_arn },
     { name = "REDIS_SESSION_PASSWORD",     valueFrom = var.redis_password_secret_arn },
+    { name = "REDIS_CACHE_PASSWORD",       valueFrom = var.redis_password_secret_arn },
+    { name = "REDIS_QUEUE_PASSWORD",       valueFrom = var.redis_password_secret_arn },
+    { name = "REDIS_RATE_LIMIT_PASSWORD",  valueFrom = var.redis_password_secret_arn },
   ]
 
   web_container = {
@@ -99,7 +102,7 @@ locals {
     environment = concat(local.common_env, [
       { name = "LOAD_MAU_ENABLED",      value = "false" },
       { name = "START_ARQ_ON_STARTUP",  value = "false" },
-      { name = "CONSOLE_LOG_FORMAT_JSON", value = "false" },
+      { name = "NO_COLOR", value = "1" },
   
     ])
     secrets = local.common_secrets
@@ -122,7 +125,7 @@ locals {
     environment = concat(local.common_env, [
       { name = "LOAD_MAU_ENABLED",      value = "true" },
       { name = "START_ARQ_ON_STARTUP", value = "true" },
-      { name = "CONSOLE_LOG_FORMAT_JSON", value = "false" },
+      { name = "NO_COLOR", value = "1" },
     ])
     secrets = local.common_secrets
     logConfiguration = {

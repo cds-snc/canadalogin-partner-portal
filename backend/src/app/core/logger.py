@@ -55,6 +55,10 @@ def console_log_filter_processors(_, __, event_dict: EventDict) -> EventDict:
     return event_dict
 
 
+def _should_disable_console_colors() -> bool:
+    return os.getenv("NO_COLOR") is not None
+
+
 # Shared processors for all loggers
 timestamper = structlog.processors.TimeStamper(fmt="iso")
 SHARED_PROCESSORS: list[Processor] = [
@@ -79,7 +83,7 @@ structlog.configure(
 
 def build_formatter(*, json_output: bool, pre_chain: list[Processor]) -> structlog.stdlib.ProcessorFormatter:
     """Build a ProcessorFormatter with the specified renderer and processors."""
-    renderer = JSONRenderer() if json_output else ConsoleRenderer()
+    renderer = JSONRenderer() if json_output else ConsoleRenderer(colors=not _should_disable_console_colors())
 
     processors = [structlog.stdlib.ProcessorFormatter.remove_processors_meta, renderer]
 

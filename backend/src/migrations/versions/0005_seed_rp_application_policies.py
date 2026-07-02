@@ -22,6 +22,9 @@ depends_on = None
 POLICIES: list[tuple[str, str, str]] = [
     ("application owners", "rp_applications", "read"),
     ("application owners", "rp_applications", "write"),
+    ("application owners", "rp_client_secret", "read"),
+    ("application owners", "rp_client_secret", "write"),
+    ("application owners", "mau_report", "read"),
 ]
 
 

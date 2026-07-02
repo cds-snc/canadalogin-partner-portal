@@ -288,14 +288,16 @@ export const MAUReportPage = (): FunctionComponent => {
 								<p className="mt-100 text-2xl font-semibold text-[var(--gcds-text-primary)]">
 									{kpi.value.toLocaleString()}
 								</p>
-
 							</div>
 						))}
 					</div>
 				</section>
 			) : null}
 
-			{!isLoading && !isRefetching && !errorNotice && orderedRecords.length === 0 ? (
+			{!isLoading &&
+			!isRefetching &&
+			!errorNotice &&
+			orderedRecords.length === 0 ? (
 				<Notice
 					noticeRole="info"
 					noticeTitle={t("mauReport.emptyTitle")}
@@ -305,7 +307,10 @@ export const MAUReportPage = (): FunctionComponent => {
 				</Notice>
 			) : null}
 
-			{!isLoading && !isRefetching && !errorNotice && orderedRecords.length > 0 ? (
+			{!isLoading &&
+			!isRefetching &&
+			!errorNotice &&
+			orderedRecords.length > 0 ? (
 				<section className="rounded-sm border border-[var(--gcds-border-default)] bg-[var(--gcds-bg-white)] p-300">
 					<Heading tag="h2">{t("mauReport.trendChartTitle")}</Heading>
 					<Text>{t("mauReport.trendChartBody")}</Text>
@@ -313,7 +318,10 @@ export const MAUReportPage = (): FunctionComponent => {
 				</section>
 			) : null}
 
-			{!isLoading && !isRefetching && !errorNotice && orderedRecords.length > 0 ? (
+			{!isLoading &&
+			!isRefetching &&
+			!errorNotice &&
+			orderedRecords.length > 0 ? (
 				<section className="rounded-sm border border-[var(--gcds-border-default)] bg-[var(--gcds-bg-white)] p-300">
 					<div className="flex items-center justify-between">
 						<Heading tag="h2">{t("mauReport.dailyListTitle")}</Heading>
