@@ -6,23 +6,18 @@ import { useSession, type SessionState } from "@/hooks";
 import { Home } from "@/pages/Home";
 
 vi.mock("react-i18next", () => ({
-	useTranslation: (): { t: (key: string) => string } => ({
+	useTranslation: (): { i18n: { language: string }; t: (key: string) => string } => ({
+		i18n: { language: "en" },
 		t: (key: string): string => {
 			const translations: Record<string, string> = {
 				"home.featureSectionTitle": "Manage RP applications",
 				"home.heroEyebrow": "Partner portal",
 				"home.heroTitle": "Manage your relying party applications in one place.",
 				"home.signInAction": "Sign in with CanadaLogin",
-				"home.signOutAction": "Sign out",
-				"home.summary": "Access the CanadaLogin Partner Portal to configure, and monitor relying party applications connected to the CanadaLogin service.",
+				"home.summary": "Use your Government of Canada email address to sign in.",
 				"home.title": "CanadaLogin Partner Portal",
-				"home.aboutCardTitle": "About this portal",
-				"home.aboutCardDescription": "Learn about the CanadaLogin Partner Portal and how it supports relying party application management.",
-				"home.federalCardTitle": "System health",
-				"home.federalCardDescription": "Check the current health and readiness of the CanadaLogin backend services.",
-				"home.optionalCardTitle": "Terms and conditions",
-				"home.optionalCardDescription": "Review the terms and conditions for using the Partner Portal.",
-				"home.dashboardPageLink": "Go to dashboard",
+				"home.supportCardTitle": "Support",
+				"home.supportCardDescription": "Get help with the CanadaLogin Partner Portal.",
 			};
 
 			return translations[key] ?? key;
@@ -38,7 +33,7 @@ vi.mock("@gcds-core/components-react", () => ({
 vi.mock("@/components", () => ({
 	Button: ({ children, onGcdsClick }: PropsWithChildren<{ onGcdsClick?: () => void }>): ReactElement => <button onClick={onGcdsClick}>{children}</button>,
 	Card: ({ cardTitle, description }: { cardTitle: string; description?: string }): ReactElement => <article><h2>{cardTitle}</h2><p>{description}</p></article>,
-	Grid: ({ children }: PropsWithChildren): ReactElement => <section>{children}</section>,
+	Grid: ({ children }: PropsWithChildren): ReactElement => <div>{children}</div>,
 	Heading: ({ children }: PropsWithChildren): ReactElement => <h1>{children}</h1>,
 	Link: ({ children, href }: PropsWithChildren<{ href: string }>): ReactElement => <a href={href}>{children}</a>,
 	Notice: ({ children }: PropsWithChildren): ReactElement => <section>{children}</section>,
@@ -77,38 +72,7 @@ describe("Home", () => {
 			screen.getByRole("heading", { name: /canadalogin partner portal/i }),
 		).toBeTruthy();
 		expect(
-			screen.getByRole("heading", { name: /manage your relying party applications in one place/i }),
-		).toBeTruthy();
-		expect(
 			screen.getByRole("button", { name: /sign in with canadalogin/i }),
 		).toBeTruthy();
-	});
-
-	it("shows the signed-in user and a sign-out action when authenticated", () => {
-		mockedUseSession.mockReturnValue(createSessionState({
-			currentUser: {
-				name: "Jane Doe",
-				email: "jane@example.com",
-				profileImageUrl: "https://example.com/avatar.png",
-				authProvider: "gc-sso",
-				authSubject: "subject-123",
-				roleUuids: ["role-uuid-2"],
-				tierUuid: "tier-uuid-3",
-				uuid: "user-uuid-7",
-			},
-			isLoading: false,
-			isAuthenticated: true,
-		}));
-
-		const queryClient = new QueryClient();
-
-		render(
-			<QueryClientProvider client={queryClient}>
-				<Home />
-			</QueryClientProvider>,
-		);
-
-		expect(screen.getByRole("button", { name: /go to dashboard/i })).toBeTruthy();
-		expect(screen.getByRole("button", { name: /sign out/i })).toBeTruthy();
 	});
 });

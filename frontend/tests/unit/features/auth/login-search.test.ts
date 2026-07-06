@@ -14,14 +14,14 @@ describe("login-search", () => {
 		const location = buildLoginLocation({
 			message: "session-expired",
 			reason: "unauthorized",
-			redirect: "/dashboard",
+			redirect: "/your-applications",
 		} satisfies LoginRedirectSearch);
 
 		expect(location).toEqual({
 			search: {
 				message: "session-expired",
 				reason: "unauthorized",
-				redirect: "/dashboard",
+				redirect: "/your-applications",
 			},
 			to: "/login",
 		});
@@ -33,6 +33,6 @@ describe("login-search", () => {
 			redirect: "https://evil.example",
 		} satisfies LoginRedirectSearch);
 
-		expect(location.search.redirect).toBe("/dashboard");
+		expect(location.search.redirect).toBe("/your-applications");
 	});
 });

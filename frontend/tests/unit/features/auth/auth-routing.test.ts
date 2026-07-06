@@ -11,6 +11,10 @@ vi.mock("@/features/auth/session-queries", () => ({
 	revalidateCurrentUser: vi.fn(),
 }));
 
+vi.mock("@/fetch/auth", () => ({
+	getOidcLoginUrl: vi.fn(() => "http://localhost:8000/api/v1/auth/oidc/login"),
+}));
+
 const sampleUser = {
 	acceptedTermsAt: "2026-06-11T12:00:00Z",
 	"authProvider": "gc-sso",
@@ -25,12 +29,17 @@ const sampleUser = {
 };
 
 describe("auth-routing", () => {
+	let assignMock: ReturnType<typeof vi.fn>;
+
 	beforeEach(() => {
 		vi.resetAllMocks();
+		assignMock = vi.fn();
+		vi.stubGlobal("location", { assign: assignMock });
 	});
 
 	afterEach(() => {
 		vi.clearAllMocks();
+		vi.unstubAllGlobals();
 	});
 
 	it("keeps internal app paths and rejects external ones", () => {
@@ -45,41 +54,19 @@ describe("auth-routing", () => {
 		await expect(requireAuthenticatedUser("/users")).resolves.toEqual(sampleUser);
 	});
 
-	it("redirects to login when backend revalidation clears a stale cached session", async () => {
+	it("navigates directly to OIDC when the user is not authenticated", async () => {
 		vi.mocked(revalidateCurrentUser).mockResolvedValue(null);
 
-		await expect(requireAuthenticatedUser("/users")).rejects.toMatchObject({
-			options: {
-				replace: true,
-				search: { redirect: "/users" },
-				to: "/login",
-			},
-		});
+		await expect(requireAuthenticatedUser("/users")).rejects.toThrow("Redirecting to OIDC login");
+		expect(assignMock).toHaveBeenCalledWith("http://localhost:8000/api/v1/auth/oidc/login");
 		expect(revalidateCurrentUser).toHaveBeenCalledTimes(1);
 	});
 
-	it("redirects unauthenticated users to the login route", async () => {
-		vi.mocked(revalidateCurrentUser).mockResolvedValue(null);
-
-		await expect(requireAuthenticatedUser("/users")).rejects.toMatchObject({
-			options: {
-				replace: true,
-				search: { redirect: "/users" },
-				to: "/login",
-			},
-		});
-	});
-
-	it("redirects to login when session revalidation fails before route entry", async () => {
+	it("navigates to OIDC when session revalidation fails before route entry", async () => {
 		vi.mocked(revalidateCurrentUser).mockRejectedValue(new TypeError("Failed to fetch"));
 
-		await expect(requireAuthenticatedUser("/dashboard")).rejects.toMatchObject({
-			options: {
-				replace: true,
-				search: { redirect: "/dashboard" },
-				to: "/login",
-			},
-		});
+		await expect(requireAuthenticatedUser("/your-applications")).rejects.toThrow("Redirecting to OIDC login");
+		expect(assignMock).toHaveBeenCalledWith("http://localhost:8000/api/v1/auth/oidc/login");
 	});
 
 	it("redirects authenticated users away from the login page", async () => {
@@ -104,17 +91,24 @@ describe("auth-routing", () => {
 		});
 	});
 
-	it("redirects to terms-and-conditions when terms have not been accepted", async () => {
+	it("navigates to OIDC when post-login revalidation finds no session", async () => {
+		vi.mocked(revalidateCurrentUser).mockResolvedValue(null);
+
+		await expect(completeLoginRedirect("/profile")).rejects.toThrow("Redirecting to OIDC login");
+		expect(assignMock).toHaveBeenCalledWith("http://localhost:8000/api/v1/auth/oidc/login");
+	});
+
+	it("redirects to accept-terms when terms have not been accepted", async () => {
 		vi.mocked(revalidateCurrentUser).mockResolvedValue({
 			...sampleUser,
 			acceptedTermsAt: null,
 		});
 
-		await expect(requireAuthenticatedUser("/dashboard")).rejects.toMatchObject({
+		await expect(requireAuthenticatedUser("/your-applications")).rejects.toMatchObject({
 			options: {
 				replace: true,
-				search: { redirect: "/dashboard" },
-				to: "/terms-and-conditions",
+				search: { redirect: "/your-applications" },
+				to: "/accept-terms",
 			},
 		});
 	});
@@ -122,30 +116,18 @@ describe("auth-routing", () => {
 	it("passes terms check when acceptedTermsAt is set", async () => {
 		vi.mocked(revalidateCurrentUser).mockResolvedValue(sampleUser);
 
-		await expect(requireAuthenticatedUser("/dashboard")).resolves.toEqual(sampleUser);
+		await expect(requireAuthenticatedUser("/your-applications")).resolves.toEqual(sampleUser);
 	});
 
-	it("passes terms check when already on the terms page", async () => {
+	it("passes terms check when already on the accept-terms page", async () => {
 		vi.mocked(revalidateCurrentUser).mockResolvedValue({
 			...sampleUser,
 			acceptedTermsAt: null,
 		});
 
-		await expect(requireAuthenticatedUser("/terms-and-conditions")).resolves.toEqual({
+		await expect(requireAuthenticatedUser("/accept-terms")).resolves.toEqual({
 			...sampleUser,
 			acceptedTermsAt: null,
-		});
-	});
-
-	it("returns to login when post-login revalidation still has no session", async () => {
-		vi.mocked(revalidateCurrentUser).mockResolvedValue(null);
-
-		await expect(completeLoginRedirect("/profile")).rejects.toMatchObject({
-			options: {
-				replace: true,
-				search: { redirect: "/profile" },
-				to: "/login",
-			},
 		});
 	});
 });

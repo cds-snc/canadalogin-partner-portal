@@ -64,7 +64,16 @@ vi.mock("@tanstack/react-router", () => ({
 
 vi.mock("@/hooks", () => ({
 	useSession: vi.fn(),
+	useRoles: vi.fn(() => ({ roles: [], isLoading: false, error: null })),
 }));
+
+vi.mock("@tanstack/react-query", async () => {
+	const actual = await vi.importActual("@tanstack/react-query");
+	return {
+		...actual,
+		useQuery: vi.fn(() => ({ data: null, isLoading: false, error: null })),
+	};
+});
 
 vi.mock("@gcds-core/components-react", () => ({
 	GcdsBreadcrumbs: ({ children }: { children: ReactNode }): ReactElement => (
@@ -82,6 +91,17 @@ vi.mock("@gcds-core/components-react", () => ({
 		lang: string;
 		href: string;
 	}): ReactElement => <span>Lang:{lang}</span>,
+	GcdsLink: ({ children, href }: { children: ReactNode; href: string }): ReactElement => (
+		<a href={href}>{children}</a>
+	),
+	GcdsNavGroup: ({
+		children,
+		menuLabel,
+	}: {
+		children: ReactNode;
+		menuLabel: string;
+		openTrigger?: string;
+	}): ReactElement => <ul aria-label={menuLabel}>{children}</ul>,
 	GcdsNavLink: ({
 		children,
 		href,

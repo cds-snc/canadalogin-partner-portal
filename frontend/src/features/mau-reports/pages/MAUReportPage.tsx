@@ -75,9 +75,9 @@ const exportToCSV = (
 };
 
 export const MAUReportPage = (): FunctionComponent => {
-	const { t } = useTranslation();
+	const { i18n, t } = useTranslation();
 	const { rpApplicationUuid } = useParams({
-		from: "/rp-applications/mine/$rpApplicationUuid/mau-report",
+		from: "/your-applications/$rpApplicationUuid/mau-report",
 	});
 	const rpApplicationUuidValue = String(rpApplicationUuid);
 	const defaultDateRange = useMemo(() => buildDefaultDateRange(), []);
@@ -103,7 +103,7 @@ export const MAUReportPage = (): FunctionComponent => {
 			error.code === "rp_application_department_required"
 		) {
 			globalThis.location.replace(
-				`/rp-applications/mine/${rpApplicationUuidValue}/department-setup`
+				`/your-applications/${rpApplicationUuidValue}/department-setup`
 			);
 		}
 	}, [error, rpApplicationUuidValue]);
@@ -122,36 +122,34 @@ export const MAUReportPage = (): FunctionComponent => {
 		);
 	}, [responseData?.records]);
 
-	const latestRecord = useMemo(() => {
-		if (orderedRecords.length === 0) {
-			return null;
-		}
-
-		return orderedRecords[0] ?? null;
-	}, [orderedRecords]);
-
 	const kpis = useMemo<Array<KPI>>(() => {
-		if (!latestRecord) {
+		if (orderedRecords.length === 0) {
 			return [];
 		}
+
+		const totalLogins = orderedRecords.reduce((sum, r) => sum + r.total_logins, 0);
+		const uniqueUsers = orderedRecords.reduce((sum, r) => sum + r.unique_users, 0);
 
 		return [
 			{
 				label: t("mauReport.metrics.totalLogin"),
-				value: latestRecord.total_logins,
+				value: totalLogins,
 			},
 			{
 				label: t("mauReport.metrics.uniqueUser"),
-				value: latestRecord.unique_users,
-			},
-			{
-				label: t("mauReport.metrics.mtdUniqueUser"),
-				value: latestRecord.mtd_unique_users,
+				value: uniqueUsers,
 			},
 		];
-	}, [latestRecord, t]);
+	}, [orderedRecords, t]);
 
-	const latestDate = latestRecord?.date ?? "";
+	const lang = i18n.resolvedLanguage ?? "en";
+
+	const formatDate = (dateStr: string): string =>
+		new Date(`${dateStr}T00:00:00`).toLocaleDateString(lang, {
+			year: "numeric",
+			month: "long",
+			day: "numeric",
+		});
 
 	const trendPoints = useMemo(
 		() =>
@@ -194,24 +192,13 @@ export const MAUReportPage = (): FunctionComponent => {
 		setActiveEndDate(draftEndDate);
 	};
 
-	const applicationName = responseData?.application_name ?? "";
 	const departmentName = responseData?.department_name ?? null;
 
 	return (
 		<div className="flex flex-col gap-400">
-			<div className="flex flex-wrap items-center justify-between gap-300">
-				<Heading marginBottom="0" tag="h1">
-					{applicationName
-						? t("mauReport.pageTitle", { applicationName })
-						: t("mauReport.title")}
-				</Heading>
-				<Button
-					href={`/rp-applications/mine/${rpApplicationUuidValue}`}
-					type="link"
-				>
-					{t("workspaces.backToApplication")}
-				</Button>
-			</div>
+			<Heading tag="h1">
+				{t("mauReport.pageTitle")}
+			</Heading>
 			{departmentName ? (
 				<Text>
 					{t("mauReport.departmentLabel", { department: departmentName })}
@@ -273,10 +260,13 @@ export const MAUReportPage = (): FunctionComponent => {
 				</Notice>
 			) : null}
 
-			{!isLoading && !isRefetching && !errorNotice && latestRecord ? (
+			{!isLoading && !isRefetching && !errorNotice && orderedRecords.length > 0 ? (
 				<section>
 					<Heading tag="h2">
-						{t("mauReport.sectionTitle", { date: latestDate })}
+						{t("mauReport.sectionTitle", {
+							startDate: formatDate(activeStartDate),
+							endDate: formatDate(activeEndDate),
+						})}
 					</Heading>
 					<div className="mt-300 grid gap-200 md:grid-cols-3 lg:grid-cols-3">
 						{kpis.map((kpi) => (

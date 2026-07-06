@@ -1,12 +1,13 @@
 import { useTranslation } from "react-i18next";
 import type { FunctionComponent } from "@/common/types";
-import { Button, Card, Grid, Heading, Notice, Text } from "@/components";
+import { Button, Card, Grid, Heading, Link, Notice, Text } from "@/components";
 import { CenteredPageLayout } from "@/components/layout";
 import { useSession } from "@/hooks";
 
 export const Home = (): FunctionComponent => {
-	const { t } = useTranslation();
-	const { isAuthenticated, isLoading, login } = useSession();
+	const { t, i18n } = useTranslation();
+	const { isLoading, login } = useSession();
+	const lang = i18n.language?.startsWith("fr") ? "fr" : "en";
 
 	if (isLoading) {
 		return (
@@ -22,77 +23,48 @@ export const Home = (): FunctionComponent => {
 		);
 	}
 
-	const onLogoutClick = (): void => {
-		window.location.href = "/logout";
-	};
-
 	return (
 		<>
-			<section className="border border-[var(--gcds-border-default)] bg-[var(--gcds-bg-light)] px-500 py-600 md:px-650 md:py-700">
-				<div className="max-w-3xl">
-					<span className="text-sm font-semibold tracking-[0.12em] text-[var(--gcds-text-secondary)] uppercase">
-						{t("home.heroEyebrow")}
-					</span>
-					<Heading tag="h1">{t("home.title")}</Heading>
-					<Heading marginBottom="200" marginTop="0" tag="h2">
-						{t("home.heroTitle")}
-					</Heading>
-					<Text marginBottom="0">{t("home.summary")}</Text>
+			<section>
+				<Heading tag="h1">{t("home.title")}</Heading>
+				<Text>{t("home.summary")}</Text>
+				<Text>
+					{t("home.summaryTermsPrefix")}
+					<Link href="/terms-and-conditions">{t("home.summaryTermsLink")}</Link>
+					{t("home.summaryTermsSuffix")}
+				</Text>
 
-					<div className="flex flex-wrap items-center gap-250 pt-100">
-						{!isAuthenticated ? (
-							<Button
-								buttonId="oidc-login"
-								buttonRole="start"
-								type="button"
-								onGcdsClick={login}
-							>
-								{t("home.signInAction")}
-							</Button>
-						) : (
-							<>
-								<Button
-									buttonId="goto-dashboard"
-									buttonRole="primary"
-									href="/dashboard"
-									type="link"
-								>
-									{t("home.dashboardPageLink")}
-								</Button>
-								<Button
-									buttonId="logout"
-									buttonRole="secondary"
-									type="button"
-									onGcdsClick={onLogoutClick}
-								>
-									{t("home.signOutAction")}
-								</Button>
-							</>
-						)}
-					</div>
+				<div className="flex flex-wrap items-center gap-250 pt-100">
+					<Button
+						buttonId="oidc-login"
+						buttonRole="start"
+						type="button"
+						onGcdsClick={login}
+					>
+						{t("home.signInAction")}
+					</Button>
+				</div>
+
+				<div className="mt-400">
+					<Heading tag="h2">{t("home.aboutSectionTitle")}</Heading>
+					<Text>{t("home.aboutSectionBody")}</Text>
 				</div>
 			</section>
 
 			<section>
 				<div className="mt-400">
-					<Grid columnsDesktop="1fr 1fr 1fr" columnsTablet="1fr 1fr" tag="div">
-						<Card
-							cardTitle={t("home.aboutCardTitle")}
-							cardTitleTag="h3"
-							description={t("home.aboutCardDescription")}
-							href="/about"
-						/>
-						<Card
-							cardTitle={t("home.optionalCardTitle")}
-							cardTitleTag="h3"
-							description={t("home.optionalCardDescription")}
-							href="/terms-and-conditions"
-						/>
+					<Grid columnsDesktop="1fr 1fr" columnsTablet="1fr 1fr" tag="div">
 						<Card
 							cardTitle={t("home.supportCardTitle")}
 							cardTitleTag="h3"
 							description={t("home.supportCardDescription")}
 							href="/support"
+						/>
+						<Card
+							cardTitle={t("home.canadaLoginCardTitle")}
+							cardTitleTag="h3"
+							description={t("home.canadaLoginCardDescription")}
+							href={`https://login.canada.ca/${lang}/`}
 						/>
 					</Grid>
 				</div>
