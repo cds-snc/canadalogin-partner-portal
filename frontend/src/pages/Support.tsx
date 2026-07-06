@@ -14,9 +14,13 @@ const Support = (): FunctionComponent => {
 
 			<section>
 				<Heading tag="h2">{t("support.sectionTroubleshootingTitle")}</Heading>
-				<Text marginBottom="100"><strong>{t("support.sectionTroubleshootingItem1Title")}</strong></Text>
+				<Text marginBottom="100">
+					<strong>{t("support.sectionTroubleshootingItem1Title")}</strong>
+				</Text>
 				<Text>{t("support.sectionTroubleshootingItem1Body")}</Text>
-				<Text marginBottom="100"><strong>{t("support.sectionTroubleshootingItem2Title")}</strong></Text>
+				<Text marginBottom="100">
+					<strong>{t("support.sectionTroubleshootingItem2Title")}</strong>
+				</Text>
 				<Text>{t("support.sectionTroubleshootingItem2Body")}</Text>
 			</section>
 

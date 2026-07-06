@@ -2,7 +2,6 @@ import { useState, type ReactElement } from "react";
 import { useTranslation } from "react-i18next";
 import { useNavigate, useSearch } from "@tanstack/react-router";
 import { Button, Checkboxes, Text } from "@/components/ui";
-import { CenteredPageLayout } from "@/components/layout";
 import { useSession } from "@/hooks";
 import { acceptTerms } from "@/fetch/user-terms";
 import { useToast } from "@/components/ui/Toast";
@@ -24,7 +23,7 @@ const AcceptTermsPage = (): ReactElement => {
 	const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
 	const [acceptedTerms, setAcceptedTerms] = useState<Array<string>>([]);
 	const [submitError, setSubmitError] = useState<string | null>(null);
-    const isAccepted = acceptedTerms.includes("accepted");
+	const isAccepted = acceptedTerms.includes("accepted");
 
 	const handleAccept = async (): Promise<void> => {
 		if (!isAccepted) return;

@@ -110,13 +110,12 @@ export const ManageCredentialsPage = (): FunctionComponent => {
 
 		const loadClientData = async (): Promise<void> => {
 			try {
-				const [
-					credentialsResponse,
-					rotatedSecretsResponse,
-				] = await Promise.all([
-					getCurrentUserRPApplicationClientCredentials(rpApplicationUuid),
-					getCurrentUserRPApplicationRotatedClientSecrets(rpApplicationUuid),
-				]);
+				const [credentialsResponse, rotatedSecretsResponse] = await Promise.all(
+					[
+						getCurrentUserRPApplicationClientCredentials(rpApplicationUuid),
+						getCurrentUserRPApplicationRotatedClientSecrets(rpApplicationUuid),
+					]
+				);
 				if (!isMounted) {
 					return;
 				}
@@ -244,33 +243,33 @@ export const ManageCredentialsPage = (): FunctionComponent => {
 
 	return (
 		<>
-				<Heading tag="h1">{t("workspaces.manageCredentials")}</Heading>
-				<Text>{t("workspaces.applicationClientHelp")}</Text>
+			<Heading tag="h1">{t("workspaces.manageCredentials")}</Heading>
+			<Text>{t("workspaces.applicationClientHelp")}</Text>
 
-				<Heading marginTop="0" tag="h2">
-					{t("workspaces.clientCredentials")}
-				</Heading>
-				<LabelValueRow
-					label={t("workspaces.applicationClientIdLabel")}
-					value={
-						<div className="flex flex-wrap items-center gap-150">
-							<Text marginBottom="0">{credentials.clientId}</Text>
-							<Button
-								buttonRole="secondary"
-								size="small"
-								type="button"
-								onGcdsClick={() => {
-									void copyValue(
-										credentials.clientId,
-										t("workspaces.applicationClientIdCopiedSuccess")
-									);
-								}}
-							>
-								{t("workspaces.applicationClientCopyAction")}
-							</Button>
-						</div>
-					}
-				/>
+			<Heading marginTop="0" tag="h2">
+				{t("workspaces.clientCredentials")}
+			</Heading>
+			<LabelValueRow
+				label={t("workspaces.applicationClientIdLabel")}
+				value={
+					<div className="flex flex-wrap items-center gap-150">
+						<Text marginBottom="0">{credentials.clientId}</Text>
+						<Button
+							buttonRole="secondary"
+							size="small"
+							type="button"
+							onGcdsClick={() => {
+								void copyValue(
+									credentials.clientId,
+									t("workspaces.applicationClientIdCopiedSuccess")
+								);
+							}}
+						>
+							{t("workspaces.applicationClientCopyAction")}
+						</Button>
+					</div>
+				}
+			/>
 			<Heading tag="h3">
 				{t("workspaces.applicationClientActivateTitle")}
 			</Heading>
@@ -324,15 +323,15 @@ export const ManageCredentialsPage = (): FunctionComponent => {
 					return (
 						<LabelValueRow
 							key={deleteValue}
-							label={secret.description?.trim() || t("rpOAuthSetup.notAvailable")}
+							label={
+								secret.description?.trim() || t("rpOAuthSetup.notAvailable")
+							}
 							value={
 								<div className="flex flex-wrap items-center gap-150">
 									<Text marginBottom="0">
 										{isVisible
 											? (secret.value ??
-												t(
-													"workspaces.applicationClientSecretUnavailable"
-												))
+												t("workspaces.applicationClientSecretUnavailable"))
 											: maskedSecretPlaceholder}
 									</Text>
 									<Button
@@ -398,7 +397,7 @@ export const ManageCredentialsPage = (): FunctionComponent => {
 				</Button>
 			</div>
 
-		<ConfirmDialog
+			<ConfirmDialog
 				cancelLabel={t("common.cancel")}
 				confirmLabel={t("workspaces.applicationClientGenerateConfirmAction")}
 				description={t("workspaces.applicationClientGenerateConfirmBody")}

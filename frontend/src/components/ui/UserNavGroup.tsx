@@ -24,9 +24,15 @@ export const UserNavGroup = (): FunctionComponent => {
 
 	const roleNames = (currentUser.roleUuids ?? [])
 		.map((uuid) => roles.find((r) => r.uuid === uuid)?.name)
-		.filter((name): name is string => typeof name === "string" && name.trim().length > 0);
+		.filter(
+			(name): name is string =>
+				typeof name === "string" && name.trim().length > 0
+		);
 
-	const departmentLabel = department?.name ?? currentUser.departmentAbbreviation ?? t("yourApplications.noDepartment");
+	const departmentLabel =
+		department?.name ??
+		currentUser.departmentAbbreviation ??
+		t("yourApplications.noDepartment");
 
 	return (
 		<GcdsNavGroup menuLabel={currentUser.name} openTrigger={currentUser.name}>
@@ -40,7 +46,9 @@ export const UserNavGroup = (): FunctionComponent => {
 					</p>
 					{roleNames.length > 0 ? (
 						<div className="mt-100 text-[var(--gcds-text-secondary)]">
-							<p className="mb-100"><strong>{t("nav.roles")}:</strong></p>
+							<p className="mb-100">
+								<strong>{t("nav.roles")}:</strong>
+							</p>
 							<ul className="flex flex-wrap gap-100">
 								{roleNames.map((roleName) => (
 									<li

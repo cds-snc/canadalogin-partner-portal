@@ -5,9 +5,8 @@ import type { RouteBreadcrumbContext } from "@/types/route-breadcrumbs";
 import { requireAuthenticatedUser } from "../../../features/auth/auth-routing";
 
 const MAUReportPage = lazy(async () => ({
-	default: (
-		await import("../../../features/mau-reports/pages/MAUReportPage")
-	).MAUReportPage,
+	default: (await import("../../../features/mau-reports/pages/MAUReportPage"))
+		.MAUReportPage,
 }));
 
 export const Route = createFileRoute(

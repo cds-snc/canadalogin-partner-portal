@@ -32,8 +32,7 @@ export const requireAuthenticatedUser = async (
 	// Enforce terms acceptance before allowing access to any authenticated page.
 	const targetPath = sanitizeAppPath(redirectTo, getPostLoginPath());
 	const isOnboardingPath =
-		targetPath.startsWith("/accept-terms") ||
-		targetPath.startsWith("/profile");
+		targetPath.startsWith("/accept-terms") || targetPath.startsWith("/profile");
 
 	if (!isOnboardingPath && currentUser.acceptedTermsAt == null) {
 		throw redirect({

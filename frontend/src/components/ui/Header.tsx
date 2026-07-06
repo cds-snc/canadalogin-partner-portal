@@ -161,7 +161,9 @@ const Header = (): FunctionComponent => {
 						{item.label}
 					</GcdsNavLink>
 				))}
-				{isAuthenticated && !isLoading ? <GcdsNavLink href="/logout">{t("nav.logout")}</GcdsNavLink> : null}
+				{isAuthenticated && !isLoading ? (
+					<GcdsNavLink href="/logout">{t("nav.logout")}</GcdsNavLink>
+				) : null}
 				{isAuthenticated && !isLoading ? <UserNavGroup /> : null}
 			</GcdsTopNav>
 		</GcdsHeader>

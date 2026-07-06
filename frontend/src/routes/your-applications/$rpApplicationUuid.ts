@@ -5,9 +5,7 @@ import { HttpRequestError } from "@/fetch/errors";
 import { getCurrentUserRPApplicationDepartment } from "@/fetch/rp-applications";
 import { requireAuthenticatedUser } from "../../features/auth/auth-routing";
 
-export const Route = createFileRoute(
-	"/your-applications/$rpApplicationUuid"
-)({
+export const Route = createFileRoute("/your-applications/$rpApplicationUuid")({
 	beforeLoad: async ({ params, location }) => {
 		await requireAuthenticatedUser(
 			`/your-applications/${params.rpApplicationUuid}`
@@ -27,7 +25,7 @@ export const Route = createFileRoute(
 				if (preflight.departmentId === null) {
 					throw redirect({
 						replace: true,
-					to: "/your-applications/$rpApplicationUuid/department-setup",
+						to: "/your-applications/$rpApplicationUuid/department-setup",
 						params: { rpApplicationUuid: params.rpApplicationUuid },
 						search: { redirect: location.href },
 					}) as unknown as Error;
@@ -50,7 +48,8 @@ export const Route = createFileRoute(
 				{ href: "/your-applications", label: i18n.t("nav.dashboard") },
 				{
 					href: `/your-applications/${params.rpApplicationUuid}`,
-					label: rpApplicationName ?? i18n.t("yourApplications.unknownApplication"),
+					label:
+						rpApplicationName ?? i18n.t("yourApplications.unknownApplication"),
 				},
 			],
 			rpApplicationName,

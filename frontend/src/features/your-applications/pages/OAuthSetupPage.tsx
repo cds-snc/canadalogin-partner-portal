@@ -2,13 +2,7 @@ import { useParams } from "@tanstack/react-router";
 import { useEffect, useMemo, useState, type ReactNode } from "react";
 import { useTranslation } from "react-i18next";
 import type { FunctionComponent } from "@/common/types";
-import {
-	Card,
-	Details,
-	Heading,
-	Notice,
-	Text,
-} from "@/components/ui";
+import { Card, Details, Heading, Notice, Text } from "@/components/ui";
 import { HttpRequestError } from "@/fetch/errors";
 import {
 	getCurrentUserRPOAuthSetup,
@@ -137,9 +131,7 @@ export const OAuthSetupPage = (): FunctionComponent => {
 
 	return (
 		<div className="flex flex-col gap-400">
-			<Heading tag="h1">
-				{applicationName}
-			</Heading>
+			<Heading tag="h1">{applicationName}</Heading>
 
 			<div className="flex flex-col gap-200">
 				<div>
@@ -153,28 +145,36 @@ export const OAuthSetupPage = (): FunctionComponent => {
 				) : null}
 				{applicationUrl ? (
 					<div className="flex items-center gap-200">
-						<span className="font-semibold">{t("rpOAuthSetup.applicationUrlLabel")}:</span>
-						<a href={applicationUrl} rel="noopener noreferrer" target="_blank">{applicationUrl}</a>
+						<span className="font-semibold">
+							{t("rpOAuthSetup.applicationUrlLabel")}:
+						</span>
+						<a href={applicationUrl} rel="noopener noreferrer" target="_blank">
+							{applicationUrl}
+						</a>
 					</div>
 				) : null}
 			</div>
 
-			<Details
-				detailsTitle={t("rpOAuthSetup.oauthSectionTitle")}
-			>
+			<Details detailsTitle={t("rpOAuthSetup.oauthSectionTitle")}>
 				<div className="flex flex-col gap-200">
 					<div className="flex items-center gap-200">
-						<span className="font-semibold">{t("rpOAuthSetup.pkceEnabledLabel")}:</span>
+						<span className="font-semibold">
+							{t("rpOAuthSetup.pkceEnabledLabel")}:
+						</span>
 						<span>{pkceLabel}</span>
 					</div>
 					<div className="flex items-center gap-200">
-						<span className="font-semibold">{t("rpOAuthSetup.logoutUriLabel")}:</span>
+						<span className="font-semibold">
+							{t("rpOAuthSetup.logoutUriLabel")}:
+						</span>
 						<span>{logoutUri ?? t("rpOAuthSetup.notAvailable")}</span>
 					</div>
 				</div>
 
 				<div className="mt-200">
-					<div className="font-semibold">{t("rpOAuthSetup.redirectUrisLabel")}</div>
+					<div className="font-semibold">
+						{t("rpOAuthSetup.redirectUrisLabel")}
+					</div>
 					{redirectUris.length === 0 ? (
 						<Text>{t("rpOAuthSetup.noRedirectUris")}</Text>
 					) : (
@@ -189,7 +189,9 @@ export const OAuthSetupPage = (): FunctionComponent => {
 				</div>
 
 				<div className="mt-200">
-					<div className="font-semibold">{t("rpOAuthSetup.logoutRedirectUrisLabel")}</div>
+					<div className="font-semibold">
+						{t("rpOAuthSetup.logoutRedirectUrisLabel")}
+					</div>
 					{logoutRedirectUris.length === 0 ? (
 						<Text>{t("rpOAuthSetup.noLogoutRedirectUris")}</Text>
 					) : (

@@ -62,14 +62,14 @@ export const YourApplicationsPage = (): FunctionComponent => {
 							{(rpApplications ?? []).map((application) => (
 								<Card
 									key={application.uuid}
-								cardTitleTag="h3"
-								href={`/your-applications/${application.uuid}`}
-								cardTitle={
-									application.dnrAppName?.trim() ||
-									application.name?.trim() ||
-									application.ibm_sv_application_id ||
-									t("yourApplications.unknownApplication")
-								}
+									cardTitleTag="h3"
+									href={`/your-applications/${application.uuid}`}
+									cardTitle={
+										application.dnrAppName?.trim() ||
+										application.name?.trim() ||
+										application.ibm_sv_application_id ||
+										t("yourApplications.unknownApplication")
+									}
 								/>
 							))}
 						</div>
@@ -81,4 +81,3 @@ export const YourApplicationsPage = (): FunctionComponent => {
 		</section>
 	);
 };
-
