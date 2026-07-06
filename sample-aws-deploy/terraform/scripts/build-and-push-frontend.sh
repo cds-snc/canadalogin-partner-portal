@@ -45,23 +45,25 @@ fi
 
 FRONTEND_URL=$(cd "$INFRA_DIR" && terraform output -raw frontend_url)
 S3_BUCKET=$(cd "$INFRA_DIR" && terraform output -raw frontend_s3_bucket_id)
+API_URL=$(cd "$INFRA_DIR" && terraform output -raw api_url)
 
 echo "  Frontend URL:  $FRONTEND_URL"
 echo "  S3 bucket:     $S3_BUCKET"
+echo "  API URL:       $API_URL"
 echo ""
 
 # Build the frontend
 echo "=== Building frontend ==="
 echo "  Directory: $FRONTEND_DIR"
 echo "  VITE_APP_ENVIRONMENT=${ENVIRONMENT}"
-echo "  VITE_API_BASE_URL=<unset — same-origin>"
+echo "  VITE_API_BASE_URL=${API_URL}"
 echo ""
 
 cd "$FRONTEND_DIR"
 
-# Set defaults for optional vars; VITE_API_BASE_URL is intentionally unset
-# so the SPA calls the same origin (single CloudFront distribution).
+# Set defaults for optional vars
 : "${VITE_APP_ENVIRONMENT:=$ENVIRONMENT}"
+: "${VITE_API_BASE_URL:=$API_URL}"
 : "${VITE_APP_TITLE:=CanadaLogin Partner Portal}"
 : "${VITE_AUTH_POST_LOGIN_PATH:=/dashboard}"
 : "${VITE_SESSION_WARNING_AFTER_MINUTES:=25}"
@@ -70,6 +72,7 @@ cd "$FRONTEND_DIR"
 pnpm install --frozen-lockfile
 
 VITE_APP_ENVIRONMENT="$VITE_APP_ENVIRONMENT" \
+VITE_API_BASE_URL="$VITE_API_BASE_URL" \
 VITE_APP_TITLE="$VITE_APP_TITLE" \
 VITE_AUTH_POST_LOGIN_PATH="$VITE_AUTH_POST_LOGIN_PATH" \
 VITE_SESSION_WARNING_AFTER_MINUTES="$VITE_SESSION_WARNING_AFTER_MINUTES" \

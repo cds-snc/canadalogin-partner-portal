@@ -1,5 +1,6 @@
 import hashlib
 import logging
+import importlib
 from unittest.mock import MagicMock
 
 import pytest
@@ -8,6 +9,7 @@ from src.app.core.exceptions.standardized_logger import (
     QUERY_STRING_BLACKLIST,
     StandardizedLogger,
 )
+from src.app.core import logger as app_logger
 
 
 @pytest.fixture()
@@ -130,3 +132,22 @@ def test_log_emits_error_for_5xx_responses(
     assert len(caplog.records) == 1
     assert caplog.records[0].levelno == logging.ERROR
     assert "CanadaLogin.PartnerPortal.ERROR.500" in caplog.records[0].message
+
+
+def test_build_formatter_disables_console_colors_when_no_color_is_set(monkeypatch: pytest.MonkeyPatch) -> None:
+    captured: dict[str, object] = {}
+
+    class FakeConsoleRenderer:
+        def __init__(self, *, colors: bool = True, **kwargs: object) -> None:
+            captured["colors"] = colors
+            captured["kwargs"] = kwargs
+
+        def __call__(self, *args: object, **kwargs: object) -> str:
+            return "rendered"
+
+    monkeypatch.setenv("NO_COLOR", "1")
+    monkeypatch.setattr(app_logger, "ConsoleRenderer", FakeConsoleRenderer)
+
+    app_logger.build_formatter(json_output=False, pre_chain=[])
+
+    assert captured["colors"] is False
