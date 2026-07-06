@@ -1,16 +1,16 @@
 #!/usr/bin/env bash
 #
-# build-and-push.sh
+# build-and-push-backend.sh
 #
 # Builds the backend Docker image for linux/amd64 (matching ECS X86_64 Fargate),
 # tags it for the ECR repository, and pushes it.
 #
 # Usage:
 #   cd sample-aws-deploy/terraform
-#   ./scripts/build-and-push.sh <ecr_repository_url> <aws_region>
+#   ./scripts/build-and-push-backend.sh <ecr_repository_url> <aws_region>
 #
 # Examples:
-#   ./scripts/build-and-push.sh 123456789012.dkr.ecr.ca-central-1.amazonaws.com/cl-pp-backend-scratch ca-central-1
+#   ./scripts/build-and-push-backend.sh 123456789012.dkr.ecr.ca-central-1.amazonaws.com/cl-pp-backend-scratch ca-central-1
 #
 # To get <ecr_repository_url>, run after Wave 1:
 #   cd infra && terraform output ecr_repository_url
