@@ -69,6 +69,7 @@ ibm_sv_admin_client_id     = "1234567890"
 session_cookie_name  = "cl.pp.app.session"
 session_max_age      = 1800
 session_rolling      = true
+session_cookie_domain = "test.cloudfront.net"
 
 
 # ----- CORS -----

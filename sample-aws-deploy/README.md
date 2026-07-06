@@ -170,7 +170,7 @@ cd sample-aws-deploy/terraform
 ECR_URL=$(cd infra && terraform output -raw ecr_repository_url)
 
 # Build and push
-./scripts/build-and-push.sh "$ECR_URL" ca-central-1
+./scripts/build-and-push-backend.sh "$ECR_URL" ca-central-1
 ```
 
 **What the script does:**
@@ -301,7 +301,7 @@ For subsequent deployments after the initial setup:
 # 1. Build + push new Docker image
 cd sample-aws-deploy/terraform
 ECR_URL=$(cd infra && terraform output -raw ecr_repository_url)
-./scripts/build-and-push.sh "$ECR_URL" ca-central-1
+./scripts/build-and-push-backend.sh "$ECR_URL" ca-central-1
 
 # 2. Rebuild frontend + sync to S3
 ./scripts/build-and-push-frontend.sh dev
@@ -368,7 +368,7 @@ To use an external MAU bucket (e.g. from IBM SV production), set `aws_s3_role_ar
 | Script | Location | Purpose |
 |--------|----------|---------|
 | `sync-deploy-env.sh` | `terraform/scripts/` | Generate Wave 2 tfvars from Wave 1 outputs |
-| `build-and-push.sh` | `terraform/scripts/` | Build backend Docker for linux/amd64 and push to ECR |
+| `build-and-push-backend.sh` | `terraform/scripts/` | Build backend Docker for linux/amd64 and push to ECR |
 | `build-and-push-frontend.sh` | `terraform/scripts/` | Build frontend SPA, sync to S3, invalidate CloudFront |
 
 ## Clean Up
