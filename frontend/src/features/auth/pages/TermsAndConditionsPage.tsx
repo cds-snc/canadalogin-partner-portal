@@ -1,7 +1,7 @@
 import { useState, type ReactElement } from "react";
 import { useTranslation } from "react-i18next";
 import { useNavigate, useSearch } from "@tanstack/react-router";
-import { Button, Checkboxes, Heading, Text } from "@/components/ui";
+import { Button, Heading, Text } from "@/components/ui";
 import { CenteredPageLayout } from "@/components/layout";
 import { useSession } from "@/hooks";
 import { acceptTerms } from "@/fetch/user-terms";
@@ -21,9 +21,8 @@ const TermsAndConditionsPage = (): ReactElement => {
 	const toast = useToast();
 
 	const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
-	const [acceptedTerms, setAcceptedTerms] = useState<Array<string>>([]);
+	const [isAccepted, setIsAccepted] = useState<boolean>(false);
 	const [submitError, setSubmitError] = useState<string | null>(null);
-	const isAccepted = acceptedTerms.includes("accepted");
 
 	const handleAccept = async (): Promise<void> => {
 		if (!isAccepted) return;
@@ -73,20 +72,21 @@ const TermsAndConditionsPage = (): ReactElement => {
 				<Text>{t("termsAndConditions.alreadyAccepted")}</Text>
 			) : (
 				<div className="flex flex-col gap-200">
-					<Checkboxes
-						name="terms-accept-checkbox"
-						value={acceptedTerms}
-						options={[
-							{
-								id: "terms-accept-checkbox-option",
-								label: t("termsAndConditions.checkboxLabel"),
-								value: "accepted",
-							},
-						]}
-						onInput={(event) => {
-							setAcceptedTerms(event.target.value);
-						}}
-					/>
+					<label
+						className="flex items-start gap-200"
+						htmlFor="terms-accept-checkbox"
+					>
+						<input
+							checked={isAccepted}
+							className="mt-100"
+							id="terms-accept-checkbox"
+							type="checkbox"
+							onChange={(e) => {
+								setIsAccepted(e.target.checked);
+							}}
+						/>
+						<Text>{t("termsAndConditions.checkboxLabel")}</Text>
+					</label>
 
 					<div>
 						<Button
