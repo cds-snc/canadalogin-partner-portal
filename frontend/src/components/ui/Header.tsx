@@ -1,16 +1,18 @@
 import { useNavigate, useRouterState } from "@tanstack/react-router";
 import { useTranslation } from "react-i18next";
+import type { ReactNode } from "react";
 import {
-	GcdsBreadcrumbs,
-	GcdsBreadcrumbsItem,
 	GcdsHeader,
 	GcdsLangToggle,
+	GcdsLink,
 	GcdsNavLink,
 	GcdsTopNav,
 } from "@gcds-core/components-react";
 import type { FunctionComponent } from "@/common/types";
 import { useSession } from "@/hooks";
+import { getOidcLoginUrl } from "@/fetch/auth";
 import type { RouteBreadcrumbItem } from "@/types/route-breadcrumbs";
+import { UserNavGroup } from "./UserNavGroup";
 
 type NavigationItem = {
 	href: string;
@@ -98,7 +100,7 @@ const Header = (): FunctionComponent => {
 	};
 
 	const authItems: Array<NavigationItem> = [
-		{ href: "/dashboard", label: t("nav.dashboard") },
+		{ href: "/your-applications", label: t("nav.dashboard") },
 	];
 
 	const superuserItems: Array<NavigationItem> = [
@@ -111,7 +113,7 @@ const Header = (): FunctionComponent => {
 	];
 
 	const publicItems: Array<NavigationItem> = [
-		{ href: "/login", label: t("nav.login") },
+		{ href: getOidcLoginUrl(), label: t("nav.login") },
 	];
 
 	let items: Array<NavigationItem>;
@@ -119,11 +121,9 @@ const Header = (): FunctionComponent => {
 		items = [...commonItems];
 	} else if (isAuthenticated) {
 		items = [
-			...commonItems,
 			...authItems,
 			...(currentUser?.isSuperuser ? superuserItems : []),
 			supportItem,
-			{ href: "/logout", label: t("nav.logout") },
 		];
 	} else {
 		items = [...commonItems, supportItem, ...publicItems];
@@ -137,18 +137,16 @@ const Header = (): FunctionComponent => {
 				slot="toggle"
 				onClick={handleLangToggle}
 			/>
-			{breadcrumbs.length > 0 ? (
-				<GcdsBreadcrumbs slot="breadcrumb">
-					{breadcrumbs.map((item) => (
-						<GcdsBreadcrumbsItem
-							key={`${item.href}-${item.label}`}
-							href={item.href}
-						>
-							{item.label}
-						</GcdsBreadcrumbsItem>
-					))}
-				</GcdsBreadcrumbs>
-			) : null}
+			{((): ReactNode => {
+				const parentCrumb = breadcrumbs[breadcrumbs.length - 2];
+				return parentCrumb ? (
+					<div slot="breadcrumb">
+						<GcdsLink href={parentCrumb.href}>
+							{`← ${t("nav.backTo")} ${parentCrumb.label}`}
+						</GcdsLink>
+					</div>
+				) : null;
+			})()}
 			<GcdsTopNav alignment="end" label={t("nav.label")} slot="menu">
 				<GcdsNavLink href="/" slot="home">
 					{serviceName}
@@ -163,6 +161,10 @@ const Header = (): FunctionComponent => {
 						{item.label}
 					</GcdsNavLink>
 				))}
+				{isAuthenticated && !isLoading ? (
+					<GcdsNavLink href="/logout">{t("nav.logout")}</GcdsNavLink>
+				) : null}
+				{isAuthenticated && !isLoading ? <UserNavGroup /> : null}
 			</GcdsTopNav>
 		</GcdsHeader>
 	);

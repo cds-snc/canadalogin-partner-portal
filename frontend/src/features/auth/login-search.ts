@@ -8,7 +8,7 @@ export type LoginRedirectSearch = {
 	redirect?: string;
 };
 
-const defaultPostLoginPath = "/dashboard";
+const defaultPostLoginPath = "/your-applications";
 
 export const sanitizeAppPath = (
 	path: string | null | undefined,

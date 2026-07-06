@@ -1,9 +1,9 @@
 import { redirect } from "@tanstack/react-router";
-import type { UserRead } from "@/fetch/auth";
+import { getOidcLoginUrl, type UserRead } from "@/fetch/auth";
 import { revalidateCurrentUser } from "./session-queries";
-import { buildLoginLocation, sanitizeAppPath } from "./login-search";
+import { sanitizeAppPath } from "./login-search";
 
-const defaultPostLoginPath = "/dashboard";
+const defaultPostLoginPath = "/your-applications";
 
 export const getPostLoginPath = (): string =>
 	sanitizeAppPath(
@@ -25,25 +25,19 @@ export const requireAuthenticatedUser = async (
 	}
 
 	if (!currentUser) {
-		// TanStack Router uses thrown redirect objects to short-circuit route loading.
-		throw redirect({
-			replace: true,
-			...buildLoginLocation({
-				redirect: sanitizeAppPath(redirectTo, getPostLoginPath()),
-			}),
-		}) as unknown as Error;
+		window.location.assign(getOidcLoginUrl());
+		throw new Error("Redirecting to OIDC login");
 	}
 
 	// Enforce terms acceptance before allowing access to any authenticated page.
 	const targetPath = sanitizeAppPath(redirectTo, getPostLoginPath());
 	const isOnboardingPath =
-		targetPath.startsWith("/terms-and-conditions") ||
-		targetPath.startsWith("/profile");
+		targetPath.startsWith("/accept-terms") || targetPath.startsWith("/profile");
 
 	if (!isOnboardingPath && currentUser.acceptedTermsAt == null) {
 		throw redirect({
 			replace: true,
-			to: "/terms-and-conditions",
+			to: "/accept-terms",
 			search: { redirect: targetPath },
 		}) as unknown as Error;
 	}
@@ -71,7 +65,7 @@ export const requireSuperuser = async (
 	if (!currentUser.isSuperuser) {
 		throw redirect({
 			replace: true,
-			to: "/dashboard",
+			to: "/your-applications",
 		}) as unknown as Error;
 	}
 
@@ -98,10 +92,8 @@ export const completeLoginRedirect = async (
 	const targetPath = sanitizeAppPath(redirectTo, getPostLoginPath());
 
 	if (!currentUser) {
-		throw redirect({
-			replace: true,
-			...buildLoginLocation({ redirect: targetPath }),
-		}) as unknown as Error;
+		window.location.assign(getOidcLoginUrl());
+		throw new Error("Redirecting to OIDC login");
 	}
 
 	throw redirect({

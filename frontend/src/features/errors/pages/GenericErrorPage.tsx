@@ -28,7 +28,7 @@ export const GenericErrorPage = ({
 				<Text>{t(bodyKey)}</Text>
 			</Notice>
 			<div className="flex flex-wrap gap-150">
-				<Button href="/dashboard" type="link">
+				<Button href="/your-applications" type="link">
 					{t("genericError.dashboardAction")}
 				</Button>
 				<Button buttonRole="secondary" href="/" type="link">

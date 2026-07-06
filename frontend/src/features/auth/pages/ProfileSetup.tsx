@@ -43,7 +43,7 @@ export const ProfileSetup = (): ReactElement => {
 			await setMyDepartment(selected);
 			toast.success(t("profile.departmentSavedSuccess"));
 			await refreshSession();
-			await navigate({ replace: true, to: "/dashboard" });
+			await navigate({ replace: true, to: "/your-applications" });
 		} catch (err) {
 			console.error(err);
 			setSubmitError(t("profile.errorSaving"));
@@ -96,7 +96,7 @@ export const ProfileSetup = (): ReactElement => {
 	}
 
 	return (
-		<CenteredPageLayout className="max-w-3xl gap-400">
+		<>
 			<Heading tag="h1">{t("profile.setupTitle")}</Heading>
 
 			<Text>{t("profile.setupIntro")}</Text>
@@ -113,6 +113,8 @@ export const ProfileSetup = (): ReactElement => {
 
 			<div className="flex flex-col gap-200">
 				<Select
+					required
+					hint={t("profile.departmentHint")}
 					label={t("profile.departmentLabel")}
 					name="department"
 					selectId="department-select"
@@ -140,7 +142,7 @@ export const ProfileSetup = (): ReactElement => {
 					</Button>
 				</div>
 			</div>
-		</CenteredPageLayout>
+		</>
 	);
 };
 

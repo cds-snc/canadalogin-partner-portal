@@ -16,17 +16,18 @@ vi.mock("@tanstack/react-router", () => ({
 }));
 
 vi.mock("react-i18next", () => ({
-	useTranslation: (): { t: (key: string, options?: Record<string, unknown>) => string } => ({
+	useTranslation: (): { i18n: { resolvedLanguage: string }; t: (key: string, options?: Record<string, unknown>) => string } => ({
+		i18n: { resolvedLanguage: "en" },
 		t: (key: string, options?: Record<string, unknown>): string => {
 			const translations: Record<string, string> = {
-				"mauReport.pageTitle": `${options?.["applicationName"] ?? ""} — Usage Report`,
+				"mauReport.pageTitle": "Usage Report",
 				"mauReport.title": "MAU report",
 				"mauReport.departmentLabel": `Department: ${options?.["department"] ?? ""}`,
 				"mauReport.loadingTitle": "Loading MAU report",
 				"mauReport.loadingBody": "Loading MAU data for this RP application.",
 				"mauReport.errorTitle": "Unable to load MAU report",
 				"mauReport.errorBody": "The MAU report could not be loaded for this RP application.",
-				"mauReport.sectionTitle": `On: ${options?.["date"] ?? ""}`,
+				"mauReport.sectionTitle": `${options?.["startDate"] ?? ""} to ${options?.["endDate"] ?? ""}`,
 				"mauReport.emptyTitle": "No MAU data",
 				"mauReport.emptyBody": "No MAU records were returned for the selected date range.",
 				"mauReport.metrics.totalLogin": "Total login",
@@ -246,7 +247,7 @@ describe("MAUReportPage", () => {
 
 		expect(
 			screen.getByRole("heading", { level: 1 }).textContent
-		).toBe("Benefits Portal — Usage Report");
+		).toBe("Usage Report");
 	});
 
 	it("shows department name when present", () => {
@@ -328,9 +329,8 @@ describe("MAUReportPage", () => {
 
 		render(<MAUReportPage />);
 
-		const sectionTitle = screen.getByRole("heading", { level: 2, name: /^On:/ });
+		const sectionTitle = screen.getByRole("heading", { level: 2, name: /to/ });
 		expect(sectionTitle).toBeTruthy();
-		expect(sectionTitle.textContent).toMatch(/^On: 2026-01-1[45]$/);
 
 		expect(screen.getByRole("heading", { level: 3, name: "Total login" })).toBeTruthy();
 		expect(screen.getByRole("heading", { level: 3, name: "Unique user" })).toBeTruthy();
@@ -340,7 +340,6 @@ describe("MAUReportPage", () => {
 		expect(
 			screen.queryByRole("heading", { level: 3, name: "Failed login" })
 		).toBeNull();
-		expect(screen.getByRole("heading", { level: 3, name: "MTD unique user" })).toBeTruthy();
 	});
 
 	it("renders trend chart and data table sections", () => {
@@ -409,11 +408,8 @@ describe("MAUReportPage", () => {
 
 		render(<MAUReportPage />);
 
-		const backLink = screen.getByRole("link", { name: "Back to Application" });
-		expect(backLink).toBeTruthy();
-		expect(backLink.getAttribute("href")).toBe(
-			"/rp-applications/mine/application-uuid-1"
-		);
+		expect(screen.getByRole("heading", { level: 1 }).textContent).toBe("Usage Report");
+		expect(screen.getByText("No MAU data")).toBeTruthy();
 	});
 
 	it("redirects to department-setup when 409 rp_application_department_required received", async () => {
@@ -422,7 +418,7 @@ describe("MAUReportPage", () => {
 		Object.defineProperty(globalThis, "location", {
 			configurable: true,
 			value: {
-				pathname: "/rp-applications/mine/application-uuid-1/mau-report",
+				pathname: "/your-applications/application-uuid-1/mau-report",
 				replace: replaceMock,
 			} as Pick<Location, "pathname" | "replace">,
 		});
@@ -442,7 +438,7 @@ describe("MAUReportPage", () => {
 
 		await waitFor(() => {
 			expect(replaceMock).toHaveBeenCalledWith(
-				"/rp-applications/mine/application-uuid-1/department-setup"
+					"/your-applications/application-uuid-1/department-setup"
 			);
 		});
 

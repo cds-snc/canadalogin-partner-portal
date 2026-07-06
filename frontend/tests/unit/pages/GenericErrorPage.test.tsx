@@ -64,7 +64,7 @@ describe("GenericErrorPage", () => {
 		).toBeTruthy();
 		expect(
 			screen.getByRole("link", { name: "Go to dashboard" }).getAttribute("href")
-		).toBe("/dashboard");
+		).toBe("/your-applications");
 		expect(
 			screen.getByRole("link", { name: "Go to home" }).getAttribute("href")
 		).toBe("/");

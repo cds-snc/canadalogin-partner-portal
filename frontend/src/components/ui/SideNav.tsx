@@ -75,9 +75,6 @@ const SideNav = (): FunctionComponent => {
 				</GcdsNavGroup>
 			))}
 
-			<GcdsNavLink current={isCurrentPath("/about")} href="/about">
-				About this app
-			</GcdsNavLink>
 			<GcdsNavLink
 				current={isCurrentPath("/submit-a-holiday")}
 				href="/submit-a-holiday"
