@@ -1,7 +1,9 @@
+from typing import Optional
+
 from fastapi.responses import RedirectResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 from starlette.requests import Request
-from starsessions.session import get_session_id, regenerate_session_id
+from starsessions.session import generate_session_id, get_session_handler
 
 from ..core.config import settings
 from ..core.exceptions.http_exceptions import ForbiddenException, UnauthorizedException
@@ -13,9 +15,12 @@ class OidcService:
     def __init__(self, logout_service: OidcLogoutService | None = None) -> None:
         self.logout_service = logout_service or OidcLogoutService()
 
-    async def login(self, request: Request):
+    async def login(self, request: Request, ui_locales: Optional[str] = None):
         client = get_oidc_client()
         redirect_uri = build_oidc_redirect_uri(request)
+        if ui_locales:
+            request.session["ui_locales"] = ui_locales
+            return await client.authorize_redirect(request, redirect_uri, ui_locales=ui_locales)
         return await client.authorize_redirect(request, redirect_uri)
 
     async def callback(self, request: Request, db: AsyncSession):
@@ -27,11 +32,11 @@ class OidcService:
         except ForbiddenException:
             request.session.clear()
             return RedirectResponse(url=settings.OIDC_ACCESS_DENIED_REDIRECT)
-        regenerate_session_id(request)
         try:
-            session_id = get_session_id(request)
+            handler = get_session_handler(request)
+            handler.session_id = claims.get("sid") or generate_session_id()
         except (AssertionError, KeyError, TypeError):
-            session_id = None
+            pass
         request.session["user_uuid"] = str(oidc_user["uuid"])
         request.session["tokens"] = token
         request.session["oidc_logout"] = {
@@ -40,9 +45,11 @@ class OidcService:
             "issuer": client.server_metadata.get("issuer"),
             "id_token": token.get("id_token"),
         }
-        if claims.get("sid") and session_id:
-            await self.logout_service.store_session(claims["sid"], session_id)
-        return RedirectResponse(url=settings.OIDC_POST_LOGIN_REDIRECT)
+        ui_locales = request.session.pop("ui_locales", None)
+        post_login_url = settings.OIDC_POST_LOGIN_REDIRECT
+        if ui_locales:
+            post_login_url = f"{post_login_url}?ui_locales={ui_locales}"
+        return RedirectResponse(url=post_login_url)
 
     async def backchannel_logout(self, logout_token: str) -> dict[str, str]:
         claims = await self.logout_service.validate_logout_token(logout_token)
@@ -50,8 +57,5 @@ class OidcService:
         if not sid:
             raise UnauthorizedException("Invalid logout token.")
 
-        session_id = await self.logout_service.get_session_id(sid)
-        if session_id:
-            await self.logout_service.remove_local_session(session_id)
-        await self.logout_service.remove_session(sid)
+        await self.logout_service.remove_local_session(sid)
         return {"message": "Backchannel logout processed"}

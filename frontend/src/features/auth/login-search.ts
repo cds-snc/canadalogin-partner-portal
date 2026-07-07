@@ -6,6 +6,7 @@ export type LoginRedirectSearch = {
 	message?: LoginMessageKey;
 	reason?: LoginRedirectReason;
 	redirect?: string;
+	uiLocales?: string;
 };
 
 const defaultPostLoginPath = "/your-applications";

@@ -1,5 +1,7 @@
 import { redirect } from "@tanstack/react-router";
 import { getOidcLoginUrl, type UserRead } from "@/fetch/auth";
+import { normalizeLanguageCode } from "@/common/language";
+import { appPreferencesStore } from "@/store/app-preferences-store";
 import { revalidateCurrentUser } from "./session-queries";
 import { sanitizeAppPath } from "./login-search";
 
@@ -86,14 +88,22 @@ export const redirectAuthenticatedUser = async (
 };
 
 export const completeLoginRedirect = async (
-	redirectTo?: string
+	redirectTo?: string,
+	uiLocales?: string
 ): Promise<never> => {
 	const currentUser = await revalidateCurrentUser();
 	const targetPath = sanitizeAppPath(redirectTo, getPostLoginPath());
 
 	if (!currentUser) {
-		window.location.assign(getOidcLoginUrl());
+		const { language } = appPreferencesStore.getState();
+		window.location.assign(getOidcLoginUrl(language));
 		throw new Error("Redirecting to OIDC login");
+	}
+
+	if (uiLocales) {
+		await appPreferencesStore
+			.getState()
+			.setLanguage(normalizeLanguageCode(uiLocales));
 	}
 
 	throw redirect({

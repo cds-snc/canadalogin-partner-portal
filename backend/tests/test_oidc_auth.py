@@ -171,10 +171,10 @@ class TestOidcCallback:
         mock_service = Mock()
         mock_service.login = AsyncMock(return_value="redirect-response")
 
-        result = await oidc_login(request, mock_service)
+        result = await oidc_login(request, mock_service, ui_locales=None)
 
         assert result == "redirect-response"
-        mock_service.login.assert_awaited_once_with(request)
+        mock_service.login.assert_awaited_once_with(request, ui_locales=None)
 
     @pytest.mark.asyncio
     async def test_oidc_callback_delegates_to_service(self, mock_db):

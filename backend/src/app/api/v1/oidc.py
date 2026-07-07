@@ -1,6 +1,6 @@
-from typing import Annotated
+from typing import Annotated, Optional
 
-from fastapi import APIRouter, Depends, Form, Request
+from fastapi import APIRouter, Depends, Form, Query, Request
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from ...api.dependencies import get_oidc_service
@@ -11,8 +11,12 @@ router = APIRouter(prefix="/auth/oidc", tags=["oidc"])
 
 
 @router.get("/login")
-async def oidc_login(request: Request, service: Annotated[OidcService, Depends(get_oidc_service)]):
-    return await service.login(request)
+async def oidc_login(
+    request: Request,
+    service: Annotated[OidcService, Depends(get_oidc_service)],
+    ui_locales: Optional[str] = Query(None, pattern="^(en|fr)$"),
+):
+    return await service.login(request, ui_locales=ui_locales)
 
 
 @router.get("/callback")

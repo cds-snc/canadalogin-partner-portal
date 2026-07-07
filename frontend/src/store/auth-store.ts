@@ -2,6 +2,7 @@ import { useStore } from "zustand";
 import { createStore } from "zustand/vanilla";
 import { clearBackendActivity } from "@/lib/backend-activity";
 import { getCurrentUser, getOidcLoginUrl, type UserRead } from "@/fetch/auth";
+import { appPreferencesStore } from "@/store/app-preferences-store";
 
 type AuthStoreState = {
 	currentUser: UserRead | null;
@@ -88,7 +89,8 @@ const authStore = createStore<AuthStoreState>()((set, get) => {
 		...initialSnapshot,
 		hydrateSession: (): Promise<UserRead | null> => runHydration(false),
 		login: (): void => {
-			window.location.assign(getOidcLoginUrl());
+			const { language } = appPreferencesStore.getState();
+			window.location.assign(getOidcLoginUrl(language));
 		},
 		logout: (): Promise<void> => {
 			sessionVersion += 1;

@@ -19,8 +19,6 @@ class TestAuthService:
     @pytest.mark.asyncio
     async def test_logout_returns_oidc_logout_details_and_clears_session(self) -> None:
         logout_service = Mock()
-        logout_service.remove_session = AsyncMock()
-        logout_service.get_session_id = AsyncMock(return_value="session-id-456")
         logout_service.remove_local_session = AsyncMock()
         service = AuthService(logout_service=logout_service)
         request = Mock(
@@ -49,9 +47,7 @@ class TestAuthService:
                 "post_logout_redirect_uri": settings.OIDC_POST_LOGOUT_REDIRECT_URI,
             },
         }
-        logout_service.get_session_id.assert_awaited_once_with("sid-123")
-        logout_service.remove_session.assert_awaited_once_with("sid-123")
-        logout_service.remove_local_session.assert_awaited_once_with("session-id-456")
+        logout_service.remove_local_session.assert_awaited_once_with("sid-123")
 
     @pytest.mark.asyncio
     async def test_refresh_access_token_requires_cookie(self, mock_db) -> None:
