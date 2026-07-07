@@ -45,6 +45,18 @@ def get_oidc_client():
     return client
 
 
+async def warm_oidc_metadata() -> None:
+    if not settings.OIDC_ENABLED:
+        return
+
+    register_oidc_client()
+    client = oauth.create_client(settings.OIDC_PROVIDER_NAME)
+    if client is None:
+        return
+
+    await client.load_server_metadata()
+
+
 def build_oidc_redirect_uri(request) -> str:
     configured_redirect_uri = settings.OIDC_REDIRECT_URI
     if configured_redirect_uri:

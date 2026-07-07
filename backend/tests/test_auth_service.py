@@ -31,9 +31,11 @@ class TestAuthService:
             }
         )
         client = Mock()
-        client.server_metadata = {
-            "end_session_endpoint": "https://example.verify.ibm.com/logout",
-        }
+        client.load_server_metadata = AsyncMock(
+            return_value={
+                "end_session_endpoint": "https://example.verify.ibm.com/logout",
+            }
+        )
 
         with patch("src.app.services.auth_service.get_oidc_client", return_value=client):
             result = await service.logout(request=request)
