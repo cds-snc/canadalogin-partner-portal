@@ -1,7 +1,6 @@
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import type { FunctionComponent } from "@/common/types";
-import { CenteredPageLayout } from "@/components/layout";
 import {
 	Button,
 	ConfirmDialog,
@@ -155,7 +154,7 @@ export const RolesPage = (): FunctionComponent => {
 	const isSubmitting = modalMode === "create" ? isCreating : isUpdating;
 
 	return (
-		<CenteredPageLayout className="max-w-5xl">
+		<>
 			<Heading tag="h1">{t("roles.title")}</Heading>
 			<Text>{t("roles.summary")}</Text>
 
@@ -333,6 +332,6 @@ export const RolesPage = (): FunctionComponent => {
 					void handleDeleteRole();
 				}}
 			/>
-		</CenteredPageLayout>
+		</>
 	);
 };

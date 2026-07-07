@@ -17,8 +17,7 @@ const FooterComponent: React.FC = () => {
 				}
 			: {
 					"About Canada.ca": "https://www.canada.ca/en/government/about.html",
-					"Terms and conditions":
-						"https://www.canada.ca/en/transparency/terms.html",
+					"Terms and conditions": "/terms-and-conditions",
 					Privacy: "https://www.canada.ca/en/transparency/privacy.html",
 				};
 

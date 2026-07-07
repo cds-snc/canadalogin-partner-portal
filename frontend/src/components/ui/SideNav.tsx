@@ -36,16 +36,6 @@ const navLinks = [
 			{ href: "/view-holidays/yukon", label: "Yukon" },
 		],
 	},
-	{
-		groupLabel: "Holiday information",
-		links: [
-			{
-				href: "/federal-and-provincial-holidays",
-				label: "Federal and provincial holidays",
-			},
-			{ href: "/optional-holidays", label: "Optional holidays" },
-		],
-	},
 ];
 
 const SideNav = (): FunctionComponent => {

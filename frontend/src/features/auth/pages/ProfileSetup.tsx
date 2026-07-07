@@ -1,7 +1,6 @@
 import { useMemo, useState, type ReactElement } from "react";
 import { useTranslation } from "react-i18next";
-import { Button, Heading, Notice, Select, Text } from "@/components/ui";
-import { CenteredPageLayout } from "@/components/layout";
+import { Button, Grid, Heading, Notice, Select, Text } from "@/components/ui";
 import { useDepartments, useSession } from "@/hooks";
 import { setMyDepartment } from "@/fetch/user-departments";
 import { useNavigate } from "@tanstack/react-router";
@@ -54,16 +53,16 @@ export const ProfileSetup = (): ReactElement => {
 
 	if (isDepartmentsLoading) {
 		return (
-			<CenteredPageLayout className="max-w-3xl gap-400">
+			<>
 				<Heading tag="h1">{t("profile.setupTitle")}</Heading>
 				<Text>{t("profile.loading")}</Text>
-			</CenteredPageLayout>
+			</>
 		);
 	}
 
 	if (departmentsError) {
 		return (
-			<CenteredPageLayout className="max-w-3xl gap-400">
+			<>
 				<Heading tag="h1">{t("profile.setupTitle")}</Heading>
 				<Notice
 					noticeRole="warning"
@@ -72,13 +71,13 @@ export const ProfileSetup = (): ReactElement => {
 				>
 					<Text>{departmentsError.message ?? String(departmentsError)}</Text>
 				</Notice>
-			</CenteredPageLayout>
+			</>
 		);
 	}
 
 	if (departments.length === 0) {
 		return (
-			<CenteredPageLayout className="max-w-3xl gap-400">
+			<>
 				<Heading tag="h1">{t("profile.setupTitle")}</Heading>
 				<Text>{t("profile.setupIntro")}</Text>
 				<Notice
@@ -91,12 +90,12 @@ export const ProfileSetup = (): ReactElement => {
 						administrator.
 					</Text>
 				</Notice>
-			</CenteredPageLayout>
+			</>
 		);
 	}
 
 	return (
-		<>
+		<Grid columns="1fr" tag="div">
 			<Heading tag="h1">{t("profile.setupTitle")}</Heading>
 
 			<Text>{t("profile.setupIntro")}</Text>
@@ -111,38 +110,33 @@ export const ProfileSetup = (): ReactElement => {
 				</Notice>
 			) : null}
 
-			<div className="flex flex-col gap-200">
-				<Select
-					required
-					hint={t("profile.departmentHint")}
-					label={t("profile.departmentLabel")}
-					name="department"
-					selectId="department-select"
-					value={selected}
-					onInput={(e) => {
-						setSelected((e.target as HTMLSelectElement).value);
-					}}
-				>
-					<option value="">{t("profile.chooseDepartment")}</option>
-					{sortedDepartments.map((d) => (
-						<option key={d.uuid} value={d.uuid}>
-							{d.name}
-						</option>
-					))}
-				</Select>
-
-				<div>
-					<Button
-						buttonRole="primary"
-						disabled={!selected || isSubmitting}
-						type="button"
-						onGcdsClick={handleSubmit}
-					>
-						{isSubmitting ? t("profile.loading") : t("profile.save")}
-					</Button>
-				</div>
-			</div>
-		</>
+			<Select
+				required
+				hint={t("profile.departmentHint")}
+				label={t("profile.departmentLabel")}
+				name="department"
+				selectId="department-select"
+				value={selected}
+				onInput={(e) => {
+					setSelected((e.target as HTMLSelectElement).value);
+				}}
+			>
+				<option value="">{t("profile.chooseDepartment")}</option>
+				{sortedDepartments.map((d) => (
+					<option key={d.uuid} value={d.uuid}>
+						{d.name}
+					</option>
+				))}
+			</Select>
+			<Button
+				buttonRole="primary"
+				disabled={!selected || isSubmitting}
+				type="button"
+				onGcdsClick={handleSubmit}
+			>
+				{isSubmitting ? t("profile.loading") : t("profile.save")}
+			</Button>
+		</Grid>
 	);
 };
 

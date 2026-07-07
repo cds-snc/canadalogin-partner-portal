@@ -1,7 +1,6 @@
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import type { FunctionComponent } from "@/common/types";
-import { CenteredPageLayout } from "@/components/layout";
 import type { DataTableColumn } from "@/components/ui/DataTable";
 import {
 	Button,
@@ -398,7 +397,7 @@ export const UsersPage = (): FunctionComponent => {
 				: t("users.saveAction");
 
 	return (
-		<CenteredPageLayout className="max-w-5xl">
+		<>
 			<Heading tag="h1">{t("users.title")}</Heading>
 			<Text>{t("users.summary")}</Text>
 
@@ -792,6 +791,6 @@ export const UsersPage = (): FunctionComponent => {
 					void handleRemoveRole();
 				}}
 			/>
-		</CenteredPageLayout>
+		</>
 	);
 };

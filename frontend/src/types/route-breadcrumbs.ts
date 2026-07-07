@@ -1,8 +1,8 @@
-export type RouteBreadcrumbItem = {
+export type RouteBackLink = {
 	href: string;
 	label: string;
 };
 
-export type RouteBreadcrumbContext = {
-	breadcrumbs: Array<RouteBreadcrumbItem>;
+export type RouteBackLinkContext = {
+	backLink: RouteBackLink;
 };

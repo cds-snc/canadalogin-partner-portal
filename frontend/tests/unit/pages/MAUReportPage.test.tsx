@@ -70,9 +70,6 @@ vi.mock("@tanstack/react-query", async () => {
 
 vi.mock("@/components/layout", () => ({
 	Breadcrumbs: (): ReactElement => <nav>Breadcrumbs</nav>,
-	CenteredPageLayout: ({ children }: PropsWithChildren): ReactElement => (
-		<div>{children}</div>
-	),
 }));
 
 vi.mock("@/components/ui", () => ({
@@ -155,6 +152,7 @@ vi.mock("@/components/ui", () => ({
 			{children}
 		</section>
 	),
+	Grid: ({ children }: PropsWithChildren): ReactElement => <div>{children}</div>,
 	Text: ({ children }: PropsWithChildren): ReactElement => <p>{children}</p>,
 }));
 

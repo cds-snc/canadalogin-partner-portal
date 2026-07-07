@@ -10,23 +10,13 @@ const TermsAndConditionsContent = (): ReactElement => {
 	return (
 		<>
 			<Heading tag="h1">{t("termsAndConditions.title")}</Heading>
-
 			<Text>{t("termsAndConditions.intro")}</Text>
-
-			<div>
-				<Heading tag="h2">{t("termsAndConditions.section1Title")}</Heading>
-				<Text>{t("termsAndConditions.section1Body")}</Text>
-			</div>
-
-			<div>
-				<Heading tag="h2">{t("termsAndConditions.section2Title")}</Heading>
-				<Text>{t("termsAndConditions.section2Body")}</Text>
-			</div>
-
-			<div>
-				<Heading tag="h2">{t("termsAndConditions.section3Title")}</Heading>
-				<Text>{t("termsAndConditions.section3Body")}</Text>
-			</div>
+			<Heading tag="h2">{t("termsAndConditions.section1Title")}</Heading>
+			<Text>{t("termsAndConditions.section1Body")}</Text>
+			<Heading tag="h2">{t("termsAndConditions.section2Title")}</Heading>
+			<Text>{t("termsAndConditions.section2Body")}</Text>
+			<Heading tag="h2">{t("termsAndConditions.section3Title")}</Heading>
+			<Text>{t("termsAndConditions.section3Body")}</Text>
 		</>
 	);
 };

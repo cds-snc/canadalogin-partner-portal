@@ -1,6 +1,6 @@
 import { Outlet, createFileRoute, redirect } from "@tanstack/react-router";
 import i18n from "@/common/i18n";
-import type { RouteBreadcrumbContext } from "@/types/route-breadcrumbs";
+import type { RouteBackLinkContext } from "@/types/route-breadcrumbs";
 import { HttpRequestError } from "@/fetch/errors";
 import { getCurrentUserRPApplicationDepartment } from "@/fetch/rp-applications";
 import { requireAuthenticatedUser } from "../../features/auth/auth-routing";
@@ -43,17 +43,12 @@ export const Route = createFileRoute("/your-applications/$rpApplicationUuid")({
 		}
 
 		return {
-			breadcrumbs: [
-				{ href: "/", label: i18n.t("nav.home") },
-				{ href: "/your-applications", label: i18n.t("nav.dashboard") },
-				{
-					href: `/your-applications/${params.rpApplicationUuid}`,
-					label:
-						rpApplicationName ?? i18n.t("yourApplications.unknownApplication"),
-				},
-			],
+			backLink: {
+				href: "/your-applications",
+				label: i18n.t("nav.dashboard"),
+			},
 			rpApplicationName,
-		} satisfies RouteBreadcrumbContext & { rpApplicationName: string | null };
+		} satisfies RouteBackLinkContext & { rpApplicationName: string | null };
 	},
 	component: Outlet,
 });

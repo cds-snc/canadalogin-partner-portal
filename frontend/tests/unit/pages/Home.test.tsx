@@ -33,6 +33,7 @@ vi.mock("@gcds-core/components-react", () => ({
 vi.mock("@/components", () => ({
 	Button: ({ children, onGcdsClick }: PropsWithChildren<{ onGcdsClick?: () => void }>): ReactElement => <button onClick={onGcdsClick}>{children}</button>,
 	Card: ({ cardTitle, description }: { cardTitle: string; description?: string }): ReactElement => <article><h2>{cardTitle}</h2><p>{description}</p></article>,
+	Container: ({ children }: PropsWithChildren): ReactElement => <div>{children}</div>,
 	Grid: ({ children }: PropsWithChildren): ReactElement => <div>{children}</div>,
 	Heading: ({ children }: PropsWithChildren): ReactElement => <h1>{children}</h1>,
 	Link: ({ children, href }: PropsWithChildren<{ href: string }>): ReactElement => <a href={href}>{children}</a>,

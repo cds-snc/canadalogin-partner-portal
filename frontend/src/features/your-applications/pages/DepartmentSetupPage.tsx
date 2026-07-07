@@ -1,8 +1,7 @@
 import { useEffect, useMemo, useState, type ReactElement } from "react";
 import { useNavigate, useParams, useSearch } from "@tanstack/react-router";
 import { useTranslation } from "react-i18next";
-import { CenteredPageLayout } from "@/components/layout";
-import { Button, Heading, Notice, Select, Text } from "@/components/ui";
+import { Button, Grid, Heading, Notice, Select, Text } from "@/components/ui";
 import { HttpRequestError } from "@/fetch/errors";
 import {
 	assignCurrentUserRPApplicationDepartment,
@@ -103,16 +102,16 @@ export const DepartmentSetupPage = (): ReactElement => {
 
 	if (isLoading) {
 		return (
-			<CenteredPageLayout className="max-w-3xl gap-400">
+			<>
 				<Heading tag="h1">{t("rpDepartmentSetup.title")}</Heading>
 				<Text>{t("rpDepartmentSetup.loading")}</Text>
-			</CenteredPageLayout>
+			</>
 		);
 	}
 
 	if (departmentsError) {
 		return (
-			<CenteredPageLayout className="max-w-3xl gap-400">
+			<>
 				<Heading tag="h1">{t("rpDepartmentSetup.title")}</Heading>
 				<Notice
 					noticeRole="warning"
@@ -121,13 +120,13 @@ export const DepartmentSetupPage = (): ReactElement => {
 				>
 					<Text>{departmentsError.message ?? String(departmentsError)}</Text>
 				</Notice>
-			</CenteredPageLayout>
+			</>
 		);
 	}
 
 	if (departments.length === 0) {
 		return (
-			<CenteredPageLayout className="max-w-3xl gap-400">
+			<>
 				<Heading tag="h1">{t("rpDepartmentSetup.title")}</Heading>
 				<Notice
 					noticeRole="warning"
@@ -136,12 +135,12 @@ export const DepartmentSetupPage = (): ReactElement => {
 				>
 					<Text>{t("rpDepartmentSetup.noDepartments")}</Text>
 				</Notice>
-			</CenteredPageLayout>
+			</>
 		);
 	}
 
 	return (
-		<>
+		<Grid columns="1fr" tag="div">
 			{applicationName ? (
 				<Heading tag="h1">{applicationName}</Heading>
 			) : (
@@ -160,38 +159,34 @@ export const DepartmentSetupPage = (): ReactElement => {
 				</Notice>
 			) : null}
 
-			<div className="flex flex-col gap-200">
-				<Select
-					required
-					label={t("rpDepartmentSetup.departmentLabel")}
-					name="department"
-					selectId="rp-department-select"
-					value={selected}
-					onInput={(e) => {
-						setSelected((e.target as HTMLSelectElement).value);
-					}}
-				>
-					<option value="">{t("rpDepartmentSetup.chooseDepartment")}</option>
-					{sortedDepartments.map((d) => (
-						<option key={d.uuid} value={d.uuid}>
-							{d.name}
-						</option>
-					))}
-				</Select>
+			<Select
+				required
+				label={t("rpDepartmentSetup.departmentLabel")}
+				name="department"
+				selectId="rp-department-select"
+				value={selected}
+				onInput={(e) => {
+					setSelected((e.target as HTMLSelectElement).value);
+				}}
+			>
+				<option value="">{t("rpDepartmentSetup.chooseDepartment")}</option>
+				{sortedDepartments.map((d) => (
+					<option key={d.uuid} value={d.uuid}>
+						{d.name}
+					</option>
+				))}
+			</Select>
 
-				<div>
-					<Button
-						buttonRole="primary"
-						disabled={!selected || isSubmitting}
-						type="button"
-						onGcdsClick={handleSubmit}
-					>
-						{isSubmitting
-							? t("rpDepartmentSetup.loading")
-							: t("rpDepartmentSetup.save")}
-					</Button>
-				</div>
-			</div>
-		</>
+			<Button
+				buttonRole="primary"
+				disabled={!selected || isSubmitting}
+				type="button"
+				onGcdsClick={handleSubmit}
+			>
+				{isSubmitting
+					? t("rpDepartmentSetup.loading")
+					: t("rpDepartmentSetup.save")}
+			</Button>
+		</Grid>
 	);
 };

@@ -2,7 +2,7 @@ import { useParams } from "@tanstack/react-router";
 import { useEffect, useMemo, useState, type ReactNode } from "react";
 import { useTranslation } from "react-i18next";
 import type { FunctionComponent } from "@/common/types";
-import { Card, Details, Heading, Notice, Text } from "@/components/ui";
+import { Card, Details, Grid, Heading, Notice, Text } from "@/components/ui";
 import { HttpRequestError } from "@/fetch/errors";
 import {
 	getCurrentUserRPOAuthSetup,
@@ -127,83 +127,85 @@ export const OAuthSetupPage = (): FunctionComponent => {
 			? t("rpOAuthSetup.pkceEnabled")
 			: oauthSetup.pkceEnabled === false
 				? t("rpOAuthSetup.pkceDisabled")
-				: t("rpOAuthSetup.notAvailable");
+				: t("common.notAvailable");
 
 	return (
-		<div className="flex flex-col gap-400">
+		<Grid columns="1fr" tag="div">
 			<Heading tag="h1">{applicationName}</Heading>
 
-			<div className="flex flex-col gap-200">
+			<Grid columns="1fr" tag="div">
 				<div>
 					<StatusBadge status={oauthSetup.status} />
 				</div>
 				{departmentDisplayName ? (
-					<div className="flex items-center gap-200">
-						<span className="font-semibold">{t("nav.organization")}:</span>
-						<span>{departmentDisplayName}</span>
-					</div>
+					<Grid columns="1fr" columnsTablet="auto 1fr" tag="dl">
+						<dt>
+							<strong>{t("nav.organization")}:</strong>
+						</dt>
+						<dd>{departmentDisplayName}</dd>
+					</Grid>
 				) : null}
 				{applicationUrl ? (
-					<div className="flex items-center gap-200">
-						<span className="font-semibold">
-							{t("rpOAuthSetup.applicationUrlLabel")}:
-						</span>
-						<a href={applicationUrl} rel="noopener noreferrer" target="_blank">
-							{applicationUrl}
-						</a>
-					</div>
+					<Grid columns="1fr" columnsTablet="auto 1fr" tag="dl">
+						<dt>
+							<strong>{t("rpOAuthSetup.applicationUrlLabel")}:</strong>
+						</dt>
+						<dd>
+							<a
+								href={applicationUrl}
+								rel="noopener noreferrer"
+								target="_blank"
+							>
+								{applicationUrl}
+							</a>
+						</dd>
+					</Grid>
 				) : null}
-			</div>
+			</Grid>
 
 			<Details detailsTitle={t("rpOAuthSetup.oauthSectionTitle")}>
-				<div className="flex flex-col gap-200">
-					<div className="flex items-center gap-200">
-						<span className="font-semibold">
-							{t("rpOAuthSetup.pkceEnabledLabel")}:
-						</span>
-						<span>{pkceLabel}</span>
-					</div>
-					<div className="flex items-center gap-200">
-						<span className="font-semibold">
-							{t("rpOAuthSetup.logoutUriLabel")}:
-						</span>
-						<span>{logoutUri ?? t("rpOAuthSetup.notAvailable")}</span>
-					</div>
-				</div>
-
-				<div className="mt-200">
-					<div className="font-semibold">
-						{t("rpOAuthSetup.redirectUrisLabel")}
-					</div>
-					{redirectUris.length === 0 ? (
-						<Text>{t("rpOAuthSetup.noRedirectUris")}</Text>
-					) : (
-						<ul className="list-disc">
-							{redirectUris.map((uri) => (
-								<li key={uri}>
-									<Text>{uri}</Text>
-								</li>
-							))}
-						</ul>
-					)}
-				</div>
-
-				<div className="mt-200">
-					<div className="font-semibold">
-						{t("rpOAuthSetup.logoutRedirectUrisLabel")}
-					</div>
-					{logoutRedirectUris.length === 0 ? (
-						<Text>{t("rpOAuthSetup.noLogoutRedirectUris")}</Text>
-					) : (
-						<ul className="list-disc pl-300">
-							{logoutRedirectUris.map((uri) => (
-								<li key={uri}>
-									<Text>{uri}</Text>
-								</li>
-							))}
-						</ul>
-					)}
-				</div>
+				<Grid columns="1fr" columnsTablet="auto 1fr" tag="dl">
+					<dt>
+						<strong>{t("rpOAuthSetup.pkceEnabledLabel")}:</strong>
+					</dt>
+					<dd>{pkceLabel}</dd>
+					<dt>
+						<strong>{t("rpOAuthSetup.logoutUriLabel")}:</strong>
+					</dt>
+					<dd>{logoutUri ?? t("common.notAvailable")}</dd>
+				</Grid>
+				<dl>
+					<dt>
+						<strong>{t("rpOAuthSetup.redirectUrisLabel")}</strong>
+					</dt>
+					<dd>
+						{redirectUris.length === 0 ? (
+							<Text>{t("rpOAuthSetup.noRedirectUris")}</Text>
+						) : (
+							<ul className="list-disc">
+								{redirectUris.map((uri) => (
+									<li key={uri}>{uri}</li>
+								))}
+							</ul>
+						)}
+					</dd>
+				</dl>
+				<dl>
+					<dt>
+						<strong>{t("rpOAuthSetup.logoutRedirectUrisLabel")}</strong>
+					</dt>
+					<dd>
+						{logoutRedirectUris.length === 0 ? (
+							<Text>{t("rpOAuthSetup.noLogoutRedirectUris")}</Text>
+						) : (
+							<ul className="list-disc pl-300">
+								{logoutRedirectUris.map((uri) => (
+									<li key={uri}>{uri}</li>
+								))}
+							</ul>
+						)}
+					</dd>
+				</dl>
 			</Details>
 
 			<Card
@@ -216,6 +218,6 @@ export const OAuthSetupPage = (): FunctionComponent => {
 				cardTitleTag="h3"
 				href={`/your-applications/${rpApplicationUuid}/manage-credentials`}
 			/>
-		</div>
+		</Grid>
 	);
 };

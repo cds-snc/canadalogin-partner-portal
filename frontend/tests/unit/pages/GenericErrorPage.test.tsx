@@ -20,12 +20,6 @@ vi.mock("react-i18next", () => ({
 	}),
 }));
 
-vi.mock("@/components/layout", () => ({
-	CenteredPageLayout: ({ children }: PropsWithChildren): ReactElement => (
-		<div>{children}</div>
-	),
-}));
-
 vi.mock("@/components/ui", () => ({
 	Button: ({
 		children,

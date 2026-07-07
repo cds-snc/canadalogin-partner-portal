@@ -53,9 +53,6 @@ vi.mock("react-i18next", () => ({
 
 vi.mock("@/components/layout", () => ({
 	Breadcrumbs: (): ReactElement => <nav>Breadcrumbs</nav>,
-	CenteredPageLayout: ({ children }: PropsWithChildren): ReactElement => (
-		<div>{children}</div>
-	),
 }));
 
 vi.mock("@/components/ui", () => ({

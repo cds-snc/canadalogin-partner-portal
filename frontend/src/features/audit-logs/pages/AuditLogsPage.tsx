@@ -1,7 +1,6 @@
 import { useMemo, useState, type FormEvent } from "react";
 import { useTranslation } from "react-i18next";
 import type { FunctionComponent } from "@/common/types";
-import { Breadcrumbs, CenteredPageLayout } from "@/components/layout";
 import {
 	Button,
 	DataTable,
@@ -109,13 +108,7 @@ export const AuditLogsPage = (): FunctionComponent => {
 	};
 
 	return (
-		<CenteredPageLayout className="max-w-6xl">
-			<Breadcrumbs
-				items={[
-					{ href: "/", label: t("nav.home") },
-					{ href: "/audit-logs", label: t("auditLogs.title") },
-				]}
-			/>
+		<>
 			<Heading tag="h1">{t("auditLogs.title")}</Heading>
 			<Text>{t("auditLogs.summary")}</Text>
 
@@ -202,6 +195,6 @@ export const AuditLogsPage = (): FunctionComponent => {
 					/>
 				</div>
 			) : null}
-		</CenteredPageLayout>
+		</>
 	);
 };

@@ -16,9 +16,7 @@ import { Route as TermsAndConditionsRouteImport } from './routes/terms-and-condi
 import { Route as SupportRouteImport } from './routes/support'
 import { Route as RolesRouteImport } from './routes/roles'
 import { Route as PoliciesRouteImport } from './routes/policies'
-import { Route as OptionalHolidaysRouteImport } from './routes/optional-holidays'
 import { Route as LogoutRouteImport } from './routes/logout'
-import { Route as FederalAndProvincialHolidaysRouteImport } from './routes/federal-and-provincial-holidays'
 import { Route as ErrorRouteImport } from './routes/error'
 import { Route as DepartmentsRouteImport } from './routes/departments'
 import { Route as AuthCompleteRouteImport } from './routes/auth-complete'
@@ -69,22 +67,11 @@ const PoliciesRoute = PoliciesRouteImport.update({
   path: '/policies',
   getParentRoute: () => rootRouteImport,
 } as any)
-const OptionalHolidaysRoute = OptionalHolidaysRouteImport.update({
-  id: '/optional-holidays',
-  path: '/optional-holidays',
-  getParentRoute: () => rootRouteImport,
-} as any)
 const LogoutRoute = LogoutRouteImport.update({
   id: '/logout',
   path: '/logout',
   getParentRoute: () => rootRouteImport,
 } as any)
-const FederalAndProvincialHolidaysRoute =
-  FederalAndProvincialHolidaysRouteImport.update({
-    id: '/federal-and-provincial-holidays',
-    path: '/federal-and-provincial-holidays',
-    getParentRoute: () => rootRouteImport,
-  } as any)
 const ErrorRoute = ErrorRouteImport.update({
   id: '/error',
   path: '/error',
@@ -169,9 +156,7 @@ export interface FileRoutesByFullPath {
   '/auth-complete': typeof AuthCompleteRoute
   '/departments': typeof DepartmentsRoute
   '/error': typeof ErrorRoute
-  '/federal-and-provincial-holidays': typeof FederalAndProvincialHolidaysRoute
   '/logout': typeof LogoutRoute
-  '/optional-holidays': typeof OptionalHolidaysRoute
   '/policies': typeof PoliciesRoute
   '/roles': typeof RolesRoute
   '/support': typeof SupportRoute
@@ -195,9 +180,7 @@ export interface FileRoutesByTo {
   '/auth-complete': typeof AuthCompleteRoute
   '/departments': typeof DepartmentsRoute
   '/error': typeof ErrorRoute
-  '/federal-and-provincial-holidays': typeof FederalAndProvincialHolidaysRoute
   '/logout': typeof LogoutRoute
-  '/optional-holidays': typeof OptionalHolidaysRoute
   '/policies': typeof PoliciesRoute
   '/roles': typeof RolesRoute
   '/support': typeof SupportRoute
@@ -220,9 +203,7 @@ export interface FileRoutesById {
   '/auth-complete': typeof AuthCompleteRoute
   '/departments': typeof DepartmentsRoute
   '/error': typeof ErrorRoute
-  '/federal-and-provincial-holidays': typeof FederalAndProvincialHolidaysRoute
   '/logout': typeof LogoutRoute
-  '/optional-holidays': typeof OptionalHolidaysRoute
   '/policies': typeof PoliciesRoute
   '/roles': typeof RolesRoute
   '/support': typeof SupportRoute
@@ -248,9 +229,7 @@ export interface FileRouteTypes {
     | '/auth-complete'
     | '/departments'
     | '/error'
-    | '/federal-and-provincial-holidays'
     | '/logout'
-    | '/optional-holidays'
     | '/policies'
     | '/roles'
     | '/support'
@@ -274,9 +253,7 @@ export interface FileRouteTypes {
     | '/auth-complete'
     | '/departments'
     | '/error'
-    | '/federal-and-provincial-holidays'
     | '/logout'
-    | '/optional-holidays'
     | '/policies'
     | '/roles'
     | '/support'
@@ -298,9 +275,7 @@ export interface FileRouteTypes {
     | '/auth-complete'
     | '/departments'
     | '/error'
-    | '/federal-and-provincial-holidays'
     | '/logout'
-    | '/optional-holidays'
     | '/policies'
     | '/roles'
     | '/support'
@@ -325,9 +300,7 @@ export interface RootRouteChildren {
   AuthCompleteRoute: typeof AuthCompleteRoute
   DepartmentsRoute: typeof DepartmentsRoute
   ErrorRoute: typeof ErrorRoute
-  FederalAndProvincialHolidaysRoute: typeof FederalAndProvincialHolidaysRoute
   LogoutRoute: typeof LogoutRoute
-  OptionalHolidaysRoute: typeof OptionalHolidaysRoute
   PoliciesRoute: typeof PoliciesRoute
   RolesRoute: typeof RolesRoute
   SupportRoute: typeof SupportRoute
@@ -389,25 +362,11 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof PoliciesRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/optional-holidays': {
-      id: '/optional-holidays'
-      path: '/optional-holidays'
-      fullPath: '/optional-holidays'
-      preLoaderRoute: typeof OptionalHolidaysRouteImport
-      parentRoute: typeof rootRouteImport
-    }
     '/logout': {
       id: '/logout'
       path: '/logout'
       fullPath: '/logout'
       preLoaderRoute: typeof LogoutRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/federal-and-provincial-holidays': {
-      id: '/federal-and-provincial-holidays'
-      path: '/federal-and-provincial-holidays'
-      fullPath: '/federal-and-provincial-holidays'
-      preLoaderRoute: typeof FederalAndProvincialHolidaysRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/error': {
@@ -557,9 +516,7 @@ const rootRouteChildren: RootRouteChildren = {
   AuthCompleteRoute: AuthCompleteRoute,
   DepartmentsRoute: DepartmentsRoute,
   ErrorRoute: ErrorRoute,
-  FederalAndProvincialHolidaysRoute: FederalAndProvincialHolidaysRoute,
   LogoutRoute: LogoutRoute,
-  OptionalHolidaysRoute: OptionalHolidaysRoute,
   PoliciesRoute: PoliciesRoute,
   RolesRoute: RolesRoute,
   SupportRoute: SupportRoute,
