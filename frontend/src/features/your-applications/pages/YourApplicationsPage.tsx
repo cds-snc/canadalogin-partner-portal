@@ -1,6 +1,6 @@
 import { useTranslation } from "react-i18next";
 import type { FunctionComponent } from "@/common/types";
-import { Card, Heading, Notice, Text } from "@/components/ui";
+import { Card, Grid, Heading, Notice, Text } from "@/components/ui";
 import { getRequestErrorNotice } from "@/fetch";
 import { getCurrentUserRPApplications } from "@/fetch/rp-applications";
 import { useQuery } from "@tanstack/react-query";
@@ -39,11 +39,9 @@ export const YourApplicationsPage = (): FunctionComponent => {
 	}
 
 	return (
-		<section>
-			<div className="max-w-3xl">
-				<Heading tag="h1">{t("yourApplications.title")}</Heading>
-				<Text>{t("yourApplications.summary")}</Text>
-			</div>
+		<Grid columns="1fr" tag="div">
+			<Heading tag="h1">{t("yourApplications.title")}</Heading>
+			<Text>{t("yourApplications.summary")}</Text>
 
 			{errorNotice ? (
 				<Notice
@@ -78,6 +76,6 @@ export const YourApplicationsPage = (): FunctionComponent => {
 					)}
 				</>
 			) : null}
-		</section>
+		</Grid>
 	);
 };

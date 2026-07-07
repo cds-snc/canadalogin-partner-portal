@@ -1,7 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import type { FunctionComponent } from "@/common/types";
-import { CenteredPageLayout } from "@/components/layout";
 import { Button, Heading, Notice, Text } from "@/components/ui";
 
 export const AccessDeniedPage = (): FunctionComponent => {
@@ -48,7 +47,7 @@ export const AccessDeniedPage = (): FunctionComponent => {
 	};
 
 	return (
-		<CenteredPageLayout className="max-w-3xl gap-400">
+		<>
 			<Heading tag="h1">{t("accessDenied.title")}</Heading>
 			<Notice
 				noticeRole="warning"
@@ -64,6 +63,6 @@ export const AccessDeniedPage = (): FunctionComponent => {
 					{t("accessDenied.action")}
 				</Button>
 			</div>
-		</CenteredPageLayout>
+		</>
 	);
 };

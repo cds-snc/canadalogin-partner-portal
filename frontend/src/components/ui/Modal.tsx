@@ -39,7 +39,12 @@ const Modal = ({
 							{title}
 						</DialogTitle>
 						{description ? (
-							<p className="government-modal__description">{description}</p>
+							<p
+								className="government-modal__description"
+								style={{ whiteSpace: "pre-line" }}
+							>
+								{description}
+							</p>
 						) : null}
 					</div>
 					<button

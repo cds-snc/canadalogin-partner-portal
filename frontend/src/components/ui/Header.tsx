@@ -1,6 +1,5 @@
 import { useNavigate, useRouterState } from "@tanstack/react-router";
 import { useTranslation } from "react-i18next";
-import type { ReactNode } from "react";
 import {
 	GcdsHeader,
 	GcdsLangToggle,
@@ -11,7 +10,7 @@ import {
 import type { FunctionComponent } from "@/common/types";
 import { useSession } from "@/hooks";
 import { getOidcLoginUrl } from "@/fetch/auth";
-import type { RouteBreadcrumbItem } from "@/types/route-breadcrumbs";
+import type { RouteBackLink } from "@/types/route-breadcrumbs";
 import { UserNavGroup } from "./UserNavGroup";
 
 type NavigationItem = {
@@ -29,26 +28,9 @@ const isCurrentPath = (pathname: string, href: string): boolean => {
 	return pathname === href || pathname.startsWith(`${href}/`);
 };
 
-const isRouteBreadcrumbItem = (
-	value: unknown
-): value is RouteBreadcrumbItem => {
-	if (typeof value !== "object" || value === null) {
-		return false;
-	}
-
-	const candidate = value as {
-		href?: unknown;
-		label?: unknown;
-	};
-
-	return (
-		typeof candidate.href === "string" && typeof candidate.label === "string"
-	);
-};
-
-const selectBreadcrumbs = (
+const selectBackLink = (
 	routeMatches: Array<{ context?: unknown }>
-): Array<RouteBreadcrumbItem> => {
+): RouteBackLink | null => {
 	for (let index = routeMatches.length - 1; index >= 0; index -= 1) {
 		const match = routeMatches[index];
 
@@ -56,18 +38,20 @@ const selectBreadcrumbs = (
 			continue;
 		}
 
-		const context = match.context as {
-			breadcrumbs?: unknown;
-		};
+		const context = match.context as { backLink?: unknown };
+		const { backLink } = context;
 
-		if (!Array.isArray(context.breadcrumbs)) {
-			continue;
+		if (
+			typeof backLink === "object" &&
+			backLink !== null &&
+			typeof (backLink as { href?: unknown }).href === "string" &&
+			typeof (backLink as { label?: unknown }).label === "string"
+		) {
+			return backLink as RouteBackLink;
 		}
-
-		return context.breadcrumbs.filter(isRouteBreadcrumbItem);
 	}
 
-	return [];
+	return null;
 };
 
 const Header = (): FunctionComponent => {
@@ -77,8 +61,8 @@ const Header = (): FunctionComponent => {
 	const pathname = useRouterState({
 		select: (state) => state.location.pathname,
 	});
-	const breadcrumbs = useRouterState({
-		select: (state) => selectBreadcrumbs(state.matches),
+	const backLink = useRouterState({
+		select: (state) => selectBackLink(state.matches),
 	});
 	const serviceName = t("home.title");
 
@@ -106,9 +90,7 @@ const Header = (): FunctionComponent => {
 	const superuserItems: Array<NavigationItem> = [
 		{ href: "/users", label: t("nav.users") },
 		{ href: "/departments", label: t("nav.departments") },
-		{ href: "/policies", label: t("nav.policies") },
 		{ href: "/roles", label: t("nav.roles") },
-		{ href: "/tiers", label: t("nav.tiers") },
 		{ href: "/audit-logs", label: t("nav.auditLogs") },
 	];
 
@@ -137,16 +119,13 @@ const Header = (): FunctionComponent => {
 				slot="toggle"
 				onClick={handleLangToggle}
 			/>
-			{((): ReactNode => {
-				const parentCrumb = breadcrumbs[breadcrumbs.length - 2];
-				return parentCrumb ? (
-					<div slot="breadcrumb">
-						<GcdsLink href={parentCrumb.href}>
-							{`← ${t("nav.backTo")} ${parentCrumb.label}`}
-						</GcdsLink>
-					</div>
-				) : null;
-			})()}
+			{backLink ? (
+				<div slot="breadcrumb">
+					<GcdsLink href={backLink.href}>
+						{`← ${t("nav.backTo")} ${backLink.label}`}
+					</GcdsLink>
+				</div>
+			) : null}
 			<GcdsTopNav alignment="end" label={t("nav.label")} slot="menu">
 				<GcdsNavLink href="/" slot="home">
 					{serviceName}

@@ -31,9 +31,6 @@ vi.mock("@tanstack/react-query", () => ({
 
 vi.mock("@/components/layout", () => ({
 	Breadcrumbs: (): ReactElement => <nav>Breadcrumbs</nav>,
-	CenteredPageLayout: ({ children }: PropsWithChildren): ReactElement => (
-		<div>{children}</div>
-	),
 }));
 
 vi.mock("@/components/ui", () => ({
@@ -43,6 +40,7 @@ vi.mock("@/components/ui", () => ({
 	Container: ({ children }: PropsWithChildren): ReactElement => (
 		<section>{children}</section>
 	),
+	Grid: ({ children }: PropsWithChildren): ReactElement => <div>{children}</div>,
 	Heading: ({ children }: PropsWithChildren): ReactElement => <h1>{children}</h1>,
 	Link: ({ children, href }: PropsWithChildren<{ href: string }>): ReactElement => (
 		<a href={href}>{children}</a>

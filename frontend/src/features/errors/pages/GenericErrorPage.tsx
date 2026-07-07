@@ -1,6 +1,5 @@
 import { useTranslation } from "react-i18next";
 import type { FunctionComponent } from "@/common/types";
-import { CenteredPageLayout } from "@/components/layout";
 import { Button, Heading, Notice, Text } from "@/components/ui";
 
 export type GenericErrorKind = "not_found" | "unexpected";
@@ -22,7 +21,7 @@ export const GenericErrorPage = ({
 		: "genericError.unexpectedBody";
 
 	return (
-		<CenteredPageLayout className="max-w-3xl gap-450">
+		<>
 			<Heading tag="h1">{t("genericError.title")}</Heading>
 			<Notice noticeRole="danger" noticeTitle={t(titleKey)} noticeTitleTag="h2">
 				<Text>{t(bodyKey)}</Text>
@@ -35,6 +34,6 @@ export const GenericErrorPage = ({
 					{t("genericError.homeAction")}
 				</Button>
 			</div>
-		</CenteredPageLayout>
+		</>
 	);
 };

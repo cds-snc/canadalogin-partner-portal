@@ -9,6 +9,7 @@ import {
 	DateInput,
 	Heading,
 	Notice,
+	Grid,
 	Text,
 } from "@/components/ui";
 import type { DataTableColumn } from "@/components/ui/DataTable";
@@ -201,7 +202,7 @@ export const MAUReportPage = (): FunctionComponent => {
 	const departmentName = responseData?.department_name ?? null;
 
 	return (
-		<div className="flex flex-col gap-400">
+		<Grid columns="1fr" tag="div">
 			<Heading tag="h1">{t("mauReport.pageTitle")}</Heading>
 			{departmentName ? (
 				<Text>
@@ -345,6 +346,6 @@ export const MAUReportPage = (): FunctionComponent => {
 					</div>
 				</section>
 			) : null}
-		</div>
+		</Grid>
 	);
 };

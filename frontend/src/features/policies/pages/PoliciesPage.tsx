@@ -1,7 +1,6 @@
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import type { FunctionComponent } from "@/common/types";
-import { CenteredPageLayout } from "@/components/layout";
 import {
 	Button,
 	ConfirmDialog,
@@ -166,7 +165,7 @@ export const PoliciesPage = (): FunctionComponent => {
 	const isSubmitting = modalMode === "create" ? isCreating : isUpdating;
 
 	return (
-		<CenteredPageLayout className="max-w-5xl">
+		<>
 			<Heading tag="h1">{t("policies.title")}</Heading>
 			<Text>{t("policies.summary")}</Text>
 
@@ -343,6 +342,6 @@ export const PoliciesPage = (): FunctionComponent => {
 					void handleDeletePolicy();
 				}}
 			/>
-		</CenteredPageLayout>
+		</>
 	);
 };

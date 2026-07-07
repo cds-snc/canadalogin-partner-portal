@@ -1,5 +1,3 @@
-export { default as FederalAndProvincialHolidays } from "./FederalAndProvincialHolidays";
 export { Home } from "./Home";
 export { default as NotFound } from "./NotFound";
-export { default as OptionalHolidays } from "./OptionalHolidays";
 export { default as Support } from "./Support";

@@ -1,7 +1,6 @@
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import type { FunctionComponent } from "@/common/types";
-import { CenteredPageLayout } from "@/components/layout";
 import {
 	Button,
 	ConfirmDialog,
@@ -159,7 +158,7 @@ export const TiersPage = (): FunctionComponent => {
 	const isSubmitting = modalMode === "create" ? isCreating : isUpdating;
 
 	return (
-		<CenteredPageLayout className="max-w-5xl">
+		<>
 			<Heading tag="h1">{t("tiers.title")}</Heading>
 			<Text>{t("tiers.summary")}</Text>
 
@@ -313,6 +312,6 @@ export const TiersPage = (): FunctionComponent => {
 					void handleDeleteTier();
 				}}
 			/>
-		</CenteredPageLayout>
+		</>
 	);
 };
