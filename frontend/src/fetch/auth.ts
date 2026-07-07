@@ -37,7 +37,12 @@ export const getCurrentUser = async (): Promise<UserRead | null> => {
 	}
 };
 
-export const getOidcLoginUrl = (): string =>
-	buildApiUrl("/api/v1/auth/oidc/login");
+export const getOidcLoginUrl = (language?: string): string => {
+	const url = buildApiUrl("/api/v1/auth/oidc/login");
+	if (language === "en" || language === "fr") {
+		return `${url}?ui_locales=${language}`;
+	}
+	return url;
+};
 
 export const getBackendOrigin = (): string => getApiBaseUrl();

@@ -19,28 +19,6 @@ class OidcLogoutService:
 
         self.store = store
 
-    @staticmethod
-    def build_index_key(sid: str) -> str:
-        return f"oidc-logout:{sid}"
-
-    async def store_session(self, sid: str, session_id: str) -> None:
-        await self.store.write(
-            session_id=self.build_index_key(sid),
-            data=session_id.encode(),
-            lifetime=settings.SESSION_MAX_AGE,
-            ttl=settings.REDIS_SESSION_GC_TTL,
-        )
-
-    async def get_session_id(self, sid: str) -> str | None:
-        payload = await self.store.read(self.build_index_key(sid), settings.SESSION_MAX_AGE)
-        if payload is None:
-            return None
-
-        return payload.decode()
-
-    async def remove_session(self, sid: str) -> None:
-        await self.store.remove(self.build_index_key(sid))
-
     async def remove_local_session(self, session_id: str) -> None:
         await self.store.remove(session_id)
 

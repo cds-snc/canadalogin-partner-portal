@@ -8,10 +8,13 @@ const validateSearch = (
 ): LoginRedirectSearch => ({
 	redirect:
 		typeof search["redirect"] === "string" ? search["redirect"] : undefined,
+	uiLocales:
+		typeof search["ui_locales"] === "string" ? search["ui_locales"] : undefined,
 });
 
 export const Route = createFileRoute("/auth-complete")({
-	beforeLoad: async ({ search }) => completeLoginRedirect(search.redirect),
+	beforeLoad: async ({ search }) =>
+		completeLoginRedirect(search.redirect, search.uiLocales),
 	component: AuthCompletePage,
 	validateSearch,
 });

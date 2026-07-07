@@ -46,10 +46,7 @@ class AuthService:
             if oidc_logout:
                 sid = oidc_logout.get("sid")
                 if sid:
-                    session_id = await self.logout_service.get_session_id(sid)
-                    await self.logout_service.remove_session(sid)
-                    if session_id:
-                        await self.logout_service.remove_local_session(session_id)
+                    await self.logout_service.remove_local_session(sid)
 
             payload = {
                 "message": "Logged out successfully",
