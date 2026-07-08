@@ -48,17 +48,6 @@ def mock_redis_services() -> Generator[None, Any, None]:
         yield
 
 
-@pytest.fixture(autouse=True)
-def suppress_arq_startup_in_tests(request) -> Generator[None, Any, None]:
-    """Avoid background ARQ worker startup in tests that do not explicitly verify it."""
-    if request.node.nodeid.startswith("tests/test_session_setup.py"):
-        yield
-        return
-
-    with patch("src.app.core.setup.start_arq_service_on_startup", new=Mock()):
-        yield
-
-
 @pytest.fixture(scope="session")
 def client(mock_redis_services) -> Generator[TestClient, Any, None]:
     sync_engine, _ = _create_local_session()

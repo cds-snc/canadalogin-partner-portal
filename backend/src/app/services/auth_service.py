@@ -68,7 +68,8 @@ class AuthService:
             return None
 
         client = get_oidc_client()
-        end_session_endpoint = client.server_metadata.get("end_session_endpoint")
+        metadata = await client.load_server_metadata()
+        end_session_endpoint = metadata.get("end_session_endpoint")
         if not end_session_endpoint:
             return None
 
