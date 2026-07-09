@@ -27,6 +27,7 @@ help:
 	@echo "  format            - run ruff to auto-fix lint issues in backend source"
 	@echo "  typecheck         - run mypy over backend sources"
 	@echo "  dev               - run backend API with uvicorn (reload)"
+	@echo "  worker            - run backend ARQ background worker"
 	@echo "  backend-image     - build backend Docker image"
 	@echo "  frontend-image    - build frontend Docker image"
 	@echo "  bk-image          - shortcut for backend-image"
@@ -66,6 +67,11 @@ typecheck:
 dev:
 	@echo "Starting backend API server"
 	cd $(BACKEND_DIR) && UV_PROJECT_ENVIRONMENT=$(UV_PROJECT_ENVIRONMENT) $(UV) run uvicorn src.app.main:app --reload --host 127.0.0.1 --port 8000
+
+.PHONY: worker
+worker:
+	@echo "Starting backend ARQ worker"
+	$(BACKEND_CMD) python -m src.app.core.worker.settings
 
 backend-image:
 	@echo "Building backend Docker image"
@@ -137,7 +143,7 @@ all-format:
 	cd $(FRONTEND_DIR) && $(PNPM) run format
 
 # Backend shortcuts (bk-*)
-.PHONY: bk-install bk-test bk-lint bk-format bk-typecheck bk-dev
+.PHONY: bk-install bk-test bk-lint bk-format bk-typecheck bk-dev bk-worker
 bk-install: install
 bk-test: test
 bk-lint: lint
@@ -145,6 +151,7 @@ bk-format: format
 
 bk-typecheck: typecheck
 bk-dev: dev
+bk-worker: worker
 
 # Backend migration shortcut
 .PHONY: bk-migration
