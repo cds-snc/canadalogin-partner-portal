@@ -36,7 +36,7 @@ class S3Repository:
             raise
 
         content = (await _async_read_stream(response["Body"])).decode("utf-8")
-        reader = csv.DictReader(io.StringIO(content), delimiter="\t")
+        reader = csv.DictReader(io.StringIO(content))
         return [_parse_row(row) for row in reader]
 
     async def _get_client(self) -> Any:
