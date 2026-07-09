@@ -4,13 +4,13 @@
 # Copy this to terraform.tfvars and fill in the required values.
 #
 # Required: oidc_server_metadata_url, oidc_client_id, oidc_client_secret
-# Optional: all others have sensible defaults
+# Optional: good to use this sample for POC first
 # =============================================================================
 
 # ----- General -----
-# aws_region          = "ca-central-1"
-# environment         = "dev"
-# app_name            = "cl-pp"
+aws_region          = "ca-central-1"
+environment         = "dev"
+app_name            = "cl-pp"
 
 # ----- OIDC (required) -----
 oidc_enabled               = true
