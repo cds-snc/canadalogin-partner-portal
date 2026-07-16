@@ -26,6 +26,10 @@ const { resetMock } = vi.hoisted(() => ({
 	resetMock: vi.fn(),
 }));
 
+vi.mock("@/fetch/base-url", () => ({
+	buildApiUrl: (path: string): string => `http://localhost:8000${path}`,
+}));
+
 vi.mock("@/store", () => ({
 	useAuthStore: (selector: (state: Record<string, unknown>) => unknown): unknown =>
 		selector({ reset: resetMock }),
@@ -81,6 +85,6 @@ describe("LogoutPage", (): void => {
 
 		await vi.advanceTimersByTimeAsync(2000);
 
-		expect(locationHref).toBe("/api/v1/logout");
+		expect(locationHref).toBe("http://localhost:8000/api/v1/logout");
 	});
 });
