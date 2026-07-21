@@ -7,7 +7,7 @@ on:
   workflow_dispatch:
 
 permissions:
-  contents: read
+  contents: write
   id-token: write
 
 env:
@@ -15,7 +15,7 @@ env:
   GITHUB_SHA: ${{ github.sha }}
 
 concurrency:
-  group: deploy-dev
+  group: release-pipeline
   cancel-in-progress: false
 
 jobs:
@@ -88,8 +88,6 @@ jobs:
         uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
         with:
           node-version: "22"
-          cache: "pnpm"
-          cache-dependency-path: frontend/pnpm-lock.yaml
 
       - name: Enable Corepack
         run: |
@@ -97,11 +95,9 @@ jobs:
           corepack prepare pnpm@9.15.4 --activate
 
       - name: Install frontend dependencies
-        working-directory: frontend
-        run: pnpm install --frozen-lockfile
+        run: pnpm --dir frontend --ignore-workspace install --frozen-lockfile
 
       - name: Build frontend
-        working-directory: frontend
         env:
           VITE_API_BASE_URL: ${{ secrets.VITE_API_BASE_URL }}
           VITE_APP_ENVIRONMENT: ${{ vars.VITE_APP_ENVIRONMENT }}
@@ -113,7 +109,7 @@ jobs:
           export VITE_AUTH_POST_LOGIN_PATH="${VITE_AUTH_POST_LOGIN_PATH:-/your-applications}"
           export VITE_SESSION_WARNING_AFTER_MINUTES="${VITE_SESSION_WARNING_AFTER_MINUTES:-25}"
           export VITE_SESSION_COUNTDOWN_MINUTES="${VITE_SESSION_COUNTDOWN_MINUTES:-5}"
-          pnpm build
+          pnpm --dir frontend --ignore-workspace build
 
       - name: Configure AWS credentials using OIDC
         uses: aws-actions/configure-aws-credentials@7474bc4690e29a8392af63c5b98e7449536d5c3a # v4.3.1
