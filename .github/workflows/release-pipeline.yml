@@ -15,7 +15,7 @@ env:
   GITHUB_SHA: ${{ github.sha }}
 
 concurrency:
-  group: deploy-dev
+  group: release-pipeline
   cancel-in-progress: false
 
 jobs:
