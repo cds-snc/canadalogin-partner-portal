@@ -1,0 +1,286 @@
+name: Release Pipeline - Frontend & Backend API
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  id-token: write
+
+env:
+  AWS_REGION: ca-central-1
+  GITHUB_SHA: ${{ github.sha }}
+
+concurrency:
+  group: deploy-dev
+  cancel-in-progress: false
+
+jobs:
+  build-backend:
+    name: Build Backend Image
+    runs-on: ubuntu-latest
+    environment: dev
+    outputs:
+      image_uri: ${{ steps.image.outputs.image_uri }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+
+      - name: Audit DNS requests
+        uses: cds-snc/dns-proxy-action@9ad793100229573be3f5ba78cc69ec523f2c8b7e # main
+        env:
+          DNS_PROXY_FORWARDTOSENTINEL: "true"
+          DNS_PROXY_LOGANALYTICSWORKSPACEID: ${{ secrets.LOG_ANALYTICS_WORKSPACE_ID }}
+          DNS_PROXY_LOGANALYTICSSHAREDKEY: ${{ secrets.LOG_ANALYTICS_WORKSPACE_KEY }}
+
+      - name: Configure AWS credentials using OIDC
+        uses: aws-actions/configure-aws-credentials@7474bc4690e29a8392af63c5b98e7449536d5c3a # v4.3.1
+        with:
+          role-to-assume: arn:aws:iam::${{ vars.AWS_ACCOUNT_ID }}:role/github_action_manage_push_ecr_ecs-partner-portal
+          role-session-name: DevBackendDeploy
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@988b5a0280414f521da01fcc63a27aeeb4b104db # v3.11.1
+
+      - name: Login to Amazon ECR
+        uses: aws-actions/amazon-ecr-login@d539f0932e70871a027e9d5a9d8fc38589180a64 # v2.1.6
+
+      - name: Compute image tags
+        id: image
+        run: |
+          echo "image_uri=${{ vars.ARTIFACT_ECR_REPOSITORY }}:${GITHUB_SHA}" >> "$GITHUB_OUTPUT"
+
+      - name: Build and push backend image
+        env:
+          IMAGE_URI: ${{ steps.image.outputs.image_uri }}
+        run: |
+          docker buildx build \
+            --platform linux/amd64 \
+            --build-arg APP_VERSION="$GITHUB_SHA" \
+            --tag "$IMAGE_URI" \
+            --tag "${{ vars.ARTIFACT_ECR_REPOSITORY }}:latest" \
+            --push \
+            backend
+
+      - name: Docker generate SBOM
+        uses: cds-snc/security-tools/.github/actions/generate-sbom@837a88b6337d4842543184c8eac97a8adac8f302 # v4.0.3
+        env:
+          TRIVY_DB_REPOSITORY: ${{ vars.TRIVY_DB_REPOSITORY }}
+        with:
+          docker_image: "${{ steps.image.outputs.image_uri }}"
+          dockerfile_path: backend/Dockerfile
+          sbom_name: gc-signin-dev-partner-portal-backend-api
+          token: "${{ secrets.GITHUB_TOKEN }}"
+
+  build-frontend:
+    name: Build Frontend
+    runs-on: ubuntu-latest
+    environment: dev
+    steps:
+      - name: Checkout
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+
+      - name: Set up Node.js
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version: "22"
+          cache: "pnpm"
+          cache-dependency-path: frontend/pnpm-lock.yaml
+
+      - name: Enable Corepack
+        run: |
+          corepack enable
+          corepack prepare pnpm@9.15.4 --activate
+
+      - name: Install frontend dependencies
+        working-directory: frontend
+        run: pnpm install --frozen-lockfile
+
+      - name: Build frontend
+        working-directory: frontend
+        env:
+          VITE_API_BASE_URL: ${{ secrets.VITE_API_BASE_URL }}
+          VITE_APP_ENVIRONMENT: ${{ vars.VITE_APP_ENVIRONMENT }}
+          VITE_APP_VERSION: ${{ github.sha }}
+          VITE_AUTH_POST_LOGIN_PATH: ${{ vars.VITE_AUTH_POST_LOGIN_PATH }}
+          VITE_SESSION_WARNING_AFTER_MINUTES: ${{ vars.VITE_SESSION_WARNING_AFTER_MINUTES }}
+          VITE_SESSION_COUNTDOWN_MINUTES: ${{ vars.VITE_SESSION_COUNTDOWN_MINUTES }}
+        run: |
+          export VITE_AUTH_POST_LOGIN_PATH="${VITE_AUTH_POST_LOGIN_PATH:-/your-applications}"
+          export VITE_SESSION_WARNING_AFTER_MINUTES="${VITE_SESSION_WARNING_AFTER_MINUTES:-25}"
+          export VITE_SESSION_COUNTDOWN_MINUTES="${VITE_SESSION_COUNTDOWN_MINUTES:-5}"
+          pnpm build
+
+      - name: Configure AWS credentials using OIDC
+        uses: aws-actions/configure-aws-credentials@7474bc4690e29a8392af63c5b98e7449536d5c3a # v4.3.1
+        with:
+          role-to-assume: arn:aws:iam::${{ vars.AWS_ACCOUNT_ID }}:role/github_action_push_S3-partner-portal
+          role-session-name: DevFrontendBuildArtifacts
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Upload frontend build artifacts to S3
+        run: |
+          aws s3 sync \
+            frontend/dist \
+            "s3://${{ secrets.FRONTEND_APP_BUILD_ARTIFACTS_S3_BUCKET }}/${GITHUB_SHA}" \
+            --delete
+
+  deploy-frontend:
+    name: Deploy Frontend
+    runs-on: ubuntu-latest
+    environment: dev
+    needs:
+      - build-frontend
+    steps:
+      - name: Configure AWS credentials using OIDC
+        uses: aws-actions/configure-aws-credentials@7474bc4690e29a8392af63c5b98e7449536d5c3a # v4.3.1
+        with:
+          role-to-assume: arn:aws:iam::${{ vars.AWS_ACCOUNT_ID }}:role/github_action_push_S3-partner-portal
+          role-session-name: DevFrontendDeploy
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Ensure frontend build artifact exists
+        run: |
+          if ! aws s3 ls "s3://${{ secrets.FRONTEND_APP_BUILD_ARTIFACTS_S3_BUCKET }}/${GITHUB_SHA}/"; then
+            echo "No frontend build artifacts found for ${GITHUB_SHA}"
+            exit 1
+          fi
+
+      - name: Deploy frontend to S3
+        run: |
+          aws s3 sync \
+            "s3://${{ secrets.FRONTEND_APP_BUILD_ARTIFACTS_S3_BUCKET }}/${GITHUB_SHA}" \
+            "s3://${{ secrets.FRONTEND_APP_S3_BUCKET }}" \
+            --delete
+
+      - name: Invalidate CloudFront cache
+        run: aws cloudfront create-invalidation --distribution-id "${{ secrets.CLOUDFRONT_DISTRIBUTION_ID }}" --paths "/index.html" "/assets/*" "/locales/*"
+
+  deploy-backend:
+    name: Deploy Backend Services
+    runs-on: ubuntu-latest
+    environment: dev
+    needs:
+      - build-backend
+    steps:
+      - name: Checkout
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+
+      - name: Configure AWS credentials using OIDC
+        uses: aws-actions/configure-aws-credentials@7474bc4690e29a8392af63c5b98e7449536d5c3a # v4.3.1
+        with:
+          role-to-assume: arn:aws:iam::${{ vars.AWS_ACCOUNT_ID }}:role/github_action_manage_push_ecr_ecs-partner-portal
+          role-session-name: DevEcsDeploy
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Download current web task definition
+        run: |
+          WEB_TASK_DEF_ARN=$(aws ecs describe-services \
+            --cluster "${{ vars.ECS_WEB_CLUSTER }}" \
+            --services "${{ vars.ECS_WEB_SERVICE }}" \
+            --query "services[0].taskDefinition" \
+            --output text)
+          echo "WEB_TASK_DEF_ARN=$WEB_TASK_DEF_ARN" >> "$GITHUB_ENV"
+          aws ecs describe-task-definition \
+            --task-definition "$WEB_TASK_DEF_ARN" \
+            --query taskDefinition > web-task-definition.json
+
+      - name: Check current web image
+        id: current-web-image
+        run: |
+          CURRENT_WEB_IMAGE=$(aws ecs describe-task-definition \
+            --task-definition "$WEB_TASK_DEF_ARN" \
+            --query "taskDefinition.containerDefinitions[?name=='${{ vars.ECS_WEB_CONTAINER }}'].image" \
+            --output text)
+
+          if [ "$CURRENT_WEB_IMAGE" = "${{ needs.build-backend.outputs.image_uri }}" ]; then
+            echo "deployment_needed=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "deployment_needed=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Render web task definition
+        if: steps.current-web-image.outputs.deployment_needed == 'true'
+        id: web-task-def
+        uses: aws-actions/amazon-ecs-render-task-definition@6853cfae8c3a7d978fbf68b5a55453395541dfbb # v1.8.5
+        with:
+          task-definition: web-task-definition.json
+          container-name: ${{ vars.ECS_WEB_CONTAINER }}
+          image: ${{ needs.build-backend.outputs.image_uri }}
+
+      - name: Deploy web task definition
+        if: steps.current-web-image.outputs.deployment_needed == 'true'
+        uses: aws-actions/amazon-ecs-deploy-task-definition@a310a830f5c14e583e35d84e4e1ec7dd177c3c9c # v2.6.2
+        with:
+          task-definition: ${{ steps.web-task-def.outputs.task-definition }}
+          service: ${{ vars.ECS_WEB_SERVICE }}
+          cluster: ${{ vars.ECS_WEB_CLUSTER }}
+          wait-for-service-stability: true
+          propagate-tags: SERVICE
+
+      - name: Update SSM parameter for web deployed image
+        if: steps.current-web-image.outputs.deployment_needed == 'true'
+        run: |
+          aws ssm put-parameter \
+            --name "/ecs/${{ vars.ECS_WEB_CLUSTER }}/${{ vars.ECS_WEB_SERVICE }}/container-image" \
+            --value "${{ needs.build-backend.outputs.image_uri }}" \
+            --type "String" \
+            --overwrite
+
+      - name: Download current worker task definition
+        run: |
+          WORKER_TASK_DEF_ARN=$(aws ecs describe-services \
+            --cluster "${{ vars.ECS_WORKER_CLUSTER }}" \
+            --services "${{ vars.ECS_WORKER_SERVICE }}" \
+            --query "services[0].taskDefinition" \
+            --output text)
+          echo "WORKER_TASK_DEF_ARN=$WORKER_TASK_DEF_ARN" >> "$GITHUB_ENV"
+          aws ecs describe-task-definition \
+            --task-definition "$WORKER_TASK_DEF_ARN" \
+            --query taskDefinition > worker-task-definition.json
+
+      - name: Check current worker image
+        id: current-worker-image
+        run: |
+          CURRENT_WORKER_IMAGE=$(aws ecs describe-task-definition \
+            --task-definition "$WORKER_TASK_DEF_ARN" \
+            --query "taskDefinition.containerDefinitions[?name=='${{ vars.ECS_WORKER_CONTAINER }}'].image" \
+            --output text)
+
+          if [ "$CURRENT_WORKER_IMAGE" = "${{ needs.build-backend.outputs.image_uri }}" ]; then
+            echo "deployment_needed=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "deployment_needed=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Render worker task definition
+        if: steps.current-worker-image.outputs.deployment_needed == 'true'
+        id: worker-task-def
+        uses: aws-actions/amazon-ecs-render-task-definition@6853cfae8c3a7d978fbf68b5a55453395541dfbb # v1.8.5
+        with:
+          task-definition: worker-task-definition.json
+          container-name: ${{ vars.ECS_WORKER_CONTAINER }}
+          image: ${{ needs.build-backend.outputs.image_uri }}
+
+      - name: Deploy worker task definition
+        if: steps.current-worker-image.outputs.deployment_needed == 'true'
+        uses: aws-actions/amazon-ecs-deploy-task-definition@a310a830f5c14e583e35d84e4e1ec7dd177c3c9c # v2.6.2
+        with:
+          task-definition: ${{ steps.worker-task-def.outputs.task-definition }}
+          service: ${{ vars.ECS_WORKER_SERVICE }}
+          cluster: ${{ vars.ECS_WORKER_CLUSTER }}
+          wait-for-service-stability: true
+          propagate-tags: SERVICE
+
+      - name: Update SSM parameter for worker deployed image
+        if: steps.current-worker-image.outputs.deployment_needed == 'true'
+        run: |
+          aws ssm put-parameter \
+            --name "/ecs/${{ vars.ECS_WORKER_CLUSTER }}/${{ vars.ECS_WORKER_SERVICE }}/container-image" \
+            --value "${{ needs.build-backend.outputs.image_uri }}" \
+            --type "String" \
+            --overwrite
