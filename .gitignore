@@ -44,7 +44,6 @@ docker-compose.override.yml
 /frontend/build/
 /frontend/.pnp.cjs
 /frontend/.pnp.loader.mjs
-pnpm-lock.yaml
 package-lock.json
 yarn.lock
 
