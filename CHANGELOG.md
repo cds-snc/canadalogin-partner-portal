@@ -1,5 +1,27 @@
 # Changelog
 
+## [1.2.0](https://github.com/cds-snc/canadalogin-partner-portal/compare/v1.1.0...v1.2.0) (2026-07-23)
+
+
+### Features
+
+* **actions:** add intial dev release pipeline ([#124](https://github.com/cds-snc/canadalogin-partner-portal/issues/124)) ([3571b96](https://github.com/cds-snc/canadalogin-partner-portal/commit/3571b96a32151cab075458422b64f2cb773c740f))
+
+
+### Bug Fixes
+
+* **actions:** resolve pnpm setup and SBOM permission issues ([#127](https://github.com/cds-snc/canadalogin-partner-portal/issues/127)) ([80fb81f](https://github.com/cds-snc/canadalogin-partner-portal/commit/80fb81fe5993c3e61ea7e7acf33ea4075d1cdd4d))
+
+
+### Miscellaneous Chores
+
+* **frontend:** add pnpm lockfile ([#129](https://github.com/cds-snc/canadalogin-partner-portal/issues/129)) ([6e67fd1](https://github.com/cds-snc/canadalogin-partner-portal/commit/6e67fd14818aefc514617d0d824d7b149dccb876))
+
+
+### Documentation
+
+* add partner portal onboarding PRD draft ([#131](https://github.com/cds-snc/canadalogin-partner-portal/issues/131)) ([a052914](https://github.com/cds-snc/canadalogin-partner-portal/commit/a05291418976a7326fe772e994ddccebdb089916))
+
 ## [1.1.0](https://github.com/cds-snc/canadalogin-partner-portal/compare/v1.0.0...v1.1.0) (2026-07-17)
 
 
