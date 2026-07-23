@@ -3,9 +3,6 @@
 ## Document Status
 Draft
 
-## Owner
-Product / CanadaLogin
-
 ## Date
 2026-07-22
 
@@ -43,10 +40,10 @@ Out of scope for this iteration:
 - STAGING to PRODUCTION requires partner request and CL review.
 - CanadaLogin sign-up is mandatory for partner users.
 - Partner access is domain-restricted.
-- RP secrets are available to authorized RP roles via one-time reveal behavior.
+- RP secrets are available to authorized RP roles masked, but able to be revealed.
 - CL Admin must never view RP secret values.
-- No automatic partner notification on secret availability.
-- Approval workflow is out-of-band, but portal must track status and external reference.
+- No automatic partner notification on secret changes.
+- Approval workflow is out-of-band, but portal must track status and external reference. (Explore if we can POST to the Jira API)
 - Incident reporting workflow details are deferred (TBD).
 - Deprecation starts as Jira link-out and must be extensible for future in-app flow.
 
@@ -63,7 +60,6 @@ Already implemented today:
 
 Partially implemented or implementation-specific:
 - Role model in current codebase exists, but does not yet directly map to the final RP Admin / RP User / Read Only / CL Admin operational model described here.
-- Review workflow primitives exist in planning/backlog artifacts, but production onboarding approvals remain out-of-band.
 
 Not implemented or intentionally deferred:
 - Formalized end-to-end in-app promotion approvals.
@@ -99,24 +95,27 @@ Implementation status: Partially implemented (current role model differs from ta
 
 Open Spec statement:
 - The system shall enforce role-based permissions that support RP Admin, RP User (Edit), Read Only, and CL Admin responsibilities while preventing CL Admin access to RP secrets.
+- Action item: develope the full user role model, information, and data flows to define the schema. 
 
-Required behavior:
+Required behavior (review after schema is developed):
 - RP Admin: all partner permissions except promotion approve/reject.
 - RP User (Edit): read/edit for config, promotion request metadata, secret-reveal workflows, and CATS-related submission fields.
 - Read Only: no edit actions.
-- CL Admin: metadata/status visibility only; no secret values.
+- CL Admin: metadata/status visibility only; no secret values, or assigning themselves to an RP Admin role. 
 
 ### Feature 4: Application Information Intake
 Implementation status: Implemented baseline (field alignment refinement required)
 
 Open Spec statement:
 - The system shall capture and maintain application information required for STAGING readiness and production planning.
+- [Add: The fields required] @sr
 
 ### Feature 5: Application Contacts Intake
 Implementation status: Implemented baseline (gating rules TBD)
 
 Open Spec statement:
 - The system shall capture application contacts and contact-type designations required for onboarding, support, incident response, and authorization workflows.
+- SR to Add required fields
 
 TBD:
 - Mandatory contact-type gate by stage (STAGING, PRODUCTION).
@@ -126,6 +125,7 @@ Implementation status: Partially implemented
 
 Open Spec statement:
 - The system shall support environment-scoped RP registration data and pre-fill previously provided values when promoting from one environment to the next.
+- To be decided: Where the single source of truth for the OIDC configuration and business information is stored. @kev
 
 ### Feature 7: Environment Lifecycle Rules
 Implementation status: Partially implemented
@@ -137,29 +137,30 @@ Open Spec statement:
 Implementation status: Net new
 
 Open Spec statement:
-- The system shall track promotion request status and external review references when approval actions occur outside the portal.
+- TBD, depending on JIRA: The system shall track promotion request status and external review references when approval actions occur outside the portal.
 
 Required minimum:
 - Status states (for example pending, approved, rejected).
 - External reference (for example ticket or review record).
 - Reviewer metadata and timestamps.
 
-### Feature 9: Secrets Handling and One-Time Reveal
+### Feature 9: Secrets Handling and one-time Reveal Functionality
 Implementation status: Implemented baseline with policy constraints
 
 Open Spec statement:
 - The system shall provide authorized RP users one-time secret reveal behavior and enforce strict non-visibility of secret values for CL Admin users.
 
-### Feature 10: CATS Evidence and Readiness
+### Feature 10: CATS Evidence and Readiness (V2)
 Implementation status: Partially implemented/TBD
 
 Open Spec statement:
-- The system shall represent CATS readiness in production progression and support traceable evidence references.
+- The system shall link to the CATS readiness checklist for partners to complete out-of-band
+- The system shall prompt RP admins to provide their CATS readiness report to the CL admin via Jira when they request to go-live
 
 TBD:
 - Evidence mechanism: upload, reference, or both.
 
-### Feature 11: Onboarding Checklist Tracking
+### Feature 11: Onboarding Checklist Tracking (V2)
 Implementation status: Partially implemented
 
 Open Spec statement:
@@ -171,13 +172,7 @@ Implementation status: Implemented baseline/expandable
 Open Spec statement:
 - The system shall provide contextual links to required onboarding documentation and external process entry points.
 
-### Feature 13: Integration Health Visualization
-Implementation status: Implemented baseline
-
-Open Spec statement:
-- The system shall display partner-facing integration status by environment.
-
-### Feature 14: Metrics and MAU Reporting
+### Feature 13: Metrics and MAU Reporting
 Implementation status: Implemented baseline
 
 Open Spec statement:
@@ -188,6 +183,7 @@ Implementation status: Net new
 
 Open Spec statement:
 - The system shall provide an in-portal path for partners to notify CanadaLogin of anticipated volume spikes.
+- The system shall push partners to fill out a form and submit it via Jira
 
 TBD:
 - Submission implementation (ticket creation vs redirect to intake link).
@@ -197,6 +193,7 @@ Implementation status: Deferred/TBD
 
 Open Spec statement:
 - The system shall provide a discoverable partner incident reporting path.
+- SR to connect with PSO on how partners report incidents
 
 TBD:
 - Detailed incident workflow, intake mechanism, and SLA handling.
