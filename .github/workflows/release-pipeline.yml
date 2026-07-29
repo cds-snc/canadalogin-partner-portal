@@ -141,7 +141,10 @@ jobs:
   build-frontend:
     name: Build Frontend
     runs-on: ubuntu-latest
-    environment: dev
+    strategy:
+      matrix:
+        environment: [dev]
+    environment: ${{ matrix.environment }}
     needs: [detect-release-tag]
     steps:
       - name: Checkout
@@ -197,28 +200,56 @@ jobs:
   deploy-frontend:
     name: Deploy Frontend
     runs-on: ubuntu-latest
-    environment: dev
+    strategy:
+      matrix:
+        environment: [dev]
+    environment: ${{ matrix.environment }}
     needs:
       - build-frontend
     steps:
+      - name: Checkout repository
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+
+      - name: Fetch tags
+        run: git fetch --prune --unshallow --tags
+
+      # In dev we always deploy the current GITHUB_SHA.
+      # In all other environments we resolve the pinned version from .deployed_versions/{env}.json.
+      - name: Set deployment SHA
+        run: |
+          if [ "${{ matrix.environment }}" = "dev" ]; then
+            echo "DEPLOYMENT_SHA=${GITHUB_SHA}" >> "$GITHUB_ENV"
+          else
+            DEPLOYMENT_TAG=$(cat .deployed_versions/${{ matrix.environment }}.json | jq -r '.version')
+            DEPLOYMENT_SHA=$(git rev-list -n 1 "v${DEPLOYMENT_TAG}")
+            echo "DEPLOYMENT_SHA=${DEPLOYMENT_SHA}" >> "$GITHUB_ENV"
+          fi
+
+      - name: Ensure deployment SHA is set
+        run: |
+          if [ -z "${DEPLOYMENT_SHA}" ]; then
+            echo "DEPLOYMENT_SHA is not set. Exiting."
+            exit 1
+          fi
+
       - name: Configure AWS credentials using OIDC
         uses: aws-actions/configure-aws-credentials@7474bc4690e29a8392af63c5b98e7449536d5c3a # v4.3.1
         with:
           role-to-assume: arn:aws:iam::${{ vars.AWS_ACCOUNT_ID }}:role/github_action_push_S3-partner-portal
-          role-session-name: DevFrontendDeploy
+          role-session-name: FrontendDeploy
           aws-region: ${{ env.AWS_REGION }}
 
       - name: Ensure frontend build artifact exists
         run: |
-          if ! aws s3 ls "s3://${{ secrets.FRONTEND_APP_BUILD_ARTIFACTS_S3_BUCKET }}/${GITHUB_SHA}/"; then
-            echo "No frontend build artifacts found for ${GITHUB_SHA}"
+          if ! aws s3 ls "s3://${{ secrets.FRONTEND_APP_BUILD_ARTIFACTS_S3_BUCKET }}/${DEPLOYMENT_SHA}/"; then
+            echo "No frontend build artifacts found for ${DEPLOYMENT_SHA}"
             exit 1
           fi
 
       - name: Deploy frontend to S3
         run: |
           aws s3 sync \
-            "s3://${{ secrets.FRONTEND_APP_BUILD_ARTIFACTS_S3_BUCKET }}/${GITHUB_SHA}" \
+            "s3://${{ secrets.FRONTEND_APP_BUILD_ARTIFACTS_S3_BUCKET }}/${DEPLOYMENT_SHA}" \
             "s3://${{ secrets.FRONTEND_APP_S3_BUCKET }}" \
             --delete
 
@@ -228,18 +259,43 @@ jobs:
   deploy-backend:
     name: Deploy Backend Services
     runs-on: ubuntu-latest
-    environment: dev
+    strategy:
+      matrix:
+        environment: [dev]
+    environment: ${{ matrix.environment }}
     needs:
       - build-backend
     steps:
       - name: Checkout
         uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
 
+      - name: Fetch tags
+        run: git fetch --prune --unshallow --tags
+
+      # In dev we always deploy the current GITHUB_SHA.
+      # In all other environments we resolve the pinned version from .deployed_versions/{env}.json.
+      - name: Set deployment SHA
+        run: |
+          if [ "${{ matrix.environment }}" = "dev" ]; then
+            echo "DEPLOYMENT_SHA=${GITHUB_SHA}" >> "$GITHUB_ENV"
+          else
+            DEPLOYMENT_TAG=$(cat .deployed_versions/${{ matrix.environment }}.json | jq -r '.version')
+            DEPLOYMENT_SHA=$(git rev-list -n 1 "v${DEPLOYMENT_TAG}")
+            echo "DEPLOYMENT_SHA=${DEPLOYMENT_SHA}" >> "$GITHUB_ENV"
+          fi
+
+      - name: Ensure deployment SHA is set
+        run: |
+          if [ -z "${DEPLOYMENT_SHA}" ]; then
+            echo "DEPLOYMENT_SHA is not set. Exiting."
+            exit 1
+          fi
+
       - name: Configure AWS credentials using OIDC
         uses: aws-actions/configure-aws-credentials@7474bc4690e29a8392af63c5b98e7449536d5c3a # v4.3.1
         with:
           role-to-assume: arn:aws:iam::${{ vars.AWS_ACCOUNT_ID }}:role/github_action_manage_push_ecr_ecs-partner-portal
-          role-session-name: DevEcsDeploy
+          role-session-name: EcsDeploy
           aws-region: ${{ env.AWS_REGION }}
 
       - name: Download current web task definition
@@ -262,7 +318,7 @@ jobs:
             --query "taskDefinition.containerDefinitions[?name=='${{ vars.ECS_WEB_CONTAINER }}'].image" \
             --output text)
 
-          if [ "$CURRENT_WEB_IMAGE" = "${{ needs.build-backend.outputs.image_uri }}" ]; then
+          if [ "$CURRENT_WEB_IMAGE" = "${{ vars.ARTIFACT_ECR_REPOSITORY }}:${DEPLOYMENT_SHA}" ]; then
             echo "deployment_needed=false" >> "$GITHUB_OUTPUT"
           else
             echo "deployment_needed=true" >> "$GITHUB_OUTPUT"
@@ -275,7 +331,7 @@ jobs:
         with:
           task-definition: web-task-definition.json
           container-name: ${{ vars.ECS_WEB_CONTAINER }}
-          image: ${{ needs.build-backend.outputs.image_uri }}
+          image: ${{ vars.ARTIFACT_ECR_REPOSITORY }}:${{ env.DEPLOYMENT_SHA }}
 
       - name: Deploy web task definition
         if: steps.current-web-image.outputs.deployment_needed == 'true'
@@ -292,7 +348,7 @@ jobs:
         run: |
           aws ssm put-parameter \
             --name "/ecs/${{ vars.ECS_WEB_CLUSTER }}/${{ vars.ECS_WEB_SERVICE }}/container-image" \
-            --value "${{ needs.build-backend.outputs.image_uri }}" \
+            --value "${{ vars.ARTIFACT_ECR_REPOSITORY }}:${DEPLOYMENT_SHA}" \
             --type "String" \
             --overwrite
 
@@ -316,7 +372,7 @@ jobs:
             --query "taskDefinition.containerDefinitions[?name=='${{ vars.ECS_WORKER_CONTAINER }}'].image" \
             --output text)
 
-          if [ "$CURRENT_WORKER_IMAGE" = "${{ needs.build-backend.outputs.image_uri }}" ]; then
+          if [ "$CURRENT_WORKER_IMAGE" = "${{ vars.ARTIFACT_ECR_REPOSITORY }}:${DEPLOYMENT_SHA}" ]; then
             echo "deployment_needed=false" >> "$GITHUB_OUTPUT"
           else
             echo "deployment_needed=true" >> "$GITHUB_OUTPUT"
@@ -329,7 +385,7 @@ jobs:
         with:
           task-definition: worker-task-definition.json
           container-name: ${{ vars.ECS_WORKER_CONTAINER }}
-          image: ${{ needs.build-backend.outputs.image_uri }}
+          image: ${{ vars.ARTIFACT_ECR_REPOSITORY }}:${{ env.DEPLOYMENT_SHA }}
 
       - name: Deploy worker task definition
         if: steps.current-worker-image.outputs.deployment_needed == 'true'
@@ -346,6 +402,6 @@ jobs:
         run: |
           aws ssm put-parameter \
             --name "/ecs/${{ vars.ECS_WORKER_CLUSTER }}/${{ vars.ECS_WORKER_SERVICE }}/container-image" \
-            --value "${{ needs.build-backend.outputs.image_uri }}" \
+            --value "${{ vars.ARTIFACT_ECR_REPOSITORY }}:${DEPLOYMENT_SHA}" \
             --type "String" \
             --overwrite
