@@ -97,19 +97,36 @@ jobs:
       - name: Compute image tags
         id: image
         run: |
+          RELEASE_TAG_OUTPUT="${{ needs.detect-release-tag.outputs.release_tag }}"
+          if [ -n "$RELEASE_TAG_OUTPUT" ]; then
+            RELEASE_VERSION="$RELEASE_TAG_OUTPUT"
+          else
+            RELEASE_VERSION="$(date +%Y%m%d)-${GITHUB_SHA}"
+          fi
+          echo "release_version=$RELEASE_VERSION" >> "$GITHUB_OUTPUT"
           echo "image_uri=${{ vars.ARTIFACT_ECR_REPOSITORY }}:${GITHUB_SHA}" >> "$GITHUB_OUTPUT"
 
       - name: Build and push backend image
         env:
           IMAGE_URI: ${{ steps.image.outputs.image_uri }}
+          RELEASE_VERSION: ${{ steps.image.outputs.release_version }}
         run: |
           docker buildx build \
             --platform linux/amd64 \
-            --build-arg APP_VERSION="$GITHUB_SHA" \
+            --build-arg APP_VERSION="$RELEASE_VERSION" \
             --tag "$IMAGE_URI" \
             --tag "${{ vars.ARTIFACT_ECR_REPOSITORY }}:latest" \
             --push \
             backend
+
+      - name: Tag and push semver image
+        if: needs.detect-release-tag.outputs.release_tag != ''
+        run: |
+          RELEASE_TAG="${{ needs.detect-release-tag.outputs.release_tag }}"
+          docker tag \
+            "${{ steps.image.outputs.image_uri }}" \
+            "${{ vars.ARTIFACT_ECR_REPOSITORY }}:$RELEASE_TAG"
+          docker push "${{ vars.ARTIFACT_ECR_REPOSITORY }}:$RELEASE_TAG"
 
       - name: Docker generate SBOM
         uses: cds-snc/security-tools/.github/actions/generate-sbom@837a88b6337d4842543184c8eac97a8adac8f302 # v4.0.3
@@ -147,11 +164,17 @@ jobs:
         env:
           VITE_API_BASE_URL: ${{ secrets.VITE_API_BASE_URL }}
           VITE_APP_ENVIRONMENT: ${{ vars.VITE_APP_ENVIRONMENT }}
-          VITE_APP_VERSION: ${{ github.sha }}
           VITE_AUTH_POST_LOGIN_PATH: ${{ vars.VITE_AUTH_POST_LOGIN_PATH }}
           VITE_SESSION_WARNING_AFTER_MINUTES: ${{ vars.VITE_SESSION_WARNING_AFTER_MINUTES }}
           VITE_SESSION_COUNTDOWN_MINUTES: ${{ vars.VITE_SESSION_COUNTDOWN_MINUTES }}
         run: |
+          RELEASE_TAG_OUTPUT="${{ needs.detect-release-tag.outputs.release_tag }}"
+          if [ -n "$RELEASE_TAG_OUTPUT" ]; then
+            RELEASE_VERSION="$RELEASE_TAG_OUTPUT"
+          else
+            RELEASE_VERSION="$(date +%Y%m%d)-${GITHUB_SHA}"
+          fi
+          export VITE_RELEASE_TAG="$RELEASE_VERSION"
           export VITE_AUTH_POST_LOGIN_PATH="${VITE_AUTH_POST_LOGIN_PATH:-/your-applications}"
           export VITE_SESSION_WARNING_AFTER_MINUTES="${VITE_SESSION_WARNING_AFTER_MINUTES:-25}"
           export VITE_SESSION_COUNTDOWN_MINUTES="${VITE_SESSION_COUNTDOWN_MINUTES:-5}"
