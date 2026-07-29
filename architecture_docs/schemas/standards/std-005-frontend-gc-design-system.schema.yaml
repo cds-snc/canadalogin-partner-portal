@@ -1,0 +1,171 @@
+schema_id: ARCH-SCHEMA-STD-005-FRONTEND-GC-DESIGN-SYSTEM
+schema_version: "0.1"
+title: Frontend GC Design System Schema Contract
+status: active
+schema_type: standard
+
+owner_doc_id: STD-005
+owner_doc_type: standard
+owner_doc_path: docs/standards/std-005-frontend-gc-design-system.md
+
+summary: >
+  Helps agents and reviewers check GC Design System component use, app shell
+  structure, navigation, language-toggle behavior, custom UI explanations, and
+  design-system exception triggers for Government of Canada frontend work.
+
+categories:
+  - design-system
+  - frontend
+  - accessibility
+  - governance
+search_keywords:
+  - gc design system
+  - canada.ca
+  - app shell
+  - header
+  - footer
+  - navigation
+  - language toggle
+  - component
+  - form
+  - custom UI
+  - design-system exception
+applies_when:
+  - scaffolding or regenerating a Government of Canada frontend
+  - building Government of Canada UI
+  - choosing UI components, forms, links, buttons, navigation, or page shell behavior
+  - documenting design-system exceptions
+do_not_use_when:
+  - the UI is not a Government of Canada frontend and no GC Design System baseline applies
+  - the work is backend-only and has no user-facing frontend impact
+
+work_contexts:
+  - local_developer
+  - shared_non_production
+  - production
+stack_profiles:
+  - react
+  - gcds
+  - canada.ca
+artifact_types:
+  - frontend_scaffold
+  - frontend_page
+  - frontend_component
+  - form
+  - navigation_model
+  - standards_impact
+  - verification_note
+  - adr
+
+related_standards:
+  - STD-004
+  - STD-005
+  - STD-006
+  - STD-007
+  - STD-017
+  - STD-018
+related_patterns:
+  - PAT-001
+  - PAT-013
+  - PAT-014
+  - PAT-015
+  - PAT-017
+  - PAT-023
+related_controls:
+  - GC-WEB-002
+  - GC-WEB-003
+  - GC-WEB-004
+  - GC-WEB-005
+related_baselines:
+  - BAS-001
+
+required_inputs:
+  - id: ui_change_scope
+    description: Description of pages, forms, components, app shell, navigation, or content changed.
+    required: true
+    source: implementation plan, PR, issue, or changed files
+  - id: design_system_usage
+    description: GC Design System components, wrappers, templates, CSS imports, or exceptions used by the change.
+    required: true
+    source: code, plan, or standards impact block
+
+checks:
+  - id: gcds-components-used-where-fit
+    description: GC Design System components are used for common Government of Canada UI needs where they fit.
+    required: true
+    check_type: content_review
+    evidence:
+      - Component mapping, code review, Storybook state, screenshot, or standards impact note.
+    failure_means: The UI may create unnecessary custom behavior or diverge from GC Design System expectations.
+    adr_required_when: The project intentionally uses custom UI where a GC Design System component fits.
+    waiver_allowed: true
+
+  - id: app-shell-present
+    description: Government of Canada React frontends use a shared app shell with header, footer, main content, skip target, and navigation.
+    required: true
+    check_type: file_review
+    evidence:
+      - Shared shell components, route layout, screenshots, or review fixture.
+    failure_means: Page chrome may be inconsistent or duplicated across pages.
+    adr_required_when: The project intentionally avoids the shared GC Design System app shell.
+    waiver_allowed: true
+
+  - id: navigation-and-home-visible
+    description: Header navigation includes Home and changed pages or parent task areas, unless an exclusion reason is recorded.
+    required: true
+    check_type: content_review
+    evidence:
+      - Navigation metadata, header menu model, screenshot, or standards impact evidence.
+    failure_means: Users may not be able to discover new pages or return to the service home.
+    adr_required_when: The project intentionally hides a user-facing route from shared navigation.
+    waiver_allowed: true
+
+  - id: language-toggle-in-header
+    description: Bilingual routes or content use the header language toggle and equivalent-language link behavior.
+    required: true
+    check_type: content_review
+    evidence:
+      - Header toggle configuration, route helper, bilingual route check, or screenshot.
+    failure_means: Official-language navigation may become inconsistent or duplicated.
+    adr_required_when: The project intentionally provides language switching outside the approved header behavior.
+    waiver_allowed: true
+
+  - id: custom-ui-explained
+    description: Custom UI choices explain why the design system component does not fit and what accessibility behavior is preserved.
+    required: true
+    check_type: human_review
+    evidence:
+      - Custom UI exception, ADR, standards impact block, or verification note.
+    failure_means: Custom UI may lack a durable rationale or review path.
+    adr_required_when: Custom UI materially changes page shell, component behavior, accessibility, or design-system posture.
+    waiver_allowed: true
+
+  - id: meaningful-ui-evidence
+    description: Meaningful UI work includes screenshots, Storybook or review fixture states, accessibility notes, and standards impact evidence as applicable.
+    required: true
+    check_type: evidence_required
+    evidence:
+      - Screenshots, review fixture, accessibility notes, standards impact block, tests, or verification note.
+    failure_means: Reviewers may not be able to confirm design-system or accessibility behavior.
+    adr_required_when: Expected design-system review evidence is intentionally omitted.
+    waiver_allowed: true
+
+outputs:
+  - id: design_system_review_summary
+    description: Review result showing component use, app shell behavior, custom UI exceptions, and evidence.
+
+evidence_expectations:
+  - Component use or exception is visible for meaningful UI changes.
+  - App shell, navigation, header, footer, and language-toggle behavior are reviewable when affected.
+  - Custom UI links to an exception, ADR, or verification note when needed.
+
+adr_triggers:
+  - Custom UI replaces a GC Design System component that fits.
+  - The project varies from app shell, header, footer, navigation, or language-toggle expectations.
+  - Design-system evidence is intentionally skipped for meaningful UI work.
+
+waiver_guidance:
+  - A project-local waiver may be needed when a delivery gate expects design-system evidence or component usage that is intentionally deferred.
+
+notes:
+  - This schema contract supports STD-005. STD-005 remains the source of truth.

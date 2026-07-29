@@ -1,0 +1,136 @@
+{
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "label": "Delorean: Doctor",
+      "type": "shell",
+      "command": "scripts/delorean/doctor.sh",
+      "group": "test",
+      "problemMatcher": [],
+      "presentation": {
+        "clear": true,
+        "panel": "dedicated",
+        "reveal": "always"
+      }
+    },
+    {
+      "label": "Delorean: Local Verification",
+      "type": "shell",
+      "command": "scripts/delorean/run-local-verification.sh",
+      "group": {
+        "kind": "test",
+        "isDefault": true
+      },
+      "problemMatcher": [],
+      "presentation": {
+        "clear": true,
+        "panel": "dedicated",
+        "reveal": "always"
+      }
+    },
+    {
+      "label": "Delorean: Structure Checks",
+      "type": "shell",
+      "command": "scripts/delorean/run-structure-checks.sh",
+      "group": "test",
+      "problemMatcher": [],
+      "presentation": {
+        "clear": true,
+        "panel": "dedicated",
+        "reveal": "always"
+      }
+    },
+    {
+      "label": "Delorean: Markdown Checks",
+      "type": "shell",
+      "command": "scripts/delorean/run-markdown-checks.sh",
+      "group": "test",
+      "problemMatcher": [],
+      "presentation": {
+        "clear": true,
+        "panel": "dedicated",
+        "reveal": "always"
+      }
+    },
+    {
+      "label": "OpenSpec: Validate Change",
+      "type": "shell",
+      "command": "make validate-openspec-change CHANGE_ID=${input:changeId}",
+      "group": "test",
+      "problemMatcher": [],
+      "presentation": {
+        "clear": true,
+        "panel": "dedicated",
+        "reveal": "always"
+      }
+    },
+    {
+      "label": "OpenSpec: Pick Active Change",
+      "type": "shell",
+      "command": "make pick-openspec-change",
+      "group": "test",
+      "problemMatcher": [],
+      "presentation": {
+        "clear": true,
+        "panel": "dedicated",
+        "reveal": "always"
+      }
+    },
+    {
+      "label": "OpenSpec: Pick + Validate Active Change",
+      "type": "shell",
+      "command": "make validate-active-openspec-change",
+      "group": "test",
+      "problemMatcher": [],
+      "presentation": {
+        "clear": true,
+        "panel": "dedicated",
+        "reveal": "always"
+      }
+    },
+    {
+      "label": "App: Start Dev",
+      "type": "shell",
+      "command": "make dev",
+      "group": "build",
+      "isBackground": true,
+      "problemMatcher": [],
+      "presentation": {
+        "panel": "dedicated",
+        "reveal": "always"
+      }
+    },
+    {
+      "label": "App: Start Frontend",
+      "type": "shell",
+      "command": "make start-frontend",
+      "group": "build",
+      "isBackground": true,
+      "problemMatcher": [],
+      "presentation": {
+        "panel": "dedicated",
+        "reveal": "always"
+      }
+    },
+    {
+      "label": "App: Start Backend",
+      "type": "shell",
+      "command": "make start-backend",
+      "group": "build",
+      "isBackground": true,
+      "problemMatcher": [],
+      "presentation": {
+        "panel": "dedicated",
+        "reveal": "always"
+      }
+    }
+  ],
+  "inputs": [
+    {
+      "id": "changeId",
+      "type": "promptString",
+      "description": "OpenSpec change ID to validate",
+      "default": "example-change"
+    }
+  ]
+}

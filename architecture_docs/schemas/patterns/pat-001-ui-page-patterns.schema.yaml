@@ -1,0 +1,160 @@
+schema_id: ARCH-SCHEMA-PAT-001-UI-PAGE-PATTERNS
+schema_version: "0.1"
+title: UI Page Patterns Schema Contract
+status: active
+schema_type: pattern
+
+owner_doc_id: PAT-001
+owner_doc_type: pattern
+owner_doc_path: docs/patterns/design/pat-001-ui-page-patterns.md
+
+summary: >
+  Helps agents and reviewers check that a user-facing page pattern is selected,
+  the page shell and navigation path are visible, design-system and accessibility
+  evidence is captured, and layout or component exceptions are recorded.
+
+categories:
+  - design-system
+  - frontend
+  - accessibility
+search_keywords:
+  - page pattern
+  - service home
+  - task hub
+  - dashboard
+  - direct task page
+  - form page
+  - data table
+  - navigation
+  - page shell
+  - gc design system
+applies_when:
+  - planning, implementing, or reviewing a user-facing page, route, form, table, dashboard, task hub, or task flow
+  - selecting a service home, task hub, dashboard, direct task page, form page, data table page, or other approved page pattern
+  - changing page shell, shared menu, route reachability, language behavior, or custom UI choices
+do_not_use_when:
+  - the work is backend-only and does not affect user-facing UI
+  - the project has already selected a different approved page framework and recorded the exception
+
+work_contexts:
+  - local_developer
+  - shared_non_production
+  - production
+stack_profiles:
+  - react
+  - gcds
+  - canada.ca
+artifact_types:
+  - page_pattern_decision
+  - frontend_page
+  - route
+  - navigation
+  - screenshot
+  - verification_note
+  - adr
+
+related_standards:
+  - STD-005
+  - STD-006
+  - STD-007
+  - STD-012
+  - STD-017
+  - STD-018
+related_patterns:
+  - PAT-003
+  - PAT-013
+  - PAT-014
+  - PAT-015
+  - PAT-019
+  - PAT-020
+  - PAT-021
+  - PAT-022
+  - PAT-023
+related_controls:
+  - GC-WEB-002
+  - GC-WEB-003
+  - GC-WEB-005
+related_baselines:
+  - BAS-001
+
+required_inputs:
+  - id: page_pattern_selection
+    description: Selected page pattern and reason, such as service home, task hub, dashboard, direct task page, form page, or data table page.
+    required: true
+    source: page pattern decision, implementation plan, ADR, PR, or verification note
+  - id: route_navigation_scope
+    description: Routes, shared menu entries, breadcrumbs, language behavior, and expected path from Home or the service home to the destination page.
+    required: true
+    source: route metadata, navigation plan, implementation note, or changed files
+
+checks:
+  - id: selected-page-pattern-recorded
+    description: The selected page pattern is recorded before implementation or review completes.
+    required: true
+    check_type: evidence_required
+    evidence:
+      - Page pattern decision, implementation plan, ADR, PR description, or verification note.
+    failure_means: The page may become a one-off layout without clear navigation, shell, or accessibility expectations.
+    adr_required_when: The project intentionally uses a page structure outside the approved patterns.
+    waiver_allowed: true
+
+  - id: navigation-path-visible
+    description: Primary task pages are reachable from Home, the service home, shared menu, parent task area, or a recorded hidden-route exception.
+    required: true
+    check_type: content_review
+    evidence:
+      - Route metadata, shared menu update, navigation screenshot, hidden-route rationale, or verification note.
+    failure_means: Users may only reach the page by direct URL or unclear navigation.
+    adr_required_when: A primary destination is intentionally hidden from shared navigation.
+    waiver_allowed: true
+
+  - id: shell-baseline-present
+    description: The page shell includes required header, footer, main content, skip link or target, H1, navigation, and language behavior where applicable.
+    required: true
+    check_type: human_review
+    evidence:
+      - Screenshot, page shell review, route review, accessibility checklist, or verification note.
+    failure_means: Page structure may drift from Government of Canada layout, navigation, or accessibility expectations.
+    adr_required_when: The project intentionally uses a different page shell or language-toggle placement.
+    waiver_allowed: true
+
+  - id: design-system-component-baseline
+    description: Visible and interactive UI uses GC Design System components where they fit, with raw or custom elements treated as exceptions.
+    required: true
+    check_type: content_review
+    evidence:
+      - Component review, design-system evidence, screenshots, Storybook fixture, or verification note.
+    failure_means: Custom UI may bypass shared accessibility, styling, and interaction behavior.
+    adr_required_when: Custom layout or raw UI controls are used where the design system would normally fit.
+    waiver_allowed: true
+
+  - id: user-facing-review-evidence
+    description: Meaningful user-facing changes include screenshots, accessibility checks, and design-system review evidence.
+    required: true
+    check_type: evidence_required
+    evidence:
+      - Desktop and mobile screenshots, accessibility checklist, Storybook fixture, design review note, or verification note.
+    failure_means: Layout, navigation, accessibility, or component issues may be missed.
+    adr_required_when: User-facing review evidence is intentionally omitted for a meaningful page change.
+    waiver_allowed: true
+
+outputs:
+  - id: page_pattern_review_summary
+    description: Review result showing selected page pattern, navigation path, page shell, design-system use, review evidence, and exceptions.
+
+evidence_expectations:
+  - The selected page pattern and path from Home or service home are visible.
+  - Screenshots and accessibility evidence exist for meaningful user-facing changes.
+  - Custom layout or custom UI exceptions are recorded before implementation.
+
+adr_triggers:
+  - Project intentionally uses a different page framework or page pattern.
+  - A primary task route is intentionally hidden from shared navigation.
+  - Custom layout or raw UI controls replace design-system components where the standard pattern would normally fit.
+
+waiver_guidance:
+  - Delivery waivers for missing screenshots, accessibility evidence, or design review belong in the project-local Delorean evidence process.
+  - This schema contract does not define runtime waiver records.
+
+notes:
+  - This schema contract supports PAT-001. PAT-001 remains the source of truth.

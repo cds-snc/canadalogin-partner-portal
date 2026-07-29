@@ -1,0 +1,222 @@
+schema_id: ARCH-SCHEMA-STD-020-DATABASE-PERSISTENCE
+schema_version: "0.1"
+title: Database Persistence Schema Contract
+status: active
+schema_type: standard
+
+owner_doc_id: STD-020
+owner_doc_type: standard
+owner_doc_path: docs/standards/std-020-database-persistence.md
+
+summary: >
+  Helps agents and reviewers check relational persistence decisions, SQLAlchemy
+  model style, API schema separation, repository boundaries, Alembic migrations,
+  migration review, public identifiers, tenant or workspace ownership, delete
+  behavior, retention, and database test evidence.
+
+categories:
+  - data
+  - backend
+  - api
+  - security-privacy
+  - operations
+  - testing
+search_keywords:
+  - database
+  - persistence
+  - sqlalchemy
+  - alembic
+  - postgres
+  - migration
+  - repository
+  - data access
+  - soft delete
+  - hard delete
+  - retention
+  - tenant ownership
+  - workspace ownership
+  - public id
+applies_when:
+  - adding or changing relational persistence, database models, or database repositories
+  - creating or reviewing Alembic migrations, indexes, constraints, or seed data
+  - deciding ownership, retention, soft delete, hard delete, or public identifier behavior for stored records
+  - reviewing database schema, API data contracts, or database-backed service behavior
+do_not_use_when:
+  - the change has no relational persistence, database model, migration, repository, seed data, retention, or stored record impact
+  - the project uses a non-relational persistence model with a separate approved architecture decision
+
+work_contexts:
+  - local_developer
+  - shared_non_production
+  - production
+stack_profiles:
+  - postgres
+  - sqlalchemy
+  - alembic
+  - fastapi
+artifact_types:
+  - database_model
+  - migration
+  - repository
+  - data_access
+  - seed_data
+  - api_schema
+  - backend_test
+  - verification_note
+  - adr
+
+related_standards:
+  - STD-003
+  - STD-008
+  - STD-009
+  - STD-010
+  - STD-012
+  - STD-013
+  - STD-014
+  - STD-020
+related_patterns:
+  - PAT-005
+  - PAT-006
+  - PAT-008
+  - PAT-012
+related_controls:
+  - GC-WEB-006
+  - GC-WEB-007
+  - GC-WEB-009
+  - GC-WEB-010
+related_baselines:
+  - BAS-001
+
+required_inputs:
+  - id: persistence_change_scope
+    description: Description of models, migrations, repositories, data-access code, seed data, stored records, or API schemas changed.
+    required: true
+    source: implementation plan, PR, issue, or changed files
+  - id: data_classification
+    description: Ownership, sensitivity, retention, audit, delete, and public identifier expectations for stored data.
+    required: true
+    source: architecture note, ADR, implementation plan, data review, or PR
+
+checks:
+  - id: data-ownership-sensitivity-retention-known
+    description: Data ownership, sensitivity, retention, audit, and delete behavior are known before persistence changes are accepted.
+    required: true
+    check_type: human_review
+    evidence:
+      - Architecture note, ADR, data review, implementation plan, or verification note.
+    failure_means: Persistence behavior may conflict with privacy, retention, or audit needs.
+    adr_required_when: Data ownership, retention, or delete behavior is a material architecture decision.
+    waiver_allowed: true
+
+  - id: sqlalchemy-typed-model-style
+    description: SQLAlchemy models use typed 2.0 style with explicit table names, nullability, lengths, indexes, and constraints where applicable.
+    required: true
+    check_type: file_review
+    evidence:
+      - SQLAlchemy model review, migration review, or tests.
+    failure_means: Data model behavior may be ambiguous or under-constrained.
+    adr_required_when: The project intentionally uses a different ORM or SQLAlchemy model style.
+    waiver_allowed: true
+
+  - id: api-schemas-separate-from-orm
+    description: Pydantic API schemas are separate from ORM persistence models when the API contract differs from persistence shape.
+    required: true
+    check_type: file_review
+    evidence:
+      - API schema files, ORM model files, route models, or documented exception.
+    failure_means: API contracts may expose internal persistence details.
+    adr_required_when: The project intentionally exposes ORM models directly through API contracts.
+    waiver_allowed: true
+
+  - id: repository-keeps-persistence-out-of-routes
+    description: Repository or data-access code keeps persistence details out of route handlers.
+    required: true
+    check_type: file_review
+    evidence:
+      - Repository, data-access adapter, service boundary, or route review.
+    failure_means: Persistence behavior may be hard to test and review.
+    adr_required_when: The project intentionally performs persistence access directly in routes for nontrivial behavior.
+    waiver_allowed: true
+
+  - id: alembic-migrations-exist
+    description: Alembic migrations exist for schema, index, constraint, and seed-data changes that need tracked database state.
+    required: true
+    check_type: file_review
+    evidence:
+      - Migration file under the project migration path, migration review note, or documented no-migration rationale.
+    failure_means: Shared or production database state may drift from application code.
+    adr_required_when: The project intentionally skips migrations for a shared, staging, production, or tracked database.
+    waiver_allowed: true
+
+  - id: migrations-reviewed-for-data-loss-and-rollback
+    description: Migrations are reviewed for nullability, constraints, indexes, data conversion, data loss, rollback, and deployment order.
+    required: true
+    check_type: human_review
+    evidence:
+      - Migration review note, tests, downgrade review, deployment note, or verification note.
+    failure_means: Database changes may cause data loss, failed deploys, or unsafe rollback behavior.
+    adr_required_when: The project intentionally accepts migration data-loss or rollback risk.
+    waiver_allowed: true
+
+  - id: public-apis-avoid-internal-ids
+    description: Public APIs do not expose internal integer IDs without a deliberate API decision.
+    required: true
+    check_type: content_review
+    evidence:
+      - API schema review, public identifier decision, ADR, or endpoint contract.
+    failure_means: Internal persistence details may become public API contracts.
+    adr_required_when: The project intentionally exposes internal IDs in public APIs.
+    waiver_allowed: false
+
+  - id: tenant-or-workspace-ownership-enforced
+    description: Tenant or workspace ownership is enforced in reads, writes, uniqueness, and authorization where applicable.
+    required: true
+    check_type: human_review
+    evidence:
+      - Model constraints, repository filters, service checks, authorization tests, or verification note.
+    failure_means: Cross-tenant or cross-workspace data access risk may be hidden.
+    adr_required_when: The project intentionally does not enforce tenant or workspace ownership for scoped records.
+    waiver_allowed: false
+
+  - id: delete-behavior-matches-retention
+    description: Soft delete, hard delete, or disposition behavior matches retention, audit, recovery, and privacy needs.
+    required: true
+    check_type: human_review
+    evidence:
+      - Delete behavior decision, model fields, service behavior, tests, or ADR.
+    failure_means: Records may be retained or removed contrary to business, audit, or privacy needs.
+    adr_required_when: The project uses hard delete where soft delete or retention review would normally apply.
+    waiver_allowed: true
+
+  - id: persistence-tests-cover-meaningful-paths
+    description: Tests cover model constraints, service behavior, ownership checks, and meaningful create, read, update, and delete paths.
+    required: true
+    check_type: evidence_required
+    evidence:
+      - Model tests, repository tests, service tests, API tests, migration-adjacent tests, or verification note.
+    failure_means: Persistence behavior and constraints may regress.
+    adr_required_when: The project intentionally ships meaningful persistence behavior without tests or verification.
+    waiver_allowed: true
+
+outputs:
+  - id: persistence_review_summary
+    description: Review result showing ownership, sensitivity, retention, model style, migrations, repository boundaries, identifier decisions, and test evidence.
+
+evidence_expectations:
+  - Migration evidence exists for tracked schema, index, constraint, and seed-data changes.
+  - Ownership, sensitivity, retention, delete behavior, and public identifier decisions are visible.
+  - Tests cover meaningful persistence and ownership paths.
+
+adr_triggers:
+  - Project uses a different persistence stack or ORM model style.
+  - Project exposes internal IDs in public APIs.
+  - Project uses hard delete where soft delete would normally apply.
+  - Project skips migrations for a shared or production database.
+  - Project accepts migration data-loss, rollback, tenant ownership, or retention risk.
+
+waiver_guidance:
+  - Delivery waivers for deferred migration review, tests, or evidence belong in the project-local Delorean evidence process.
+  - Waivers must not hide data ownership, sensitive data, retention, migration, or tenant isolation risk.
+
+notes:
+  - This schema contract supports STD-020. STD-020 remains the source of truth.

@@ -1,0 +1,208 @@
+schema_id: ARCH-SCHEMA-STD-009-API-REST
+schema_version: "0.2"
+title: REST API Schema Contract
+status: active
+schema_type: standard
+
+owner_doc_id: STD-009
+owner_doc_type: standard
+owner_doc_path: docs/standards/std-009-api-rest.md
+
+summary: >
+  Helps agents and reviewers check REST API behavior, resource URL naming,
+  HTTP methods, JSON request and response bodies, serialized field naming,
+  cross-stack wire-contract alignment, response object preference, examples,
+  breaking-change visibility, and OpenAPI contract evidence.
+
+categories:
+  - api
+  - backend
+  - frontend
+search_keywords:
+  - rest
+  - api
+  - http status
+  - resource url
+  - endpoint contract
+  - openapi
+  - json body
+  - json field naming
+  - serialization
+  - wire name
+  - field casing
+  - contract test
+  - response object
+  - breaking change
+  - pagination
+  - filtering
+  - sorting
+applies_when:
+  - designing REST endpoints or resources
+  - changing API methods, status codes, pagination, filtering, sorting, or versioning
+  - changing serialized JSON field names, aliases, or casing
+  - reviewing API contracts or OpenAPI behavior
+  - documenting endpoint contract shapes before implementation
+do_not_use_when:
+  - the change does not affect an HTTP API contract or OpenAPI output
+  - the endpoint intentionally follows an external non-REST protocol with a documented reason
+
+work_contexts:
+  - local_developer
+  - shared_non_production
+  - production
+stack_profiles:
+  - rest
+  - fastapi
+  - openapi
+artifact_types:
+  - endpoint_contract
+  - api_endpoint
+  - openapi_contract
+  - serialization_contract
+  - frontend_type
+  - api_test
+  - verification_note
+  - adr
+
+related_standards:
+  - STD-008
+  - STD-009
+  - STD-010
+  - STD-012
+related_patterns:
+  - PAT-002
+  - PAT-005
+  - PAT-006
+  - PAT-024
+related_controls:
+  - GC-WEB-010
+related_baselines:
+  - BAS-001
+
+required_inputs:
+  - id: endpoint_behavior
+    description: Meaningful endpoint behavior, method, path, request, response, auth, status codes, and errors.
+    required: true
+    source: endpoint contract, OpenAPI output, implementation plan, or PR
+  - id: api_change_scope
+    description: Whether the change creates, changes, removes, or breaks an API contract.
+    required: true
+    source: issue, PR, API contract, or ADR
+  - id: json_serialization_contract
+    description: Canonical JSON field-naming convention and how backend serialization, OpenAPI, frontend types, and API clients use the wire names.
+    required: true
+    source: endpoint contract, API specification, OpenAPI output, frontend types, or contract tests
+
+checks:
+  - id: behavior-described-before-implementation
+    description: Meaningful API behavior is described before or during implementation using an endpoint contract, OpenAPI detail, or equivalent note.
+    required: true
+    check_type: content_review
+    evidence:
+      - Endpoint contract, OpenAPI output, implementation plan, PR note, or API review note.
+    failure_means: API behavior may be implemented without a reviewable contract.
+    adr_required_when: A project intentionally skips API behavior description for meaningful endpoints.
+    waiver_allowed: true
+
+  - id: resource-url-naming
+    description: API URLs are resource-based, use nouns, and avoid verbs except for documented action endpoints.
+    required: true
+    check_type: content_review
+    evidence:
+      - Endpoint path review, OpenAPI path, or endpoint contract.
+    failure_means: API URLs may be inconsistent or action-oriented without rationale.
+    adr_required_when: A project intentionally uses verb-based URLs or a different resource naming style.
+    waiver_allowed: true
+
+  - id: http-methods-match-operation
+    description: HTTP methods match intended read, create, action, replace, partial update, or delete behavior.
+    required: true
+    check_type: content_review
+    evidence:
+      - Endpoint contract, route definition, OpenAPI operation, or API review note.
+    failure_means: Clients may receive confusing or nonstandard API behavior.
+    adr_required_when: A project intentionally uses an HTTP method differently from the standard.
+    waiver_allowed: true
+
+  - id: json-request-response-bodies
+    description: JSON request and response bodies are used by default unless another media type or protocol reason is documented.
+    required: true
+    check_type: content_review
+    evidence:
+      - Request and response model, OpenAPI media type, or documented protocol reason.
+    failure_means: Request or response expectations may be unclear or inconsistent.
+    adr_required_when: A project intentionally uses a non-JSON shape for normal API behavior.
+    waiver_allowed: true
+
+  - id: response-object-preferred
+    description: Responses prefer objects over top-level arrays and avoid dynamic object keys.
+    required: true
+    check_type: content_review
+    evidence:
+      - Response model, example response, or OpenAPI schema.
+    failure_means: API responses may be harder for clients to type, extend, or validate.
+    adr_required_when: A project intentionally returns top-level arrays or dynamic object keys.
+    waiver_allowed: true
+
+  - id: serialized-json-field-naming-aligned
+    description: One canonical JSON field-naming convention is explicit and backend serializers, OpenAPI, frontend types, and API clients use the same wire names.
+    required: true
+    check_type: evidence_required
+    evidence:
+      - Endpoint serialization contract, representative serialized request and response, OpenAPI schema, frontend type, API helper, or contract test.
+    failure_means: Individually typed backend and frontend layers may still fail at runtime because field names or casing drift.
+    adr_required_when: A project intentionally exposes different JSON field names to different clients or changes existing wire casing.
+    waiver_allowed: false
+
+  - id: examples-present
+    description: Meaningful endpoints include small realistic examples for request, response, status codes, and errors when useful for review.
+    required: true
+    check_type: evidence_required
+    evidence:
+      - Endpoint contract examples, OpenAPI examples, test fixtures, or review notes.
+    failure_means: Consumers and reviewers may not understand the contract shape.
+    adr_required_when: Examples are intentionally omitted for meaningful or externally consumed endpoints.
+    waiver_allowed: true
+
+  - id: breaking-changes-explicit
+    description: Breaking API behavior changes, including serialized field-name or casing changes, are explicit and traceable.
+    required: true
+    check_type: human_review
+    evidence:
+      - ADR, API change note, migration note, versioning note, or release note.
+    failure_means: Consumers may be surprised by breaking behavior changes.
+    adr_required_when: API behavior changes in a breaking way.
+    waiver_allowed: true
+
+  - id: openapi-contract-evidence
+    description: OpenAPI, tests, and verification are updated when behavior changes.
+    required: true
+    check_type: evidence_required
+    evidence:
+      - OpenAPI export, schema diff, API tests, or verification note.
+    failure_means: API contract drift may go unnoticed.
+    adr_required_when: A project intentionally does not maintain OpenAPI evidence for meaningful API changes.
+    waiver_allowed: true
+
+outputs:
+  - id: api_contract_review_summary
+    description: Review result showing endpoint behavior, URL naming, HTTP methods, examples, breaking changes, and OpenAPI evidence.
+
+evidence_expectations:
+  - Meaningful endpoint changes include endpoint contract or OpenAPI evidence.
+  - Serialized request and response evidence shows the same wire names in backend output, OpenAPI, frontend types, and API helpers.
+  - Breaking changes are visible in an ADR, release note, or API change note.
+  - Tests or verification cover changed API behavior.
+
+adr_triggers:
+  - API behavior changes in a breaking way.
+  - Existing serialized JSON field names or casing change.
+  - Project uses a nonstandard URL, method, response body, or protocol shape.
+  - Public API contract deliberately diverges from REST guidance.
+
+waiver_guidance:
+  - Delivery waivers for deferred OpenAPI updates, examples, or API tests belong in the project-local Delorean evidence process.
+  - This schema contract does not define runtime waiver records.
+
+notes:
+  - This schema contract supports STD-009. STD-009 remains the source of truth.

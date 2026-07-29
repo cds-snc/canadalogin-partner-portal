@@ -1,0 +1,176 @@
+schema_id: ARCH-SCHEMA-STD-015-CODE-QUALITY-LINTING-FORMATTING
+schema_version: "0.1"
+title: Code Quality, Linting, and Formatting Schema Contract
+status: active
+schema_type: standard
+
+owner_doc_id: STD-015
+owner_doc_type: standard
+owner_doc_path: docs/standards/std-015-code-quality-linting-and-formatting.md
+
+summary: >
+  Helps agents and reviewers check that linting, formatting, type checks, local
+  quality commands, generated-file handling, failures, disables, and exceptions
+  are visible and aligned with the project stack.
+
+categories:
+  - code-quality
+  - frontend
+  - backend
+  - testing
+search_keywords:
+  - lint
+  - linting
+  - formatting
+  - formatter
+  - type check
+  - static check
+  - eslint
+  - prettier
+  - black
+  - flake8
+  - ruff
+  - generated files
+  - css review
+applies_when:
+  - adding or changing linting, formatting, type checks, static checks, generated files, quality commands, or CI quality checks
+  - reviewing broad lint disables, generated-file exclusions, local command documentation, or frontend CSS reviewability
+  - recording skipped or bypassed quality checks for meaningful changes
+do_not_use_when:
+  - the change has no source code, generated file, linting, formatting, type-check, local command, or CI quality-check impact
+  - a project-local stack tooling decision already records equivalent quality command and exception evidence
+
+work_contexts:
+  - local_developer
+  - shared_non_production
+  - production
+stack_profiles:
+  - react
+  - typescript
+  - python
+  - fastapi
+  - css
+artifact_types:
+  - lint_config
+  - format_config
+  - typecheck_config
+  - generated_file
+  - ci_config
+  - verification_note
+  - adr
+
+related_standards:
+  - STD-004
+  - STD-008
+  - STD-012
+  - STD-015
+  - STD-018
+related_patterns:
+  - PAT-015
+  - PAT-017
+related_controls: []
+related_baselines:
+  - BAS-001
+
+required_inputs:
+  - id: quality_change_scope
+    description: Description of changed source files, generated files, linting, formatting, type checks, local commands, CI checks, disables, or skipped checks.
+    required: true
+    source: implementation plan, PR, issue, changed files, or verification note
+  - id: quality_commands
+    description: Commands or project documentation for linting, formatting, type checking, and auto-fix behavior when applicable.
+    required: false
+    source: package.json, Makefile, pyproject.toml, eslint config, pytest config, docs, or verification note
+
+checks:
+  - id: lint-format-commands-known
+    description: Linting and formatting commands are known, documented, and aligned with the selected frontend or backend tooling when used.
+    required: true
+    check_type: file_review
+    evidence:
+      - package.json, Makefile, tool config, README, CI config, or verification note.
+    failure_means: Contributors and agents may run inconsistent checks or miss formatting failures.
+    adr_required_when: A project intentionally uses a different quality tooling pattern than the shared standard.
+    waiver_allowed: true
+
+  - id: type-checks-run-where-applicable
+    description: Type checks run or have recorded evidence when TypeScript, typed Python, or other typed stack checks apply.
+    required: true
+    check_type: evidence_required
+    evidence:
+      - Typecheck command output, CI result, verification note, or documented not-applicable reason.
+    failure_means: Type regressions may reach review or release unnoticed.
+    adr_required_when: A project intentionally bypasses type checks for meaningful typed-code changes.
+    waiver_allowed: true
+
+  - id: formatter-and-linter-results-recorded
+    description: Formatting and linting results are fixed or recorded for meaningful source changes.
+    required: true
+    check_type: evidence_required
+    evidence:
+      - Command output, CI result, verification note, changed formatting config, or documented skipped-check reason.
+    failure_means: Reviewers may not know whether style, lint, or static checks passed.
+    adr_required_when: A project intentionally bypasses lint or formatting checks for a meaningful change.
+    waiver_allowed: true
+
+  - id: generated-files-handled-intentionally
+    description: Generated files are excluded, checked, or reviewed intentionally so they do not add lint noise or hide meaningful generated output changes.
+    required: true
+    check_type: content_review
+    evidence:
+      - Ignore file, generated-file note, codegen command, PR review, or verification note.
+    failure_means: Generated output may create noisy reviews or bypass useful checks.
+    adr_required_when: Generated files are intentionally committed or excluded in a way that changes review expectations.
+    waiver_allowed: true
+
+  - id: broad-disables-include-reason
+    description: Broad lint, type, formatting, or static-check disables include a short reason and narrow scope.
+    required: true
+    check_type: content_review
+    evidence:
+      - Inline disable review, config review, PR note, ADR, or verification note.
+    failure_means: Suppressed findings may hide real defects or drift from project quality rules.
+    adr_required_when: A project intentionally keeps broad disables for durable project behavior.
+    waiver_allowed: true
+
+  - id: failures-fixed-or-recorded
+    description: Quality check failures are fixed or recorded with reason, risk, owner, and follow-up where needed.
+    required: true
+    check_type: evidence_required
+    evidence:
+      - Passing check output, verification note, issue, ADR, or project-local waiver when a gate requires it.
+    failure_means: Known quality failures may be hidden from reviewers or carried into release.
+    adr_required_when: A project intentionally accepts quality check failures for a meaningful or recurring condition.
+    waiver_allowed: true
+
+  - id: exceptions-explained
+    description: Meaningful exceptions to linting, formatting, type checking, generated-file handling, or local/CI command alignment are explained.
+    required: true
+    check_type: human_review
+    evidence:
+      - PR review, verification note, ADR, implementation note, or issue.
+    failure_means: Exceptions may become unexplained precedent for future work.
+    adr_required_when: The exception changes durable project quality policy, tool choice, or CI behavior.
+    waiver_allowed: true
+
+outputs:
+  - id: code_quality_review_summary
+    description: Review result showing command availability, lint/format/typecheck evidence, generated-file handling, disables, failures, and exceptions.
+
+evidence_expectations:
+  - Meaningful source changes identify relevant lint, format, and type checks.
+  - Bypassed checks and broad disables include a reason.
+  - Durable quality tooling exceptions are recorded as ADRs when they change project policy.
+
+adr_triggers:
+  - Project bypasses lint, formatting, or type checks for meaningful changes.
+  - Project adopts a different quality tooling pattern.
+  - Project keeps broad disables or generated-file handling that changes durable review expectations.
+  - Project changes local and CI quality command alignment.
+
+waiver_guidance:
+  - Delivery waivers for deferred lint, format, type, or CI quality evidence belong in the project-local Delorean evidence process.
+  - This schema contract does not define runtime waiver records.
+
+notes:
+  - This schema contract supports STD-015. STD-015 remains the source of truth.

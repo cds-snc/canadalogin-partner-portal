@@ -1,0 +1,644 @@
+catalog_version: 1
+scope: standards
+description: >
+  Machine-readable routing index for architecture standards. Use this file to
+  find relevant standards by category, status, and task trigger. The standards
+  documents remain the authoritative source for rules and checks.
+
+categories:
+  foundation:
+    title: Foundation
+    description: Baseline rules that apply across most architecture work.
+  documentation:
+    title: Documentation
+    description: Guidance for creating, naming, referencing, and maintaining documents.
+  architecture:
+    title: Architecture
+    description: System structure, stack choices, and cross-cutting architecture constraints.
+  frontend:
+    title: Frontend
+    description: Browser UI, frontend structure, components, state, and client behavior.
+  backend:
+    title: Backend
+    description: Backend service structure, runtime behavior, models, and service boundaries.
+  api:
+    title: API
+    description: API contracts, REST behavior, request and response shapes, and OpenAPI.
+  data:
+    title: Data
+    description: Data storage, data handling, persistence, and lifecycle concerns.
+  design-system:
+    title: Design System
+    description: GC Design System usage, page shells, components, navigation, and UI consistency.
+  accessibility:
+    title: Accessibility
+    description: Accessibility expectations for UI structure, content, navigation, and interaction.
+  security-privacy:
+    title: Security and Privacy
+    description: Security, privacy, identity, authorization, sensitive data, and secret handling.
+  operations:
+    title: Operations
+    description: Logging, observability, runtime configuration, deployment, and operational readiness.
+  testing:
+    title: Testing
+    description: Test strategy, local checks, coverage expectations, and verification evidence.
+  code-quality:
+    title: Code Quality
+    description: Linting, formatting, type checks, static checks, and generated-file handling.
+  deployment:
+    title: Deployment
+    description: Containerization, runtime packaging, cloud readiness, and release constraints.
+  governance:
+    title: Governance
+    description: Review expectations, compliance concerns, and standards impact checks.
+
+documents:
+  - id: STD-001
+    title: Document Identifiers
+    type: standard
+    status: active
+    primary_category: documentation
+    categories:
+      - documentation
+      - foundation
+    path: docs/standards/std-001-document-identifiers.md
+    applies_when:
+      - creating reusable architecture guidance
+      - renaming or moving guidance documents
+      - referencing standards, patterns, reference architectures, ADRs, or templates
+    related: []
+    schema_refs:
+      - id: ARCH-SCHEMA-STD-001-DOCUMENT-IDENTIFIERS
+        path: docs/schemas/standards/std-001-document-identifiers.schema.yaml
+        used_for:
+          - checking stable IDs, filenames, headings, and metadata
+          - recording identifier exceptions or ADR triggers
+
+  - id: STD-002
+    title: Work Contexts
+    type: standard
+    status: active
+    primary_category: foundation
+    categories:
+      - foundation
+      - operations
+      - security-privacy
+    path: docs/standards/std-002-work-contexts.md
+    applies_when:
+      - working with local, shared, or production environments
+      - deciding whether production or shared-environment access is in scope
+      - handling secrets, real data, external systems, deployment, or approvals
+      - selecting real, substituted, or unavailable dependency modes from availability and authorized access
+      - recording a work context declaration for environment-sensitive work
+    related:
+      - STD-013
+      - STD-014
+      - STD-016
+    schema_refs:
+      - id: ARCH-SCHEMA-STD-002-WORK-CONTEXTS
+        path: docs/schemas/standards/std-002-work-contexts.schema.yaml
+        used_for:
+          - separating execution context from solution target and selecting dependency modes
+          - identifying stop conditions, approvals, secrets, real data, substitutions, and external system boundaries
+
+  - id: STD-003
+    title: Full-Stack Application Stack
+    type: standard
+    status: active
+    primary_category: architecture
+    categories:
+      - architecture
+      - frontend
+      - backend
+      - api
+      - data
+      - operations
+    path: docs/standards/std-003-full-stack-application-stack.md
+    applies_when:
+      - scaffolding a new application or template repository
+      - defining or changing the application stack
+      - changing project structure, dependencies, tests, or local setup
+      - deciding whether frontend, backend, persistence, auth, or deployment choices fit the baseline
+      - preserving target application contracts when selected dependencies are unavailable or outside authorized scope
+    related:
+      - STD-002
+      - STD-004
+      - STD-005
+      - STD-006
+      - STD-008
+      - STD-009
+      - STD-012
+      - STD-013
+      - STD-017
+      - STD-020
+
+  - id: STD-004
+    title: Frontend React and TypeScript
+    type: standard
+    status: active
+    primary_category: frontend
+    categories:
+      - frontend
+      - testing
+      - code-quality
+    path: docs/standards/std-004-frontend-react-typescript.md
+    applies_when:
+      - scaffolding or generating a React frontend
+      - changing React or TypeScript frontend code
+      - adding frontend components, routes, features, hooks, state, services, or types
+      - changing source routes, generated router artifacts, or low-level API helpers
+      - adding a nested TanStack Router child beneath an existing page route
+      - reviewing frontend tests or user-facing frontend behavior
+    related:
+      - STD-003
+      - STD-005
+      - STD-006
+      - STD-007
+      - STD-012
+      - STD-018
+    schema_refs:
+      - id: ARCH-SCHEMA-STD-004-FRONTEND-REACT-TYPESCRIPT
+        path: docs/schemas/standards/std-004-frontend-react-typescript.schema.yaml
+        used_for:
+          - checking frontend structure, typing, thin source routes, nested layout render paths, feature ownership, typed API helpers, generated router artifacts, UI state, and review fixture evidence
+          - recording frontend architecture exceptions or ADR triggers
+
+  - id: STD-005
+    title: Frontend GC Design System
+    type: standard
+    status: active
+    primary_category: design-system
+    categories:
+      - design-system
+      - frontend
+      - accessibility
+      - governance
+    path: docs/standards/std-005-frontend-gc-design-system.md
+    applies_when:
+      - scaffolding or regenerating a Government of Canada frontend
+      - building Government of Canada UI
+      - choosing UI components, forms, links, buttons, navigation, or page shell behavior
+      - documenting design-system exceptions
+    related:
+      - STD-006
+      - STD-007
+      - STD-017
+      - STD-018
+    schema_refs:
+      - id: ARCH-SCHEMA-STD-005-FRONTEND-GC-DESIGN-SYSTEM
+        path: docs/schemas/standards/std-005-frontend-gc-design-system.schema.yaml
+        used_for:
+          - checking GC Design System component, app shell, navigation, and language-toggle evidence
+          - recording design-system exceptions or ADR triggers
+
+  - id: STD-006
+    title: GC UI Page Layout Rules
+    type: standard
+    status: active
+    primary_category: design-system
+    categories:
+      - design-system
+      - frontend
+      - accessibility
+      - governance
+    path: docs/standards/std-006-gc-ui-page-layout-rules.md
+    applies_when:
+      - scaffolding a user-facing frontend page shell or service home
+      - planning or changing a user-facing page
+      - changing layout, navigation, header, footer, menu, breadcrumb, or language toggle behavior
+      - creating forms, multi-step flows, service homes, task hubs, or page shells
+    related:
+      - STD-005
+      - STD-007
+      - STD-017
+      - STD-018
+    schema_refs:
+      - id: ARCH-SCHEMA-STD-006-GC-UI-PAGE-LAYOUT-RULES
+        path: docs/schemas/standards/std-006-gc-ui-page-layout-rules.schema.yaml
+        used_for:
+          - checking page pattern, page shell, navigation path, and layout evidence
+          - recording page layout exceptions or ADR triggers
+
+  - id: STD-007
+    title: UI Accessibility Basics
+    type: standard
+    status: active
+    primary_category: accessibility
+    categories:
+      - accessibility
+      - frontend
+      - design-system
+      - governance
+    path: docs/standards/std-007-ui-accessibility-basics.md
+    applies_when:
+      - reviewing labels, headings, keyboard behavior, focus, contrast, errors, or status messages
+      - changing user-facing UI content or layout
+      - checking accessibility for pages, forms, controls, or navigation
+    related:
+      - STD-005
+      - STD-006
+      - STD-017
+    schema_refs:
+      - id: ARCH-SCHEMA-STD-007-UI-ACCESSIBILITY-BASICS
+        path: docs/schemas/standards/std-007-ui-accessibility-basics.schema.yaml
+        used_for:
+          - checking accessibility review evidence for headings, labels, keyboard, focus, errors, status, and contrast
+          - recording accessibility exceptions or ADR triggers
+
+  - id: STD-008
+    title: Backend FastAPI
+    type: standard
+    status: active
+    primary_category: backend
+    categories:
+      - backend
+      - api
+      - data
+      - security-privacy
+      - testing
+    path: docs/standards/std-008-backend-fastapi.md
+    applies_when:
+      - adding or changing FastAPI routes, services, models, dependencies, or config
+      - changing backend error handling, OpenAPI output, persistence, auth boundaries, or outbound integrations
+      - configuring a real or substituted backend dependency
+      - reviewing backend tests or service structure
+    related:
+      - STD-002
+      - STD-003
+      - STD-009
+      - STD-010
+      - STD-012
+      - STD-013
+      - STD-020
+    schema_refs:
+      - id: ARCH-SCHEMA-STD-008-BACKEND-FASTAPI
+        path: docs/schemas/standards/std-008-backend-fastapi.schema.yaml
+        used_for:
+          - checking FastAPI router, model, service, outbound adapter, dependency substitution, configuration, OpenAPI, and backend test evidence
+          - recording backend framework, service boundary, substitute, or auth simulation exceptions and ADR triggers
+
+  - id: STD-009
+    title: REST API
+    type: standard
+    status: active
+    primary_category: api
+    categories:
+      - api
+      - backend
+      - frontend
+    path: docs/standards/std-009-api-rest.md
+    applies_when:
+      - designing REST endpoints or resources
+      - changing API methods, status codes, pagination, filtering, sorting, or versioning
+      - changing serialized JSON field names, aliases, casing, or frontend API expectations
+      - reviewing API contracts or OpenAPI behavior
+      - documenting endpoint contract shapes before implementation
+    related:
+      - STD-008
+      - STD-010
+      - STD-012
+    schema_refs:
+      - id: ARCH-SCHEMA-STD-009-API-REST
+        path: docs/schemas/standards/std-009-api-rest.schema.yaml
+        used_for:
+          - checking REST endpoint contract, URL, method, serialized field naming, cross-stack wire alignment, examples, breaking change, and OpenAPI evidence
+          - recording API design exceptions or ADR triggers
+
+  - id: STD-010
+    title: API Response and Error Models
+    type: standard
+    status: active
+    primary_category: api
+    categories:
+      - api
+      - backend
+      - frontend
+      - security-privacy
+    path: docs/standards/std-010-api-response-and-error-models.md
+    applies_when:
+      - defining typed API response models
+      - changing frontend API client types or backend response models
+      - changing success envelopes, list responses, validation errors, safe error shapes, error codes, or API examples
+      - changing serialized success, list, validation, or error field names and casing
+    related:
+      - STD-008
+      - STD-009
+      - STD-011
+      - STD-013
+    schema_refs:
+      - id: ARCH-SCHEMA-STD-010-API-RESPONSE-ERROR-MODELS
+        path: docs/schemas/standards/std-010-api-response-and-error-models.schema.yaml
+        used_for:
+          - checking typed response, serialized field alignment, error, validation, safety, example, contract-test, and OpenAPI evidence
+          - recording response-shape exceptions or ADR triggers
+
+  - id: STD-011
+    title: Logging and Observability
+    type: standard
+    status: active
+    primary_category: operations
+    categories:
+      - operations
+      - backend
+      - security-privacy
+    path: docs/standards/std-011-logging-and-observability.md
+    applies_when:
+      - adding or changing structured log event shapes, log codes, correlation IDs, request IDs, trace IDs, or diagnostic context
+      - reviewing masked query values, safe logging, context objects, or operational diagnostics
+      - changing frontend error reporting, backend errors, jobs, workflows, or operational guides
+    related:
+      - STD-010
+      - STD-013
+      - STD-014
+    schema_refs:
+      - id: ARCH-SCHEMA-STD-011-LOGGING-OBSERVABILITY
+        path: docs/schemas/standards/std-011-logging-and-observability.schema.yaml
+        used_for:
+          - checking log identifiers, structured event shape, diagnostic context, sensitive value masking, and operational evidence
+          - recording logging privacy, diagnostics, or observability exceptions and ADR triggers
+
+  - id: STD-012
+    title: Testing Basics
+    type: standard
+    status: active
+    primary_category: testing
+    categories:
+      - testing
+      - frontend
+      - backend
+      - api
+      - code-quality
+    path: docs/standards/std-012-testing-basics.md
+    applies_when:
+      - adding or changing tests, checks, coverage notes, or verification evidence
+      - reviewing frontend, backend, integration, contract, or end-to-end tests
+      - recording skipped checks or remaining coverage gaps
+    related:
+      - STD-004
+      - STD-008
+      - STD-009
+      - STD-015
+      - STD-018
+    schema_refs:
+      - id: ARCH-SCHEMA-STD-012-TESTING-BASICS
+        path: docs/schemas/standards/std-012-testing-basics.schema.yaml
+        used_for:
+          - checking success, failure, frontend, backend, API contract, migration, and data test evidence
+          - recording skipped checks, coverage gaps, verification evidence, and ADR triggers
+
+  - id: STD-013
+    title: Security and Privacy Basics
+    type: standard
+    status: active
+    primary_category: security-privacy
+    categories:
+      - security-privacy
+      - backend
+      - frontend
+      - data
+      - operations
+    path: docs/standards/std-013-security-and-privacy-basics.md
+    applies_when:
+      - changing auth, authorization, API access, user data, sensitive data, logging, or dependencies
+      - reviewing privacy impact, input validation, safe errors, or local network exposure
+      - substituting an unavailable security-sensitive dependency
+      - deciding whether security-sensitive behavior needs an architecture decision
+      - documenting sensitive data handling records
+    related:
+      - STD-002
+      - STD-010
+      - STD-011
+      - STD-014
+      - STD-020
+    schema_refs:
+      - id: ARCH-SCHEMA-STD-013-SECURITY-PRIVACY-BASICS
+        path: docs/schemas/standards/std-013-security-and-privacy-basics.schema.yaml
+        used_for:
+          - checking sensitive data, validation, authorization, safe errors, privacy, audit, logging, local exposure, and security-sensitive substitute evidence
+          - recording material security, privacy, production data, substitute, or approval decision ADR triggers
+
+  - id: STD-014
+    title: Secrets and Configuration
+    type: standard
+    status: active
+    primary_category: security-privacy
+    categories:
+      - security-privacy
+      - operations
+      - frontend
+      - backend
+      - deployment
+    path: docs/standards/std-014-secrets-and-configuration.md
+    applies_when:
+      - adding or changing environment variables, config files, CI settings, or deployment settings
+      - handling local config, runtime secrets, frontend public config, or backend secret sources
+      - reviewing logs, examples, or generated output for leaked secrets
+      - documenting configuration entry shapes
+    related:
+      - STD-002
+      - STD-011
+      - STD-013
+      - STD-016
+    schema_refs:
+      - id: ARCH-SCHEMA-STD-014-SECRETS-CONFIGURATION
+        path: docs/schemas/standards/std-014-secrets-and-configuration.schema.yaml
+        used_for:
+          - checking source safety, config separation, fake examples, frontend public config, deployed secret handling, and rotation evidence
+          - recording secret management, leaked secret, local config, or frontend public config ADR triggers
+
+  - id: STD-015
+    title: Code Quality, Linting, and Formatting
+    type: standard
+    status: active
+    primary_category: code-quality
+    categories:
+      - code-quality
+      - frontend
+      - backend
+      - testing
+    path: docs/standards/std-015-code-quality-linting-and-formatting.md
+    applies_when:
+      - adding or changing linting, formatting, type checks, static checks, or local quality commands
+      - reviewing generated-file exclusions or broad lint disables
+      - aligning local quality commands with CI checks
+    related:
+      - STD-004
+      - STD-008
+      - STD-012
+      - STD-018
+    schema_refs:
+      - id: ARCH-SCHEMA-STD-015-CODE-QUALITY-LINTING-FORMATTING
+        path: docs/schemas/standards/std-015-code-quality-linting-and-formatting.schema.yaml
+        used_for:
+          - checking lint, format, typecheck, generated-file, disable, failure, and exception evidence
+          - recording bypassed check, tooling, broad disable, or generated-file ADR triggers
+
+  - id: STD-016
+    title: Container Build and Deployment
+    type: standard
+    status: active
+    primary_category: deployment
+    categories:
+      - deployment
+      - operations
+      - backend
+      - security-privacy
+    path: docs/standards/std-016-container-build-and-deployment.md
+    applies_when:
+      - adding or changing container images, Dockerfiles, ignore rules, image scanning, or runtime config
+      - preparing backend services for container deployment
+      - reviewing AWS container deployment readiness or runtime secret injection
+      - documenting runtime service contracts
+    related:
+      - STD-002
+      - STD-011
+      - STD-014
+    schema_refs:
+      - id: ARCH-SCHEMA-STD-016-CONTAINER-BUILD-DEPLOYMENT
+        path: docs/schemas/standards/std-016-container-build-and-deployment.schema.yaml
+        used_for:
+          - checking build context, ignore rules, runtime config, secret handling, image scan, runtime contract, and deployment readiness evidence
+          - recording container, image scanning, runtime posture, or shared and production deployment ADR triggers
+
+  - id: STD-017
+    title: Government of Canada Standards Review
+    type: standard
+    status: active
+    primary_category: governance
+    categories:
+      - governance
+      - design-system
+      - accessibility
+      - security-privacy
+      - frontend
+      - api
+      - data
+      - operations
+    path: docs/standards/std-017-gc-standards-review.md
+    applies_when:
+      - scaffolding a Government of Canada service or template repository
+      - planning, designing, implementing, or reviewing Government of Canada service work
+      - checking standards impact for UI, content, APIs, data, identity, security, privacy, information management, deployment, or verification
+      - deciding whether the Government of Canada web application baseline applies
+      - recording standards decisions that affect architecture, delivery risk, or user-facing behavior
+      - completing a standards impact block
+    related:
+      - STD-005
+      - STD-006
+      - STD-007
+      - STD-013
+      - STD-019
+    schema_refs:
+      - id: ARCH-SCHEMA-STD-017-GC-STANDARDS-REVIEW
+        path: docs/schemas/standards/std-017-gc-standards-review.schema.yaml
+        used_for:
+          - checking standards impact review coverage
+          - recording service impact exceptions or ADR triggers
+
+  - id: STD-018
+    title: Frontend CSS and Design-System Boundary
+    type: standard
+    status: active
+    primary_category: design-system
+    categories:
+      - design-system
+      - frontend
+      - accessibility
+      - code-quality
+      - governance
+    path: docs/standards/std-018-frontend-css-and-design-system-boundary.md
+    applies_when:
+      - adding or changing frontend CSS, layout classes, page shell styling, custom UI wrappers, badges, cards, modals, or design-system overrides
+      - deciding whether custom CSS or custom UI is acceptable in a GC Design System frontend
+      - reviewing hard-coded layout values, broad global CSS, duplicated design-system imports, or custom visual components
+      - recording custom UI or CSS exceptions
+    related:
+      - STD-004
+      - STD-005
+      - STD-006
+      - STD-007
+      - STD-015
+    schema_refs:
+      - id: ARCH-SCHEMA-STD-018-FRONTEND-CSS-DESIGN-SYSTEM-BOUNDARY
+        path: docs/schemas/standards/std-018-frontend-css-and-design-system-boundary.schema.yaml
+        used_for:
+          - checking custom CSS, design-system override, global style, and custom component evidence
+          - recording CSS or design-system boundary exceptions and ADR triggers
+
+  - id: STD-019
+    title: Government of Canada Web Application Baseline Governance
+    type: standard
+    status: active
+    primary_category: governance
+    categories:
+      - governance
+      - design-system
+      - accessibility
+      - security-privacy
+      - frontend
+      - backend
+      - api
+      - data
+      - operations
+      - deployment
+      - testing
+    path: docs/standards/std-019-government-of-canada-web-application-baseline.md
+    applies_when:
+      - creating a Government of Canada web application
+      - changing a Government of Canada web application
+      - reviewing or releasing a Government of Canada web application
+      - assessing the active Government of Canada web application baseline
+      - recording baseline gate evidence, deferred controls, or exceptions
+      - deciding whether a reusable baseline profile applies to a service change
+    related:
+      - STD-005
+      - STD-006
+      - STD-007
+      - STD-009
+      - STD-010
+      - STD-011
+      - STD-013
+      - STD-014
+      - STD-016
+      - STD-017
+      - STD-018
+      - STD-020
+    schema_refs:
+      - id: ARCH-SCHEMA-STD-019-GC-WEB-APPLICATION-BASELINE
+        path: docs/schemas/standards/std-019-gc-web-application-baseline.schema.yaml
+        used_for:
+          - checking baseline assessment and release readiness evidence
+          - recording baseline exceptions, deferred controls, open risks, or ADR triggers
+
+  - id: STD-020
+    title: Database Persistence
+    type: standard
+    status: active
+    primary_category: data
+    categories:
+      - data
+      - backend
+      - api
+      - security-privacy
+      - operations
+      - testing
+    path: docs/standards/std-020-database-persistence.md
+    applies_when:
+      - adding or changing relational persistence, database models, or database repositories
+      - creating or reviewing Alembic migrations, indexes, constraints, or seed data
+      - deciding ownership, retention, soft delete, hard delete, or public identifier behavior for stored records
+      - reviewing database schema, API data contracts, or database-backed service behavior
+    related:
+      - STD-003
+      - STD-008
+      - STD-009
+      - STD-010
+      - STD-012
+      - STD-013
+      - STD-014
+    schema_refs:
+      - id: ARCH-SCHEMA-STD-020-DATABASE-PERSISTENCE
+        path: docs/schemas/standards/std-020-database-persistence.schema.yaml
+        used_for:
+          - checking persistence ownership, migrations, repository boundaries, public identifiers, retention, delete behavior, and test evidence
+          - recording persistence, migration, identifier, or retention exceptions and ADR triggers

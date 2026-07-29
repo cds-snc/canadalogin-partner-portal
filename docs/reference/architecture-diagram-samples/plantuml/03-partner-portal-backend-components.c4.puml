@@ -1,0 +1,70 @@
+@startuml
+' CanadaLogin Partner Portal - C4 level 3 backend component view.
+'
+' Work context: local illustrative sample only.
+' Source codebase: ../gc-signin-partner-portal, read as source material only.
+' View question: how is the FastAPI backend decomposed into major components?
+' Excluded: frontend component internals, SQL table-by-table detail, generated
+' route tree files, and deployment topology.
+
+!include <C4/C4_Component>
+
+LAYOUT_LEFT_RIGHT()
+skinparam wrapWidth 170
+skinparam maxMessageSize 130
+
+title CanadaLogin Partner Portal - C4 Level 3 Backend Components
+
+Container(webUi, "Portal web UI", "React SPA", "Calls the backend API.")
+ContainerDb_Ext(postgres, "PostgreSQL database", "PostgreSQL", "Persistent partner portal records.")
+ContainerDb_Ext(redis, "Redis", "Redis", "Sessions, cache, rate limits, and queue state.")
+System_Ext(oidcProvider, "OIDC identity provider", "External identity service.")
+System_Ext(ibmVerify, "IBM Security Verify", "External identity administration and reporting API.")
+System_Ext(gcNotify, "GC Notify", "External email notification API.")
+
+Container_Boundary(api, "Backend API container") {
+  Component(appSetup, "Application setup and middleware", "core/setup.py", "Creates the FastAPI app, registers session, CORS, client-cache, logging, exception, Redis, and IBM Verify startup/shutdown behavior.")
+  Component(apiRouters, "API routers", "api/v1/*.py", "Route modules for OIDC, logout, users, roles, departments, tiers, policies, rate limits, tasks, IBM Verify admin, health, and workspaces.")
+  Component(apiDependencies, "API dependencies", "api/dependencies.py", "Provides current-user lookup, service factories, rate-limit dependency, and superuser checks.")
+  Component(authAndOidc, "Auth and OIDC services", "services/auth_service.py, services/oidc_service.py, core/oidc.py, core/security.py", "Handles OIDC login/callback, session sync, local token fallback, token blacklist, and logout.")
+  Component(casbinAccess, "Casbin authorization guard", "core/access_control.py", "Maps users to subjects and enforces resource/action permissions from database-backed policies.")
+  Component(workspaceService, "Workspace and RP application service", "services/workspace_service.py", "Owns workspace, application info, contact, RP application, invitation, credential, and usage workflows.")
+  Component(domainServices, "Supporting domain services", "services/*_service.py", "User, role, department, tier, policy, rate-limit, task, and health service operations.")
+  Component(ibmAdminService, "IBM Verify admin service", "services/ibm_sv_admin_service.py", "Builds IBM Verify application payloads, normalizes responses, and handles client-secret and usage-report operations.")
+  Component(gcNotifyService, "GC Notify service", "services/gc_notify_service.py", "Sends RP application developer invitation email requests.")
+  Component(repositoryAdapters, "Repository adapters and external clients", "repositories/*.py", "FastCRUD adapters for database models and IBM Verify HTTP admin client.")
+  Component(modelsAndSchemas, "Models and schemas", "models/*.py, schemas/*.py", "SQLAlchemy database models and Pydantic API request/response schemas.")
+  Component(exceptionHandlers, "Exception and OpenAPI error envelope", "core/exceptions/*.py", "Centralized error envelope and reusable route error documentation.")
+  Component(workerSettings, "ARQ worker settings", "core/worker/*.py", "Background job worker configuration and sample task function.")
+}
+
+Rel(webUi, apiRouters, "Calls", "JSON / HTTPS")
+Rel(apiRouters, apiDependencies, "Use", "FastAPI Depends")
+Rel(apiRouters, workspaceService, "Delegate workspace and RP application commands")
+Rel(apiRouters, domainServices, "Delegate admin and support commands")
+Rel(apiRouters, authAndOidc, "Delegate login, callback, and logout")
+
+Rel(appSetup, redis, "Creates Redis pools and session store")
+Rel(appSetup, repositoryAdapters, "Creates IBM Verify admin client on startup")
+Rel(apiDependencies, authAndOidc, "Resolve current user from session or bearer token")
+Rel(apiDependencies, redis, "Checks rate-limit counters")
+Rel(authAndOidc, oidcProvider, "Authorize redirect and callback", "OIDC")
+Rel(authAndOidc, postgres, "Syncs users and token blacklist")
+Rel(authAndOidc, redis, "Stores server session")
+Rel(casbinAccess, postgres, "Reads roles and access policies")
+
+Rel(apiRouters, casbinAccess, "Protect selected routes", "Permission decorators")
+Rel(workspaceService, repositoryAdapters, "Reads and writes workspaces, application info, RP applications, invitations, users, and members")
+Rel(domainServices, repositoryAdapters, "Read/write supporting domain records")
+Rel(repositoryAdapters, modelsAndSchemas, "Map records and schema DTOs")
+Rel(repositoryAdapters, postgres, "Persist and query records", "SQLAlchemy / FastCRUD")
+Rel(workspaceService, ibmAdminService, "Manage IBM Verify app settings, credentials, and reports")
+Rel(ibmAdminService, repositoryAdapters, "Uses IBM Verify admin HTTP client")
+Rel(repositoryAdapters, ibmVerify, "Calls admin API", "HTTPS / OAuth2")
+Rel(workspaceService, gcNotifyService, "Send invitation emails")
+Rel(gcNotifyService, gcNotify, "POST notification request", "HTTPS / REST")
+Rel(apiRouters, exceptionHandlers, "Errors flow through shared response envelope")
+Rel(workerSettings, redis, "Dequeues jobs", "ARQ")
+
+SHOW_LEGEND()
+@enduml

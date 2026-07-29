@@ -1,0 +1,45 @@
+@startuml
+' CanadaLogin Partner Portal - C4 level 1 system context.
+'
+' Work context: local illustrative sample only.
+' Source codebase: ../gc-signin-partner-portal, read as source material only.
+' View question: who uses the partner portal, and which external systems does it
+' depend on?
+' Excluded: AWS topology, database tables, route-by-route behavior, OAuth
+' callback details, and production identifiers.
+
+!include <C4/C4_Context>
+
+LAYOUT_LEFT_RIGHT()
+skinparam wrapWidth 180
+skinparam maxMessageSize 140
+
+title CanadaLogin Partner Portal - C4 Level 1 System Context
+
+Person(platformSuperuser, "Platform superuser", "Manages platform-wide departments, users, roles, tiers, rate limits, and policies.")
+Person(workspaceAdmin, "Workspace administrator", "Manages partner workspaces, application information, RP applications, credentials, and developer invitations.")
+Person(workspaceMember, "Workspace member", "Reviews and maintains workspace and application records.")
+Person(invitedDeveloper, "Invited external developer", "Accepts a tokenized invitation and edits a scoped RP application.")
+
+System_Boundary(portalBoundary, "CanadaLogin Partner Portal") {
+  System(portal, "Partner Portal", "Bilingual web application and API for partner onboarding, workspace administration, RP application management, and invited-developer access.")
+}
+
+System_Ext(oidcProvider, "OIDC identity provider", "Authenticates portal users and returns identity claims.")
+System_Ext(ibmVerify, "IBM Security Verify", "Hosts OIDC application registrations, client secrets, and application usage or audit reports.")
+System_Ext(gcNotify, "GC Notify", "Sends RP application developer invitation emails.")
+System_Ext(partnerApplications, "Partner RP applications", "External relying-party applications registered through the portal.")
+
+Rel(platformSuperuser, portal, "Administers platform data", "Browser / HTTPS")
+Rel(workspaceAdmin, portal, "Manages workspaces, RP applications, credentials, usage, and invitations", "Browser / HTTPS")
+Rel(workspaceMember, portal, "Reviews workspace and application records", "Browser / HTTPS")
+Rel(invitedDeveloper, portal, "Accepts invitation and updates scoped RP application", "Browser / HTTPS")
+
+Rel(portal, oidcProvider, "Authenticates users", "OIDC")
+Rel(portal, ibmVerify, "Creates, updates, and reads OIDC application records", "HTTPS / Admin API")
+Rel(portal, gcNotify, "Requests invitation email delivery", "HTTPS / REST")
+Rel(gcNotify, invitedDeveloper, "Delivers invitation email", "Email")
+Rel(partnerApplications, ibmVerify, "Use registered OIDC clients for sign-in", "OIDC")
+
+SHOW_LEGEND()
+@enduml

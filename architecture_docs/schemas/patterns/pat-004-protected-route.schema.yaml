@@ -1,0 +1,184 @@
+schema_id: ARCH-SCHEMA-PAT-004-PROTECTED-ROUTE
+schema_version: "0.2"
+title: Protected Route Schema Contract
+status: active
+schema_type: pattern
+
+owner_doc_id: PAT-004
+owner_doc_type: pattern
+owner_doc_path: docs/patterns/frontend/pat-004-protected-route.md
+
+summary: >
+  Helps agents and reviewers check protected frontend route boundaries,
+  server-backed session freshness, fail-closed behavior, public sign-in
+  reachability, backend enforcement, cookie-session local verification when
+  PAT-009 applies, user states, and authorization tests.
+
+categories:
+  - frontend
+  - security
+  - testing
+search_keywords:
+  - protected route
+  - route guard
+  - session revalidation
+  - authorization freshness
+  - fail closed
+  - cached auth state
+  - public sign in
+  - unauthorized state
+  - cookie session
+  - local hostname
+  - localhost
+  - 127.0.0.1
+applies_when:
+  - a frontend route requires authentication, a role, a permission, or fresh session state
+  - protected route entry uses cached client session data or a server session query
+  - protected route entry uses a cookie-backed backend session during local development
+  - sign-in, retry, forbidden, or unauthorized route behavior is reviewed
+do_not_use_when:
+  - the route is public content
+  - the change is backend-only and does not affect frontend route behavior
+  - frontend protection would be the only authorization boundary
+
+work_contexts:
+  - local_developer
+  - shared_non_production
+  - production
+stack_profiles:
+  - react
+  - typescript
+  - rest
+artifact_types:
+  - frontend_route
+  - route_guard
+  - session_api_client
+  - query_hook
+  - frontend_test
+  - backend_test
+  - verification_note
+  - adr
+
+related_standards:
+  - STD-004
+  - STD-008
+  - STD-012
+  - STD-013
+related_patterns:
+  - PAT-009
+  - PAT-010
+  - PAT-018
+  - PAT-020
+  - PAT-024
+related_controls:
+  - GC-WEB-007
+  - GC-WEB-008
+related_baselines:
+  - BAS-001
+
+required_inputs:
+  - id: protected_route_scope
+    description: Routes, required session or permission state, public auth routes, and user-visible signed-out or unauthorized behavior.
+    required: true
+    source: route definitions, implementation plan, issue, PR, or auth design
+  - id: session_freshness_decision
+    description: Whether authorization freshness matters at route entry and how the server-backed session is revalidated when it does.
+    required: true
+    source: auth design, session client, query policy, route guard, or verification note
+
+checks:
+  - id: server-session-revalidated-when-freshness-matters
+    description: Protected route entry revalidates the server-backed session when current authorization or session freshness matters.
+    required: true
+    applies_when:
+      - access can change while cached client session state still exists
+    check_type: content_review
+    evidence:
+      - Route guard or loader, session query freshness policy, API request, tests, or documented reason freshness does not apply.
+    failure_means: A protected route may render using stale authentication or authorization state.
+    adr_required_when: A project intentionally accepts stale authorization at protected route entry.
+    waiver_allowed: false
+
+  - id: cached-client-state-not-authorization-authority
+    description: Cached query, store, or browser state is not treated as the authorization source of truth.
+    required: true
+    check_type: file_review
+    evidence:
+      - Route guard, session helper, state store, backend dependency, and tests show that the server owns the decision.
+    failure_means: Client-controlled or stale state may grant access to protected content.
+    adr_required_when: Never; frontend-only authorization is not an acceptable variation.
+    waiver_allowed: false
+
+  - id: revalidation-fails-closed
+    description: Revalidation failure does not render protected content and produces a safe signed-out, unavailable, or retry path.
+    required: true
+    check_type: content_review
+    evidence:
+      - Route behavior and tests for rejected, expired, unavailable, and failed session checks.
+    failure_means: Protected content may be exposed or the app may misrepresent an unavailable session check as authorized.
+    adr_required_when: Never; protected route entry must fail closed.
+    waiver_allowed: false
+
+  - id: public-auth-routes-remain-reachable
+    description: Public sign-in, login-start, callback, and recovery routes that begin or restore authentication remain outside the protected boundary.
+    required: true
+    check_type: file_review
+    evidence:
+      - Route tree, guard exclusions, and navigation tests show public auth entry remains reachable.
+    failure_means: Users may enter a redirect loop or be unable to sign in.
+    adr_required_when: A project intentionally protects an authentication entry route.
+    waiver_allowed: false
+
+  - id: backend-enforcement-remains-authoritative
+    description: Protected backend resources and actions enforce authentication and authorization independently of frontend routing.
+    required: true
+    check_type: evidence_required
+    evidence:
+      - Backend authorization dependency, service or route enforcement, and negative authorization tests.
+    failure_means: Bypassing the frontend may expose protected data or actions.
+    adr_required_when: Never; frontend route guards do not replace backend authorization.
+    waiver_allowed: false
+
+  - id: local-cookie-session-verification-uses-pat-009
+    description: Protected-route verification follows PAT-009 local hostname, cookie, credentials, CORS, CSRF, and redirect guidance when route entry relies on a local cookie-backed backend session.
+    required: true
+    applies_when:
+      - protected route revalidation uses a cookie-backed backend session in local development
+    check_type: evidence_required
+    evidence:
+      - PAT-009 review evidence, documented local hostname, route-entry session request, browser or integration result, or verification note.
+    failure_means: Hostname or cookie-origin drift may be misdiagnosed as a route authorization failure.
+    adr_required_when: A project uses a different reviewed local browser-session transport.
+    waiver_allowed: false
+
+  - id: protected-route-state-tests
+    description: Tests cover authorized, signed-out, unauthorized, stale cached state, revalidation failure, and reachable public sign-in behavior when applicable.
+    required: true
+    check_type: evidence_required
+    evidence:
+      - Frontend route tests, backend authorization tests, screenshots, or verification note.
+    failure_means: Important access-control and recovery branches may regress.
+    adr_required_when: A meaningful protected route ships without authorization state verification.
+    waiver_allowed: true
+
+outputs:
+  - id: protected_route_review_summary
+    description: Review result showing session freshness, fail-closed behavior, public auth reachability, backend enforcement, applicable local cookie-session verification, user states, and test evidence.
+
+evidence_expectations:
+  - Route-entry tests prove stale cached authentication does not grant access.
+  - Revalidation failures do not reveal protected content.
+  - Public sign-in routes remain reachable and protected backend behavior has independent tests.
+  - Local cookie-session route checks use PAT-009 evidence under the documented hostname when that pattern applies.
+
+adr_triggers:
+  - Project accepts stale session or authorization state at route entry.
+  - Project uses a route structure that risks protecting public authentication entry.
+  - Project varies from the selected protected-route pattern.
+
+waiver_guidance:
+  - Delivery waivers for deferred screenshots or non-critical UI state evidence belong in the project-local Delorean evidence process.
+  - Waivers must not permit frontend-only authorization or fail-open route entry.
+
+notes:
+  - This schema contract supports PAT-004. PAT-004 remains the source of truth.

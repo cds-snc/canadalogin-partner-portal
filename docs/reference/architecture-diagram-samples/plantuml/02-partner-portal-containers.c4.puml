@@ -1,0 +1,43 @@
+@startuml
+' CanadaLogin Partner Portal - C4 level 2 container view.
+'
+' Work context: local illustrative sample only.
+' Source codebase: ../gc-signin-partner-portal, read as source material only.
+' View question: what runtime containers make up the partner portal software
+' system?
+' Excluded: cloud account/VPC/subnet placement, route-by-route API detail,
+' concrete environment variables, and production identifiers.
+
+!include <C4/C4_Container>
+
+LAYOUT_LEFT_RIGHT()
+skinparam wrapWidth 170
+skinparam maxMessageSize 130
+
+title CanadaLogin Partner Portal - C4 Level 2 Containers
+
+Person(portalUser, "Portal user", "Platform superuser, workspace administrator, workspace member, or invited external developer.")
+
+System_Ext(oidcProvider, "OIDC identity provider", "Authenticates portal users.")
+System_Ext(ibmVerify, "IBM Security Verify", "OIDC application registrations, client secrets, usage, and audit reports.")
+System_Ext(gcNotify, "GC Notify", "Invitation email delivery.")
+
+System_Boundary(portal, "CanadaLogin Partner Portal") {
+  Container(webUi, "Portal web UI", "React, TypeScript, Vite, TanStack Router/Query", "Browser-executed single-page application for dashboard, administration, workspace, RP application, profile, and invitation flows.")
+  Container(api, "Backend API", "FastAPI, SQLAlchemy 2.0, Authlib, Casbin", "JSON API, OIDC session handling, authorization, partner domain logic, IBM Verify administration, GC Notify invitation delivery, and standardized error responses.")
+  Container(worker, "Background worker", "ARQ worker", "Runs queued background tasks from Redis. The current repo includes a sample task worker foundation.")
+  ContainerDb(postgres, "PostgreSQL database", "PostgreSQL", "Users, roles, policies, departments, tiers, workspaces, application information, contacts, RP applications, invitations, token blacklist, and rate-limit configuration.")
+  ContainerDb(redis, "Redis", "Redis", "Server sessions, cache entries, rate-limit counters, and ARQ queue state.")
+}
+
+Rel(portalUser, webUi, "Uses", "Browser / HTTPS")
+Rel(webUi, api, "Calls API and receives standardized errors", "JSON / HTTPS with cookies")
+Rel(api, oidcProvider, "Starts login and handles callback", "OIDC / Authlib")
+Rel(api, ibmVerify, "Administers OIDC applications, credentials, usage, and audit trail", "HTTPS / OAuth2 client")
+Rel(api, gcNotify, "Sends developer invitations", "HTTPS / REST")
+Rel(api, postgres, "Reads and writes domain records", "SQLAlchemy async / asyncpg")
+Rel(api, redis, "Stores sessions, cache, rate limits, and queued jobs", "Redis protocol")
+Rel(worker, redis, "Dequeues jobs", "ARQ / Redis")
+
+SHOW_LEGEND()
+@enduml

@@ -1,0 +1,134 @@
+#!/usr/bin/env bash
+
+set -euo pipefail
+
+repo_root="$(git rev-parse --show-toplevel)"
+scripts_dir="${repo_root}/scripts/delorean"
+status=0
+
+changed_files="$(git -C "${repo_root}" diff --cached --name-only --diff-filter=ACMRT || true)"
+changed_source="staged"
+
+if [ -z "${changed_files}" ]; then
+  changed_files="$(git -C "${repo_root}" diff --name-only --diff-filter=ACMRT || true)"
+  changed_source="changed"
+fi
+
+if [ -z "${changed_files}" ]; then
+  echo "No staged or changed files detected. Skipping pre-commit checks."
+  exit 0
+fi
+
+needs_format=0
+needs_markdown=0
+needs_shell=0
+needs_frontend=0
+needs_backend=0
+needs_secret=0
+needs_codex_sync=0
+
+while IFS= read -r file; do
+  [ -z "${file}" ] && continue
+
+  case "${file}" in
+    frontend/*)
+      needs_frontend=1
+      ;;
+    backend/*.py | backend/requirements*.txt | .flake8 | pytest.ini | Makefile)
+      needs_backend=1
+      ;;
+  esac
+
+  case "${file}" in
+    *.md)
+      needs_format=1
+      needs_markdown=1
+      ;;
+    *.json | *.yml | *.yaml | *.sh | .github/hooks/* | agent-configs/shared/hooks/* | scripts/delorean/*)
+      needs_format=1
+      ;;
+  esac
+
+  case "${file}" in
+    *.sh | .github/hooks/* | agent-configs/shared/hooks/* | scripts/delorean/*)
+      needs_shell=1
+      ;;
+  esac
+
+  case "${file}" in
+    agent-configs/vscode/agents/* | agent-configs/vscode/prompts/* | agent-configs/codex/agents/* | agent-configs/codex/prompts/* | scripts/delorean/sync-codex-adapters.sh)
+      needs_codex_sync=1
+      ;;
+  esac
+
+  case "${file}" in
+    .env | */.env | .env.* | */.env.*)
+      case "${file}" in
+        .env.example | */.env.example | .env.template | */.env.template)
+          ;;
+        *)
+          needs_secret=1
+          ;;
+      esac
+      ;;
+  esac
+done <<EOF
+${changed_files}
+EOF
+
+run_check() {
+  local description="$1"
+  shift
+
+  echo "Running ${description}..."
+  if ! "$@"; then
+    status=1
+  fi
+}
+
+echo "Pre-commit checks based on ${changed_source} files."
+
+if [ "${needs_format}" -eq 1 ]; then
+  run_check "format checks" "${scripts_dir}/run-format-checks.sh"
+fi
+
+if [ "${needs_markdown}" -eq 1 ]; then
+  run_check "Markdown checks" "${scripts_dir}/run-markdown-checks.sh"
+fi
+
+if [ "${needs_shell}" -eq 1 ]; then
+  run_check "ShellCheck adapter" "${scripts_dir}/run-shellcheck.sh"
+fi
+
+if [ "${needs_frontend}" -eq 1 ]; then
+  run_check "frontend lint and format adapter" env DELOREAN_LINT_SCOPE=frontend DELOREAN_LINT_MODE=quick "${scripts_dir}/run-lint.sh"
+fi
+
+if [ "${needs_backend}" -eq 1 ]; then
+  run_check "backend lint and format adapter" env DELOREAN_LINT_SCOPE=backend DELOREAN_LINT_MODE=quick "${scripts_dir}/run-lint.sh"
+fi
+
+if [ "${needs_secret}" -eq 1 ]; then
+  run_check "secret checks" "${scripts_dir}/run-secret-checks.sh"
+fi
+
+if [ "${needs_codex_sync}" -eq 1 ] && [ -x "${scripts_dir}/sync-codex-adapters.sh" ]; then
+  run_check "Codex adapter sync check" "${scripts_dir}/sync-codex-adapters.sh" --check
+fi
+
+if [ "${status}" -ne 0 ]; then
+  echo "Some pre-commit checks failed." >&2
+  echo "For auto-fixable formatting issues, run 'make fix', review the changes, stage them, and retry." >&2
+fi
+
+if [ "${needs_format}" -eq 0 ] &&
+  [ "${needs_markdown}" -eq 0 ] &&
+  [ "${needs_shell}" -eq 0 ] &&
+  [ "${needs_frontend}" -eq 0 ] &&
+  [ "${needs_backend}" -eq 0 ] &&
+  [ "${needs_secret}" -eq 0 ] &&
+  [ "${needs_codex_sync}" -eq 0 ]; then
+  echo "No lightweight pre-commit checks matched these files."
+fi
+
+exit "${status}"

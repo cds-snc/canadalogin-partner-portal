@@ -1,0 +1,219 @@
+schema_id: ARCH-SCHEMA-STD-002-WORK-CONTEXTS
+schema_version: "0.2"
+title: Work Contexts Schema Contract
+status: active
+schema_type: standard
+
+owner_doc_id: STD-002
+owner_doc_type: standard
+owner_doc_path: docs/standards/std-002-work-contexts.md
+
+summary: >
+  Helps agents and reviewers separate local, shared non-production, or
+  production execution and access boundaries from the solution target and each
+  dependency's real, substituted, or unavailable mode.
+
+categories:
+  - foundation
+  - operations
+  - security-privacy
+search_keywords:
+  - work context
+  - localhost
+  - shared environment
+  - production
+  - secrets
+  - real data
+  - external systems
+  - dependency availability
+  - dependency substitution
+  - stub
+  - simulator
+  - adapter
+  - approvals
+applies_when:
+  - work mentions localhost, environments, deployment, secrets, data, external services, or production
+  - a change may touch shared infrastructure, credentials, real users, or real data
+  - agents need to decide whether local developer defaults apply
+  - a dependency may be unavailable or outside authorized access in the declared work context
+do_not_use_when:
+  - the work is purely editorial and cannot affect environments, data, secrets, external systems, or approvals
+
+work_contexts:
+  - local_developer
+  - shared_non_production
+  - production
+stack_profiles: []
+artifact_types:
+  - work_context_declaration
+  - implementation_plan
+  - dependency_substitution_record
+  - verification_note
+  - adr
+  - baseline_assessment
+
+related_standards:
+  - STD-002
+  - STD-013
+  - STD-014
+  - STD-016
+related_patterns:
+  - PAT-025
+related_controls: []
+related_baselines: []
+
+required_inputs:
+  - id: requested_scope
+    description: User request, issue, plan, or change description that may name environment-sensitive work.
+    required: true
+    source: user request or project files
+  - id: target_environment
+    description: Localhost, named shared environment, production target, or unknown environment.
+    required: false
+    source: user request or work context declaration
+  - id: solution_target
+    description: Project-selected runtime and architecture being implemented independently from where current actions run.
+    required: false
+    source: project architecture, selected standards and patterns, user request, or implementation plan
+  - id: dependency_modes
+    description: Target dependencies with availability, authorized access, selected real, local, substituted, or unavailable mode, configuration boundary, and remaining verification.
+    required: false
+    source: work context declaration, implementation plan, configuration, or verification note
+
+checks:
+  - id: context-named-or-local-default
+    description: The work context is named, or the local developer default is explicitly used.
+    required: true
+    check_type: content_review
+    evidence:
+      - Work context declaration, plan note, or verification note names the context or local default.
+    failure_means: The work may accidentally cross into shared or production scope.
+    adr_required_when: A project adopts a different default context rule than STD-002.
+    waiver_allowed: false
+
+  - id: work-context-and-solution-target-separated
+    description: The work context limits execution and access but does not redefine the project-selected solution architecture or application contracts.
+    required: true
+    check_type: content_review
+    evidence:
+      - Work context declaration, project architecture, selected standards and patterns, endpoint contract, or implementation plan.
+    failure_means: Local execution or dependency availability may incorrectly produce a local-only architecture.
+    adr_required_when: A project intentionally varies the solution architecture or application contract by work context.
+    waiver_allowed: false
+
+  - id: local-developer-bounds
+    description: Local developer work uses safe data and secrets and does not imply deployment, approval, shared access, or a local-only solution architecture.
+    required: true
+    applies_when:
+      - context_type is local_developer
+    check_type: content_review
+    evidence:
+      - Plan, test setup, or verification note confirms local execution and access boundaries while preserving the project-selected solution target.
+    failure_means: Local work may cross an unsafe access boundary or be mistaken for a requirement to build a different architecture.
+    adr_required_when: A project changes the default local data, secret, exposure, or access-safety posture.
+    waiver_allowed: false
+
+  - id: shared-non-production-explicit
+    description: Shared non-production work names the environment, access path, data type, secret source, owner, rollback or cleanup path, and verification expectations.
+    required: true
+    applies_when:
+      - context_type is shared_non_production
+    check_type: evidence_required
+    evidence:
+      - Work context declaration or plan records shared environment details before access or deployment.
+    failure_means: Shared environment work lacks enough context for safe execution or review.
+    adr_required_when: The project intentionally performs shared-environment work without the expected context details.
+    waiver_allowed: true
+
+  - id: production-explicit-approval-boundary
+    description: Production work names human approval, change record, target, secret source, blast radius, rollback plan, monitoring, verification, and release owner.
+    required: true
+    applies_when:
+      - context_type is production
+    check_type: evidence_required
+    evidence:
+      - Production work context declaration, change record, approval path, and release owner are recorded.
+    failure_means: Production work lacks the minimum review and approval boundary.
+    adr_required_when: A project intentionally changes the production approval model.
+    waiver_allowed: true
+
+  - id: secrets-source-known
+    description: Work that needs secrets names whether secrets are placeholders, local-only values, CI secrets, platform secrets, managed secrets, or unknown.
+    required: true
+    check_type: content_review
+    evidence:
+      - Work context declaration records secrets_source and stop conditions for real credentials.
+    failure_means: Agents or reviewers may request, expose, or misuse real credentials.
+    adr_required_when: A project intentionally stores or handles secrets outside the approved model.
+    waiver_allowed: false
+
+  - id: real-data-handled-explicitly
+    description: Work that touches real, sensitive, shared, or production data identifies the data type and review boundary.
+    required: true
+    check_type: human_review
+    evidence:
+      - Work context declaration or review note identifies data type and privacy/security expectations.
+    failure_means: Real or sensitive data may be treated as local test data.
+    adr_required_when: A project intentionally uses real or sensitive data in a context where STD-002 would stop.
+    waiver_allowed: true
+
+  - id: external-systems-named
+    description: Target external systems are named, and each required dependency records availability, authorized access, selected mode, configuration boundary, and remaining real-integration verification.
+    required: true
+    check_type: content_review
+    evidence:
+      - Work context declaration lists external_systems and dependency_modes, or records that no external dependency applies.
+    failure_means: Integration scope, implementation mode, or access authority may be unclear or unsafe.
+    adr_required_when: A project intentionally relies on undeclared external integrations.
+    waiver_allowed: false
+
+  - id: dependency-substitution-preserves-contract
+    description: A substitute is explicitly configured behind the same application-owned boundary, preserves canonical contracts and important business and security semantics, and cannot activate through silent production fallback.
+    required: true
+    applies_when:
+      - a required dependency uses a stub, fake, mock, simulator, local service, or other substitute
+    check_type: human_review
+    evidence:
+      - Dependency substitution record, adapter or provider review, contract tests, mode-selection tests, and remaining real-integration gaps.
+    failure_means: Substituted behavior may create a local-only architecture, bypass required invariants, or conceal a production dependency failure.
+    adr_required_when: A project intentionally varies a material application contract or permits an alternate production implementation or degraded mode.
+    waiver_allowed: false
+
+  - id: approvals-and-human-decisions-visible
+    description: Approval boundaries, waiver requests, release decisions, or archive decisions are visible and not created on behalf of a human by default.
+    required: true
+    check_type: human_review
+    evidence:
+      - Stop conditions, approval owner, or decision record is named before proceeding.
+    failure_means: A workflow may cross a human decision boundary without explicit approval.
+    adr_required_when: A project intentionally delegates an approval boundary to automation.
+    waiver_allowed: true
+
+outputs:
+  - id: work_context_result
+    description: Named work context or explicit local developer default with stop conditions.
+  - id: dependency_mode_result
+    description: Target dependencies with availability, authorized access, explicit modes, preserved contracts, and remaining real-integration verification.
+  - id: escalation_result
+    description: Review note identifying any shared-environment, production, secret, real-data, external-system, or approval boundary.
+
+evidence_expectations:
+  - Work context declaration is recorded when environment, data, secret, external system, deployment, or approval scope matters.
+  - Work context and solution target are recorded as separate decisions when dependency availability affects implementation.
+  - Verification names substituted dependencies and does not present substitute coverage as real-integration evidence.
+  - Verification notes distinguish local evidence from approval records.
+
+adr_triggers:
+  - A project changes the default local developer posture.
+  - Work intentionally proceeds without required shared-environment or production context.
+  - A project intentionally varies a material contract or security boundary between real and substituted dependencies.
+  - Production intentionally permits an alternate dependency implementation, substitute, or degraded mode.
+  - Automation is intended to make a human approval, waiver, release, or archive decision.
+
+waiver_guidance:
+  - A project-local waiver may be needed when delivery gates require context fields that are incomplete for a time-limited reason.
+  - Waivers do not permit exposing secrets, using real data unsafely, bypassing human approval, or silently activating a production substitute.
+
+notes:
+  - Local development commonly substitutes more dependencies, but work context alone does not select dependency mode or redefine the solution target.
+  - This schema contract supports STD-002. STD-002 remains the source of truth.

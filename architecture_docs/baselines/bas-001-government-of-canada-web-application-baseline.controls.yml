@@ -1,0 +1,76 @@
+catalog_version: 1
+id: BAS-001
+title: Government of Canada Web Application Baseline
+type: baseline_profile
+status: active
+version: "2026.05"
+baseline_path: docs/baselines/bas-001-government-of-canada-web-application-baseline.md
+governing_standard: STD-019
+governing_standard_path: docs/standards/std-019-government-of-canada-web-application-baseline.md
+control_catalog: docs/controls/catalog.yml
+reference_architecture_catalog: docs/architecture/reference/catalog.yml
+description: >
+  Machine-readable app-type profile for BAS-001. This file references reusable
+  controls; it does not define control detail.
+
+reference_architectures: []
+
+control_statuses:
+  required_to_assess: The control must receive an assessment status under the governing standard.
+  conditional: The control is assessed only when the condition is true.
+
+controls:
+  - id: GC-WEB-001
+    requirement: required_to_assess
+    control_path: docs/controls/gc-web/gc-web-001-scope-and-applicability.md
+    applicability: All Government of Canada web applications.
+
+  - id: GC-WEB-002
+    requirement: required_to_assess
+    control_path: docs/controls/gc-web/gc-web-002-canada-ca-design-federal-identity-and-page-shell.md
+    applicability: Public-facing pages and service flows; record not applicable for API-only or non-public contexts when justified.
+
+  - id: GC-WEB-003
+    requirement: required_to_assess
+    control_path: docs/controls/gc-web/gc-web-003-accessibility.md
+    applicability: User-facing UI, content, documents, media, and service workflows.
+
+  - id: GC-WEB-004
+    requirement: required_to_assess
+    control_path: docs/controls/gc-web/gc-web-004-official-languages-and-plain-language.md
+    applicability: User-facing content and service interactions where official languages obligations apply.
+
+  - id: GC-WEB-005
+    requirement: required_to_assess
+    control_path: docs/controls/gc-web/gc-web-005-mobile-and-responsive-behaviour.md
+    applicability: User-facing UI and service workflows.
+
+  - id: GC-WEB-006
+    requirement: required_to_assess
+    control_path: docs/controls/gc-web/gc-web-006-privacy-and-personal-information.md
+    applicability: Any collection, use, disclosure, retention, logging, export, or deletion of personal information.
+
+  - id: GC-WEB-007
+    requirement: required_to_assess
+    control_path: docs/controls/gc-web/gc-web-007-security.md
+    applicability: All web applications, APIs, deployment paths, and operational contexts.
+
+  - id: GC-WEB-008
+    requirement: required_to_assess
+    control_path: docs/controls/gc-web/gc-web-008-identity-and-access.md
+    applicability: Restricted access, personal information, privileged actions, sessions, roles, or scopes.
+
+  - id: GC-WEB-009
+    requirement: required_to_assess
+    control_path: docs/controls/gc-web/gc-web-009-information-management-records-and-audit.md
+    applicability: Business records, transactional data, generated documents, uploads, exports, audit events, or data lifecycle concerns.
+
+  - id: GC-WEB-010
+    requirement: required_to_assess
+    control_path: docs/controls/gc-web/gc-web-010-apis-interoperability-and-data-exchange.md
+    applicability: APIs, integrations, imports, exports, or data exchange paths.
+
+  - id: GC-WEB-011
+    requirement: required_to_assess
+    control_path: docs/controls/gc-web/gc-web-011-logging-monitoring-analytics-and-operational-readiness.md
+    applicability: Production, shared-environment, operational, logging, analytics, support, or incident response concerns.

@@ -1,0 +1,33 @@
+# Example only. Archived workflows do not run from .github/workflows-archive/.
+# Move into .github/workflows/ only after the solution repo chooses this pattern.
+# Review action version policy before enabling: use pinned SHAs or approved major tags, but do not mix policies silently.
+
+name: Frontend lint example
+
+on:
+  pull_request:
+    paths:
+      - "frontend/**"
+      - ".github/workflows-archive/frontend-lint.example.yml"
+  push:
+    paths:
+      - "frontend/**"
+
+permissions:
+  contents: read
+
+jobs:
+  frontend-lint:
+    name: Frontend lint, typecheck, and format
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+
+      - name: Install frontend dependencies
+        run: npm ci --ignore-scripts --prefix frontend
+
+      - name: Run frontend lint adapter
+        run: DELOREAN_LINT_SCOPE=frontend scripts/delorean/run-lint.sh

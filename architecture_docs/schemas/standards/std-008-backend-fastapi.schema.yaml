@@ -1,0 +1,255 @@
+schema_id: ARCH-SCHEMA-STD-008-BACKEND-FASTAPI
+schema_version: "0.3"
+title: Backend FastAPI Schema Contract
+status: active
+schema_type: standard
+
+owner_doc_id: STD-008
+owner_doc_type: standard
+owner_doc_path: docs/standards/std-008-backend-fastapi.md
+
+summary: >
+  Helps agents and reviewers check FastAPI backend structure, routers,
+  Pydantic request and response models, thin handlers, service boundaries,
+  outbound adapter boundaries, safe and explicit dependency configuration,
+  substitute boundaries, local role simulation limits, OpenAPI output, and
+  success and failure path tests.
+
+categories:
+  - backend
+  - api
+  - data
+  - security-privacy
+  - testing
+search_keywords:
+  - fastapi
+  - pydantic
+  - response model
+  - router
+  - service layer
+  - outbound adapter
+  - external api
+  - timeout
+  - upstream error
+  - openapi
+  - configuration
+  - dependency availability
+  - dependency substitution
+  - adapter
+  - simulator
+  - local role simulation
+  - success path
+  - failure path
+applies_when:
+  - adding or changing FastAPI routes, services, models, dependencies, or config
+  - changing backend error handling, OpenAPI output, persistence, auth boundaries, or outbound integrations
+  - a selected backend dependency may be unavailable or outside authorized access
+  - reviewing backend tests or service structure
+do_not_use_when:
+  - the backend does not use FastAPI and has a different approved backend framework decision
+  - the change has no backend route, service, model, config, OpenAPI, auth, persistence, or test impact
+
+work_contexts:
+  - local_developer
+  - shared_non_production
+  - production
+stack_profiles:
+  - fastapi
+  - pydantic
+  - python
+artifact_types:
+  - backend_router
+  - api_endpoint
+  - pydantic_model
+  - service
+  - outbound_adapter
+  - config
+  - openapi_contract
+  - backend_test
+  - dependency_adapter
+  - verification_note
+  - adr
+
+related_standards:
+  - STD-002
+  - STD-003
+  - STD-008
+  - STD-009
+  - STD-010
+  - STD-012
+  - STD-013
+  - STD-020
+related_patterns:
+  - PAT-005
+  - PAT-006
+  - PAT-009
+  - PAT-010
+  - PAT-018
+  - PAT-025
+  - PAT-026
+related_controls:
+  - GC-WEB-007
+  - GC-WEB-008
+  - GC-WEB-010
+related_baselines:
+  - BAS-001
+
+required_inputs:
+  - id: backend_change_scope
+    description: Description of changed routers, endpoints, request models, response models, services, dependencies, configuration, auth, persistence, or tests.
+    required: true
+    source: implementation plan, PR, issue, or changed files
+  - id: api_behavior
+    description: Endpoint behavior, request shape, response shape, auth expectation, and failure paths when routes are changed.
+    required: false
+    source: endpoint contract, OpenAPI output, tests, or implementation notes
+  - id: backend_dependency_modes
+    description: Selected backend dependencies with availability, authorized access, explicit mode, application-owned boundary, and remaining real-integration verification.
+    required: false
+    source: implementation plan, configuration, dependency provider, composition root, or verification note
+  - id: outbound_integration_behavior
+    description: Adapter boundary, timeout, retry or no-retry, safe error translation, and test behavior when a service calls an external API or provider.
+    required: false
+    source: integration design, adapter configuration, tests, ADR, or verification note
+
+checks:
+  - id: routers-used-for-endpoint-groups
+    description: Endpoint groups use FastAPI routers rather than placing substantial route definitions directly in app setup.
+    required: true
+    check_type: file_review
+    evidence:
+      - Router modules under `backend/app/routers/` or the project-approved router path.
+    failure_means: Endpoint ownership and review boundaries may be unclear.
+    adr_required_when: A project intentionally does not use FastAPI routers for endpoint groups.
+    waiver_allowed: false
+
+  - id: pydantic-request-response-models
+    description: Pydantic request and response models are used where endpoint input or output has a meaningful contract.
+    required: true
+    check_type: file_review
+    evidence:
+      - Request and response model definitions, route annotations, or documented reason the model does not apply.
+    failure_means: API contracts may be implicit or hard to validate.
+    adr_required_when: A project intentionally avoids Pydantic models for meaningful API contracts.
+    waiver_allowed: true
+
+  - id: response-model-used-where-practical
+    description: Routes use `response_model` where practical for OpenAPI clarity and response shaping.
+    required: true
+    check_type: file_review
+    evidence:
+      - Route definitions include `response_model` or a documented reason it is not practical.
+    failure_means: OpenAPI output and response validation may be less reliable.
+    adr_required_when: A project intentionally avoids response_model for meaningful endpoints.
+    waiver_allowed: true
+
+  - id: thin-route-handlers
+    description: Route handlers stay thin and avoid embedding business rules, persistence details, or orchestration logic.
+    required: true
+    check_type: content_review
+    evidence:
+      - Route code review, service call boundary, or implementation note.
+    failure_means: Business behavior may be hard to test, reuse, or review.
+    adr_required_when: A project intentionally keeps substantial business logic in route handlers.
+    waiver_allowed: true
+
+  - id: service-layer-for-nontrivial-behavior
+    description: Business logic moves into services when routes do more than assemble a simple response.
+    required: true
+    check_type: file_review
+    evidence:
+      - Service module under `backend/app/services/` or the project-approved service path.
+    failure_means: Nontrivial behavior may lack a stable test and ownership boundary.
+    adr_required_when: A project intentionally uses a different service boundary pattern.
+    waiver_allowed: true
+
+  - id: outbound-service-adapter-when-applicable
+    description: External API or provider access uses an injected adapter with explicit timeouts, a reviewed retry or no-retry decision, and centralized safe error translation.
+    required: true
+    applies_when:
+      - a backend service calls an external API, platform, provider, or hosted service
+    check_type: evidence_required
+    evidence:
+      - Adapter and service boundary, dependency wiring, timeout configuration, retry decision, error translator, focused tests, or verification note.
+    failure_means: Business behavior may be coupled to a provider and expose unsafe or unreliable failure behavior.
+    adr_required_when: A project intentionally bypasses the outbound adapter boundary or exposes upstream-provided error detail beyond reviewed allowlisted fields.
+    waiver_allowed: false
+
+  - id: safe-configuration-settings
+    description: Backend configuration uses safe settings, does not hard-code real credentials or production-only values, and selects dependency implementations explicitly without silent fallback.
+    required: true
+    check_type: file_review
+    evidence:
+      - Settings class, environment variable names, `.env.example`, dependency provider, startup validation, mode-selection tests, or configuration review note.
+    failure_means: Runtime configuration may be unsafe, unclear, environment-specific, or able to activate an unintended substitute.
+    adr_required_when: A project intentionally uses a different configuration model.
+    waiver_allowed: false
+
+  - id: dependency-substitutes-preserve-boundaries
+    description: Unavailable backend dependencies use explicitly configured substitutes behind the same service, repository, client, session, or provider boundary without changing application contracts or bypassing business and security behavior.
+    required: true
+    applies_when:
+      - a selected database, Redis, identity, policy, rate-limit, queue, job, or external-service dependency uses a substitute
+    check_type: human_review
+    evidence:
+      - Dependency adapter, configuration, shared contract tests, authorization tests, production rejection test, and remaining real-integration gaps.
+    failure_means: Local or substituted backend behavior may diverge from the solution target or leak into production.
+    adr_required_when: A project intentionally varies a material backend contract or permits an alternate production implementation or degraded mode.
+    waiver_allowed: false
+
+  - id: local-role-simulation-limited
+    description: Local role simulation, when used, is limited to local development or tests, uses the same backend session and authorization boundaries, and is not presented as real identity-source verification.
+    required: true
+    check_type: human_review
+    evidence:
+      - Local role simulation configuration, tests, code guard, or verification note.
+    failure_means: Development-only identity behavior may leak into shared or production contexts.
+    adr_required_when: A project intentionally relies on simulated roles outside local development and tests.
+    waiver_allowed: false
+
+  - id: openapi-understandable
+    description: OpenAPI output is understandable for meaningful endpoints, including models, status codes, and errors.
+    required: true
+    check_type: evidence_required
+    evidence:
+      - OpenAPI export, local OpenAPI inspection, endpoint contract, or verification note.
+    failure_means: API consumers and reviewers may not understand backend behavior.
+    adr_required_when: A project intentionally omits OpenAPI evidence for meaningful API behavior.
+    waiver_allowed: true
+
+  - id: success-and-failure-tests
+    description: Meaningful routes have tests or verification for success and important failure paths.
+    required: true
+    check_type: evidence_required
+    evidence:
+      - Backend tests, API tests, failure path tests, or verification note.
+    failure_means: Expected and error behavior may regress or remain unreviewed.
+    adr_required_when: A project intentionally ships meaningful route behavior without success and failure coverage.
+    waiver_allowed: true
+
+outputs:
+  - id: backend_review_summary
+    description: Review result showing router structure, model use, service and dependency boundaries, configuration safety, substitute constraints, OpenAPI evidence, and test coverage.
+
+evidence_expectations:
+  - Meaningful endpoint changes include request and response model evidence.
+  - Outbound integrations show adapter injection, resilience decisions, safe error translation, and isolated tests.
+  - OpenAPI, tests, or verification notes show success and failure behavior.
+  - Real, substituted, or unavailable backend dependency modes and remaining real-integration gaps are visible when applicable.
+  - Local-only auth or role simulation constraints and shared session and authorization boundaries are visible when used.
+
+adr_triggers:
+  - Project uses a different backend framework or intentionally varies from FastAPI structure.
+  - Project avoids Pydantic models or response_model for meaningful API behavior.
+  - Project keeps business logic in route handlers for nontrivial behavior.
+  - Project bypasses the outbound adapter boundary, uses unbounded provider calls, or exposes raw upstream error bodies.
+  - Project relies on local role simulation outside local development or tests.
+  - Project permits a backend development or test substitute in production or materially varies the application contract by dependency mode.
+
+waiver_guidance:
+  - Delivery waivers for missing tests, OpenAPI evidence, or model coverage belong in the project-local Delorean evidence process.
+  - Waivers must not permit silent production fallback or bypass application-owned security and business behavior.
+  - This schema contract does not define runtime waiver records.
+
+notes:
+  - This schema contract supports STD-008. STD-008 remains the source of truth.

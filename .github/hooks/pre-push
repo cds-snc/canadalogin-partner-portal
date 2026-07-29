@@ -1,0 +1,11 @@
+#!/usr/bin/env bash
+
+set -euo pipefail
+
+repo_root="$(git rev-parse --show-toplevel)"
+
+echo "Running pre-push local verification: lint, typecheck, format checks, secret checks, fast tests, and optional container checks."
+"${repo_root}/scripts/delorean/run-local-verification.sh"
+
+echo "Running pre-push OpenAPI check when backend API files changed."
+"${repo_root}/scripts/delorean/run-openapi-checks.sh"

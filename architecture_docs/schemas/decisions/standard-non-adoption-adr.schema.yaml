@@ -1,0 +1,177 @@
+schema_id: ARCH-SCHEMA-DECISION-STANDARD-NON-ADOPTION-ADR
+schema_version: "0.1"
+title: Standard And Pattern Non-Adoption ADR Schema Contract
+status: active
+schema_type: decision
+
+owner_doc_id: TPL-006
+owner_doc_type: template
+owner_doc_path: docs/templates/architecture/tpl-006-adr-template.md
+
+summary: >
+  Helps agents and reviewers record local ADR decisions when a project varies
+  from, does not follow, defers, replaces, or marks not applicable a selected
+  standard, pattern, control, or baseline requirement.
+
+categories:
+  - governance
+  - architecture
+  - documentation
+search_keywords:
+  - ADR
+  - non-adoption
+  - does not follow
+  - varies from standard
+  - defers standard
+  - replaces pattern
+  - not applicable
+  - waiver
+  - risk acceptance
+applies_when:
+  - a selected standard, pattern, control, or baseline will not be followed as written
+  - a project varies from a standard or control
+  - a project defers a standard expectation
+  - a project replaces a recommended pattern with another approved approach
+  - a project records a not applicable decision with a reason
+do_not_use_when:
+  - the project follows the selected guidance without material variation
+  - only a short verification note is needed and no durable decision exists
+
+work_contexts:
+  - local_developer
+  - shared_non_production
+  - production
+stack_profiles: []
+artifact_types:
+  - adr
+  - architecture_decision
+  - standards_impact
+  - baseline_assessment
+  - verification_note
+
+related_standards:
+  - STD-001
+  - STD-017
+  - STD-019
+related_patterns: []
+related_controls: []
+related_baselines: []
+
+required_inputs:
+  - id: referenced_guidance
+    description: The applicable standard, pattern, control, or baseline requirement involved in the decision.
+    required: true
+    source: standards, patterns, controls, baselines, or schema catalog
+  - id: decision_type
+    description: The decision type, such as varies, does not follow, defers, replaces, or not applicable.
+    required: true
+    source: local project ADR
+  - id: decision_reason
+    description: The reason the project is not following the selected guidance as written.
+    required: true
+    source: local project ADR
+
+checks:
+  - id: referenced-guidance-named
+    description: The ADR names the standard, pattern, control, or baseline requirement.
+    required: true
+    check_type: content_review
+    evidence:
+      - ADR includes a link or stable ID for the applicable guidance.
+    failure_means: Reviewers cannot tell what guidance was varied, deferred, replaced, or marked not applicable.
+    adr_required_when: Always required for this decision type.
+    waiver_allowed: false
+
+  - id: decision-type-recorded
+    description: The ADR records the decision type as varies, does not follow, defers, replaces, or not applicable.
+    required: true
+    check_type: content_review
+    evidence:
+      - ADR decision section includes the decision type.
+    failure_means: The decision cannot be routed or reviewed consistently.
+    adr_required_when: Always required for this decision type.
+    waiver_allowed: false
+
+  - id: reason-recorded
+    description: The ADR explains why the project is not following the selected guidance as written.
+    required: true
+    check_type: human_review
+    evidence:
+      - ADR includes a clear reason.
+    failure_means: The decision may appear accidental or hidden.
+    adr_required_when: Always required for this decision type.
+    waiver_allowed: false
+
+  - id: risk-or-tradeoff-recorded
+    description: The ADR describes the risk or trade-off created by the decision.
+    required: true
+    check_type: human_review
+    evidence:
+      - ADR includes risk or trade-off details.
+    failure_means: Reviewers cannot assess the impact of the decision.
+    adr_required_when: Always required for this decision type.
+    waiver_allowed: false
+
+  - id: mitigation-recorded
+    description: The ADR records mitigation, compensating controls, alternate pattern, or reason mitigation is not available.
+    required: true
+    check_type: human_review
+    evidence:
+      - ADR includes mitigation or accepted residual risk.
+    failure_means: The project may accept risk without a visible management plan.
+    adr_required_when: Always required for this decision type.
+    waiver_allowed: false
+
+  - id: owner-recorded
+    description: The ADR identifies the owner of the decision.
+    required: true
+    check_type: content_review
+    evidence:
+      - ADR names the owner or owning role.
+    failure_means: The decision may be unowned.
+    adr_required_when: Always required for this decision type.
+    waiver_allowed: false
+
+  - id: review-trigger-recorded
+    description: The ADR states when the decision should be reviewed.
+    required: true
+    check_type: content_review
+    evidence:
+      - ADR includes a review trigger, date, release, condition, or supersession signal.
+    failure_means: Temporary or risk-bearing decisions may persist without review.
+    adr_required_when: Always required for this decision type.
+    waiver_allowed: false
+
+  - id: related-evidence-or-waiver-linked
+    description: The ADR links related evidence or a project-local waiver when the delivery gate also needs an exception.
+    required: false
+    check_type: evidence_required
+    evidence:
+      - ADR links verification note, baseline assessment, evidence record, or waiver when applicable.
+    failure_means: Delivery exceptions may be separated from the durable decision.
+    adr_required_when: A delivery gate exception or evidence-based risk acceptance is involved.
+    waiver_allowed: true
+
+outputs:
+  - id: local_project_adr
+    description: Local ADR documenting the guidance variation, non-adoption, deferral, replacement, or not-applicable decision.
+  - id: related_exception_links
+    description: Links to related verification evidence, baseline assessment, or project-local waiver when applicable.
+
+evidence_expectations:
+  - ADR names the guidance, decision type, reason, risk or trade-off, mitigation, owner, and review trigger.
+  - Related evidence or project-local waiver is linked when a gate, release, or accepted risk depends on it.
+
+adr_triggers:
+  - Project varies from an applicable standard.
+  - Project does not follow an applicable standard.
+  - Project defers an applicable standard.
+  - Project replaces a recommended pattern with another approach.
+  - Project marks selected guidance not applicable and needs to preserve the reason.
+
+waiver_guidance:
+  - A project-local waiver may be needed when a delivery gate or release process allows the work to proceed despite the decision.
+  - The ADR records the durable decision. The waiver records the time-limited or release-specific delivery exception.
+
+notes:
+  - This schema contract supports local project ADRs. It does not create runtime Delorean waiver records.

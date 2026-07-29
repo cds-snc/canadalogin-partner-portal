@@ -1,0 +1,185 @@
+@startuml
+' CanadaLogin Partner Portal - C4 level 4 code view.
+'
+' Work context: local illustrative sample only.
+' Source codebase: ../gc-signin-partner-portal, read as source material only.
+' View question: which code elements implement the workspace/RP application
+' invitation and application-management slice?
+' Excluded: every route, every CRUD adapter, frontend component internals,
+' complete database schema, and runtime sequence details.
+
+left to right direction
+skinparam linetype ortho
+skinparam shadowing false
+skinparam classAttributeIconSize 0
+skinparam wrapWidth 180
+hide circle
+
+title CanadaLogin Partner Portal - C4 Level 4 Code View: Workspace And RP Application Slice
+
+package "backend/src/app/api/v1" {
+  class "workspaces.py\nFastAPI router" as WorkspacesRouter <<module>> {
+    +create_workspace()
+    +list_current_user_workspaces()
+    +invite_rp_application_developer()
+    +accept_rp_application_developer_invitation()
+    +create_rp_application()
+    +update_rp_application()
+    +get_rp_application_usage_summary()
+  }
+}
+
+package "backend/src/app/services" {
+  class WorkspaceService <<service>> {
+    +create_workspace(...)
+    +list_current_user_workspaces(...)
+    +create_rp_application(...)
+    +update_rp_application(...)
+    +invite_rp_application_developer(...)
+    +accept_rp_application_developer_invitation(...)
+    +get_rp_application_usage_summary(...)
+    +get_rp_application_client_credentials(...)
+    -_get_workspace_admin_rp_application(...)
+    -_create_rp_application_developer_invitation(...)
+    -_get_current_user_rp_application_context(...)
+    -_hash_invitation_token(raw_token)
+    -_build_rp_application_invite_url(raw_token)
+  }
+
+  class IBMVerifyAdminService <<service>> {
+    +build_application_creation_payload(...)
+    +build_application_update_payload(...)
+    +normalize_usage_and_audit_payloads(...)
+  }
+
+  class GCNotifyService <<service>> {
+    +send_email(recipient_email, personalisation, reference)
+  }
+}
+
+package "backend/src/app/repositories" {
+  class "crud_workspaces" as WorkspaceCrud <<FastCRUD>>
+  class "crud_workspace_members" as WorkspaceMemberCrud <<FastCRUD>>
+  class "crud_application_infos" as ApplicationInfoCrud <<FastCRUD>>
+  class "crud_application_contacts" as ApplicationContactCrud <<FastCRUD>>
+  class "crud_rp_applications" as RPApplicationCrud <<FastCRUD>>
+  class "crud_rp_application_developer_invitations" as InvitationCrud <<FastCRUD>>
+  class "crud_users" as UserCrud <<FastCRUD>>
+  class IBMVerifyAdminClient <<HTTP client>> {
+    +create_application(payload)
+    +update_application(application_id, payload)
+    +get_client_secret(client_id)
+    +update_client_secret(client_id, payload)
+    +get_application_total_logins(application_id, from_date, to_date)
+    +get_application_audit_trail(application_id, from_date, to_date, size, sort_by, sort_order)
+  }
+}
+
+package "backend/src/app/models" {
+  class Workspace <<SQLAlchemy model>> {
+    +id
+    +uuid
+    +name
+    +slug
+    +department_id
+    +created_by
+  }
+
+  class WorkspaceMember <<SQLAlchemy model>> {
+    +workspace_id
+    +user_id
+    +role
+  }
+
+  class ApplicationInfo <<SQLAlchemy model>> {
+    +workspace_id
+    +name
+  }
+
+  class ApplicationContact <<SQLAlchemy model>> {
+    +application_info_id
+  }
+
+  class RPApplication <<SQLAlchemy model>> {
+    +workspace_id
+    +application_info_id
+    +name
+    +uuid
+    +ibm_sv_application_id
+    +status
+  }
+
+  class RPApplicationDeveloperInvitation <<SQLAlchemy model>> {
+    +workspace_id
+    +rp_application_id
+    +invited_email
+    +token_hash
+    +invite_expires_at
+    +invited_by
+    +role
+    +accepted_at
+    +revoked_at
+    +gc_notify_notification_id
+  }
+
+  class User <<SQLAlchemy model>> {
+    +id
+    +uuid
+    +email
+    +auth_provider
+    +auth_subject
+  }
+}
+
+package "backend/src/app/schemas" {
+  class WorkspaceCreate <<Pydantic schema>>
+  class RPApplicationCreate <<Pydantic schema>>
+  class RPApplicationUpdate <<Pydantic schema>>
+  class RPApplicationDeveloperInvitationCreate <<Pydantic schema>>
+  class RPApplicationDeveloperInvitationRead <<Pydantic schema>>
+  class RPApplicationCurrentUserRead <<Pydantic schema>>
+}
+
+WorkspacesRouter --> WorkspaceService : Depends(get_workspace_service)
+WorkspacesRouter ..> WorkspaceCreate
+WorkspacesRouter ..> RPApplicationCreate
+WorkspacesRouter ..> RPApplicationUpdate
+WorkspacesRouter ..> RPApplicationDeveloperInvitationCreate
+WorkspacesRouter ..> RPApplicationDeveloperInvitationRead
+WorkspacesRouter ..> RPApplicationCurrentUserRead
+
+WorkspaceService --> WorkspaceCrud : create/get/update/delete
+WorkspaceService --> WorkspaceMemberCrud : membership checks
+WorkspaceService --> ApplicationInfoCrud : application info records
+WorkspaceService --> ApplicationContactCrud : contact records
+WorkspaceService --> RPApplicationCrud : RP application records
+WorkspaceService --> InvitationCrud : invitation create/get/update
+WorkspaceService --> UserCrud : invited/current user lookups
+WorkspaceService --> IBMVerifyAdminService : IBM app, credentials, usage, audit
+WorkspaceService --> GCNotifyService : invitation email
+
+IBMVerifyAdminService --> IBMVerifyAdminClient : call admin endpoints
+InvitationCrud --> RPApplicationDeveloperInvitation : persists
+RPApplicationCrud --> RPApplication : persists
+WorkspaceCrud --> Workspace : persists
+WorkspaceMemberCrud --> WorkspaceMember : persists
+ApplicationInfoCrud --> ApplicationInfo : persists
+ApplicationContactCrud --> ApplicationContact : persists
+UserCrud --> User : persists
+
+RPApplicationDeveloperInvitation --> Workspace : workspace_id
+RPApplicationDeveloperInvitation --> RPApplication : rp_application_id
+RPApplicationDeveloperInvitation --> User : invited_by
+RPApplication --> Workspace : workspace_id
+RPApplication --> ApplicationInfo : application_info_id
+ApplicationContact --> ApplicationInfo : application_info_id
+WorkspaceMember --> Workspace : workspace_id
+WorkspaceMember --> User : user_id
+
+note right of WorkspaceService
+  Focused code view for the partner-specific slice.
+  It shows modules/classes and persistence relationships,
+  not a runtime sequence or full database ERD.
+end note
+
+@enduml

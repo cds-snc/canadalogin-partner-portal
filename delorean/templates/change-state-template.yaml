@@ -1,0 +1,152 @@
+version: 1
+
+change:
+  id: "<change-id>"
+  title: "<plain-language title>"
+  summary: ""
+  workContext: "local" # local | nonprod | production
+  currentPhase: "spec" # spec | plan | implement | verify | release-ready | closed
+  decisionState: "draft" # draft | ready | blocked | changes_requested | approved | exception_requested
+  lastUpdated: "YYYY-MM-DD"
+  owner: ""
+
+openspec:
+  inScope: true
+  lifecycleState: "draft active change" # current spec only | draft active change | accepted active change | ready to archive | archived | not applicable
+  activeChangeId: "<change-id>"
+  activeChangePath: "openspec/changes/<change-id>"
+  currentSpecRefs: []
+  proposalPath: "openspec/changes/<change-id>/proposal.md"
+  designPath: "openspec/changes/<change-id>/design.md"
+  tasksPath: "openspec/changes/<change-id>/tasks.md"
+  deltaSpecPaths: []
+  validation:
+    status: "not_started" # not_started | pending | pass | fail | blocked | waived | not_applicable
+    command: "make validate-openspec-change CHANGE_ID=<change-id>"
+    resultLink: ""
+    skippedReason: ""
+  archive:
+    required: "unknown" # yes | no | unknown
+    status: "not_started" # not_started | pending | pass | fail | blocked | waived | not_applicable
+    archivePath: ""
+    reasonIfNotArchived: ""
+
+controlBoundary:
+  required: true
+  status: "pending"
+  permissionProfile: "local-agent-standard"
+  allowedTools: []
+  allowedFileScope: []
+  allowedApis: []
+  allowedMcpServers: []
+  deniedScope: []
+  sensitiveDataClassification: "none"
+  sensitiveDataHandling: "Use fake or test-only data. Do not use real secrets or production data."
+  requiredApprovals: []
+  exceptions: []
+  auditLinks: []
+
+baselineAssessment:
+  required: "unknown" # yes | no | unknown
+  status: "not_started" # not_started | pending | pass | blocked | not_applicable
+  baselineId: "BAS-001"
+  baselineVersion: ""
+  governingStandard: "STD-019"
+  baselineCatalogPath: "architecture_docs/baselines/catalog.yml"
+  controlCatalogPath: "architecture_docs/controls/catalog.yml"
+  controlsProfilePath: "architecture_docs/baselines/bas-001-government-of-canada-web-application-baseline.controls.yml"
+  assessmentTemplate: "TPL-011: GC Web Application Baseline Assessment Template"
+  assessmentPath: ""
+  referenceArchitectureId: ""
+  referenceArchitectureRelation: "" # follows | extends | varies_from | replaces | not_applicable
+  affectedControls: []
+  controlStatusValues:
+    - applies
+    - not_applicable
+    - deferred
+    - exception
+  controlStatuses: {}
+  deferredControls: []
+  exceptions: []
+  evidence: []
+  notes: ""
+
+gates:
+  work-context:
+    level: "block_with_exception"
+    status: "pending"
+    owner: ""
+    evidence: []
+    notes: ""
+  openspec-change-package:
+    level: "block_with_exception"
+    status: "pending"
+    owner: ""
+    evidence: []
+    notes: ""
+  control-boundary:
+    level: "block_with_exception"
+    status: "pending"
+    owner: ""
+    evidence: []
+    notes: ""
+  implementation-tasks:
+    level: "block_with_exception"
+    status: "not_started"
+    owner: ""
+    evidence: []
+    notes: ""
+  openspec-validation:
+    level: "block_with_exception"
+    status: "not_started"
+    owner: ""
+    evidence: []
+    notes: ""
+  local-quality-checks:
+    level: "block_with_exception"
+    status: "not_started"
+    owner: ""
+    evidence: []
+    notes: ""
+  baseline-assessment:
+    level: "block_with_exception"
+    status: "not_started"
+    owner: ""
+    evidence: []
+    notes: "At Level 2 use warn/advisory unless the user asks for full release-readiness artifacts. At Level 3 or 4 this blocks before release-ready unless waived."
+  evidence-bundle:
+    level: "block_with_exception"
+    status: "not_started"
+    owner: ""
+    evidence: []
+    notes: ""
+  approval-or-waiver:
+    level: "block"
+    status: "not_applicable"
+    owner: ""
+    evidence: []
+    notes: ""
+  openspec-archive:
+    level: "block_with_exception"
+    status: "not_started"
+    owner: ""
+    evidence: []
+    notes: ""
+
+evidence:
+  evidenceBundlePath: "delorean/evidence/<change-id>/evidence-bundle.md"
+  approvalResponsePath: ""
+  waiverPath: ""
+  agentRunLinks: []
+  testResultLinks: []
+  screenshotLinks: []
+  openFindings: []
+  skippedChecks: []
+  remainingRisk: []
+
+reentry:
+  needed: false
+  phase: ""
+  reasonCode: "" # intent_gap | design_gap | plan_gap | implementation_gap | evidence_gap | approval_gap | artifact_drift | design_drift | openspec_lifecycle_gap | control_boundary_gap | baseline_gap | gate_gap
+  notes: ""
+  owner: ""

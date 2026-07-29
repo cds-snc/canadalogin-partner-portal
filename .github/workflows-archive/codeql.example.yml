@@ -1,0 +1,45 @@
+# Example only. Archived workflows do not run from .github/workflows-archive/.
+# Move into .github/workflows/ only after the solution repo chooses this pattern.
+# Review action version policy before enabling: use pinned SHAs or approved major tags, but do not mix policies silently.
+# This is a basic CodeQL starter. Do not add organization reporting, Slack, deployment, AWS, or release logic here.
+
+name: CodeQL example
+
+on:
+  pull_request:
+  push:
+  schedule:
+    - cron: "30 6 * * 1"
+
+permissions:
+  actions: read
+  contents: read
+  security-events: write
+
+jobs:
+  analyze:
+    name: Analyze
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        language:
+          - actions
+          - javascript-typescript
+          - python
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+
+      - name: Initialize CodeQL
+        uses: github/codeql-action/init@v4
+        with:
+          languages: ${{ matrix.language }}
+
+      - name: Autobuild
+        uses: github/codeql-action/autobuild@v4
+
+      - name: Perform CodeQL analysis
+        uses: github/codeql-action/analyze@v4

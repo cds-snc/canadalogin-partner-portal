@@ -1,0 +1,28 @@
+# Example only. Archived workflows do not run from .github/workflows-archive/.
+# Move into .github/workflows/ only after the solution repo chooses this pattern.
+# Review action version policy before enabling: use pinned SHAs or approved major tags, but do not mix policies silently.
+# This example builds the backend image in CI and does not push it.
+
+name: Backend container build example
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build-backend-container:
+    name: Build backend container
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+
+      - name: Build backend image
+        run: docker build -f backend/Dockerfile -t delorean-backend:${{ github.sha }} backend
+
+      - name: Confirm image exists
+        run: docker image inspect delorean-backend:${{ github.sha }} >/dev/null
