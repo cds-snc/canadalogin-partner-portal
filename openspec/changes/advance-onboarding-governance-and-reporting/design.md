@@ -1,0 +1,186 @@
+## Context
+
+The PRD documents a broad MVP1 baseline that is already implemented, but it also identifies a recurring operational gap: onboarding data exists without a first-class product workflow for readiness, review, and oversight. Current OpenSpec coverage is narrower than the PRD and focuses mostly on owner-scoped RP application detail work, generic error routing, and a few later feature changes. This change package captures the MVP2 product behavior needed to turn the portal from a functional onboarding tool into a governed onboarding workflow.
+
+This change is implementation-ready only after the baseline dashboard, workspace, application-information, and invitation scope is either restored in code or explicitly narrowed through [openspec/changes/reconcile-prd-current-spec-gaps](../reconcile-prd-current-spec-gaps/proposal.md). Treat that change as a prerequisite when a slice depends on those surfaces.
+
+Relevant standards and baseline impact for planning:
+
+- UI and route design: STD-005, STD-006, STD-007, STD-017.
+- API and error contracts: STD-009 and STD-010.
+- Persistence and ownership boundaries: STD-020.
+- Dashboard and reporting layout: PAT-021, PAT-017, PAT-023.
+- Relational schema change path: PAT-012.
+
+## Goals / Non-Goals
+
+**Goals:**
+
+- Define a durable onboarding state model for workspaces, application information records, and RP applications.
+- Define readiness indicators for application information completion.
+- Define the internal reviewer and administrator oversight experience at the requirement level.
+- Define aggregate reporting expectations for onboarding throughput, invitation conversion, and secret rotation hygiene.
+- Keep role-boundary guidance explicit so workspace membership and invited-developer access are easier to understand.
+
+**Non-Goals:**
+
+- No billing, quotas, or customer invoicing.
+- No anonymous self-serve onboarding.
+- No formal approval or waiver automation in this change.
+- No expansion of invited-developer permissions beyond clearer product guidance.
+- No replacement of IBM Security Verify as the underlying identity or runtime application system of record.
+
+## Decisions
+
+### Decision 1: Use a shared onboarding state vocabulary
+
+- Choice: use `draft`, `submitted`, `under_review`, `approved`, and `launched` as the MVP2 state vocabulary for workspaces, application information records, and RP applications.
+- Rationale: the PRD already names this progression, and a consistent vocabulary reduces ambiguity across related onboarding artifacts.
+- Trade-off: exact transition ownership still needs a human decision before implementation.
+
+### Decision 2: Start readiness indicators with application information records
+
+- Choice: add section-level completion indicators and an overall submit-ready signal for application information first.
+- Rationale: application information already carries the broadest onboarding context and is the highest-value place to surface incomplete data.
+- Trade-off: exact required-field rules and any weighted scoring remain a planning decision, not a spec-internal algorithm.
+
+### Decision 3: Treat oversight as an authenticated operational dashboard
+
+- Choice: model the reviewer and administrator experience as an operational oversight area with a compact overview route plus separate queue and reporting routes, instead of one overloaded screen.
+- Route plan:
+	- `/onboarding-oversight` for the authenticated overview page
+	- `/onboarding-oversight/queue` for the filterable review backlog
+	- `/onboarding-oversight/reports` for aggregate reporting
+- Rationale: STD-006 and PAT-021 allow a dashboard for authenticated repeat users, but multiple user goals still need separate destination routes.
+- Trade-off: if a dedicated reviewer role is introduced later, route access wiring may expand without changing the route structure.
+
+### Decision 4: Keep role-boundary guidance informational in MVP2
+
+- Choice: add help and guidance content that explains workspace membership, workspace-admin responsibilities, and invited-developer application scope without changing the underlying access model in this change.
+- Rationale: the PRD identifies product-copy ambiguity as an immediate problem even without a permission-model redesign.
+- Trade-off: future role-matrix changes can build on this requirement without forcing them into the current MVP2 package.
+
+### Decision 5: Start reporting with aggregate operational metrics
+
+- Choice: MVP2 reporting should focus on invitation conversion, secret rotation hygiene, and onboarding throughput, with filterable periods and cross-workspace views.
+- Rationale: these are the specific near-term reporting needs named in the PRD and can be satisfied without turning the change into a full analytics platform.
+- Default first-release formulas:
+	- invitation conversion = accepted invitations / invitations sent in the selected period
+	- secret rotation hygiene = count and percent of RP applications with at least one valid rotation event inside the configured policy window
+	- onboarding throughput = counts of records entering `submitted`, `approved`, and `launched` during the selected period
+- Trade-off: product can still refine formulas later, but this default is concrete enough for first implementation slices.
+
+### Decision 6: Persist workflow state explicitly and keep review notes separate from the core record
+
+- Choice: add explicit onboarding-state fields to each onboarding-owned record type, and model review notes and checklist outcomes as separate related records for application-information review rather than embedding freeform reviewer history inside the core business row.
+- Rationale: STD-020 and PAT-012 favor visible ownership, explicit schema review, and audit-friendly related records over hidden JSON drift in primary rows.
+- Trade-off: this adds migration and repository work earlier, but keeps the data model reviewable and easier to extend.
+
+## Standards impact
+
+```yaml
+standards_impact:
+	ui:
+		applies: true
+		decision: Use the shared app shell plus GC Design System components; use PAT-021 for the authenticated oversight overview, PAT-017 for read-only summaries, and PAT-023 for queue and report tables.
+		evidence: Page-pattern decision and route plan recorded in this design before implementation.
+		exceptions: []
+	accessibility:
+		applies: true
+		decision: Keyboard, focus, headings, notices, filter controls, and table semantics must be reviewed for overview, queue, and reporting routes.
+		evidence: Frontend verification tasks and route-state tests will capture accessible loading, empty, error, and success states.
+		exceptions: []
+	official_languages:
+		applies: true
+		decision: All new overview, queue, report, state, checklist, and guidance copy must ship in English and French with route parity.
+		evidence: Locale catalogs and UI tests updated for both languages where practical.
+		exceptions: []
+	security_privacy:
+		applies: true
+		decision: Reporting and review-note APIs must return only authorized data, use safe error responses, and avoid exposing secrets or sensitive audit detail in aggregate views.
+		evidence: API contract tests and authorization tests for queue, notes, and reports.
+		exceptions: []
+	identity_access:
+		applies: true
+		decision: Reuse existing platform-admin or superuser access for the first slice unless a dedicated reviewer role is explicitly approved.
+		evidence: Route guards, backend permission checks, and task notes reflect the chosen oversight actor.
+		exceptions: []
+	information_management:
+		applies: true
+		decision: Review notes, checklist outcomes, and lifecycle timestamps are business records that need explicit ownership and auditability.
+		evidence: Schema and migration review notes plus tests covering persistence and retrieval.
+		exceptions: []
+	verification:
+		applies: true
+		decision: Validate change artifacts, add targeted backend and frontend tests, and capture standards-aware verification for user-facing slices.
+		evidence: `make validate-openspec-change`, route/page tests, API tests, and migration review notes.
+		exceptions: []
+	gc_web_application_baseline:
+		applies: true
+		decision: Treat this as a meaningful GC web application change and keep baseline impact visible during implementation and verification.
+		evidence: Standards impact and baseline applicability recorded here for handoff.
+		exceptions: []
+```
+
+## Slice Plan
+
+### Slice 0: Baseline dependency resolution
+
+- Outcome: this change has a stable foundation for workspace, application-information, and invitation behaviors.
+- Dependency: [openspec/changes/reconcile-prd-current-spec-gaps](../reconcile-prd-current-spec-gaps/proposal.md) is resolved or the PRD is narrowed so these requirements no longer depend on missing baseline surfaces.
+- Exit condition: implementation can reference real current or planned baseline capabilities without ambiguity.
+
+### Slice 1: Lifecycle state model
+
+- Outcome: workspaces, application information records, and RP applications each carry a visible onboarding state.
+- Impacted areas: backend schemas, persistence, APIs, frontend lists and detail pages, tests.
+- Notes: use STD-009, STD-010, STD-020, and PAT-012 for API and persistence changes.
+- Exit condition: state vocabulary, timestamps, and visibility are defined and verified for the three record types.
+
+### Slice 2: Application information readiness indicators
+
+- Outcome: workspace admins can identify incomplete application information sections before submission.
+- Impacted areas: application information schemas, UI summaries, validation, tests.
+- Notes: use PAT-017 for summary displays and GC Design System notices for incomplete-state feedback.
+- Exit condition: required sections, submit-ready behavior, and submission validation are defined and testable.
+
+### Slice 3: Reviewer oversight and review notes
+
+- Outcome: internal reviewer or administrator users can find records needing review and capture checklist outcomes or notes.
+- Impacted areas: `/onboarding-oversight` overview route, `/onboarding-oversight/queue` queue route, list and filter APIs, review-note persistence, access-control review, tests.
+- Notes: use PAT-021 for the overview route and PAT-023 for queue tables.
+- Exit condition: review workflow paths, queue behavior, and note/checklist behavior are defined.
+
+### Slice 4: Role-boundary guidance
+
+- Outcome: workspace admins and invited developers can see clearer help content about collaboration boundaries.
+- Impacted areas: frontend copy, help surfaces, translation files, tests.
+- Notes: keep guidance informational and bilingual; do not silently broaden permissions.
+- Exit condition: guidance surfaces, target audiences, and copy ownership are defined in spec and tasks.
+
+### Slice 5: Aggregate onboarding reporting
+
+- Outcome: internal oversight users can review aggregate onboarding, invitation, and secret-hygiene metrics without record-by-record inspection.
+- Impacted areas: `/onboarding-oversight/reports` route, reporting queries, APIs, summary widgets, table exports, tests.
+- Notes: use PAT-021 for the reports landing content and PAT-023 for any tabular report results.
+- Exit condition: metric families, filters, access scope, and default formulas are defined.
+
+## Implementation readiness
+
+- Ready after: Slice 0 baseline dependency resolution is complete.
+- First recommended implementation order after dependency resolution:
+	1. Slice 1 lifecycle state model
+	2. Slice 2 application-information readiness
+	3. Slice 3 oversight queue and review notes
+	4. Slice 5 aggregate reporting
+	5. Slice 4 role-boundary guidance
+- Current blockers:
+	- workspace, application-information, and invitation baselines are not yet reconciled with current code
+	- a dedicated reviewer role is not defined if the platform-admin default is rejected
+
+## Open Questions
+
+- Human decision required only if the default platform-admin oversight assumption is rejected and a distinct reviewer role must be introduced before first implementation.
+- Human decision required only if product wants lifecycle state to newly block RP application creation rather than inform readiness and submission flow.
+- Human decision required: which onboarding checklist items are mandatory for the first release of reviewer notes.
+- Human decision required only if the default first-release reporting formulas, selected-period filtering, and CSV export behavior are not acceptable.

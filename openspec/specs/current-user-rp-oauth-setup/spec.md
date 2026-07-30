@@ -1,7 +1,7 @@
 # current-user-rp-oauth-setup
 
 ## Purpose
-Define the current-user OAuth setup detail API and frontend experience for RP application owners. Purpose details can be expanded as implementation evolves.
+Define the current-user OAuth setup detail API and owner-scoped RP application detail experience.
 
 ## Requirements
 
@@ -10,11 +10,15 @@ The system SHALL provide a current-user scoped endpoint at `/api/v1/rp-applicati
 
 #### Scenario: Authorized owner requests OAuth setup detail
 - **WHEN** an authenticated user who is an RP application owner requests `/api/v1/rp-applications/mine/{rpApplicationUuid}/oauth-setup`
-- **THEN** the API returns `200` with fields for application context (`rpApplicationName`, `status`, optional `applicationUrl`, optional `discoveryEndpoint`) and OAuth setup (`clientId`, `clientSecret`, optional `pkceEnabled`, `redirectUris`, optional `logoutUri`, `logoutRedirectUris`)
+- **THEN** the API returns `200` with fields for application context (`rpApplicationName`, `status`, optional `applicationUrl`, optional `discoveryEndpoint`, optional `departmentName`, optional `departmentNameFr`) and OAuth setup (`clientId`, `clientSecret`, optional `pkceEnabled`, `redirectUris`, optional `logoutUri`, `logoutRedirectUris`)
 
 #### Scenario: Non-owner requests OAuth setup detail
 - **WHEN** an authenticated user who does not own the RP application requests `/api/v1/rp-applications/mine/{rpApplicationUuid}/oauth-setup`
 - **THEN** the API returns `403`
+
+#### Scenario: Missing-department application cannot load OAuth setup
+- **WHEN** an authenticated owner requests OAuth setup for an owned RP application whose `departmentId` is null
+- **THEN** the API returns `409` with error code `rp_application_department_required`
 
 ### Requirement: Owner authorization and upstream retrieval ordering
 The system MUST authorize access using local synced owner data before performing IBM Verify detail retrieval.
@@ -37,25 +41,26 @@ The system MUST source `discoveryEndpoint` from backend OIDC configuration and r
 - **WHEN** the authorized owner requests OAuth setup detail and backend `OIDC_SERVER_METADATA_URL` is set
 - **THEN** the response includes `discoveryEndpoint` matching the configured metadata URL
 
-### Requirement: Current-user OAuth setup page route and rendering
-The frontend SHALL provide a route at `/rp-applications/mine/$rpApplicationUuid` and render a read-only page with sections ordered as Application context first and OAuth client setup second.
+### Requirement: Current-user RP application detail page route and rendering
+The frontend SHALL provide a route at `/your-applications/$rpApplicationUuid` and render a read-only owner page with application context first and OAuth setup details second.
 
-#### Scenario: User opens detail page from dashboard
-- **WHEN** a user clicks an RP application name in dashboard resources
-- **THEN** navigation resolves to `/rp-applications/mine/$rpApplicationUuid` and the page renders read-only setup data
+#### Scenario: User opens detail page from current-user applications landing page
+- **WHEN** a user clicks an RP application name in `/your-applications`
+- **THEN** navigation resolves to `/your-applications/$rpApplicationUuid` and the page renders read-only application and OAuth setup details
 
-### Requirement: Secret display is protected in the UI
-The OAuth setup page MUST mask client secret by default and require explicit reveal to view the value.
+#### Scenario: Details page shows department label
+- **WHEN** the detail page renders application context and a department display value is available
+- **THEN** the page includes a `Department` row using localized selection from `departmentName` and `departmentNameFr`
 
-#### Scenario: User loads page before revealing secret
-- **WHEN** the OAuth setup page first renders
-- **THEN** client secret is not shown in clear text until the user chooses reveal
+#### Scenario: Details page exposes owner actions for usage and credentials
+- **WHEN** the owner-scoped detail page renders successfully
+- **THEN** the page includes navigation actions to `/your-applications/$rpApplicationUuid/mau-report` and `/your-applications/$rpApplicationUuid/manage-credentials`
 
 ### Requirement: OAuth setup fetch uses fresh data
 The frontend MUST request OAuth setup detail with no-store semantics to avoid stale credential/configuration data.
 
 #### Scenario: User refreshes OAuth setup page
-- **WHEN** the user reloads `/rp-applications/mine/$rpApplicationUuid`
+- **WHEN** the user reloads `/your-applications/$rpApplicationUuid`
 - **THEN** the frontend issues a fresh request and does not rely on cached setup payload
 
 ### Requirement: RP OAuth setup error routing
@@ -69,6 +74,10 @@ The frontend MUST route RP OAuth setup failures according to the agreed mapping.
 - **WHEN** the OAuth setup request returns `404`
 - **THEN** the user is redirected to `/error?kind=not_found`
 
+#### Scenario: Missing-department conflict response
+- **WHEN** the OAuth setup request returns `409` with code `rp_application_department_required`
+- **THEN** the user is redirected to `/your-applications/$rpApplicationUuid/department-setup`
+
 #### Scenario: Unexpected OAuth setup failures
-- **WHEN** the OAuth setup request returns `5xx`, network failure, or any non-403/non-404 error
+- **WHEN** the OAuth setup request returns `5xx`, network failure, or any non-403/non-404/non-conflict error
 - **THEN** the user is redirected to `/error?kind=unexpected`
