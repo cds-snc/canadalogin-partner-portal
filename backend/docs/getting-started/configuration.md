@@ -109,6 +109,7 @@ CLPP_APPLICATION_OWNERS_ROLE_NAME="application owners"
 - The callback reads the claim named by `OIDC_GROUP_CLAIM_KEY` and only allows users who belong to `OIDC_ADMIN_GROUP_NAME` or `OIDC_APPLICATION_OWNERS_GROUP_NAME`.
 - If your provider returns a different claim name such as `groups`, change `OIDC_GROUP_CLAIM_KEY` to match.
 - If your test account is in differently named groups, update `OIDC_ADMIN_GROUP_NAME` and `OIDC_APPLICATION_OWNERS_GROUP_NAME` instead of changing code.
+- For local-only development, `OIDC_GROUP_CLAIM_KEY` can point to another stable claim such as `email`; setting `OIDC_ADMIN_GROUP_NAME` to your own email address effectively fakes local group membership without changing code.
 - `CLPP_ADMIN_ROLE_NAME` and `CLPP_APPLICATION_OWNERS_ROLE_NAME` are the local database role names that the matched IdP groups map to.
 - `REDIS_SESSION_DB=1` keeps session records separate from the cache, queue, and rate-limit Redis keys while still allowing a shared local Redis server.
 - `REDIS_SESSION_PREFIX` lets you distinguish session keys during local inspection and cleanup.
