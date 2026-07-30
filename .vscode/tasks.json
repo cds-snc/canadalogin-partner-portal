@@ -91,7 +91,7 @@
     {
       "label": "App: Start Dev",
       "type": "shell",
-      "command": "make dev",
+      "command": "make start-dev",
       "group": "build",
       "isBackground": true,
       "problemMatcher": [],

@@ -7,7 +7,7 @@ from starsessions.session import generate_session_id, get_session_handler
 
 from ..core.config import settings
 from ..core.exceptions.http_exceptions import ForbiddenException, UnauthorizedException
-from ..core.oidc import build_oidc_redirect_uri, get_oidc_client, sync_oidc_user
+from ..core.oidc import build_oidc_redirect_uri, get_oidc_client, load_oidc_server_metadata, sync_oidc_user
 from .oidc_logout_service import OidcLogoutService
 
 
@@ -17,6 +17,7 @@ class OidcService:
 
     async def login(self, request: Request, ui_locales: Optional[str] = None):
         client = get_oidc_client()
+        await load_oidc_server_metadata(client)
         redirect_uri = build_oidc_redirect_uri(request)
         if ui_locales:
             request.session["ui_locales"] = ui_locales

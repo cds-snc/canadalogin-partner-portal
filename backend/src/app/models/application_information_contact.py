@@ -24,6 +24,11 @@ class ApplicationInformationContact(Base):
         index=True,
         nullable=False,
     )
+    name_en: Mapped[str] = mapped_column(String(255), nullable=False)
+    name_fr: Mapped[str] = mapped_column(String(255), nullable=False)
+    responsibility_en: Mapped[str] = mapped_column(String(255), nullable=False)
+    responsibility_fr: Mapped[str] = mapped_column(String(255), nullable=False)
+    email: Mapped[str] = mapped_column(String(254), nullable=False)
     created_by: Mapped[int | None] = mapped_column(
         ForeignKey("user.id"),
         nullable=True,
@@ -34,11 +39,6 @@ class ApplicationInformationContact(Base):
         default_factory=uuid7,
         unique=True,
     )
-    name_en: Mapped[str] = mapped_column(String(255), nullable=False)
-    name_fr: Mapped[str] = mapped_column(String(255), nullable=False)
-    responsibility_en: Mapped[str] = mapped_column(String(255), nullable=False)
-    responsibility_fr: Mapped[str] = mapped_column(String(255), nullable=False)
-    email: Mapped[str] = mapped_column(String(254), nullable=False)
     phone_number: Mapped[str | None] = mapped_column(String(50), nullable=True, default=None)
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),

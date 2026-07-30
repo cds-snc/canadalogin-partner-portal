@@ -1,4 +1,4 @@
-<h1 align="center">CanadaLogin Partner Portal - Backend</h1>
+# CanadaLogin Partner Portal Backend
 
 FastAPI backend for the CanadaLogin Partner Portal.
 
@@ -42,10 +42,39 @@ UV_PROJECT_ENVIRONMENT=../.venv uv sync --group dev --extra dev
 
 If you are working from the repo root, prefer `make bk-install`, `make bk-test`, `make bk-lint`, and `make bk-typecheck`. The top-level `Makefile` pins backend `uv` commands to the repo-root `.venv`.
 
+For local host-run backend development, the app also needs PostgreSQL and Redis running on `localhost`. The repo-root workflow is:
+
+```bash
+# Start your local container runtime first if needed.
+# macOS example:
+colima start
+
+make bk-install
+make db-up
+make bk-dev
+```
+
+`make db-up` starts the `db` and `redis` services from `backend/docker-compose.yml` and publishes them to the host on `localhost:5432` and `localhost:6379`.
+
 ## Running
 
 ```bash
 UV_PROJECT_ENVIRONMENT=../.venv uv run uvicorn src.app.main:app --reload --host 127.0.0.1 --port 8000
+```
+
+If you start the backend directly with `uv run uvicorn ...`, make sure PostgreSQL and Redis are already reachable on the host first. From the repo root:
+
+```bash
+make db-up
+make bk-dev
+```
+
+Useful local service helpers from the repo root:
+
+```bash
+make db-up
+make db-logs
+make db-down
 ```
 
 ## Migrations
@@ -57,6 +86,8 @@ When authoring Alembic migrations in `backend/src/migrations/versions/`, keep th
 ```bash
 docker compose up --build
 ```
+
+Use `docker compose up -d db redis` when you only want the dependency services for a host-run backend, and `docker compose up --build` when you want the backend itself to run inside Docker too.
 
 ## Documentation
 

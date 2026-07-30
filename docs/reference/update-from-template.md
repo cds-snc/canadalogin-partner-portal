@@ -181,6 +181,7 @@ packages, or evidence bundles into a solution repo by default:
 - `openspec/specs/**` is solution-owned after scaffolding.
 - `openspec/changes/**` is solution-owned after scaffolding.
 - `delorean/evidence/**` is solution-owned after scaffolding.
+- `Makefile` is preserved by default because solution repos often customize local commands. Use `--path Makefile` only when you intentionally want the template version.
 - `delorean/config.yaml` is preserved unless `--include-delorean-config` is
   provided.
 

@@ -29,6 +29,7 @@ class WorkspaceMember(Base):
         index=True,
         nullable=False,
     )
+    role: Mapped[str] = mapped_column(String(32), nullable=False)
     invited_by: Mapped[int | None] = mapped_column(
         ForeignKey("user.id"),
         nullable=True,
@@ -39,7 +40,6 @@ class WorkspaceMember(Base):
         default_factory=uuid7,
         unique=True,
     )
-    role: Mapped[str] = mapped_column(String(32), nullable=False)
 
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),

@@ -2,11 +2,12 @@ from unittest.mock import AsyncMock, Mock, patch
 
 import pytest
 from starlette.requests import Request
+from fastcrud.exceptions.http_exceptions import CustomException
 
 from src.app.api.v1.oidc import oidc_callback, oidc_login
 from src.app.core.config import settings
 from src.app.core.exceptions.http_exceptions import ForbiddenException
-from src.app.core.oidc import build_oidc_redirect_uri, sync_oidc_user
+from src.app.core.oidc import build_oidc_redirect_uri, get_oidc_client, get_oidc_server_metadata_url, sync_oidc_user
 
 
 def make_request(session: dict | None = None) -> Request:
@@ -187,6 +188,30 @@ class TestOidcCallback:
 
         assert result is response
         mock_service.callback.assert_awaited_once_with(request=request, db=mock_db)
+
+
+class TestOidcConfiguration:
+    def test_get_oidc_client_raises_service_unavailable_when_client_is_not_configured(self):
+        with patch("src.app.core.oidc.register_oidc_client"):
+            with patch("src.app.core.oidc.oauth.create_client", return_value=None):
+                with pytest.raises(CustomException) as exc_info:
+                    get_oidc_client()
+
+        assert exc_info.value.status_code == 503
+        assert exc_info.value.detail == "OIDC login is not configured."
+
+    def test_get_oidc_server_metadata_url_appends_discovery_path_for_base_url(self):
+        with patch.object(settings, "OIDC_SERVER_METADATA_URL", "https://cds-gcsignin-dev.verify.ibm.com"):
+            assert (
+                get_oidc_server_metadata_url()
+                == "https://cds-gcsignin-dev.verify.ibm.com/.well-known/openid-configuration"
+            )
+
+    def test_get_oidc_server_metadata_url_preserves_explicit_discovery_url(self):
+        discovery_url = "https://cds-gcsignin-dev.verify.ibm.com/.well-known/openid-configuration"
+
+        with patch.object(settings, "OIDC_SERVER_METADATA_URL", discovery_url):
+            assert get_oidc_server_metadata_url() == discovery_url
 
 
 class TestBuildOidcRedirectUri:

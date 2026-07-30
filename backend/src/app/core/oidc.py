@@ -1,7 +1,10 @@
 import re
 from datetime import UTC, datetime
+from json import JSONDecodeError
 from typing import Any
+from urllib.parse import urlsplit, urlunsplit
 
+import httpx
 from authlib.integrations.starlette_client import OAuth
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -10,10 +13,52 @@ from ..repositories.crud_users import crud_users
 from ..schemas.role import RoleRead
 from ..schemas.user import UserCreateInternal, UserReadInternal
 from .config import settings
+from .exceptions.http_exceptions import CustomException
 from .exceptions.http_exceptions import ForbiddenException, UnauthorizedException
 
 oauth = OAuth()
 _client_registered = False
+_OIDC_DISCOVERY_PATH = "/.well-known/openid-configuration"
+_OIDC_DISCOVERY_ERROR_MESSAGE = "OIDC discovery metadata could not be loaded. Check OIDC_SERVER_METADATA_URL."
+
+
+def _build_oidc_configuration_error(detail: str) -> CustomException:
+    return CustomException(status_code=503, detail=detail)
+
+
+def get_oidc_server_metadata_url() -> str | None:
+    configured_server_metadata_url = settings.OIDC_SERVER_METADATA_URL
+    if not configured_server_metadata_url:
+        return None
+
+    normalized_server_metadata_url = configured_server_metadata_url.strip().rstrip("/")
+    if not normalized_server_metadata_url:
+        return None
+
+    parsed_url = urlsplit(normalized_server_metadata_url)
+    if parsed_url.path.endswith(_OIDC_DISCOVERY_PATH):
+        return normalized_server_metadata_url
+
+    discovery_path = f"{parsed_url.path.rstrip('/')}{_OIDC_DISCOVERY_PATH}"
+    if not discovery_path.startswith("/"):
+        discovery_path = f"/{discovery_path}"
+
+    return urlunsplit(
+        (
+            parsed_url.scheme,
+            parsed_url.netloc,
+            discovery_path,
+            parsed_url.query,
+            parsed_url.fragment,
+        )
+    )
+
+
+async def load_oidc_server_metadata(client) -> dict[str, Any]:
+    try:
+        return await client.load_server_metadata()
+    except (httpx.HTTPError, JSONDecodeError, TypeError, ValueError) as exc:
+        raise _build_oidc_configuration_error(_OIDC_DISCOVERY_ERROR_MESSAGE) from exc
 
 
 def register_oidc_client() -> None:
@@ -22,14 +67,15 @@ def register_oidc_client() -> None:
     if _client_registered or not settings.OIDC_ENABLED:
         return
 
-    if not settings.OIDC_SERVER_METADATA_URL or not settings.OIDC_CLIENT_ID or not settings.OIDC_CLIENT_SECRET:
+    server_metadata_url = get_oidc_server_metadata_url()
+    if not server_metadata_url or not settings.OIDC_CLIENT_ID or not settings.OIDC_CLIENT_SECRET:
         return
 
     oauth.register(
         name=settings.OIDC_PROVIDER_NAME,
         client_id=settings.OIDC_CLIENT_ID,
         client_secret=settings.OIDC_CLIENT_SECRET.get_secret_value(),
-        server_metadata_url=settings.OIDC_SERVER_METADATA_URL,
+        server_metadata_url=server_metadata_url,
         client_kwargs={"scope": settings.OIDC_SCOPES},
         code_challenge_method="S256",
     )
@@ -40,7 +86,7 @@ def get_oidc_client():
     register_oidc_client()
     client = oauth.create_client(settings.OIDC_PROVIDER_NAME)
     if client is None:
-        raise RuntimeError("OIDC client is not configured")
+        raise _build_oidc_configuration_error("OIDC login is not configured.")
 
     return client
 
@@ -54,7 +100,7 @@ async def warm_oidc_metadata() -> None:
     if client is None:
         return
 
-    await client.load_server_metadata()
+    await load_oidc_server_metadata(client)
 
 
 def build_oidc_redirect_uri(request) -> str:

@@ -72,7 +72,7 @@ DELOREAN_FIX_SCOPE=format make fix
 
 This template does not require every future repo to keep both `frontend/` and `backend/`. When a solution repo chooses its stack, keep local commands aligned with STD-015: Code Quality, Linting, and Formatting.
 
-For the complete first-tester setup path, run `make setup`. It installs or verifies Node.js, installs frontend dependencies, creates or reuses `.venv` with Python 3.12, installs backend development dependencies, and installs the optional official OpenSpec CLI. For frontend-only setup, run `make install-frontend-deps`. The Makefile uses `npm ci` because this template includes [frontend/package-lock.json](../../frontend/package-lock.json). Use `npm install <package>` only when intentionally changing dependencies and updating the lockfile.
+For the complete first-tester setup path, run `make setup`. It installs or verifies Node.js, installs frontend dependencies with `pnpm`, creates or reuses the repo-root `.venv` with Python 3.12, syncs backend development dependencies with `uv`, and installs the optional official OpenSpec CLI. For frontend-only setup, run `make install-frontend-deps`. This repo tracks [frontend/pnpm-lock.yaml](../../frontend/pnpm-lock.yaml), so use `pnpm install` only when intentionally changing dependencies and updating the lockfile.
 
 ## Archived Workflows
 

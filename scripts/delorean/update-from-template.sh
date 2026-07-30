@@ -696,7 +696,6 @@ else
     ".flake8"
     ".gitignore"
     ".python-version"
-    "Makefile"
     "LICENSE"
     "pytest.ini"
     "openapi/README.md"
@@ -729,6 +728,12 @@ fi
 for path in "${copy_paths[@]}"; do
   copy_path "$tmp_dir/template" "$repo_root" "$path"
 done
+
+if [ "$agent_config_only" -ne 1 ] && [ ! -e "${repo_root}/Makefile" ]; then
+	copy_path "$tmp_dir/template" "$repo_root" "Makefile"
+else
+	echo "Preserving existing solution-owned path: Makefile"
+fi
 
 if [ "$include_delorean_config" -eq 1 ]; then
   copy_path "$tmp_dir/template" "$repo_root" "delorean/config.yaml"

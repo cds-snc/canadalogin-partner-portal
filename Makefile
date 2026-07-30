@@ -4,15 +4,23 @@ VENV_DIR ?= .venv
 PYTHON ?= $(VENV_DIR)/bin/python
 PIP ?= $(PYTHON) -m pip
 NPM ?= npm
+PNPM ?= pnpm
+UV ?= uv
 FRONTEND_DIR := frontend
 FRONTEND_HOST ?= 127.0.0.1
 FRONTEND_PORT ?= 3000
 BACKEND_DIR := backend
+ROOT_DIR := $(CURDIR)
+ROOT_VENV := $(ROOT_DIR)/$(VENV_DIR)
+UV_PROJECT_ENVIRONMENT ?= $(ROOT_VENV)
+BACKEND_CMD := cd $(BACKEND_DIR) && UV_PROJECT_ENVIRONMENT="$(UV_PROJECT_ENVIRONMENT)" $(UV) run
+ALEMBIC_CMD := cd $(BACKEND_DIR)/src && UV_PROJECT_ENVIRONMENT="$(UV_PROJECT_ENVIRONMENT)" $(UV) run alembic
+FRONTEND_CMD := cd $(FRONTEND_DIR) && $(PNPM) run
 BACKEND_HOST ?= 127.0.0.1
 BACKEND_IMAGE ?= delorean-template-backend:local
 BACKEND_CONTAINER ?= delorean-template-backend
 BACKEND_PORT ?= 8000
-DATABASE_COMPOSE_FILE ?= compose.database.yaml
+DATABASE_COMPOSE_FILE ?= $(BACKEND_DIR)/docker-compose.yml
 DB_MIGRATION_MESSAGE ?= change
 OPENAPI_FILE ?= openapi/openapi.json
 NODE_MIN_VERSION ?= 20.19.0
@@ -48,8 +56,13 @@ DELOREAN_DEFAULT_LEVEL ?= 2
 DELOREAN_CONFIG_LEVEL = $(shell awk -F ':' '$$1 == "adoptionLevel" { gsub(/[[:space:]]/, "", $$2); gsub(/"/, "", $$2); gsub(/\047/, "", $$2); print $$2; found = 1; exit } END { if (!found) print "" }' "$(DELOREAN_CONFIG)" 2>/dev/null || printf "$(DELOREAN_DEFAULT_LEVEL)")
 LEVEL ?= $(DELOREAN_CONFIG_LEVEL)
 HELP_LEVEL := $(if $(filter 2 3 4,$(LEVEL)),$(LEVEL),$(DELOREAN_DEFAULT_LEVEL))
+LOAD_NVM = nvm_dir="$${NVM_DIR:-$$HOME/.nvm}"; \
+	if [ -s "$$nvm_dir/nvm.sh" ]; then \
+		. "$$nvm_dir/nvm.sh"; \
+		nvm use "$(NODE_VERSION)" >/dev/null 2>&1 || nvm use default >/dev/null 2>&1 || true; \
+	fi
 
-.PHONY: help help-all doctor setup setup-delorean setup-local-env install-node check-node setup-python-venv install-python install-dev-python install-frontend-deps install-backend-deps install-openspec-cli check-openspec-cli validate-openspec-change pick-openspec-change validate-active-openspec-change check-delorean-setup start start-dev dev start-frontend start-backend db-up db-down db-logs db-upgrade db-downgrade db-revision update-from-template update-from-template-dry-run update-existing-solution update-existing-solution-dry-run update-architecture-docs update-architecture-docs-dry-run update-agent-configs update-agent-configs-dry-run sync-codex-adapters check-codex-adapters collect-agent-run new-openspec-change fix autofix format-fix fmt-python fmt-ci-python format-python check-python-format lint-python run-pytest pytest export-openapi check-openapi container-checks build-backend-container run-backend-container stop-backend-container test-backend-container scan-backend-container setup-hooks uninstall-hooks
+.PHONY: help help-all doctor setup setup-delorean setup-local-env install-node check-node setup-python-venv install test lint format typecheck install-python install-dev-python install-frontend-deps install-backend-deps install-openspec-cli check-openspec-cli validate-openspec-change pick-openspec-change validate-active-openspec-change check-delorean-setup start start-dev dev backend-dev worker start-frontend start-backend frontend-install frontend-build frontend-dev frontend-test frontend-lint frontend-format frontend-preview all-install all-build all-test all-lint all-format bk-install bk-test bk-lint bk-format bk-typecheck bk-dev bk-worker bk-migration ft-install ft-build ft-dev ft-test ft-lint ft-format ft-preview backend-image frontend-image bk-image ft-image db-up db-down db-logs db-upgrade db-downgrade db-revision migration update-from-template update-from-template-dry-run update-existing-solution update-existing-solution-dry-run update-architecture-docs update-architecture-docs-dry-run update-agent-configs update-agent-configs-dry-run sync-codex-adapters check-codex-adapters collect-agent-run new-openspec-change fix autofix format-fix fmt-python fmt-ci-python format-python check-python-format lint-python run-pytest pytest export-openapi check-openapi container-checks build-backend-container run-backend-container stop-backend-container test-backend-container scan-backend-container setup-hooks uninstall-hooks
 
 help:
 	@echo "Starter commands (Delorean Level $(HELP_LEVEL); override with LEVEL=2|3|4; use make help-all for the full list):"
@@ -67,12 +80,34 @@ help:
 	@echo "  make uninstall-hooks"
 	@echo ""
 	@echo "Local app:"
+	@echo "  make start-dev"
 	@echo "  make dev"
+	@echo "  make bk-dev"
+	@echo "  make frontend-dev"
 	@echo "  make start-frontend"
 	@echo "  make start-backend"
 	@echo "  make db-up"
 	@echo "  make db-upgrade"
 	@echo "  make db-down"
+	@echo ""
+	@echo "Repo-local backend and frontend commands:"
+	@echo "  make install"
+	@echo "  make test"
+	@echo "  make lint"
+	@echo "  make format"
+	@echo "  make typecheck"
+	@echo "  make worker"
+	@echo "  make frontend-install"
+	@echo "  make frontend-build"
+	@echo "  make frontend-test"
+	@echo "  make frontend-lint"
+	@echo "  make frontend-format"
+	@echo "  make frontend-preview"
+	@echo "  make all-install"
+	@echo "  make all-build"
+	@echo "  make all-test"
+	@echo "  make all-lint"
+	@echo "  make all-format"
 	@echo ""
 	@echo "Local checks and fixes:"
 	@echo "  make fix"
@@ -148,7 +183,8 @@ setup:
 	@$(MAKE) --no-print-directory install-backend-deps
 	@$(MAKE) --no-print-directory install-openspec-cli
 	@echo "Starter setup complete."
-	@echo "Start the local app: make dev"
+	@echo "Start the full local app: make start-dev"
+	@echo "Start only the backend: make dev"
 	@echo "Optional hooks: make setup-hooks"
 	@echo "Optional Delorean readiness check: make setup-delorean"
 	@echo "Next check: scripts/delorean/run-local-verification.sh"
@@ -230,14 +266,13 @@ check-node:
 	fi; \
 	NODE_MIN_VERSION="$(NODE_MIN_VERSION)" node -e 'const current = process.versions.node.split(".").map(Number); const min = process.env.NODE_MIN_VERSION.split(".").map(Number); for (let i = 0; i < 3; i += 1) { if ((current[i] || 0) > (min[i] || 0)) { console.log("Node.js " + process.versions.node + " satisfies minimum " + process.env.NODE_MIN_VERSION + "."); process.exit(0); } if ((current[i] || 0) < (min[i] || 0)) { console.error("Node.js " + process.env.NODE_MIN_VERSION + " or higher is required. Found " + process.versions.node + ". Run make install-node."); process.exit(1); } } console.log("Node.js " + process.versions.node + " satisfies minimum " + process.env.NODE_MIN_VERSION + ".");'
 
-install-frontend-deps: check-node
+frontend-install: check-node
+	@echo "Installing frontend dependencies (pnpm)"
 	@set -e; \
-	nvm_dir="$${NVM_DIR:-$$HOME/.nvm}"; \
-	if [ -s "$$nvm_dir/nvm.sh" ]; then \
-		. "$$nvm_dir/nvm.sh"; \
-		nvm use "$(NODE_VERSION)" >/dev/null 2>&1 || nvm use default >/dev/null 2>&1 || true; \
-	fi; \
-	cd $(FRONTEND_DIR) && $(NPM) ci
+	$(LOAD_NVM); \
+	cd $(FRONTEND_DIR) && $(PNPM) install
+
+install-frontend-deps: frontend-install
 
 setup-python-venv:
 	@set -e; \
@@ -260,13 +295,31 @@ setup-python-venv:
 		"$(PYTHON)" --version; \
 	fi
 
-install-python: setup-python-venv
-	$(PIP) install -r $(BACKEND_DIR)/requirements.txt
+install: setup-python-venv
+	@echo "Installing backend dependencies (uses uv wrapper)"
+	cd $(BACKEND_DIR) && UV_PROJECT_ENVIRONMENT="$(UV_PROJECT_ENVIRONMENT)" $(UV) sync --group dev --extra dev
 
-install-dev-python: setup-python-venv
-	$(PIP) install -r $(BACKEND_DIR)/requirements-dev.txt
+test:
+	@echo "Running backend tests"
+	$(BACKEND_CMD) pytest -q
 
-install-backend-deps: install-dev-python
+lint:
+	@echo "Running ruff lint checks (using pyproject.toml config)"
+	$(BACKEND_CMD) ruff check src/ tests/
+
+format:
+	@echo "Auto-fixing lintable issues with ruff (using pyproject.toml config)"
+	$(BACKEND_CMD) ruff check src/ tests/ --fix
+
+typecheck:
+	@echo "Running mypy type checker"
+	$(BACKEND_CMD) mypy src/app
+
+install-python: install
+
+install-dev-python: install
+
+install-backend-deps: install
 
 install-openspec-cli: check-node
 	@set -e; \
@@ -345,47 +398,162 @@ check-delorean-setup: check-node check-openspec-cli
 
 start: start-dev
 
-dev: start-dev
+dev: backend-dev
 
-start-frontend:
+backend-dev:
+	@if [ ! -x "$(PYTHON)" ]; then \
+		echo "Backend development dependencies are missing. Run 'make install-backend-deps' first."; \
+		exit 1; \
+	fi
+	@echo "Starting backend API server"
+	$(BACKEND_CMD) uvicorn src.app.main:app --reload --host $(BACKEND_HOST) --port $(BACKEND_PORT)
+
+worker:
+	@if [ ! -x "$(PYTHON)" ]; then \
+		echo "Backend development dependencies are missing. Run 'make install-backend-deps' first."; \
+		exit 1; \
+	fi
+	@echo "Starting backend ARQ worker"
+	$(BACKEND_CMD) python -m src.app.core.worker.settings
+
+frontend-build:
+	@echo "Building frontend for production"
+	@set -e; \
+	$(LOAD_NVM); \
+	$(FRONTEND_CMD) build
+
+frontend-dev:
 	@if [ ! -x "$(FRONTEND_DIR)/node_modules/.bin/vite" ]; then \
 		echo "Frontend dependencies are missing. Run 'make install-frontend-deps' first."; \
 		exit 1; \
 	fi
-	$(NPM) --prefix $(FRONTEND_DIR) run dev -- --host $(FRONTEND_HOST) --port $(FRONTEND_PORT)
+	@echo "Starting frontend dev server"
+	@set -e; \
+	$(LOAD_NVM); \
+	$(FRONTEND_CMD) dev -- --host $(FRONTEND_HOST) --port $(FRONTEND_PORT)
 
-start-backend:
-	@if ! $(PYTHON) -c "import uvicorn" >/dev/null 2>&1; then \
-		echo "Backend development dependencies are missing. Run 'make install-dev-python' first."; \
-		exit 1; \
-	fi
-	$(PYTHON) -m uvicorn app.main:app --reload --app-dir $(BACKEND_DIR) --host $(BACKEND_HOST) --port $(BACKEND_PORT)
+frontend-test:
+	@echo "Running frontend tests"
+	@set -e; \
+	$(LOAD_NVM); \
+	$(FRONTEND_CMD) test
+
+frontend-lint:
+	@echo "Running frontend lint"
+	@set -e; \
+	$(LOAD_NVM); \
+	$(FRONTEND_CMD) lint
+
+frontend-format:
+	@echo "Formatting frontend"
+	@set -e; \
+	$(LOAD_NVM); \
+	$(FRONTEND_CMD) format
+
+frontend-preview:
+	@echo "Preview production frontend build"
+	@set -e; \
+	$(LOAD_NVM); \
+	$(FRONTEND_CMD) preview
+
+start-frontend: frontend-dev
+
+start-backend: backend-dev
+
+all-install:
+	@echo "Installing backend and frontend dependencies"
+	@$(MAKE) --no-print-directory install
+	@$(MAKE) --no-print-directory frontend-install
+
+all-build:
+	@echo "Building frontend (backend has no global build target)"
+	@$(MAKE) --no-print-directory frontend-build
+
+all-test:
+	@echo "Running backend and frontend tests"
+	@$(MAKE) --no-print-directory test
+	@$(MAKE) --no-print-directory frontend-test
+
+all-lint:
+	@echo "Linting backend and frontend"
+	@$(MAKE) --no-print-directory lint
+	@$(MAKE) --no-print-directory frontend-lint
+
+all-format:
+	@echo "Formatting backend and frontend"
+	@$(MAKE) --no-print-directory format
+	@$(MAKE) --no-print-directory frontend-format
+
+backend-image:
+	@echo "Building backend Docker image"
+	cd $(BACKEND_DIR) && docker build --pull -t canadalogin-partner-portal-backend .
+
+frontend-image:
+	@echo "Building frontend Docker image"
+	@$(MAKE) --no-print-directory frontend-build
+	cd $(FRONTEND_DIR) && docker build --pull -t canadalogin-partner-portal-frontend .
+
+bk-image: backend-image
+
+ft-image: frontend-image
+
+bk-install: install
+
+bk-test: test
+
+bk-lint: lint
+
+bk-format: format
+
+bk-typecheck: typecheck
+
+bk-dev: backend-dev
+
+bk-worker: worker
+
+bk-migration: migration
+
+ft-install: frontend-install
+
+ft-build: frontend-build
+
+ft-dev: frontend-dev
+
+ft-test: frontend-test
+
+ft-lint: frontend-lint
+
+ft-format: frontend-format
+
+ft-preview: frontend-preview
+
+migration: db-upgrade
 
 db-up:
-	docker compose -f $(DATABASE_COMPOSE_FILE) up -d
+	docker compose -f $(DATABASE_COMPOSE_FILE) up -d db redis
 
 db-down:
-	docker compose -f $(DATABASE_COMPOSE_FILE) down
+	docker compose -f $(DATABASE_COMPOSE_FILE) stop db redis
 
 db-logs:
-	docker compose -f $(DATABASE_COMPOSE_FILE) logs -f postgres
+	docker compose -f $(DATABASE_COMPOSE_FILE) logs -f db redis
 
 db-upgrade:
-	$(PYTHON) -m alembic -c $(BACKEND_DIR)/alembic.ini upgrade head
+	$(ALEMBIC_CMD) upgrade head
 
 db-downgrade:
-	$(PYTHON) -m alembic -c $(BACKEND_DIR)/alembic.ini downgrade -1
+	$(ALEMBIC_CMD) downgrade -1
 
 db-revision:
-	$(PYTHON) -m alembic -c $(BACKEND_DIR)/alembic.ini revision --autogenerate -m "$(DB_MIGRATION_MESSAGE)"
+	$(ALEMBIC_CMD) revision --autogenerate -m "$(DB_MIGRATION_MESSAGE)"
 
 start-dev:
 	@if [ ! -x "$(FRONTEND_DIR)/node_modules/.bin/vite" ]; then \
 		echo "Frontend dependencies are missing. Run 'make install-frontend-deps' first."; \
 		exit 1; \
 	fi
-	@if ! $(PYTHON) -c "import uvicorn" >/dev/null 2>&1; then \
-		echo "Backend development dependencies are missing. Run 'make install-dev-python' first."; \
+	@if [ ! -x "$(PYTHON)" ]; then \
+		echo "Backend development dependencies are missing. Run 'make install-backend-deps' first."; \
 		exit 1; \
 	fi
 	@echo "Starting backend at http://$(BACKEND_HOST):$(BACKEND_PORT)"
@@ -399,21 +567,21 @@ start-dev:
 	}; \
 	trap 'cleanup; exit 130' INT TERM; \
 	trap 'cleanup' EXIT; \
-	( exec $(PYTHON) -m uvicorn app.main:app --reload --app-dir $(BACKEND_DIR) --host $(BACKEND_HOST) --port $(BACKEND_PORT) ) & \
+	( cd $(BACKEND_DIR) && exec env UV_PROJECT_ENVIRONMENT="$(UV_PROJECT_ENVIRONMENT)" $(UV) run uvicorn src.app.main:app --reload --host $(BACKEND_HOST) --port $(BACKEND_PORT) ) & \
 	backend_pid=$$!; \
-	( cd $(FRONTEND_DIR) && exec $(NPM) run dev -- --host $(FRONTEND_HOST) --port $(FRONTEND_PORT) ) & \
+	( cd $(FRONTEND_DIR) && exec $(PNPM) run dev -- --host $(FRONTEND_HOST) --port $(FRONTEND_PORT) ) & \
 	frontend_pid=$$!; \
 	while kill -0 "$$backend_pid" 2>/dev/null && kill -0 "$$frontend_pid" 2>/dev/null; do \
 		sleep 1; \
 	done; \
-	status=0; \
+	exit_code=0; \
 	if ! kill -0 "$$backend_pid" 2>/dev/null; then \
-		wait "$$backend_pid" || status=$$?; \
+		wait "$$backend_pid" || exit_code=$$?; \
 	fi; \
 	if ! kill -0 "$$frontend_pid" 2>/dev/null; then \
-		wait "$$frontend_pid" || status=$$?; \
+		wait "$$frontend_pid" || exit_code=$$?; \
 	fi; \
-	exit "$$status"
+	exit "$$exit_code"
 
 update-from-template-dry-run:
 	LEVEL2_PROMPT_SET="$(LEVEL2_PROMPT_SET)" scripts/delorean/update-from-template.sh --repo "$(TEMPLATE_REPO)" --ref "$(TEMPLATE_REF)" --dry-run
@@ -459,20 +627,21 @@ autofix: fix
 format-fix: fix
 
 fmt-python:
-	$(PYTHON) -m black $(BACKEND_DIR)
+	$(BACKEND_CMD) ruff format src/ tests/
+	$(BACKEND_CMD) ruff check src/ tests/ --fix
 
 fmt-ci-python:
-	$(PYTHON) -m black --check $(BACKEND_DIR)
+	$(BACKEND_CMD) ruff format --check src/ tests/
 
 format-python: fmt-python
 
 check-python-format: fmt-ci-python
 
 lint-python:
-	$(PYTHON) -m flake8 $(BACKEND_DIR)
+	$(BACKEND_CMD) ruff check src/ tests/
 
 run-pytest:
-	$(PYTHON) -m pytest
+	$(BACKEND_CMD) pytest -q
 
 pytest: run-pytest
 

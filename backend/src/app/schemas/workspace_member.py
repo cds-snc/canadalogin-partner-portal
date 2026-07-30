@@ -10,7 +10,7 @@ from ..core.schemas import PersistentDeletion
 WorkspaceMemberRole = Literal["workspace_admin", "workspace_member"]
 
 
-class WorkspaceMemberRead(BaseModel, PersistentDeletion):
+class WorkspaceMemberRead(PersistentDeletion):
     model_config = ConfigDict(
         validate_by_name=True,
         validate_by_alias=True,

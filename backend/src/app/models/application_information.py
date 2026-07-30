@@ -24,6 +24,13 @@ class ApplicationInformation(Base):
         index=True,
         nullable=False,
     )
+    service_name_en: Mapped[str] = mapped_column(String(255), nullable=False)
+    service_name_fr: Mapped[str] = mapped_column(String(255), nullable=False)
+    overview: Mapped[str] = mapped_column(Text, nullable=False)
+    technology_and_protocol: Mapped[str] = mapped_column(Text, nullable=False)
+    security_and_privacy: Mapped[str] = mapped_column(Text, nullable=False)
+    usage: Mapped[str] = mapped_column(Text, nullable=False)
+    migration_or_transition_plan: Mapped[str] = mapped_column(Text, nullable=False)
     created_by: Mapped[int | None] = mapped_column(
         ForeignKey("user.id"),
         nullable=True,
@@ -34,13 +41,6 @@ class ApplicationInformation(Base):
         default_factory=uuid7,
         unique=True,
     )
-    service_name_en: Mapped[str] = mapped_column(String(255), nullable=False)
-    service_name_fr: Mapped[str] = mapped_column(String(255), nullable=False)
-    overview: Mapped[str] = mapped_column(Text, nullable=False)
-    technology_and_protocol: Mapped[str] = mapped_column(Text, nullable=False)
-    security_and_privacy: Mapped[str] = mapped_column(Text, nullable=False)
-    usage: Mapped[str] = mapped_column(Text, nullable=False)
-    migration_or_transition_plan: Mapped[str] = mapped_column(Text, nullable=False)
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),
         default_factory=lambda: datetime.now(UTC),

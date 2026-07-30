@@ -1,12 +1,30 @@
 from unittest.mock import AsyncMock, Mock, patch
+from json import JSONDecodeError
 
 import pytest
 
-from src.app.core.exceptions.http_exceptions import ForbiddenException, UnauthorizedException
+from src.app.core.exceptions.http_exceptions import CustomException, ForbiddenException, UnauthorizedException
 from src.app.services.oidc_service import OidcService
 
 
 class TestOidcService:
+    @pytest.mark.asyncio
+    async def test_login_raises_service_unavailable_when_discovery_metadata_is_not_json(self):
+        service = OidcService()
+        request = Mock(session={})
+        request.url_for = Mock(return_value="http://localhost:8000/api/v1/auth/oidc/callback")
+        client = Mock()
+        client.load_server_metadata = AsyncMock(side_effect=JSONDecodeError("Expecting value", "<html>", 0))
+        client.authorize_redirect = AsyncMock()
+
+        with patch("src.app.services.oidc_service.get_oidc_client", return_value=client):
+            with pytest.raises(CustomException) as exc_info:
+                await service.login(request=request, ui_locales=None)
+
+        assert exc_info.value.status_code == 503
+        assert exc_info.value.detail == "OIDC discovery metadata could not be loaded. Check OIDC_SERVER_METADATA_URL."
+        client.authorize_redirect.assert_not_awaited()
+
     @pytest.mark.asyncio
     async def test_callback_stores_user_uuid_in_session_and_redirects(self, mock_db, monkeypatch):
         service = OidcService()

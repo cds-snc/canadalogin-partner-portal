@@ -1,8 +1,8 @@
 import os
 from enum import Enum
-from typing import Optional
+from typing import Any, Optional
 
-from pydantic import SecretStr, computed_field, model_validator
+from pydantic import SecretStr, computed_field, field_validator, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -294,6 +294,31 @@ class Settings(
         case_sensitive=True,
         extra="ignore",
     )
+
+    @field_validator(
+        "REDIS_SESSION_PASSWORD",
+        "REDIS_CACHE_HOST",
+        "REDIS_CACHE_PORT",
+        "REDIS_CACHE_DB",
+        "REDIS_CACHE_PASSWORD",
+        "REDIS_CACHE_SSL",
+        "REDIS_QUEUE_HOST",
+        "REDIS_QUEUE_PORT",
+        "REDIS_QUEUE_DB",
+        "REDIS_QUEUE_PASSWORD",
+        "REDIS_QUEUE_SSL",
+        "REDIS_RATE_LIMIT_HOST",
+        "REDIS_RATE_LIMIT_PORT",
+        "REDIS_RATE_LIMIT_DB",
+        "REDIS_RATE_LIMIT_PASSWORD",
+        "REDIS_RATE_LIMIT_SSL",
+        mode="before",
+    )
+    @classmethod
+    def _blank_redis_values_to_none(cls, value: Any) -> Any:
+        if value == "":
+            return None
+        return value
 
     @model_validator(mode="after")
     def _apply_redis_session_defaults(self) -> "Settings":
