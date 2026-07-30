@@ -5,6 +5,7 @@ It includes data normalization, transformation logic, and application payload bu
 """
 
 import json
+from collections.abc import Mapping
 from ipaddress import ip_address
 from typing import Any, cast
 
@@ -15,8 +16,35 @@ from ..repositories.ibm_sv_admin import IBMVerifyAdminClient
 class IBMVerifyAdminService:
     """Service for IBM Security Verify admin operations."""
 
+    _SUPPORTED_RP_SETUP_FIELDS = (
+        "name",
+        "description",
+        "application_url",
+        "redirect_uris",
+        "post_logout_redirect_uris",
+        "company_name",
+        "client_type",
+        "client_auth_method",
+        "pkce_enabled",
+        "pkce_enabled_force",
+        "logout_method",
+        "logout_uri",
+        "jwks_uri",
+        "owners",
+    )
+
     def __init__(self, client: IBMVerifyAdminClient) -> None:
         self._client = client
+
+    def collect_supported_rp_setup_fields(self, rp_setup: Mapping[str, Any]) -> dict[str, Any]:
+        """Collect the RP setup fields currently supported by the IBM Verify adapter."""
+        # TODO: Expand this collector when the IBM Verify SDK/package supports the
+        # remaining RP setup questionnaire fields needed by workspace-scoped flows.
+        return {
+            field: rp_setup[field]
+            for field in self._SUPPORTED_RP_SETUP_FIELDS
+            if field in rp_setup and rp_setup[field] is not None
+        }
 
     def _normalize_redirect_uris(self, raw_value: Any) -> list[str]:
         """Normalize redirect URIs from form input or JSON arrays."""
@@ -575,6 +603,11 @@ class IBMVerifyAdminService:
         payload = self.build_application_creation_payload(payload_data, owners)
         return await self.create_application(payload)
 
+    async def create_application_from_rp_setup(self, rp_setup: Mapping[str, Any], owners: list[str]) -> dict[str, Any]:
+        """Create an application from the currently supported RP setup fields."""
+        payload_data = self.collect_supported_rp_setup_fields(rp_setup)
+        return await self.create_application_from_payload(payload_data, owners)
+
     async def update_application_from_payload(self, application_id: str, payload_data: dict[str, Any]) -> bool:
         """Update an application from a JSON payload.
 
@@ -582,3 +615,8 @@ class IBMVerifyAdminService:
         """
         current_payload = await self.build_application_update_payload(application_id, payload_data)
         return await self.update_application(application_id, current_payload)
+
+    async def update_application_from_rp_setup(self, application_id: str, rp_setup: Mapping[str, Any]) -> bool:
+        """Update an application from the currently supported RP setup fields."""
+        payload_data = self.collect_supported_rp_setup_fields(rp_setup)
+        return await self.update_application_from_payload(application_id, payload_data)

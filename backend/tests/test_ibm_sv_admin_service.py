@@ -8,6 +8,29 @@ from src.app.services.ibm_sv_admin_service import IBMVerifyAdminService
 
 
 class TestIBMVerifyAdminServiceApplicationPayloads:
+    def test_collect_supported_rp_setup_fields_filters_unsupported_values(self) -> None:
+        service = IBMVerifyAdminService(Mock())
+
+        payload = service.collect_supported_rp_setup_fields(
+            {
+                "name": "[TBS] - Application One",
+                "application_url": "https://example.gc.ca",
+                "redirect_uris": ["https://example.gc.ca/callback"],
+                "pkce_enabled": True,
+                "logout_method": "frontchannel",
+                "requested_scopes": ["openid", "profile"],
+                "sector_identifier_uri": "https://example.gc.ca/sector.json",
+            }
+        )
+
+        assert payload == {
+            "name": "[TBS] - Application One",
+            "application_url": "https://example.gc.ca",
+            "redirect_uris": ["https://example.gc.ca/callback"],
+            "pkce_enabled": True,
+            "logout_method": "frontchannel",
+        }
+
     def test_build_application_creation_payload_accepts_structured_json_values(self) -> None:
         service = IBMVerifyAdminService(Mock())
 
@@ -39,6 +62,54 @@ class TestIBMVerifyAdminServiceApplicationPayloads:
             "https://example.gc.ca/post-logout"
         ]
         assert payload["providers"]["saml"]["properties"]["companyName"] == "Treasury Board Secretariat"
+
+    @pytest.mark.asyncio
+    async def test_create_application_from_rp_setup_delegates_filtered_payload(self) -> None:
+        service = IBMVerifyAdminService(Mock())
+        service.create_application_from_payload = AsyncMock(return_value={"id": "app-1"})
+
+        result = await service.create_application_from_rp_setup(
+            {
+                "name": "[TBS] - Application One",
+                "application_url": "https://example.gc.ca",
+                "requested_scopes": ["openid"],
+                "client_type": "public",
+            },
+            owners=["owner-1"],
+        )
+
+        assert result == {"id": "app-1"}
+        service.create_application_from_payload.assert_awaited_once_with(
+            {
+                "name": "[TBS] - Application One",
+                "application_url": "https://example.gc.ca",
+                "client_type": "public",
+            },
+            ["owner-1"],
+        )
+
+    @pytest.mark.asyncio
+    async def test_update_application_from_rp_setup_delegates_filtered_payload(self) -> None:
+        service = IBMVerifyAdminService(Mock())
+        service.update_application_from_payload = AsyncMock(return_value=True)
+
+        result = await service.update_application_from_rp_setup(
+            "ibm-app-123",
+            {
+                "logout_method": "frontchannel",
+                "logout_uri": "https://example.gc.ca/logout",
+                "sector_identifier_uri": "https://example.gc.ca/sector.json",
+            },
+        )
+
+        assert result is True
+        service.update_application_from_payload.assert_awaited_once_with(
+            "ibm-app-123",
+            {
+                "logout_method": "frontchannel",
+                "logout_uri": "https://example.gc.ca/logout",
+            },
+        )
 
 
 class TestIBMVerifyAdminServiceAuditReportNormalization:

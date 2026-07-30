@@ -8,12 +8,14 @@ export type UserRead = {
 };
 
 export type WorkspaceCreate = {
+	departmentUuid: string;
 	name: string;
 	slug?: string | null;
 	description?: string | null;
 };
 
 export type WorkspaceUpdate = {
+	departmentUuid?: string | null;
 	name?: string;
 	slug?: string | null;
 	description?: string | null;
@@ -26,10 +28,11 @@ export type WorkspaceRead = {
 	slug: string;
 	departmentId: number;
 	description: string | null;
-	created_at: string;
-	updated_at: string | null;
-	is_deleted: boolean;
-	created_by: number | null;
+	createdAt: string;
+	updatedAt: string | null;
+	deletedAt: string | null;
+	isDeleted: boolean;
+	createdBy: number | null;
 };
 
 export type WorkspaceMemberCreate = {
@@ -37,17 +40,95 @@ export type WorkspaceMemberCreate = {
 	role: string;
 };
 
+export type WorkspaceMemberUpdate = {
+	role: string;
+};
+
 export type WorkspaceMemberRead = {
 	id: number;
 	uuid: string;
-	workspace_id: number;
-	user_id: number;
+	workspaceId: number;
+	userId: number;
 	role: string;
-	created_at: string;
-	is_deleted: boolean;
+	createdAt: string;
+	deletedAt: string | null;
+	isDeleted: boolean;
 	userEmail?: string;
 	userName?: string;
 	userUuid?: string;
+};
+
+export type ApplicationInformationCreate = {
+	migrationOrTransitionPlan: string;
+	overview: string;
+	securityAndPrivacy: string;
+	serviceNameEn: string;
+	serviceNameFr: string;
+	technologyAndProtocol: string;
+	usage: string;
+};
+
+export type ApplicationInformationUpdate = {
+	migrationOrTransitionPlan?: string;
+	overview?: string;
+	securityAndPrivacy?: string;
+	serviceNameEn?: string;
+	serviceNameFr?: string;
+	technologyAndProtocol?: string;
+	usage?: string;
+};
+
+export type ApplicationInformationRead = {
+	id: number;
+	uuid: string;
+	workspaceId: number;
+	createdBy: number | null;
+	serviceNameEn: string;
+	serviceNameFr: string;
+	overview: string;
+	technologyAndProtocol: string;
+	securityAndPrivacy: string;
+	usage: string;
+	migrationOrTransitionPlan: string;
+	createdAt: string;
+	updatedAt: string | null;
+	deletedAt: string | null;
+	isDeleted: boolean;
+};
+
+export type ApplicationInformationContactCreate = {
+	email: string;
+	nameEn: string;
+	nameFr: string;
+	phoneNumber?: string | null;
+	responsibilityEn: string;
+	responsibilityFr: string;
+};
+
+export type ApplicationInformationContactUpdate = {
+	email?: string;
+	nameEn?: string;
+	nameFr?: string;
+	phoneNumber?: string | null;
+	responsibilityEn?: string;
+	responsibilityFr?: string;
+};
+
+export type ApplicationInformationContactRead = {
+	id: number;
+	uuid: string;
+	applicationInformationId: number;
+	createdBy: number | null;
+	email: string;
+	nameEn: string;
+	nameFr: string;
+	phoneNumber: string | null;
+	responsibilityEn: string;
+	responsibilityFr: string;
+	createdAt: string;
+	updatedAt: string | null;
+	deletedAt: string | null;
+	isDeleted: boolean;
 };
 
 export const getWorkspaces = async (): Promise<Array<WorkspaceRead>> => {
@@ -168,6 +249,24 @@ export const removeWorkspaceMember = async (
 	return result;
 };
 
+export const updateWorkspaceMember = async (
+	workspaceUuid: string,
+	userUuid: string,
+	payload: WorkspaceMemberUpdate
+): Promise<WorkspaceMemberRead> => {
+	const result = await requestJson<WorkspaceMemberRead | null>(
+		`/api/v1/workspaces/${encodeURIComponent(workspaceUuid)}/members/${encodeURIComponent(userUuid)}`,
+		{
+			body: JSON.stringify(payload),
+			method: "PATCH",
+		}
+	);
+	if (!result) {
+		throw new Error("Failed to update workspace member");
+	}
+	return result;
+};
+
 export const getWorkspaceMembers = async (
 	workspaceUuid: string
 ): Promise<Array<WorkspaceMemberRead>> => {
@@ -194,4 +293,155 @@ export const searchUsers = async (
 		method: "GET",
 	});
 	return result ?? [];
+};
+
+export const getApplicationInformationList = async (
+	workspaceUuid: string
+): Promise<Array<ApplicationInformationRead>> => {
+	const result = await requestJson<Array<ApplicationInformationRead> | null>(
+		`/api/v1/workspaces/${encodeURIComponent(workspaceUuid)}/application-information`,
+		{
+			cache: "no-store",
+			method: "GET",
+		}
+	);
+	return result ?? [];
+};
+
+export const getApplicationInformation = async (
+	workspaceUuid: string,
+	applicationInformationUuid: string
+): Promise<ApplicationInformationRead> => {
+	const result = await requestJson<ApplicationInformationRead | null>(
+		`/api/v1/workspaces/${encodeURIComponent(workspaceUuid)}/application-information/${encodeURIComponent(applicationInformationUuid)}`,
+		{
+			cache: "no-store",
+			method: "GET",
+		}
+	);
+	if (!result) {
+		throw new Error("Application information not found");
+	}
+	return result;
+};
+
+export const createApplicationInformation = async (
+	workspaceUuid: string,
+	payload: ApplicationInformationCreate
+): Promise<ApplicationInformationRead> => {
+	const result = await requestJson<ApplicationInformationRead | null>(
+		`/api/v1/workspaces/${encodeURIComponent(workspaceUuid)}/application-information`,
+		{
+			body: JSON.stringify(payload),
+			method: "POST",
+		}
+	);
+	if (!result) {
+		throw new Error("Failed to create application information");
+	}
+	return result;
+};
+
+export const updateApplicationInformation = async (
+	workspaceUuid: string,
+	applicationInformationUuid: string,
+	payload: ApplicationInformationUpdate
+): Promise<ApplicationInformationRead> => {
+	const result = await requestJson<ApplicationInformationRead | null>(
+		`/api/v1/workspaces/${encodeURIComponent(workspaceUuid)}/application-information/${encodeURIComponent(applicationInformationUuid)}`,
+		{
+			body: JSON.stringify(payload),
+			method: "PATCH",
+		}
+	);
+	if (!result) {
+		throw new Error("Failed to update application information");
+	}
+	return result;
+};
+
+export const deleteApplicationInformation = async (
+	workspaceUuid: string,
+	applicationInformationUuid: string
+): Promise<ApiMessageResponse> => {
+	const result = await requestJson<ApiMessageResponse | null>(
+		`/api/v1/workspaces/${encodeURIComponent(workspaceUuid)}/application-information/${encodeURIComponent(applicationInformationUuid)}`,
+		{
+			method: "DELETE",
+		}
+	);
+	if (!result) {
+		throw new Error("Failed to delete application information");
+	}
+	return result;
+};
+
+export const getApplicationInformationContacts = async (
+	workspaceUuid: string,
+	applicationInformationUuid: string
+): Promise<Array<ApplicationInformationContactRead>> => {
+	const result = await requestJson<
+		Array<ApplicationInformationContactRead> | null
+	>(
+		`/api/v1/workspaces/${encodeURIComponent(workspaceUuid)}/application-information/${encodeURIComponent(applicationInformationUuid)}/contacts`,
+		{
+			cache: "no-store",
+			method: "GET",
+		}
+	);
+	return result ?? [];
+};
+
+export const createApplicationInformationContact = async (
+	workspaceUuid: string,
+	applicationInformationUuid: string,
+	payload: ApplicationInformationContactCreate
+): Promise<ApplicationInformationContactRead> => {
+	const result = await requestJson<ApplicationInformationContactRead | null>(
+		`/api/v1/workspaces/${encodeURIComponent(workspaceUuid)}/application-information/${encodeURIComponent(applicationInformationUuid)}/contacts`,
+		{
+			body: JSON.stringify(payload),
+			method: "POST",
+		}
+	);
+	if (!result) {
+		throw new Error("Failed to create application information contact");
+	}
+	return result;
+};
+
+export const updateApplicationInformationContact = async (
+	workspaceUuid: string,
+	applicationInformationUuid: string,
+	contactUuid: string,
+	payload: ApplicationInformationContactUpdate
+): Promise<ApplicationInformationContactRead> => {
+	const result = await requestJson<ApplicationInformationContactRead | null>(
+		`/api/v1/workspaces/${encodeURIComponent(workspaceUuid)}/application-information/${encodeURIComponent(applicationInformationUuid)}/contacts/${encodeURIComponent(contactUuid)}`,
+		{
+			body: JSON.stringify(payload),
+			method: "PATCH",
+		}
+	);
+	if (!result) {
+		throw new Error("Failed to update application information contact");
+	}
+	return result;
+};
+
+export const deleteApplicationInformationContact = async (
+	workspaceUuid: string,
+	applicationInformationUuid: string,
+	contactUuid: string
+): Promise<ApiMessageResponse> => {
+	const result = await requestJson<ApiMessageResponse | null>(
+		`/api/v1/workspaces/${encodeURIComponent(workspaceUuid)}/application-information/${encodeURIComponent(applicationInformationUuid)}/contacts/${encodeURIComponent(contactUuid)}`,
+		{
+			method: "DELETE",
+		}
+	);
+	if (!result) {
+		throw new Error("Failed to delete application information contact");
+	}
+	return result;
 };

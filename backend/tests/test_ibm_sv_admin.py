@@ -87,7 +87,7 @@ class TestApplicationEndpoints:
     async def test_create_application_delegates_to_service(self):
         mock_client = Mock()
         mock_service = Mock()
-        mock_service.create_application_from_payload = AsyncMock(
+        mock_service.create_application_from_rp_setup = AsyncMock(
             return_value={"id": "app1", "name": "New App"}
         )
 
@@ -105,7 +105,7 @@ class TestApplicationEndpoints:
             )
 
         assert result["name"] == "New App"
-        mock_service.create_application_from_payload.assert_awaited_once_with(
+        mock_service.create_application_from_rp_setup.assert_awaited_once_with(
             {
                 "name": "New App",
                 "description": "A new app",
@@ -119,7 +119,7 @@ class TestApplicationEndpoints:
     async def test_update_application_delegates_to_service(self):
         mock_client = Mock()
         mock_service = Mock()
-        mock_service.update_application_from_payload = AsyncMock()
+        mock_service.update_application_from_rp_setup = AsyncMock()
 
         with patch("src.app.services.ibm_sv_admin_service.IBMVerifyAdminService", return_value=mock_service):
             result = await unwrap_endpoint(ibm_sv_admin.update_application)(
@@ -135,7 +135,7 @@ class TestApplicationEndpoints:
             )
 
         assert result["message"] == "Application updated"
-        mock_service.update_application_from_payload.assert_awaited_once_with(
+        mock_service.update_application_from_rp_setup.assert_awaited_once_with(
             "app1",
             {
                 "name": "Updated App",

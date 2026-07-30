@@ -22,6 +22,7 @@ vi.mock("react-i18next", () => ({
 				"nav.roles": "Roles",
 				"nav.tiers": "Tiers",
 				"nav.users": "Users",
+				"nav.workspaces": "Workspaces",
 			};
 			return translations[key] ?? key;
 		},
@@ -154,6 +155,9 @@ describe("Header", () => {
 		expect(
 			document.querySelector("nav[aria-label='Primary navigation']")
 		).toBeTruthy();
+		expect(document.querySelector("a[data-href='/workspaces']")?.textContent).toBe(
+			"Workspaces"
+		);
 	});
 
 	it("renders public sign-in link when no session exists", () => {

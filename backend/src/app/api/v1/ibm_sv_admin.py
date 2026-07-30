@@ -19,6 +19,14 @@ class ApplicationCreateRequest(BaseModel):
     application_url: str = ""
     redirect_uris: list[str] = Field(default_factory=list)
     owners: list[str] = Field(default_factory=list)
+    post_logout_redirect_uris: list[str] = Field(default_factory=list)
+    company_name: str | None = None
+    client_type: str | None = None
+    client_auth_method: str | None = None
+    pkce_enabled: bool | None = None
+    logout_method: str | None = None
+    logout_uri: str | None = None
+    jwks_uri: str | None = None
 
 
 class ApplicationUpdateRequest(BaseModel):
@@ -26,6 +34,15 @@ class ApplicationUpdateRequest(BaseModel):
     description: str | None = None
     application_url: str | None = None
     redirect_uris: list[str] | None = None
+    post_logout_redirect_uris: list[str] | None = None
+    owners: list[str] | None = None
+    company_name: str | None = None
+    client_type: str | None = None
+    client_auth_method: str | None = None
+    pkce_enabled: bool | None = None
+    logout_method: str | None = None
+    logout_uri: str | None = None
+    jwks_uri: str | None = None
 
 
 # User endpoints
@@ -88,13 +105,8 @@ async def create_application(
     from ...services.ibm_sv_admin_service import IBMVerifyAdminService
 
     service = IBMVerifyAdminService(client)
-    payload_data = {
-        "name": app_data.name,
-        "description": app_data.description,
-        "application_url": app_data.application_url,
-        "redirect_uris": app_data.redirect_uris,
-    }
-    return await service.create_application_from_payload(payload_data, app_data.owners)
+    payload_data = app_data.model_dump(exclude={"owners"}, exclude_none=True)
+    return await service.create_application_from_rp_setup(payload_data, app_data.owners)
 
 
 @router.put("/ibm-sv-admin/applications/{application_id}")
@@ -109,8 +121,8 @@ async def update_application(
     from ...services.ibm_sv_admin_service import IBMVerifyAdminService
 
     service = IBMVerifyAdminService(client)
-    payload_data = {k: v for k, v in app_data.model_dump().items() if v is not None}
-    await service.update_application_from_payload(application_id, payload_data)
+    payload_data = app_data.model_dump(exclude_none=True)
+    await service.update_application_from_rp_setup(application_id, payload_data)
     return {"message": "Application updated"}
 
 

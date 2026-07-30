@@ -85,6 +85,7 @@ const Header = (): FunctionComponent => {
 
 	const authItems: Array<NavigationItem> = [
 		{ href: "/your-applications", label: t("nav.dashboard") },
+		{ href: "/workspaces", label: t("nav.workspaces") },
 	];
 
 	const superuserItems: Array<NavigationItem> = [

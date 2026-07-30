@@ -5,10 +5,12 @@ export type { UserRead } from "./auth";
 export { getRequestErrorNotice } from "./error-notice";
 export {
 	BadRequestError,
+	ConflictRequestError,
 	ForbiddenRequestError,
 	getRequestErrorMessage,
 	HttpRequestError,
 	isBadRequestError,
+	isConflictRequestError,
 	isForbiddenRequestError,
 	isServerRequestError,
 	isUnauthorizedRequestError,

@@ -1,0 +1,45 @@
+# Restore Workspace And Application Info Management Tasks
+
+## 1. Workspace CRUD Baseline
+
+- [x] 1.1 Implement backend list, detail, create, update, and delete routes for `/api/v1/workspaces`, including department association, safe errors, and repository coverage.
+- [x] 1.2 Implement frontend `/workspaces`, `/workspaces/new`, `/workspaces/$workspaceUuid`, and `/workspaces/$workspaceUuid/settings` routes with accessible loading, empty, error, and success states.
+	Progress note (2026-07-30): recorded the local workspaces page-pattern decision, added the authenticated `/workspaces` route family with list, create, detail, and settings pages, surfaced create and update success states through workspace-detail route search flags, exposed workspace delete from settings with list-route success feedback, and made Workspaces discoverable from the shared authenticated header navigation.
+- [x] 1.3 Add backend and frontend tests that prove authorized users can list and view accessible workspaces and workspace admins can create, edit, and delete them.
+	Progress note (2026-07-30): added focused backend workspace service, route, and OpenAPI tests for CRUD delegation, current-user workspace listing, detail reads, and safe-error responses; added frontend fetch-layer tests for workspace list, current-user list, detail, create, update, and delete flows. Focused page and route-state coverage was added under 1.2 and 5.3 for the restored `/workspaces` route family.
+
+## 2. Workspace Membership Management
+
+- [x] 2.1 Implement backend membership list, add, role-update, and remove routes under `/api/v1/workspaces/{workspace_uuid}/members` with duplicate-membership and unauthorized-actor protections.
+- [x] 2.2 Implement the frontend `/workspaces/$workspaceUuid/members` route with member search, add, role-change, remove, and denied-state behavior.
+	Progress note (2026-07-30): added the dedicated members route under the restored workspace route family, linked it from workspace detail, used workspace-scoped user search to add non-members, exposed per-member role changes and remove confirmation, and surfaced success and denied states with the shared notice pattern.
+- [x] 2.3 Add backend and frontend tests that prove membership CRUD, role updates, duplicate prevention, and access denial for non-admin actors.
+	Progress note (2026-07-30): backend service and route tests cover membership list, add, role-update, remove, duplicate-membership rejection, non-admin denial, and workspace-scoped user-search authorization/filtering; frontend fetch-contract tests cover list, add, update, remove, and workspace candidate search, while page tests cover search, add, role change, and remove flows. Executable backend pytest coverage still remains tracked under 5.2.
+
+## 3. Application Information And Contacts
+
+- [x] 3.1 Add or restore persistence and migration support for `application_information` and `application_information_contact` records per STD-020 and PAT-012.
+	Progress note (2026-07-30): added typed SQLAlchemy models, Pydantic create/update/read schemas, FastCRUD adapters, a new Alembic migration, and focused schema tests for canonical bilingual application metadata and bilingual contact records. This slice intentionally keeps RP-application linkage changes for 4.x so application-information persistence can land cleanly first.
+- [x] 3.2 Implement backend CRUD routes for `/api/v1/workspaces/{workspace_uuid}/application-information` and related contact endpoints.
+	Progress note (2026-07-30): extended `WorkspaceService` and the existing workspace route family with admin-scoped list, create, detail, update, and delete endpoints for application-information records plus nested contact list, create, update, and delete endpoints. Focused backend route and service tests were added for delegation, parent scoping, and admin denial. Linked-RP delete blocking remains tied to future RP-application linkage and stays tracked in 3.4.
+- [x] 3.3 Implement frontend list, detail, create, and edit routes under `/workspaces/$workspaceUuid/application-information` and nested contact management behavior.
+	Progress note (2026-07-30): extended the approved workspace page-pattern decision for the application-information route family, added frontend fetch wrappers and React Query hooks for application-information and contact CRUD, implemented list/create/detail/edit routes under the existing workspace shell, linked the experience from workspace detail, and added nested contact create, edit, and delete behavior on the detail page.
+- [x] 3.4 Add backend and frontend tests that prove canonical bilingual metadata persists correctly, contact CRUD works, and deletion is blocked when linked RP applications still exist.
+	Progress note (2026-07-30): extended backend service and route coverage to assert bilingual application metadata is preserved and that deleting application-information returns a 409 conflict when linked RP applications exist; added the missing RP-application linkage column and migration needed for that guard; updated frontend request error handling to surface 409 conflicts and added detail-page coverage proving the linked-RP delete block is shown to workspace admins.
+
+## 4. Workspace-Scoped RP Application Management
+
+- [ ] 4.1 Implement backend CRUD routes for `/api/v1/workspaces/{workspace_uuid}/applications` plus `/usage/summary` and `/audit-events` detail endpoints.
+	Progress note (2026-07-30): added IBM Verify admin-service helpers that collect the RP setup fields currently supported by the Python SDK-backed adapter and forward create or update calls through the existing IBM boundary; the remaining questionnaire fields still need adapter or package support before the full workspace-scoped application slice can land.
+- [ ] 4.2 Implement frontend list, detail, create, edit, usage, and audit routes under `/workspaces/$workspaceUuid/applications` while preserving the existing `/your-applications/$rpApplicationUuid` owner experience.
+- [ ] 4.3 Implement the OIDC questionnaire-derived validation and data mapping for environment selection, logout, client authentication, scopes, sector identifier, PKCE, signing, encryption, decryption, and roadmap or risk follow-up fields.
+- [ ] 4.4 Add backend and frontend tests that prove create, edit, delete, linked-application-information behavior, validation failures, and audit or usage visibility for workspace admins.
+
+## 5. Verification
+
+- [x] 5.1 Run `make validate-openspec-change CHANGE_ID=restore-workspace-and-application-info-management`.
+- [ ] 5.2 Run targeted backend tests for workspace, membership, application-information, and workspace-scoped RP application APIs.
+	Progress note (2026-07-30): attempted focused `pytest` for the workspace CRUD and membership backend files, but the current shell still does not have `pytest`, `uv`, or the repo-root `.venv`; syntax compilation and VS Code diagnostics passed for the touched backend files, including the workspace-scoped user-search route and service additions.
+- [x] 5.3 Run targeted frontend tests for restored workspace routes, forms, and route-state handling.
+	Progress note (2026-07-30): ran focused Vitest coverage for workspace fetch contracts, shared header navigation, `/workspaces` list behavior, `/workspaces/new` create behavior, `/workspaces/$workspaceUuid` success-state behavior, `/workspaces/$workspaceUuid/settings` update and delete behavior, `/workspaces/$workspaceUuid/members` search and membership-management behavior, and workspace list/detail route search normalization; frontend `pnpm build` also passed and regenerated the file-based router artifacts.
+	Additional note (2026-07-30): added and ran focused frontend coverage for workspace application-information fetch contracts, list/create/detail/edit pages, nested contact management on detail, and application-information route search-state normalization.

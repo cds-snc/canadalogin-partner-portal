@@ -1,3 +1,5 @@
+from .application_information import ApplicationInformation
+from .application_information_contact import ApplicationInformationContact
 from .access_policy import AccessPolicy
 from .audit_log import AuditLog
 from .department import Department
@@ -6,3 +8,5 @@ from .role import Role
 from .rp_application import RPApplication
 from .tier import Tier
 from .user import User
+from .workspace import Workspace
+from .workspace_member import WorkspaceMember

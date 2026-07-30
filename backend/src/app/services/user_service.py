@@ -15,6 +15,7 @@ from ..repositories.crud_rate_limit import crud_rate_limits
 from ..repositories.crud_roles import crud_roles
 from ..repositories.crud_tier import crud_tiers
 from ..repositories.crud_users import crud_users
+from ..repositories.crud_workspace_members import crud_workspace_members
 from ..schemas.audit_log import AuditLogCreateInternal
 from ..schemas.department import DepartmentRead
 from ..schemas.rate_limit import RateLimitRead
@@ -86,10 +87,8 @@ class UserService:
         self,
         db: AsyncSession,
         query: str,
-        workspace_uuid: uuid_pkg.UUID | str | None = None,
+        workspace_id: int | None = None,
     ) -> list[dict[str, Any]]:
-        # workspace_uuid is retained for backward compatibility and ignored.
-        _ = workspace_uuid
         filters: dict[str, Any] = {"is_deleted": False}
 
         users_data = await crud_users.get_multi(
@@ -108,6 +107,22 @@ class UserService:
                 or query_lower in (user.get("username") or "").lower()
             )
         ]
+
+        if workspace_id is not None:
+            memberships_data = await crud_workspace_members.get_multi(
+                db=db,
+                workspace_id=workspace_id,
+                is_deleted=False,
+            )
+            active_user_ids = {
+                membership.get("user_id")
+                for membership in memberships_data.get("data", [])
+                if membership.get("user_id") is not None
+            }
+            filtered = [
+                user for user in filtered if user.get("id") not in active_user_ids
+            ]
+
         return [await self._build_public_user(db=db, user=dict(user)) for user in filtered[:20]]
 
     async def get_user_by_uuid(self, db: AsyncSession, user_uuid: uuid_pkg.UUID | str) -> dict[str, Any]:

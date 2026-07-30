@@ -2,6 +2,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { markBackendActivity } from "@/lib/backend-activity";
 import {
 	BadRequestError,
+	ConflictRequestError,
 	ForbiddenRequestError,
 	ServerRequestError,
 	UnauthorizedRequestError,
@@ -147,6 +148,41 @@ describe("requestJson", () => {
 				method: "GET",
 			}),
 		).rejects.toBeInstanceOf(ServerRequestError);
+	});
+
+	it("throws a ConflictRequestError for 409 responses", async () => {
+		globalThis.fetch = vi.fn().mockResolvedValue({
+			headers: new Headers({ "content-type": "application/json" }),
+			json: () =>
+				Promise.resolve({
+					error: {
+						code: "conflict",
+						message:
+							"Linked RP applications must be unlinked or removed before deleting application information",
+						requestId: "request-409",
+					},
+				}),
+			ok: false,
+			status: 409,
+		} as Response);
+
+		await expect(
+			requestJson("/api/v1/workspaces/example/application-information/example", {
+				method: "DELETE",
+			}),
+		).rejects.toMatchObject({
+			detail:
+				"Linked RP applications must be unlinked or removed before deleting application information",
+			message:
+				"Linked RP applications must be unlinked or removed before deleting application information",
+			status: 409,
+		});
+		await expect(
+			requestJson("/api/v1/workspaces/example/application-information/example", {
+				method: "DELETE",
+			}),
+		).rejects.toBeInstanceOf(ConflictRequestError);
+		expect(window.location.replace).not.toHaveBeenCalled();
 	});
 
 	it("falls back to legacy detail payloads when the backend envelope is absent", async () => {

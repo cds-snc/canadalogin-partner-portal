@@ -4,6 +4,7 @@ import type { ApiErrorDetail } from "./api-types";
 import { buildApiUrl } from "./base-url";
 import {
 	BadRequestError,
+	ConflictRequestError,
 	ForbiddenRequestError,
 	HttpRequestError,
 	ServerRequestError,
@@ -147,6 +148,10 @@ const toRequestError = (
 
 	if (status === 403) {
 		return new ForbiddenRequestError(errorOptions);
+	}
+
+	if (status === 409) {
+		return new ConflictRequestError(errorOptions);
 	}
 
 	if (status >= 500) {

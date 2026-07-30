@@ -1,0 +1,552 @@
+from datetime import UTC, datetime
+from unittest.mock import AsyncMock, Mock
+
+import casbin
+from fastcrud.exceptions.http_exceptions import CustomException
+from fastapi.testclient import TestClient
+
+from src.app.api.dependencies import get_current_user, get_workspace_service
+from src.app.core.access_control import CASBIN_MODEL_PATH, database_enforcer_provider
+from src.app.core.db.database import async_get_db
+from src.app.core.exceptions.http_exceptions import ForbiddenException, NotFoundException
+from src.app.main import app
+
+
+def make_enforcer(*policies: tuple[str, str, str]) -> casbin.Enforcer:
+    enforcer = casbin.Enforcer(str(CASBIN_MODEL_PATH))
+    if policies:
+        enforcer.add_policies(list(policies))
+    return enforcer
+
+
+def sample_workspace_payload(*, name: str = "Benefits Workspace") -> dict[str, object]:
+    return {
+        "id": 9,
+        "uuid": "018f6f83-0000-0000-0000-000000000201",
+        "name": name,
+        "slug": "benefits-workspace" if name == "Benefits Workspace" else "renamed-workspace",
+        "department_id": 7,
+        "description": "Primary workspace",
+        "created_by": 42,
+        "created_at": datetime(2026, 7, 30, 12, 0, tzinfo=UTC).isoformat(),
+        "updated_at": None,
+        "deleted_at": None,
+        "is_deleted": False,
+    }
+
+
+def sample_application_information_payload(*, service_name_en: str = "Example service") -> dict[str, object]:
+    return {
+        "id": 17,
+        "uuid": "018f6f83-0000-0000-0000-000000000501",
+        "workspace_id": 9,
+        "created_by": 42,
+        "service_name_en": service_name_en,
+        "service_name_fr": "Service exemple" if service_name_en == "Example service" else "Service mis a jour",
+        "overview": "Overview text",
+        "technology_and_protocol": "OIDC with backend mediation",
+        "security_and_privacy": "Protected B controls apply",
+        "usage": "Partner onboarding usage",
+        "migration_or_transition_plan": "Phased transition",
+        "created_at": datetime(2026, 7, 30, 15, 0, tzinfo=UTC).isoformat(),
+        "updated_at": None,
+        "deleted_at": None,
+        "is_deleted": False,
+    }
+
+
+def sample_application_information_contact_payload(*, responsibility_en: str = "Product owner") -> dict[str, object]:
+    return {
+        "id": 3,
+        "uuid": "018f6f83-0000-0000-0000-000000000601",
+        "application_information_id": 17,
+        "created_by": 42,
+        "name_en": "Jane Doe",
+        "name_fr": "Jeanne Doe",
+        "responsibility_en": responsibility_en,
+        "responsibility_fr": "Responsable du produit" if responsibility_en == "Product owner" else "Responsabilite mise a jour",
+        "email": "jane.doe@example.gc.ca",
+        "phone_number": "555-555-5555",
+        "created_at": datetime(2026, 7, 30, 15, 15, tzinfo=UTC).isoformat(),
+        "updated_at": None,
+        "deleted_at": None,
+        "is_deleted": False,
+    }
+
+
+class TestWorkspaceRoutes:
+    def test_workspaces_list_allows_user_with_workspace_read_policy(self) -> None:
+        service = Mock()
+        service.list_workspaces = AsyncMock(return_value=[sample_workspace_payload()])
+
+        app.dependency_overrides[get_current_user] = lambda: {
+            "username": "member@example.gc.ca",
+            "is_superuser": False,
+        }
+        app.dependency_overrides[database_enforcer_provider] = lambda: make_enforcer(
+            ("member@example.gc.ca", "workspace", "read")
+        )
+        app.dependency_overrides[get_workspace_service] = lambda: service
+        app.dependency_overrides[async_get_db] = lambda: Mock()
+
+        try:
+            with TestClient(app) as client:
+                response = client.get("/api/v1/workspaces")
+        finally:
+            app.dependency_overrides.clear()
+
+        assert response.status_code == 200
+        assert response.json() == [
+            {
+                "id": 9,
+                "uuid": "018f6f83-0000-0000-0000-000000000201",
+                "name": "Benefits Workspace",
+                "slug": "benefits-workspace",
+                "departmentId": 7,
+                "description": "Primary workspace",
+                "createdBy": 42,
+                "createdAt": "2026-07-30T12:00:00+00:00",
+                "updatedAt": None,
+                "deletedAt": None,
+                "isDeleted": False,
+            }
+        ]
+
+    def test_current_user_workspaces_list_delegates_to_current_user_service(self) -> None:
+        service = Mock()
+        service.list_current_user_workspaces = AsyncMock(
+            return_value=[sample_workspace_payload()]
+        )
+        current_user = {
+            "id": 42,
+            "username": "member@example.gc.ca",
+            "is_superuser": False,
+        }
+        db = Mock()
+
+        app.dependency_overrides[get_current_user] = lambda: current_user
+        app.dependency_overrides[database_enforcer_provider] = lambda: make_enforcer(
+            ("member@example.gc.ca", "workspace", "read")
+        )
+        app.dependency_overrides[get_workspace_service] = lambda: service
+        app.dependency_overrides[async_get_db] = lambda: db
+
+        try:
+            with TestClient(app) as client:
+                response = client.get("/api/v1/workspaces/mine")
+        finally:
+            app.dependency_overrides.clear()
+
+        assert response.status_code == 200
+        assert response.json()[0]["uuid"] == "018f6f83-0000-0000-0000-000000000201"
+        service.list_current_user_workspaces.assert_awaited_once_with(
+            db=db,
+            current_user=current_user,
+        )
+
+    def test_workspaces_list_denies_user_without_workspace_read_policy(self) -> None:
+        service = Mock()
+        service.list_workspaces = AsyncMock()
+
+        app.dependency_overrides[get_current_user] = lambda: {
+            "username": "member@example.gc.ca",
+            "is_superuser": False,
+        }
+        app.dependency_overrides[database_enforcer_provider] = lambda: make_enforcer()
+        app.dependency_overrides[get_workspace_service] = lambda: service
+        app.dependency_overrides[async_get_db] = lambda: Mock()
+
+        try:
+            with TestClient(app) as client:
+                response = client.get("/api/v1/workspaces")
+        finally:
+            app.dependency_overrides.clear()
+
+        assert response.status_code == 403
+        assert response.json()["error"]["code"] == "forbidden"
+        service.list_workspaces.assert_not_called()
+
+    def test_workspace_detail_not_found_returns_safe_error(self) -> None:
+        service = Mock()
+        service.get_workspace_by_uuid = AsyncMock(
+            side_effect=NotFoundException("Workspace not found")
+        )
+
+        app.dependency_overrides[get_current_user] = lambda: {
+            "id": 42,
+            "username": "admin@example.gc.ca",
+            "is_superuser": True,
+        }
+        app.dependency_overrides[get_workspace_service] = lambda: service
+        app.dependency_overrides[async_get_db] = lambda: Mock()
+
+        try:
+            with TestClient(app) as client:
+                response = client.get(
+                    "/api/v1/workspaces/018f6f83-0000-0000-0000-000000000201"
+                )
+        finally:
+            app.dependency_overrides.clear()
+
+        assert response.status_code == 404
+        assert response.json()["error"]["code"] == "not_found"
+
+    def test_workspace_detail_allows_user_with_workspace_read_policy(self) -> None:
+        service = Mock()
+        service.get_workspace_by_uuid = AsyncMock(return_value=sample_workspace_payload())
+
+        app.dependency_overrides[get_current_user] = lambda: {
+            "id": 42,
+            "username": "member@example.gc.ca",
+            "is_superuser": False,
+        }
+        app.dependency_overrides[database_enforcer_provider] = lambda: make_enforcer(
+            ("member@example.gc.ca", "workspace", "read")
+        )
+        app.dependency_overrides[get_workspace_service] = lambda: service
+        app.dependency_overrides[async_get_db] = lambda: Mock()
+
+        try:
+            with TestClient(app) as client:
+                response = client.get(
+                    "/api/v1/workspaces/018f6f83-0000-0000-0000-000000000201"
+                )
+        finally:
+            app.dependency_overrides.clear()
+
+        assert response.status_code == 200
+        assert response.json()["uuid"] == "018f6f83-0000-0000-0000-000000000201"
+
+    def test_workspace_crud_mutations_delegate_to_service_for_admin(self) -> None:
+        service = Mock()
+        service.create_workspace = AsyncMock(return_value=sample_workspace_payload())
+        service.update_workspace = AsyncMock(
+            return_value=sample_workspace_payload(name="Renamed Workspace")
+        )
+        service.delete_workspace = AsyncMock(return_value={"message": "Workspace deleted"})
+
+        app.dependency_overrides[get_current_user] = lambda: {
+            "id": 42,
+            "username": "admin@example.gc.ca",
+            "is_superuser": True,
+        }
+        app.dependency_overrides[get_workspace_service] = lambda: service
+        app.dependency_overrides[async_get_db] = lambda: Mock()
+
+        try:
+            with TestClient(app) as client:
+                create_response = client.post(
+                    "/api/v1/workspaces",
+                    json={
+                        "name": "Benefits Workspace",
+                        "departmentUuid": "018f6f83-0000-0000-0000-000000000101",
+                        "description": "Primary workspace",
+                    },
+                )
+                update_response = client.patch(
+                    "/api/v1/workspaces/018f6f83-0000-0000-0000-000000000201",
+                    json={
+                        "name": "Renamed Workspace",
+                        "slug": "renamed-workspace",
+                    },
+                )
+                delete_response = client.delete(
+                    "/api/v1/workspaces/018f6f83-0000-0000-0000-000000000201"
+                )
+        finally:
+            app.dependency_overrides.clear()
+
+        assert create_response.status_code == 201
+        assert create_response.json()["departmentId"] == 7
+        assert update_response.status_code == 200
+        assert update_response.json()["name"] == "Renamed Workspace"
+        assert update_response.json()["slug"] == "renamed-workspace"
+        assert delete_response.status_code == 200
+        assert delete_response.json() == {"message": "Workspace deleted"}
+
+    def test_workspace_members_crud_delegates_to_service_for_workspace_admin(self) -> None:
+        service = Mock()
+        service.list_workspace_members = AsyncMock(
+            return_value=[
+                {
+                    "id": 12,
+                    "uuid": "018f6f83-0000-0000-0000-000000000402",
+                    "workspace_id": 9,
+                    "user_id": 99,
+                    "role": "workspace_member",
+                    "created_at": datetime(2026, 7, 30, 14, 0, tzinfo=UTC).isoformat(),
+                    "deleted_at": None,
+                    "is_deleted": False,
+                    "user_email": "member@example.gc.ca",
+                    "user_name": "Member User",
+                    "user_uuid": "018f6f83-0000-0000-0000-000000000301",
+                }
+            ]
+        )
+        service.add_workspace_member = AsyncMock(
+            return_value={
+                "id": 12,
+                "uuid": "018f6f83-0000-0000-0000-000000000402",
+                "workspace_id": 9,
+                "user_id": 99,
+                "role": "workspace_member",
+                "created_at": datetime(2026, 7, 30, 14, 0, tzinfo=UTC).isoformat(),
+                "deleted_at": None,
+                "is_deleted": False,
+                "user_email": "member@example.gc.ca",
+                "user_name": "Member User",
+                "user_uuid": "018f6f83-0000-0000-0000-000000000301",
+            }
+        )
+        service.update_workspace_member_role = AsyncMock(
+            return_value={
+                "id": 12,
+                "uuid": "018f6f83-0000-0000-0000-000000000402",
+                "workspace_id": 9,
+                "user_id": 99,
+                "role": "workspace_admin",
+                "created_at": datetime(2026, 7, 30, 14, 0, tzinfo=UTC).isoformat(),
+                "deleted_at": None,
+                "is_deleted": False,
+                "user_email": "member@example.gc.ca",
+                "user_name": "Member User",
+                "user_uuid": "018f6f83-0000-0000-0000-000000000301",
+            }
+        )
+        service.remove_workspace_member = AsyncMock(
+            return_value={"message": "Workspace member removed"}
+        )
+        current_user = {
+            "id": 42,
+            "username": "workspace-admin@example.gc.ca",
+            "is_superuser": False,
+        }
+        db = Mock()
+
+        app.dependency_overrides[get_current_user] = lambda: current_user
+        app.dependency_overrides[get_workspace_service] = lambda: service
+        app.dependency_overrides[async_get_db] = lambda: db
+
+        try:
+            with TestClient(app) as client:
+                list_response = client.get(
+                    "/api/v1/workspaces/018f6f83-0000-0000-0000-000000000201/members"
+                )
+                create_response = client.post(
+                    "/api/v1/workspaces/018f6f83-0000-0000-0000-000000000201/members",
+                    json={
+                        "userUuid": "018f6f83-0000-0000-0000-000000000301",
+                        "role": "workspace_member",
+                    },
+                )
+                update_response = client.patch(
+                    "/api/v1/workspaces/018f6f83-0000-0000-0000-000000000201/members/018f6f83-0000-0000-0000-000000000301",
+                    json={"role": "workspace_admin"},
+                )
+                delete_response = client.delete(
+                    "/api/v1/workspaces/018f6f83-0000-0000-0000-000000000201/members/018f6f83-0000-0000-0000-000000000301"
+                )
+        finally:
+            app.dependency_overrides.clear()
+
+        assert list_response.status_code == 200
+        assert list_response.json()[0]["userEmail"] == "member@example.gc.ca"
+        assert create_response.status_code == 201
+        assert create_response.json()["role"] == "workspace_member"
+        assert update_response.status_code == 200
+        assert update_response.json()["role"] == "workspace_admin"
+        assert delete_response.status_code == 200
+        assert delete_response.json() == {"message": "Workspace member removed"}
+
+    def test_workspace_members_denied_for_non_admin_actor(self) -> None:
+        service = Mock()
+        service.list_workspace_members = AsyncMock(
+            side_effect=ForbiddenException("You do not have enough privileges.")
+        )
+
+        app.dependency_overrides[get_current_user] = lambda: {
+            "id": 55,
+            "username": "member@example.gc.ca",
+            "is_superuser": False,
+        }
+        app.dependency_overrides[get_workspace_service] = lambda: service
+        app.dependency_overrides[async_get_db] = lambda: Mock()
+
+        try:
+            with TestClient(app) as client:
+                response = client.get(
+                    "/api/v1/workspaces/018f6f83-0000-0000-0000-000000000201/members"
+                )
+        finally:
+            app.dependency_overrides.clear()
+
+        assert response.status_code == 403
+        assert response.json()["error"]["code"] == "forbidden"
+
+    def test_workspace_application_information_crud_delegates_to_service_for_workspace_admin(self) -> None:
+        service = Mock()
+        service.list_workspace_application_information = AsyncMock(
+            return_value=[sample_application_information_payload()]
+        )
+        service.create_workspace_application_information = AsyncMock(
+            return_value=sample_application_information_payload()
+        )
+        service.get_workspace_application_information = AsyncMock(
+            return_value=sample_application_information_payload()
+        )
+        service.update_workspace_application_information = AsyncMock(
+            return_value=sample_application_information_payload(service_name_en="Updated service")
+        )
+        service.delete_workspace_application_information = AsyncMock(
+            return_value={"message": "Application information deleted"}
+        )
+        service.list_application_information_contacts = AsyncMock(
+            return_value=[sample_application_information_contact_payload()]
+        )
+        service.add_application_information_contact = AsyncMock(
+            return_value=sample_application_information_contact_payload()
+        )
+        service.update_application_information_contact = AsyncMock(
+            return_value=sample_application_information_contact_payload(responsibility_en="Updated responsibility")
+        )
+        service.delete_application_information_contact = AsyncMock(
+            return_value={"message": "Application information contact deleted"}
+        )
+        current_user = {
+            "id": 42,
+            "username": "workspace-admin@example.gc.ca",
+            "is_superuser": False,
+        }
+        db = Mock()
+
+        app.dependency_overrides[get_current_user] = lambda: current_user
+        app.dependency_overrides[get_workspace_service] = lambda: service
+        app.dependency_overrides[async_get_db] = lambda: db
+
+        try:
+            with TestClient(app) as client:
+                list_response = client.get(
+                    "/api/v1/workspaces/018f6f83-0000-0000-0000-000000000201/application-information"
+                )
+                create_response = client.post(
+                    "/api/v1/workspaces/018f6f83-0000-0000-0000-000000000201/application-information",
+                    json={
+                        "serviceNameEn": "Example service",
+                        "serviceNameFr": "Service exemple",
+                        "overview": "Overview text",
+                        "technologyAndProtocol": "OIDC with backend mediation",
+                        "securityAndPrivacy": "Protected B controls apply",
+                        "usage": "Partner onboarding usage",
+                        "migrationOrTransitionPlan": "Phased transition",
+                    },
+                )
+                detail_response = client.get(
+                    "/api/v1/workspaces/018f6f83-0000-0000-0000-000000000201/application-information/018f6f83-0000-0000-0000-000000000501"
+                )
+                update_response = client.patch(
+                    "/api/v1/workspaces/018f6f83-0000-0000-0000-000000000201/application-information/018f6f83-0000-0000-0000-000000000501",
+                    json={"serviceNameEn": "Updated service"},
+                )
+                delete_response = client.delete(
+                    "/api/v1/workspaces/018f6f83-0000-0000-0000-000000000201/application-information/018f6f83-0000-0000-0000-000000000501"
+                )
+                contacts_list_response = client.get(
+                    "/api/v1/workspaces/018f6f83-0000-0000-0000-000000000201/application-information/018f6f83-0000-0000-0000-000000000501/contacts"
+                )
+                contact_create_response = client.post(
+                    "/api/v1/workspaces/018f6f83-0000-0000-0000-000000000201/application-information/018f6f83-0000-0000-0000-000000000501/contacts",
+                    json={
+                        "nameEn": "Jane Doe",
+                        "nameFr": "Jeanne Doe",
+                        "responsibilityEn": "Product owner",
+                        "responsibilityFr": "Responsable du produit",
+                        "email": "jane.doe@example.gc.ca",
+                        "phoneNumber": "555-555-5555",
+                    },
+                )
+                contact_update_response = client.patch(
+                    "/api/v1/workspaces/018f6f83-0000-0000-0000-000000000201/application-information/018f6f83-0000-0000-0000-000000000501/contacts/018f6f83-0000-0000-0000-000000000601",
+                    json={"responsibilityEn": "Updated responsibility"},
+                )
+                contact_delete_response = client.delete(
+                    "/api/v1/workspaces/018f6f83-0000-0000-0000-000000000201/application-information/018f6f83-0000-0000-0000-000000000501/contacts/018f6f83-0000-0000-0000-000000000601"
+                )
+        finally:
+            app.dependency_overrides.clear()
+
+        assert list_response.status_code == 200
+        assert list_response.json()[0]["serviceNameEn"] == "Example service"
+        assert create_response.status_code == 201
+        assert create_response.json()["serviceNameFr"] == "Service exemple"
+        assert detail_response.status_code == 200
+        assert detail_response.json()["uuid"] == "018f6f83-0000-0000-0000-000000000501"
+        assert update_response.status_code == 200
+        assert update_response.json()["serviceNameEn"] == "Updated service"
+        assert delete_response.status_code == 200
+        assert delete_response.json() == {"message": "Application information deleted"}
+        assert contacts_list_response.status_code == 200
+        assert contacts_list_response.json()[0]["nameEn"] == "Jane Doe"
+        assert contact_create_response.status_code == 201
+        assert contact_create_response.json()["email"] == "jane.doe@example.gc.ca"
+        assert contact_update_response.status_code == 200
+        assert contact_update_response.json()["responsibilityEn"] == "Updated responsibility"
+        assert contact_delete_response.status_code == 200
+        assert contact_delete_response.json() == {"message": "Application information contact deleted"}
+
+    def test_workspace_application_information_denied_for_non_admin_actor(self) -> None:
+        service = Mock()
+        service.list_workspace_application_information = AsyncMock(
+            side_effect=ForbiddenException("You do not have enough privileges.")
+        )
+
+        app.dependency_overrides[get_current_user] = lambda: {
+            "id": 55,
+            "username": "member@example.gc.ca",
+            "is_superuser": False,
+        }
+        app.dependency_overrides[get_workspace_service] = lambda: service
+        app.dependency_overrides[async_get_db] = lambda: Mock()
+
+        try:
+            with TestClient(app) as client:
+                response = client.get(
+                    "/api/v1/workspaces/018f6f83-0000-0000-0000-000000000201/application-information"
+                )
+        finally:
+            app.dependency_overrides.clear()
+
+        assert response.status_code == 403
+        assert response.json()["error"]["code"] == "forbidden"
+
+    def test_workspace_application_information_delete_returns_conflict_for_linked_rp_applications(self) -> None:
+        service = Mock()
+        service.delete_workspace_application_information = AsyncMock(
+            side_effect=CustomException(
+                status_code=409,
+                detail=(
+                    "Linked RP applications must be unlinked or removed before deleting application information"
+                ),
+            )
+        )
+
+        app.dependency_overrides[get_current_user] = lambda: {
+            "id": 42,
+            "username": "workspace-admin@example.gc.ca",
+            "is_superuser": False,
+        }
+        app.dependency_overrides[get_workspace_service] = lambda: service
+        app.dependency_overrides[async_get_db] = lambda: Mock()
+
+        try:
+            with TestClient(app) as client:
+                response = client.delete(
+                    "/api/v1/workspaces/018f6f83-0000-0000-0000-000000000201/application-information/018f6f83-0000-0000-0000-000000000501"
+                )
+        finally:
+            app.dependency_overrides.clear()
+
+        assert response.status_code == 409
+        assert response.json()["error"]["code"] == "conflict"
+        assert response.json()["error"]["message"] == (
+            "Linked RP applications must be unlinked or removed before deleting application information"
+        )

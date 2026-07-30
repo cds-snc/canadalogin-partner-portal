@@ -5,10 +5,10 @@ from fastapi import APIRouter, Depends, Request
 from fastcrud import PaginatedListResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from ...api.dependencies import get_current_user, get_user_service
+from ...api.dependencies import get_current_user, get_user_service, get_workspace_service
 from ...core.access_control import casbin_guard
 from ...core.db.database import async_get_db
-from ...core.exceptions.http_exceptions import BadRequestException
+from ...core.exceptions.http_exceptions import BadRequestException, ForbiddenException
 from ...core.security import oauth2_scheme
 from ...schemas.role import RoleRead
 from ...schemas.user import (
@@ -25,20 +25,37 @@ from ...schemas.user import (
 )
 from ...services.user_service import UserService
 from ...services.user_service import UserService as UserServiceClass
+from ...services.workspace_service import WorkspaceService
 
 router = APIRouter(tags=["users"])
 
 
 @router.get("/users/search")
-@casbin_guard.require_permission("users_admin", "read")
 async def search_users(
     request: Request,
     q: str,
     db: Annotated[AsyncSession, Depends(async_get_db)],
     service: Annotated[UserService, Depends(get_user_service)],
     current_user: Annotated[dict, Depends(get_current_user)],
+    workspace_service: Annotated[WorkspaceService, Depends(get_workspace_service)],
+    workspace_uuid: uuid_pkg.UUID | None = None,
 ) -> list[dict[str, Any]]:
     """Search users by name, email, or username."""
+    if workspace_uuid is not None:
+        workspace = await workspace_service.require_workspace_admin_access(
+            db=db,
+            workspace_uuid=workspace_uuid,
+            current_user=current_user,
+        )
+        return await service.search_users(
+            db=db,
+            query=q,
+            workspace_id=workspace["id"],
+        )
+
+    if not current_user.get("is_superuser"):
+        raise ForbiddenException("You do not have enough privileges.")
+
     return await service.search_users(
         db=db,
         query=q,

@@ -14,6 +14,7 @@ from .rp_application_service import RPApplicationService
 from .task_service import TaskService
 from .tier_service import TierService
 from .user_service import UserService
+from .workspace_service import WorkspaceService
 
 __all__ = [
     "AuditService",
@@ -31,5 +32,6 @@ __all__ = [
     "TaskService",
     "TierService",
     "UserService",
+    "WorkspaceService",
     "IBMVerifyUserService",
 ]

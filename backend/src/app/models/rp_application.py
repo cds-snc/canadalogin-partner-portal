@@ -14,6 +14,11 @@ class RPApplication(Base):
 
     id: Mapped[int] = mapped_column(autoincrement=True, primary_key=True, init=False)
     department_id: Mapped[int | None] = mapped_column(ForeignKey("department.id"), index=True, nullable=True)
+    application_information_id: Mapped[int | None] = mapped_column(
+        ForeignKey("application_information.id"),
+        index=True,
+        nullable=True,
+    )
     dnr_app_name: Mapped[str] = mapped_column(String(128), nullable=False)
     created_by: Mapped[int | None] = mapped_column(ForeignKey("user.id"), nullable=True)
     uuid: Mapped[uuid_pkg.UUID] = mapped_column(UUID(as_uuid=True), default_factory=uuid7, unique=True)

@@ -5,14 +5,62 @@ set -euo pipefail
 script_dir="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
 repo_root="$(cd -- "${script_dir}/../.." && pwd)"
 
+target_files=()
+
+if [ "$#" -gt 0 ]; then
+  for input_path in "$@"; do
+    case "${input_path}" in
+      *.md)
+        ;;
+      *)
+        continue
+        ;;
+    esac
+
+    if [ -f "${input_path}" ]; then
+      normalized_path="$(cd -- "$(dirname -- "${input_path}")" && pwd)/$(basename -- "${input_path}")"
+    elif [ -f "${repo_root}/${input_path}" ]; then
+      normalized_path="${repo_root}/${input_path}"
+    else
+      echo "Skipping missing markdown file: ${input_path}" >&2
+      continue
+    fi
+
+    target_files+=("${normalized_path}")
+  done
+
+  if [ "${#target_files[@]}" -eq 0 ]; then
+    echo "No markdown files matched the requested scope."
+    exit 0
+  fi
+fi
+
+markdownlint_targets=()
+
+for file in "${target_files[@]}"; do
+  if [[ "${file}" == "${repo_root}/"* ]]; then
+    markdownlint_targets+=("${file#${repo_root}/}")
+  else
+    markdownlint_targets+=("${file}")
+  fi
+done
+
 if [ -f "${repo_root}/.markdownlint.json" ] && command -v markdownlint-cli2 >/dev/null 2>&1; then
   cd "${repo_root}"
+  if [ "${#markdownlint_targets[@]}" -gt 0 ]; then
+    markdownlint-cli2 "${markdownlint_targets[@]}"
+    exit 0
+  fi
   markdownlint-cli2 "**/*.md" "#node_modules"
   exit 0
 fi
 
 if [ -f "${repo_root}/.markdownlint.json" ] && command -v markdownlint >/dev/null 2>&1; then
   cd "${repo_root}"
+  if [ "${#markdownlint_targets[@]}" -gt 0 ]; then
+    markdownlint "${markdownlint_targets[@]}"
+    exit 0
+  fi
   markdownlint "**/*.md"
   exit 0
 fi
@@ -20,19 +68,23 @@ fi
 tmp_file="$(mktemp "${TMPDIR:-/tmp}/delorean-markdown-files.XXXXXX")"
 trap 'rm -f "${tmp_file}"' EXIT
 
-find "${repo_root}" \
-  -path "${repo_root}/.git" -prune -o \
-  -path "*/node_modules" -prune -o \
-  -path "*/dist" -prune -o \
-  -path "*/build" -prune -o \
-  -path "*/coverage" -prune -o \
-  -path "*/storybook-static" -prune -o \
-  -path "*/.venv" -prune -o \
-  -path "*/venv" -prune -o \
-  -path "*/__MACOSX" -prune -o \
-  -path "*/__pycache__" -prune -o \
-  -path "*/.pytest_cache" -prune -o \
-  -type f -name "*.md" -print0 > "${tmp_file}"
+if [ "${#target_files[@]}" -gt 0 ]; then
+  printf '%s\0' "${target_files[@]}" > "${tmp_file}"
+else
+  find "${repo_root}" \
+    -path "${repo_root}/.git" -prune -o \
+    -path "*/node_modules" -prune -o \
+    -path "*/dist" -prune -o \
+    -path "*/build" -prune -o \
+    -path "*/coverage" -prune -o \
+    -path "*/storybook-static" -prune -o \
+    -path "*/.venv" -prune -o \
+    -path "*/venv" -prune -o \
+    -path "*/__MACOSX" -prune -o \
+    -path "*/__pycache__" -prune -o \
+    -path "*/.pytest_cache" -prune -o \
+    -type f -name "*.md" -print0 > "${tmp_file}"
+fi
 
 status=0
 

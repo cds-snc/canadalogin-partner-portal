@@ -30,6 +30,7 @@ from ..services import (
     TaskService,
     TierService,
     UserService,
+    WorkspaceService,
 )
 
 logger = logging.getLogger(__name__)
@@ -52,6 +53,10 @@ def get_role_service() -> RoleService:
 
 def get_department_service() -> DepartmentService:
     return DepartmentService()
+
+
+def get_workspace_service() -> WorkspaceService:
+    return WorkspaceService()
 
 
 def get_tier_service() -> TierService:
