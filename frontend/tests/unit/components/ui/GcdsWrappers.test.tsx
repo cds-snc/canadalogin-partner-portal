@@ -29,6 +29,12 @@ vi.mock("@gcds-core/components-react", () => ({
 			{children}
 		</a>
 	),
+	GcdsNavLink: ({
+		children,
+		href,
+	}: PropsWithChildren<{
+		href: string;
+	}>): ReactElement => <a href={href}>{children}</a>,
 	GcdsNotice: ({
 		children,
 		noticeTitle,

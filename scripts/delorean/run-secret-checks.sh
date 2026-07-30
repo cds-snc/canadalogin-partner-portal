@@ -6,9 +6,22 @@ script_dir="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
 repo_root="$(cd -- "${script_dir}/../.." && pwd)"
 status=0
 
-allowed_env_examples='(^|/)\.env\.(example|template)$'
+allowed_env_examples='(^|/)\.env\.(example|template|sample)$'
 tracked_env_files=()
 tracked_key_files=()
+
+is_allowed_env_template() {
+  local path="$1"
+
+  case "${path}" in
+    backend/.env.dockercompose)
+      return 0
+      ;;
+    *)
+      return 1
+      ;;
+  esac
+}
 
 is_excluded_path() {
   local path="$1"
@@ -29,7 +42,7 @@ if git -C "${repo_root}" rev-parse --is-inside-work-tree >/dev/null 2>&1; then
       continue
     fi
 
-    if [[ "${file}" =~ (^|/)\.env($|\.) ]] && [[ ! "${file}" =~ ${allowed_env_examples} ]]; then
+    if [[ "${file}" =~ (^|/)\.env($|\.) ]] && [[ ! "${file}" =~ ${allowed_env_examples} ]] && ! is_allowed_env_template "${file}"; then
       tracked_env_files+=("${file}")
     fi
 
@@ -45,7 +58,7 @@ fi
 if [ "${#tracked_env_files[@]}" -gt 0 ]; then
   echo "Tracked local environment files are not allowed:" >&2
   printf '  %s\n' "${tracked_env_files[@]}" >&2
-  echo "Use .env.example or .env.template with safe placeholder values only." >&2
+  echo "Use .env.example, .env.sample, .env.template, or another reviewed placeholder env template with safe placeholder values only." >&2
   status=1
 fi
 
