@@ -84,7 +84,7 @@ sequenceDiagram
 
 Edge cases:
 - Missing `sub` claim → 401; missing `email` claim → 401 ForbiddenException.
-- Absent group claim → user receives default (non-admin) role.
+- Absent or unmatched group claim → user is denied access before a session is created.
 - PKCE `state` mismatch → authlib raises an error before token exchange.
 
 ## DFD-2: Department Selection And Terms Acceptance

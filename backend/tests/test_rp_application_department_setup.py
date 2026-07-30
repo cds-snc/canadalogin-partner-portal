@@ -1,9 +1,11 @@
 from unittest.mock import AsyncMock, Mock
 
+import casbin
 import pytest
 from fastapi.testclient import TestClient
 
 from src.app.api.dependencies import get_current_user, get_rp_application_service
+from src.app.core.access_control import CASBIN_MODEL_PATH, database_enforcer_provider
 from src.app.core.db.database import async_get_db
 from src.app.core.exceptions.http_exceptions import (
     ForbiddenException,
@@ -25,6 +27,23 @@ _OWNER_USER = {
 _APP_UUID = "018f6f83-0000-0000-0000-000000000333"
 
 
+def make_enforcer(*policies: tuple[str, str, str]) -> casbin.Enforcer:
+    enforcer = casbin.Enforcer(str(CASBIN_MODEL_PATH))
+    if policies:
+        enforcer.add_policies(list(policies))
+    return enforcer
+
+
+def override_rp_application_authorization() -> None:
+    app.dependency_overrides[database_enforcer_provider] = lambda: make_enforcer(
+        ("admin", "rp_applications", "read"),
+        ("admin", "rp_applications", "write"),
+        ("admin", "rp_client_secret", "read"),
+        ("admin", "rp_client_secret", "write"),
+        ("admin", "mau_report", "read"),
+    )
+
+
 class TestDepartmentPreflightEndpoint:
     """8.1 – Owner department preflight GET endpoint."""
 
@@ -40,6 +59,7 @@ class TestDepartmentPreflightEndpoint:
         )
 
         app.dependency_overrides[get_current_user] = lambda: _OWNER_USER
+        override_rp_application_authorization()
         app.dependency_overrides[get_rp_application_service] = lambda: service
         app.dependency_overrides[async_get_db] = lambda: Mock()
 
@@ -70,6 +90,7 @@ class TestDepartmentPreflightEndpoint:
         )
 
         app.dependency_overrides[get_current_user] = lambda: _OWNER_USER
+        override_rp_application_authorization()
         app.dependency_overrides[get_rp_application_service] = lambda: service
         app.dependency_overrides[async_get_db] = lambda: Mock()
 
@@ -94,6 +115,7 @@ class TestDepartmentPreflightEndpoint:
             **_OWNER_USER,
             "email": "notowner@example.gc.ca",
         }
+        override_rp_application_authorization()
         app.dependency_overrides[get_rp_application_service] = lambda: service
         app.dependency_overrides[async_get_db] = lambda: Mock()
 
@@ -115,6 +137,7 @@ class TestDepartmentPreflightEndpoint:
         )
 
         app.dependency_overrides[get_current_user] = lambda: _OWNER_USER
+        override_rp_application_authorization()
         app.dependency_overrides[get_rp_application_service] = lambda: service
         app.dependency_overrides[async_get_db] = lambda: Mock()
 
@@ -145,6 +168,7 @@ class TestDepartmentAssignmentEndpoint:
         )
 
         app.dependency_overrides[get_current_user] = lambda: _OWNER_USER
+        override_rp_application_authorization()
         app.dependency_overrides[get_rp_application_service] = lambda: service
         app.dependency_overrides[async_get_db] = lambda: Mock()
 
@@ -168,6 +192,7 @@ class TestDepartmentAssignmentEndpoint:
         )
 
         app.dependency_overrides[get_current_user] = lambda: _OWNER_USER
+        override_rp_application_authorization()
         app.dependency_overrides[get_rp_application_service] = lambda: service
         app.dependency_overrides[async_get_db] = lambda: Mock()
 
@@ -191,6 +216,7 @@ class TestDepartmentAssignmentEndpoint:
         )
 
         app.dependency_overrides[get_current_user] = lambda: _OWNER_USER
+        override_rp_application_authorization()
         app.dependency_overrides[get_rp_application_service] = lambda: service
         app.dependency_overrides[async_get_db] = lambda: Mock()
 
@@ -216,6 +242,7 @@ class TestMissingDepartmentConflictRoutes:
         )
 
         app.dependency_overrides[get_current_user] = lambda: _OWNER_USER
+        override_rp_application_authorization()
         app.dependency_overrides[get_rp_application_service] = lambda: service
         app.dependency_overrides[get_ibm_sv_admin_client] = lambda: Mock()
         app.dependency_overrides[async_get_db] = lambda: Mock()
@@ -251,6 +278,7 @@ class TestMissingDepartmentConflictRoutes:
         )
 
         app.dependency_overrides[get_current_user] = lambda: _OWNER_USER
+        override_rp_application_authorization()
         app.dependency_overrides[get_rp_application_service] = lambda: service
         app.dependency_overrides[get_ibm_sv_user_service] = lambda: Mock()
         app.dependency_overrides[get_mau_service] = lambda: Mock()
@@ -289,6 +317,7 @@ class TestOAuthSetupDepartmentFields:
         )
 
         app.dependency_overrides[get_current_user] = lambda: _OWNER_USER
+        override_rp_application_authorization()
         app.dependency_overrides[get_rp_application_service] = lambda: service
         app.dependency_overrides[get_ibm_sv_admin_client] = lambda: Mock()
         app.dependency_overrides[async_get_db] = lambda: Mock()
@@ -324,6 +353,7 @@ class TestOAuthSetupDepartmentFields:
         )
 
         app.dependency_overrides[get_current_user] = lambda: _OWNER_USER
+        override_rp_application_authorization()
         app.dependency_overrides[get_rp_application_service] = lambda: service
         app.dependency_overrides[get_ibm_sv_admin_client] = lambda: Mock()
         app.dependency_overrides[async_get_db] = lambda: Mock()

@@ -111,6 +111,7 @@ class TestApplicationEndpoints:
                 "description": "A new app",
                 "application_url": "https://example.com",
                 "redirect_uris": ["https://example.com/callback"],
+                "post_logout_redirect_uris": [],
             },
             ["user1"],
         )

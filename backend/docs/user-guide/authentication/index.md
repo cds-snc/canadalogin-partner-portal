@@ -15,6 +15,8 @@ When the frontend and backend run on different origins in development, configure
 
 If your identity provider returns `redirect_uri` mismatch errors (for example `CSIAQ0167E`), set `OIDC_REDIRECT_URI` in backend configuration to the exact callback URL registered for your OAuth client, including scheme, host, port, and path.
 
+The OIDC callback also enforces a group-based access gate before the backend creates a session. A successful sign-in at the identity provider is not enough on its own.
+
 ```python
 @router.get("/auth/oidc/login")
 async def oidc_login(request: Request):
@@ -29,6 +31,46 @@ async def oidc_callback(request: Request, db: AsyncSession):
     request.session["user_uuid"] = str(user["uuid"])
     return RedirectResponse(url=settings.OIDC_POST_LOGIN_REDIRECT)
 ```
+
+### OIDC Group Mapping
+
+During `sync_oidc_user`, the backend reads the configured claim in `OIDC_GROUP_CLAIM_KEY` and normalizes its values case-insensitively. The claim may be a list, tuple, set, a single string, or a comma-separated string.
+
+- `OIDC_ADMIN_GROUP_NAME` grants the local `CLPP_ADMIN_ROLE_NAME` role
+- `OIDC_APPLICATION_OWNERS_GROUP_NAME` grants the local `CLPP_APPLICATION_OWNERS_ROLE_NAME` role
+- If neither configured group is present, the callback returns access denied and no session is created
+- If the mapped local role records do not exist in the database, the callback also returns access denied
+
+This means local development must use either:
+
+- an identity provider that emits one of the expected group values for your test user, or
+- backend configuration that points `OIDC_GROUP_CLAIM_KEY`, `OIDC_ADMIN_GROUP_NAME`, and `OIDC_APPLICATION_OWNERS_GROUP_NAME` at claim values your test user already has
+
+For local-only development, the backend does not require `OIDC_GROUP_CLAIM_KEY` to point to a real group claim. It only reads a claim value and compares strings. If your provider does not emit groups, you can temporarily point it at a stable scalar claim such as `email` and match your own address.
+
+Example local-only workaround:
+
+```env
+OIDC_GROUP_CLAIM_KEY="email"
+OIDC_ADMIN_GROUP_NAME="developer@example.ca"
+OIDC_APPLICATION_OWNERS_GROUP_NAME="unused-local-value"
+CLPP_ADMIN_ROLE_NAME="admin"
+CLPP_APPLICATION_OWNERS_ROLE_NAME="application owners"
+```
+
+With this setup, a login whose `email` claim equals `developer@example.ca` is treated as an admin login. Keep this kind of claim repurposing limited to local development.
+
+Example:
+
+```env
+OIDC_GROUP_CLAIM_KEY="groups"
+OIDC_ADMIN_GROUP_NAME="clpp-admin"
+OIDC_APPLICATION_OWNERS_GROUP_NAME="clpp-app-owners"
+CLPP_ADMIN_ROLE_NAME="admin"
+CLPP_APPLICATION_OWNERS_ROLE_NAME="application owners"
+```
+
+OIDC groups control portal-wide role assignment at login time. Workspace membership roles such as `workspace_admin` and `workspace_member` are separate application records and are not inferred directly from IdP groups.
 
 ### Authorization Overview
 
@@ -113,6 +155,11 @@ OIDC_ENABLED=true
 OIDC_SERVER_METADATA_URL="https://your-idp/.well-known/openid-configuration"
 OIDC_CLIENT_ID="your-client-id"
 OIDC_CLIENT_SECRET="your-client-secret"
+OIDC_GROUP_CLAIM_KEY="groupIds"
+OIDC_ADMIN_GROUP_NAME="admin"
+OIDC_APPLICATION_OWNERS_GROUP_NAME="application owners"
+CLPP_ADMIN_ROLE_NAME="admin"
+CLPP_APPLICATION_OWNERS_ROLE_NAME="application owners"
 ```
 
 For local development without Docker, run a Redis server before starting the backend. If you already use Redis locally for caching, queues, or rate limiting, you can reuse it and isolate session data with `REDIS_SESSION_DB`.

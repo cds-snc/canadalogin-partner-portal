@@ -177,6 +177,9 @@ class TestWorkspaceRoutes:
             "username": "admin@example.gc.ca",
             "is_superuser": True,
         }
+        app.dependency_overrides[database_enforcer_provider] = lambda: make_enforcer(
+            ("admin", "workspace", "read")
+        )
         app.dependency_overrides[get_workspace_service] = lambda: service
         app.dependency_overrides[async_get_db] = lambda: Mock()
 
@@ -230,6 +233,9 @@ class TestWorkspaceRoutes:
             "username": "admin@example.gc.ca",
             "is_superuser": True,
         }
+        app.dependency_overrides[database_enforcer_provider] = lambda: make_enforcer(
+            ("admin", "workspace", "write")
+        )
         app.dependency_overrides[get_workspace_service] = lambda: service
         app.dependency_overrides[async_get_db] = lambda: Mock()
 

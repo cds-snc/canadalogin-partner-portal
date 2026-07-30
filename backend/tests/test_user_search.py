@@ -27,11 +27,11 @@ class TestSearchUsersRoute:
 		result = await unwrap_endpoint(search_users)(
 			Mock(),
 			"member",
-			"018f6f83-0000-0000-0000-000000000201",
 			mock_db,
 			user_service,
 			{"id": 42, "is_superuser": False},
 			workspace_service,
+			"018f6f83-0000-0000-0000-000000000201",
 		)
 
 		assert result == [{"uuid": "user-uuid-2"}]
@@ -52,11 +52,11 @@ class TestSearchUsersRoute:
 			await unwrap_endpoint(search_users)(
 				Mock(),
 				"member",
-				None,
 				mock_db,
 				Mock(),
 				{"id": 42, "is_superuser": False},
 				Mock(),
+				None,
 			)
 
 

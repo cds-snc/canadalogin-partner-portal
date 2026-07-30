@@ -22,6 +22,19 @@ def make_request(session: dict | None = None) -> Request:
     )
 
 
+@pytest.fixture(autouse=True)
+def _stable_oidc_group_settings():
+    with patch.multiple(
+        settings,
+        OIDC_GROUP_CLAIM_KEY="groupIds",
+        OIDC_ADMIN_GROUP_NAME="admin",
+        OIDC_APPLICATION_OWNERS_GROUP_NAME="application owners",
+        CLPP_ADMIN_ROLE_NAME="admin",
+        CLPP_APPLICATION_OWNERS_ROLE_NAME="application owners",
+    ):
+        yield
+
+
 class TestSyncOidcUser:
     @pytest.mark.asyncio
     async def test_sync_oidc_user_creates_missing_user_for_allowed_group(self, mock_db):

@@ -24,6 +24,12 @@ class FixedDateTime(datetime):
         return fixed_value
 
 
+@pytest.fixture(autouse=True)
+def _configured_ibm_sv_admin_base_url():
+    with patch("src.app.core.config.settings.IBM_SV_ADMIN_BASE_URL", "https://example.com"):
+        yield
+
+
 class TestIBMVerifyAdminClient:
     def _api_client_error_with_response(self, status_code: int, payload: dict[str, object]) -> APIClientError:
         response = httpx.Response(status_code, json=payload)

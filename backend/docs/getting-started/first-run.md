@@ -188,6 +188,14 @@ open http://localhost:8000/api/v1/auth/oidc/login
 
 After a successful callback, the backend stores the authenticated user in the server-side session cookie.
 
+Before this works locally, make sure your test user is in one of the configured OIDC groups. The callback only creates a session when the claim named by `OIDC_GROUP_CLAIM_KEY` contains either `OIDC_ADMIN_GROUP_NAME` or `OIDC_APPLICATION_OWNERS_GROUP_NAME`.
+
+Common local fixes:
+
+- Set `OIDC_GROUP_CLAIM_KEY` to the actual claim your IdP sends, such as `groups`
+- Change `OIDC_ADMIN_GROUP_NAME` or `OIDC_APPLICATION_OWNERS_GROUP_NAME` to match your test account's group names
+- Confirm the mapped local roles named by `CLPP_ADMIN_ROLE_NAME` and `CLPP_APPLICATION_OWNERS_ROLE_NAME` exist in the database
+
 #### 2. Test a Protected Endpoint
 
 After the callback creates the browser session, call a protected endpoint with the session cookie:
@@ -483,7 +491,7 @@ from app.api.v1.items import router as items_router  # Add this line
 
 router = APIRouter(prefix="/v1")
 router.include_router(login_router, prefix="/login")
-router.include_router(logout_router, prefix="/logout") 
+router.include_router(logout_router, prefix="/logout")
 router.include_router(users_router, prefix="/users")
 router.include_router(posts_router, prefix="/posts")
 router.include_router(tasks_router, prefix="/tasks")
@@ -640,4 +648,4 @@ You've successfully:
 - Run database migrations
 - Tested authentication and CRUD operations
 
-You're now ready to build amazing APIs with FastAPI! 
+You're now ready to build amazing APIs with FastAPI!

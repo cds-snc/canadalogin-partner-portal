@@ -56,6 +56,8 @@ make bk-dev
 
 `make db-up` starts the `db` and `redis` services from `backend/docker-compose.yml` and publishes them to the host on `localhost:5432` and `localhost:6379`.
 
+Local OIDC authentication is group-gated. The callback only creates a session when the configured claim in `OIDC_GROUP_CLAIM_KEY` contains either `OIDC_ADMIN_GROUP_NAME` or `OIDC_APPLICATION_OWNERS_GROUP_NAME`, which then map to the local roles named by `CLPP_ADMIN_ROLE_NAME` and `CLPP_APPLICATION_OWNERS_ROLE_NAME`.
+
 ## Running
 
 ```bash
