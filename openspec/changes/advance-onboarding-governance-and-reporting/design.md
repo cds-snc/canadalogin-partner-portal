@@ -1,6 +1,10 @@
+# Design
+
 ## Context
 
-The PRD documents a broad MVP1 baseline that is already implemented, but it also identifies a recurring operational gap: onboarding data exists without a first-class product workflow for readiness, review, and oversight. Current OpenSpec coverage is narrower than the PRD and focuses mostly on owner-scoped RP application detail work, generic error routing, and a few later feature changes. This change package captures the MVP2 product behavior needed to turn the portal from a functional onboarding tool into a governed onboarding workflow.
+The onboarding PRD at `docs/plans/partner-portal-onboarding-prd.md` documents a broad MVP1 baseline that is already implemented, but it also identifies a recurring operational gap: onboarding data exists without a first-class product workflow for readiness, review, and oversight. Current OpenSpec coverage is narrower than the PRD and focuses mostly on owner-scoped RP application detail work, generic error routing, and a few later feature changes. This change package captures the MVP2 product behavior needed to turn the portal from a functional onboarding tool into a governed onboarding workflow.
+
+The same PRD also makes explicit that governed onboarding must cover environment progression, out-of-band production review traceability, checklist and evidence visibility, and external process links without forcing a full in-portal approval engine into the first slice.
 
 This change is implementation-ready only after the baseline dashboard, workspace, application-information, and invitation scope is either restored in code or explicitly narrowed through [openspec/changes/reconcile-prd-current-spec-gaps](../reconcile-prd-current-spec-gaps/proposal.md). Treat that change as a prerequisite when a slice depends on those surfaces.
 
@@ -17,7 +21,9 @@ Relevant standards and baseline impact for planning:
 **Goals:**
 
 - Define a durable onboarding state model for workspaces, application information records, and RP applications.
+- Define environment progression rules and out-of-band promotion traceability for `test`, `staging`, and `production` onboarding steps.
 - Define readiness indicators for application information completion.
+- Define checklist, evidence-reference, and external process-link visibility needed before production progression.
 - Define the internal reviewer and administrator oversight experience at the requirement level.
 - Define aggregate reporting expectations for onboarding throughput, invitation conversion, and secret rotation hygiene.
 - Keep role-boundary guidance explicit so workspace membership and invited-developer access are easier to understand.
@@ -29,6 +35,8 @@ Relevant standards and baseline impact for planning:
 - No formal approval or waiver automation in this change.
 - No expansion of invited-developer permissions beyond clearer product guidance.
 - No replacement of IBM Security Verify as the underlying identity or runtime application system of record.
+- No in-portal volume-spike submission flow, detailed incident workflow, or first-class deprecation workflow automation in this package.
+- No code-level role-model rewrite from current implementation roles to the PRD's final operational labels in this package.
 
 ## Decisions
 
@@ -76,6 +84,18 @@ Relevant standards and baseline impact for planning:
 - Rationale: STD-020 and PAT-012 favor visible ownership, explicit schema review, and audit-friendly related records over hidden JSON drift in primary rows.
 - Trade-off: this adds migration and repository work earlier, but keeps the data model reviewable and easier to extend.
 
+### Decision 7: Make environment progression explicit and keep production review out of band
+
+- Choice: treat `test`, `staging`, and `production` as explicit environment-progression steps on workspace-scoped RP application records; allow `test` to be skipped when no IBM configuration change is required; allow `test` to `staging` progression without reviewer approval; and require `staging` to `production` progression to record a portal-visible request that stays review-tracked until an out-of-band CanadaLogin decision updates the outcome.
+- Rationale: the onboarding PRD makes these rules explicit and they are central to the product's onboarding lifecycle.
+- Trade-off: this change captures status and traceability, not a full in-portal approval engine.
+
+### Decision 8: Surface checklist, evidence references, and process links without hard-coding the evidence mechanism
+
+- Choice: make onboarding checklist progress, required evidence references, and external process entry points visible in portal progression views; keep the first implementation neutral on whether CATS readiness evidence is uploaded, externally referenced, or both.
+- Rationale: the PRD requires traceable production readiness while leaving the exact evidence mechanism unresolved.
+- Trade-off: later implementation still needs a human decision on the evidence interaction model.
+
 ## Standards impact
 
 ```yaml
@@ -97,12 +117,12 @@ standards_impact:
 		exceptions: []
 	security_privacy:
 		applies: true
-		decision: Reporting and review-note APIs must return only authorized data, use safe error responses, and avoid exposing secrets or sensitive audit detail in aggregate views.
+		decision: Reporting, review-note, and promotion-tracking APIs must return only authorized data, use safe error responses, and avoid exposing secrets or sensitive audit detail in aggregate views or oversight detail surfaces.
 		evidence: API contract tests and authorization tests for queue, notes, and reports.
 		exceptions: []
 	identity_access:
 		applies: true
-		decision: Reuse existing platform-admin or superuser access for the first slice unless a dedicated reviewer role is explicitly approved.
+		decision: Reuse existing platform-admin or superuser access for the first slice unless a dedicated reviewer role is explicitly approved, and map the PRD's operational role labels incrementally instead of forcing a role-model rewrite in this package.
 		evidence: Route guards, backend permission checks, and task notes reflect the chosen oversight actor.
 		exceptions: []
 	information_management:
@@ -132,31 +152,31 @@ standards_impact:
 
 ### Slice 1: Lifecycle state model
 
-- Outcome: workspaces, application information records, and RP applications each carry a visible onboarding state.
-- Impacted areas: backend schemas, persistence, APIs, frontend lists and detail pages, tests.
-- Notes: use STD-009, STD-010, STD-020, and PAT-012 for API and persistence changes.
-- Exit condition: state vocabulary, timestamps, and visibility are defined and verified for the three record types.
+- Outcome: workspaces, application information records, and RP applications each carry a visible onboarding state, and environment-progression requests carry target-environment and review-trace metadata where needed.
+- Impacted areas: backend schemas, persistence, APIs, frontend lists and detail pages, promotion metadata, tests.
+- Notes: use STD-009, STD-010, STD-020, and PAT-012 for API and persistence changes; keep `test`-optional and `staging`-to-`production` review rules explicit.
+- Exit condition: state vocabulary, transition rules, timestamps, and promotion-tracking metadata are defined and verified for the three record types.
 
 ### Slice 2: Application information readiness indicators
 
-- Outcome: workspace admins can identify incomplete application information sections before submission.
-- Impacted areas: application information schemas, UI summaries, validation, tests.
+- Outcome: workspace admins can identify incomplete application information sections, checklist items, and evidence prerequisites before submission or production progression.
+- Impacted areas: application information schemas, UI summaries, checklist state, process-link surfaces, validation, tests.
 - Notes: use PAT-017 for summary displays and GC Design System notices for incomplete-state feedback.
-- Exit condition: required sections, submit-ready behavior, and submission validation are defined and testable.
+- Exit condition: required sections, checklist visibility, submit-ready behavior, and production-readiness visibility are defined and testable.
 
 ### Slice 3: Reviewer oversight and review notes
 
-- Outcome: internal reviewer or administrator users can find records needing review and capture checklist outcomes or notes.
-- Impacted areas: `/onboarding-oversight` overview route, `/onboarding-oversight/queue` queue route, list and filter APIs, review-note persistence, access-control review, tests.
+- Outcome: internal reviewer or administrator users can find records needing review, including production-bound promotion requests, and capture checklist outcomes or notes.
+- Impacted areas: `/onboarding-oversight` overview route, `/onboarding-oversight/queue` queue route, list and filter APIs, review-note persistence, promotion-status context, access-control review, tests.
 - Notes: use PAT-021 for the overview route and PAT-023 for queue tables.
 - Exit condition: review workflow paths, queue behavior, and note/checklist behavior are defined.
 
-### Slice 4: Role-boundary guidance
+### Slice 4: Role-boundary guidance and process links
 
-- Outcome: workspace admins and invited developers can see clearer help content about collaboration boundaries.
-- Impacted areas: frontend copy, help surfaces, translation files, tests.
-- Notes: keep guidance informational and bilingual; do not silently broaden permissions.
-- Exit condition: guidance surfaces, target audiences, and copy ownership are defined in spec and tasks.
+- Outcome: workspace admins and invited developers can see clearer help content about collaboration boundaries and can reach the required onboarding documentation or external process entry points from the relevant flows.
+- Impacted areas: frontend copy, help surfaces, documentation/process-link surfaces, translation files, tests.
+- Notes: keep guidance informational and bilingual; do not silently broaden permissions or embed the full external workflow.
+- Exit condition: guidance surfaces, documentation/process links, target audiences, and copy ownership are defined in spec and tasks.
 
 ### Slice 5: Aggregate onboarding reporting
 
@@ -177,10 +197,19 @@ standards_impact:
 - Current blockers:
 	- workspace, application-information, and invitation baselines are not yet reconciled with current code
 	- a dedicated reviewer role is not defined if the platform-admin default is rejected
+	- contact-type gating by stage and the CATS evidence interaction model remain unresolved if the first implementation wants them to act as hard gates
+
+## Deferred follow-on areas
+
+- Partner volume-spike notification workflow.
+- Detailed incident reporting intake and SLA handling.
+- First-class deprecation workflow states, approvals, and notifications beyond initial link-out readiness.
 
 ## Open Questions
 
 - Human decision required only if the default platform-admin oversight assumption is rejected and a distinct reviewer role must be introduced before first implementation.
 - Human decision required only if product wants lifecycle state to newly block RP application creation rather than inform readiness and submission flow.
 - Human decision required: which onboarding checklist items are mandatory for the first release of reviewer notes.
+- Human decision required: whether contact-type requirements differ by `staging` versus `production` and should become hard readiness or progression gates.
+- Human decision required: whether CATS readiness evidence is captured as upload, external reference, or both in the first implementation slice.
 - Human decision required only if the default first-release reporting formulas, selected-period filtering, and CSV export behavior are not acceptable.

@@ -1,4 +1,4 @@
-from unittest.mock import AsyncMock, patch
+from unittest.mock import AsyncMock, Mock, patch
 
 import pytest
 
@@ -11,6 +11,10 @@ from src.app.core.exceptions.http_exceptions import (
 from src.app.schemas.application_information import (
     ApplicationInformationContactCreate,
     ApplicationInformationCreate,
+)
+from src.app.schemas.rp_application import (
+    WorkspaceRPApplicationRegistrationCreate,
+    WorkspaceRPApplicationRegistrationUpdate,
 )
 from src.app.schemas.workspace_member import WorkspaceMemberCreate, WorkspaceMemberUpdate
 from src.app.schemas.workspace import WorkspaceCreate, WorkspaceUpdate
@@ -709,3 +713,409 @@ class TestWorkspaceService:
         assert create_kwargs["object"].application_information_id == 17
         assert create_kwargs["object"].created_by == 42
         assert str(create_kwargs["object"].email) == "jane.doe@example.gc.ca"
+
+    @pytest.mark.asyncio
+    async def test_create_workspace_rp_application_sets_workspace_department_and_registration_payload(self, mock_db) -> None:
+        service = WorkspaceService()
+
+        with (
+            patch("src.app.services.workspace_service.crud_workspaces") as mock_workspaces,
+            patch("src.app.services.workspace_service.crud_workspace_members") as mock_workspace_members,
+            patch("src.app.services.workspace_service.crud_application_information") as mock_application_information,
+            patch("src.app.services.workspace_service.crud_rp_applications") as mock_rp_applications,
+        ):
+            mock_workspaces.get = AsyncMock(
+                return_value={
+                    "id": 9,
+                    "uuid": "018f6f83-0000-0000-0000-000000000201",
+                    "name": "Benefits Workspace",
+                    "slug": "benefits-workspace",
+                    "department_id": 7,
+                    "description": "Primary workspace",
+                    "created_by": 42,
+                    "created_at": "2026-07-30T12:00:00",
+                    "updated_at": None,
+                    "deleted_at": None,
+                    "is_deleted": False,
+                }
+            )
+            mock_workspace_members.get = AsyncMock(return_value={"role": "workspace_admin"})
+            mock_application_information.get = AsyncMock(
+                return_value={
+                    "id": 17,
+                    "uuid": "018f6f83-0000-0000-0000-000000000501",
+                    "workspace_id": 9,
+                    "service_name_en": "Benefits Portal",
+                    "service_name_fr": "Portail des prestations",
+                    "overview": "Overview",
+                    "technology_and_protocol": "OIDC",
+                    "security_and_privacy": "Protected B",
+                    "usage": "Usage",
+                    "migration_or_transition_plan": "Plan",
+                    "created_at": "2026-07-30T15:00:00",
+                    "updated_at": None,
+                    "deleted_at": None,
+                    "is_deleted": False,
+                }
+            )
+            mock_rp_applications.create = AsyncMock(
+                return_value={
+                    "id": 33,
+                    "uuid": "018f6f83-0000-0000-0000-000000000701",
+                    "workspace_id": 9,
+                    "department_id": 7,
+                    "application_information_id": 17,
+                    "dnr_app_name": "Benefits Portal",
+                    "canada_login_environment": "staging",
+                    "status": None,
+                    "created_by": 42,
+                    "created_at": "2026-07-30T16:00:00",
+                    "deleted_at": None,
+                    "is_deleted": False,
+                    "ibm_sv_application_id": None,
+                    "oidc_registration_payload": {"service_name_en": "Benefits Portal"},
+                    "application_owner": None,
+                }
+            )
+
+            result = await service.create_workspace_rp_application(
+                db=mock_db,
+                workspace_uuid="018f6f83-0000-0000-0000-000000000201",
+                payload=WorkspaceRPApplicationRegistrationCreate(
+                    application_information_uuid="018f6f83-0000-0000-0000-000000000501",
+                    canada_login_environment="staging",
+                    service_name_en="Benefits Portal",
+                    service_name_fr="Portail des prestations",
+                    application_environment_url_en="https://benefits.canada.ca",
+                    application_environment_url_fr="https://prestations.canada.ca",
+                    redirect_uris=["https://benefits.canada.ca/callback"],
+                    post_logout_redirect_uris=["https://benefits.canada.ca/logout-complete"],
+                    logout_mode="front_channel",
+                    logout_uri="https://benefits.canada.ca/logout",
+                    client_type="confidential",
+                    supports_authorization_code_flow=True,
+                    client_auth_method="client_secret_basic",
+                    requested_scopes=["openid", "profile"],
+                    sector_identifier="https://benefits.canada.ca",
+                    shares_pairwise_identifiers=False,
+                    pkce_supported=True,
+                    pkce_algorithms=["S256"],
+                    request_signing_supported=False,
+                    request_signing_roadmap=False,
+                    signature_validation_supported=True,
+                    signature_validation_targets=["id_token"],
+                    signature_validation_algorithms=["RS256"],
+                    request_encryption_supported=False,
+                    request_encryption_roadmap=False,
+                    message_decryption_supported=True,
+                    message_decryption_targets=["id_token"],
+                    message_decryption_key_management_algorithms=["RSA-OAEP-256"],
+                    message_decryption_content_algorithms=["A256GCM"],
+                ),
+                current_user={"id": 42, "is_superuser": False},
+            )
+
+        assert result["workspace_id"] == 9
+        create_kwargs = mock_rp_applications.create.await_args.kwargs
+        assert create_kwargs["object"].workspace_id == 9
+        assert create_kwargs["object"].department_id == 7
+        assert create_kwargs["object"].application_information_id == 17
+        assert create_kwargs["object"].dnr_app_name == "Benefits Portal"
+        assert create_kwargs["object"].canada_login_environment == "staging"
+        assert create_kwargs["object"].oidc_registration_payload["client_type"] == "confidential"
+
+    @pytest.mark.asyncio
+    async def test_update_workspace_rp_application_merges_questionnaire_payload(self, mock_db) -> None:
+        service = WorkspaceService()
+
+        with (
+            patch("src.app.services.workspace_service.crud_workspaces") as mock_workspaces,
+            patch("src.app.services.workspace_service.crud_workspace_members") as mock_workspace_members,
+            patch("src.app.services.workspace_service.crud_rp_applications") as mock_rp_applications,
+        ):
+            mock_workspaces.get = AsyncMock(
+                return_value={
+                    "id": 9,
+                    "uuid": "018f6f83-0000-0000-0000-000000000201",
+                    "name": "Benefits Workspace",
+                    "slug": "benefits-workspace",
+                    "department_id": 7,
+                    "description": "Primary workspace",
+                    "created_by": 42,
+                    "created_at": "2026-07-30T12:00:00",
+                    "updated_at": None,
+                    "deleted_at": None,
+                    "is_deleted": False,
+                }
+            )
+            mock_workspace_members.get = AsyncMock(return_value={"role": "workspace_admin"})
+            mock_rp_applications.get = AsyncMock(
+                side_effect=[
+                    {
+                        "id": 33,
+                        "uuid": "018f6f83-0000-0000-0000-000000000701",
+                        "workspace_id": 9,
+                        "department_id": 7,
+                        "application_information_id": 17,
+                        "dnr_app_name": "Benefits Portal",
+                        "canada_login_environment": "staging",
+                        "status": None,
+                        "created_by": 42,
+                        "created_at": "2026-07-30T16:00:00",
+                        "deleted_at": None,
+                        "is_deleted": False,
+                        "ibm_sv_application_id": None,
+                        "oidc_registration_payload": {
+                            "service_name_en": "Benefits Portal",
+                            "pkce_supported": True,
+                            "requested_scopes": ["openid", "profile"],
+                        },
+                        "application_owner": None,
+                    },
+                    {
+                        "id": 33,
+                        "uuid": "018f6f83-0000-0000-0000-000000000701",
+                        "workspace_id": 9,
+                        "department_id": 7,
+                        "application_information_id": 17,
+                        "dnr_app_name": "Benefits Portal Updated",
+                        "canada_login_environment": "staging",
+                        "status": None,
+                        "created_by": 42,
+                        "created_at": "2026-07-30T16:00:00",
+                        "deleted_at": None,
+                        "is_deleted": False,
+                        "ibm_sv_application_id": None,
+                        "oidc_registration_payload": {
+                            "service_name_en": "Benefits Portal Updated",
+                            "pkce_supported": True,
+                            "requested_scopes": ["openid", "profile", "email"],
+                        },
+                        "application_owner": None,
+                    },
+                ]
+            )
+            mock_rp_applications.update = AsyncMock(return_value=None)
+
+            result = await service.update_workspace_rp_application(
+                db=mock_db,
+                workspace_uuid="018f6f83-0000-0000-0000-000000000201",
+                rp_application_uuid="018f6f83-0000-0000-0000-000000000701",
+                payload=WorkspaceRPApplicationRegistrationUpdate(
+                    service_name_en="Benefits Portal Updated",
+                    requested_scopes=["openid", "profile", "email"],
+                ),
+                current_user={"id": 42, "is_superuser": False},
+            )
+
+        assert result["dnr_app_name"] == "Benefits Portal Updated"
+        update_kwargs = mock_rp_applications.update.await_args.kwargs
+        assert update_kwargs["object"]["dnr_app_name"] == "Benefits Portal Updated"
+        assert update_kwargs["object"]["oidc_registration_payload"]["requested_scopes"] == [
+            "openid",
+            "profile",
+            "email",
+        ]
+
+    @pytest.mark.asyncio
+    async def test_get_workspace_rp_application_usage_summary_uses_ibm_admin_telemetry_for_selected_day(
+        self,
+        mock_db,
+    ) -> None:
+        service = WorkspaceService()
+        mock_ibm_sv_admin_service = Mock()
+        mock_ibm_sv_admin_service.get_application_total_logins = AsyncMock(
+            return_value={"response": {"total": 11, "successful": 9, "failed": 2}}
+        )
+
+        with (
+            patch("src.app.services.workspace_service.crud_workspaces") as mock_workspaces,
+            patch("src.app.services.workspace_service.crud_workspace_members") as mock_workspace_members,
+            patch("src.app.services.workspace_service.crud_rp_applications") as mock_rp_applications,
+        ):
+            mock_workspaces.get = AsyncMock(
+                return_value={
+                    "id": 9,
+                    "uuid": "018f6f83-0000-0000-0000-000000000201",
+                    "name": "Benefits Workspace",
+                    "slug": "benefits-workspace",
+                    "department_id": 7,
+                    "description": "Primary workspace",
+                    "created_by": 42,
+                    "created_at": "2026-07-30T12:00:00",
+                    "updated_at": None,
+                    "deleted_at": None,
+                    "is_deleted": False,
+                }
+            )
+            mock_workspace_members.get = AsyncMock(return_value={"role": "workspace_admin"})
+            mock_rp_applications.get = AsyncMock(
+                return_value={
+                    "id": 33,
+                    "uuid": "018f6f83-0000-0000-0000-000000000701",
+                    "workspace_id": 9,
+                    "department_id": 7,
+                    "application_information_id": 17,
+                    "dnr_app_name": "Benefits Portal",
+                    "canada_login_environment": "staging",
+                    "status": None,
+                    "created_by": 42,
+                    "created_at": "2026-07-30T16:00:00",
+                    "deleted_at": None,
+                    "is_deleted": False,
+                    "ibm_sv_application_id": "ibm-app-123",
+                    "oidc_registration_payload": {},
+                    "application_owner": None,
+                }
+            )
+
+            result = await service.get_workspace_rp_application_usage_summary(
+                db=mock_db,
+                workspace_uuid="018f6f83-0000-0000-0000-000000000201",
+                rp_application_uuid="018f6f83-0000-0000-0000-000000000701",
+                current_user={"id": 42, "is_superuser": False},
+                ibm_sv_admin_service=mock_ibm_sv_admin_service,
+                selected_date="1775692800000",
+            )
+
+        assert result == {"total": 11, "succeeded": 9, "failed": 2}
+        mock_ibm_sv_admin_service.get_application_total_logins.assert_awaited_once_with(
+            application_id="ibm-app-123",
+            from_date="1775692800000",
+            to_date="1775779199999",
+        )
+
+    @pytest.mark.asyncio
+    async def test_get_workspace_rp_application_audit_events_search_after_delegates_cursor(
+        self,
+        mock_db,
+    ) -> None:
+        service = WorkspaceService()
+        mock_ibm_sv_admin_service = Mock()
+        mock_ibm_sv_admin_service.get_application_audit_trail_search_after = AsyncMock(
+            return_value={"events": [], "next": None, "total": 20}
+        )
+
+        with (
+            patch("src.app.services.workspace_service.crud_workspaces") as mock_workspaces,
+            patch("src.app.services.workspace_service.crud_workspace_members") as mock_workspace_members,
+            patch("src.app.services.workspace_service.crud_rp_applications") as mock_rp_applications,
+        ):
+            mock_workspaces.get = AsyncMock(
+                return_value={
+                    "id": 9,
+                    "uuid": "018f6f83-0000-0000-0000-000000000201",
+                    "name": "Benefits Workspace",
+                    "slug": "benefits-workspace",
+                    "department_id": 7,
+                    "description": "Primary workspace",
+                    "created_by": 42,
+                    "created_at": "2026-07-30T12:00:00",
+                    "updated_at": None,
+                    "deleted_at": None,
+                    "is_deleted": False,
+                }
+            )
+            mock_workspace_members.get = AsyncMock(return_value={"role": "workspace_admin"})
+            mock_rp_applications.get = AsyncMock(
+                return_value={
+                    "id": 33,
+                    "uuid": "018f6f83-0000-0000-0000-000000000701",
+                    "workspace_id": 9,
+                    "department_id": 7,
+                    "application_information_id": 17,
+                    "dnr_app_name": "Benefits Portal",
+                    "canada_login_environment": "staging",
+                    "status": None,
+                    "created_by": 42,
+                    "created_at": "2026-07-30T16:00:00",
+                    "deleted_at": None,
+                    "is_deleted": False,
+                    "ibm_sv_application_id": "ibm-app-123",
+                    "oidc_registration_payload": {},
+                    "application_owner": None,
+                }
+            )
+
+            result = await service.get_workspace_rp_application_audit_events_search_after(
+                db=mock_db,
+                workspace_uuid="018f6f83-0000-0000-0000-000000000201",
+                rp_application_uuid="018f6f83-0000-0000-0000-000000000701",
+                current_user={"id": 42, "is_superuser": False},
+                ibm_sv_admin_service=mock_ibm_sv_admin_service,
+                selected_date="1775692800000",
+                size=25,
+                search_after='"1775692800000", "event-2"',
+            )
+
+        assert result == {"events": [], "next": None, "total": 20}
+        mock_ibm_sv_admin_service.get_application_audit_trail_search_after.assert_awaited_once_with(
+            application_id="ibm-app-123",
+            from_date="1775692800000",
+            to_date="1775779199999",
+            size=25,
+            search_after='"1775692800000", "event-2"',
+        )
+
+    @pytest.mark.asyncio
+    async def test_get_workspace_rp_application_usage_summary_rejects_missing_ibm_application_id(
+        self,
+        mock_db,
+    ) -> None:
+        service = WorkspaceService()
+        mock_ibm_sv_admin_service = Mock()
+        mock_ibm_sv_admin_service.get_application_total_logins = AsyncMock()
+
+        with (
+            patch("src.app.services.workspace_service.crud_workspaces") as mock_workspaces,
+            patch("src.app.services.workspace_service.crud_workspace_members") as mock_workspace_members,
+            patch("src.app.services.workspace_service.crud_rp_applications") as mock_rp_applications,
+        ):
+            mock_workspaces.get = AsyncMock(
+                return_value={
+                    "id": 9,
+                    "uuid": "018f6f83-0000-0000-0000-000000000201",
+                    "name": "Benefits Workspace",
+                    "slug": "benefits-workspace",
+                    "department_id": 7,
+                    "description": "Primary workspace",
+                    "created_by": 42,
+                    "created_at": "2026-07-30T12:00:00",
+                    "updated_at": None,
+                    "deleted_at": None,
+                    "is_deleted": False,
+                }
+            )
+            mock_workspace_members.get = AsyncMock(return_value={"role": "workspace_admin"})
+            mock_rp_applications.get = AsyncMock(
+                return_value={
+                    "id": 33,
+                    "uuid": "018f6f83-0000-0000-0000-000000000701",
+                    "workspace_id": 9,
+                    "department_id": 7,
+                    "application_information_id": 17,
+                    "dnr_app_name": "Benefits Portal",
+                    "canada_login_environment": "staging",
+                    "status": None,
+                    "created_by": 42,
+                    "created_at": "2026-07-30T16:00:00",
+                    "deleted_at": None,
+                    "is_deleted": False,
+                    "ibm_sv_application_id": None,
+                    "oidc_registration_payload": {},
+                    "application_owner": None,
+                }
+            )
+
+            with pytest.raises(CustomException) as exc_info:
+                await service.get_workspace_rp_application_usage_summary(
+                    db=mock_db,
+                    workspace_uuid="018f6f83-0000-0000-0000-000000000201",
+                    rp_application_uuid="018f6f83-0000-0000-0000-000000000701",
+                    current_user={"id": 42, "is_superuser": False},
+                    ibm_sv_admin_service=mock_ibm_sv_admin_service,
+                )
+
+        assert exc_info.value.status_code == 409
+        assert exc_info.value.detail == "RP application is not linked to an IBM Security Verify application"
+        mock_ibm_sv_admin_service.get_application_total_logins.assert_not_called()

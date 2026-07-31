@@ -31,6 +31,20 @@ def test_openapi_documents_unified_error_schema_for_selected_endpoints() -> None
     assert workspace_member_create_responses["403"]["content"]["application/json"]["schema"] == error_response_schema_ref
     assert workspace_member_create_responses["409"]["content"]["application/json"]["schema"] == error_response_schema_ref
 
+    workspace_application_create_responses = openapi_schema["paths"]["/api/v1/workspaces/{workspace_uuid}/applications"]["post"]["responses"]
+    assert workspace_application_create_responses["400"]["content"]["application/json"]["schema"] == error_response_schema_ref
+    assert workspace_application_create_responses["403"]["content"]["application/json"]["schema"] == error_response_schema_ref
+    assert workspace_application_create_responses["404"]["content"]["application/json"]["schema"] == error_response_schema_ref
+    assert workspace_application_create_responses["422"]["content"]["application/json"]["schema"] == error_response_schema_ref
+
+    workspace_application_usage_responses = openapi_schema["paths"]["/api/v1/workspaces/{workspace_uuid}/applications/{rp_application_uuid}/usage/summary"]["get"]["responses"]
+    assert workspace_application_usage_responses["400"]["content"]["application/json"]["schema"] == error_response_schema_ref
+    assert workspace_application_usage_responses["409"]["content"]["application/json"]["schema"] == error_response_schema_ref
+
+    workspace_application_audit_responses = openapi_schema["paths"]["/api/v1/workspaces/{workspace_uuid}/applications/{rp_application_uuid}/audit-events"]["get"]["responses"]
+    assert workspace_application_audit_responses["404"]["content"]["application/json"]["schema"] == error_response_schema_ref
+    assert workspace_application_audit_responses["409"]["content"]["application/json"]["schema"] == error_response_schema_ref
+
     create_ibm_application_responses = openapi_schema["paths"]["/api/v1/ibm-sv-admin/applications"]["post"]["responses"]
     assert create_ibm_application_responses["400"]["content"]["application/json"]["schema"] == error_response_schema_ref
     assert create_ibm_application_responses["401"]["content"]["application/json"]["schema"] == error_response_schema_ref

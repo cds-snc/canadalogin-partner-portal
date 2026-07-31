@@ -4,7 +4,7 @@ from typing import Annotated, Any
 from fastapi import APIRouter, Depends, Request
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from ...api.dependencies import get_current_user, get_workspace_service
+from ...api.dependencies import get_current_user, get_ibm_sv_admin_service, get_workspace_service
 from ...core.access_control import casbin_guard
 from ...core.db.database import async_get_db
 from ...core.exceptions.openapi import error_responses
@@ -15,6 +15,13 @@ from ...schemas.application_information import (
     ApplicationInformationCreate,
     ApplicationInformationRead,
     ApplicationInformationUpdate,
+)
+from ...schemas.rp_application import (
+    RPApplicationRead,
+    RPApplicationUsageAuditTrailRead,
+    RPApplicationUsageSummaryRead,
+    WorkspaceRPApplicationRegistrationCreate,
+    WorkspaceRPApplicationRegistrationUpdate,
 )
 from ...schemas.workspace_member import (
     WorkspaceMemberCreate,
@@ -289,6 +296,192 @@ async def erase_application_information_contact(
         application_information_uuid=application_information_uuid,
         contact_uuid=contact_uuid,
         current_user=current_user,
+    )
+
+
+@router.get(
+    "/workspaces/{workspace_uuid}/applications",
+    response_model=list[RPApplicationRead],
+    responses=error_responses(401, 403, 404, 422, 500),
+)
+async def read_workspace_rp_applications(
+    request: Request,
+    workspace_uuid: uuid_pkg.UUID,
+    db: Annotated[AsyncSession, Depends(async_get_db)],
+    service: Annotated[WorkspaceService, Depends(get_workspace_service)],
+    current_user: Annotated[dict[str, Any], Depends(get_current_user)],
+) -> list[dict[str, Any]]:
+    return await service.list_workspace_rp_applications(
+        db=db,
+        workspace_uuid=workspace_uuid,
+        current_user=current_user,
+    )
+
+
+@router.post(
+    "/workspaces/{workspace_uuid}/applications",
+    response_model=RPApplicationRead,
+    status_code=201,
+    responses=error_responses(400, 401, 403, 404, 422, 500),
+)
+async def write_workspace_rp_application(
+    request: Request,
+    workspace_uuid: uuid_pkg.UUID,
+    payload: WorkspaceRPApplicationRegistrationCreate,
+    db: Annotated[AsyncSession, Depends(async_get_db)],
+    service: Annotated[WorkspaceService, Depends(get_workspace_service)],
+    current_user: Annotated[dict[str, Any], Depends(get_current_user)],
+) -> dict[str, Any]:
+    return await service.create_workspace_rp_application(
+        db=db,
+        workspace_uuid=workspace_uuid,
+        payload=payload,
+        current_user=current_user,
+    )
+
+
+@router.get(
+    "/workspaces/{workspace_uuid}/applications/{rp_application_uuid}",
+    response_model=RPApplicationRead,
+    responses=error_responses(401, 403, 404, 422, 500),
+)
+async def read_workspace_rp_application_detail(
+    request: Request,
+    workspace_uuid: uuid_pkg.UUID,
+    rp_application_uuid: uuid_pkg.UUID,
+    db: Annotated[AsyncSession, Depends(async_get_db)],
+    service: Annotated[WorkspaceService, Depends(get_workspace_service)],
+    current_user: Annotated[dict[str, Any], Depends(get_current_user)],
+) -> dict[str, Any]:
+    return await service.get_workspace_rp_application(
+        db=db,
+        workspace_uuid=workspace_uuid,
+        rp_application_uuid=rp_application_uuid,
+        current_user=current_user,
+    )
+
+
+@router.patch(
+    "/workspaces/{workspace_uuid}/applications/{rp_application_uuid}",
+    response_model=RPApplicationRead,
+    responses=error_responses(400, 401, 403, 404, 422, 500),
+)
+async def patch_workspace_rp_application(
+    request: Request,
+    workspace_uuid: uuid_pkg.UUID,
+    rp_application_uuid: uuid_pkg.UUID,
+    payload: WorkspaceRPApplicationRegistrationUpdate,
+    db: Annotated[AsyncSession, Depends(async_get_db)],
+    service: Annotated[WorkspaceService, Depends(get_workspace_service)],
+    current_user: Annotated[dict[str, Any], Depends(get_current_user)],
+) -> dict[str, Any]:
+    return await service.update_workspace_rp_application(
+        db=db,
+        workspace_uuid=workspace_uuid,
+        rp_application_uuid=rp_application_uuid,
+        payload=payload,
+        current_user=current_user,
+    )
+
+
+@router.delete(
+    "/workspaces/{workspace_uuid}/applications/{rp_application_uuid}",
+    responses=error_responses(401, 403, 404, 422, 500),
+)
+async def erase_workspace_rp_application(
+    request: Request,
+    workspace_uuid: uuid_pkg.UUID,
+    rp_application_uuid: uuid_pkg.UUID,
+    db: Annotated[AsyncSession, Depends(async_get_db)],
+    service: Annotated[WorkspaceService, Depends(get_workspace_service)],
+    current_user: Annotated[dict[str, Any], Depends(get_current_user)],
+) -> dict[str, str]:
+    return await service.delete_workspace_rp_application(
+        db=db,
+        workspace_uuid=workspace_uuid,
+        rp_application_uuid=rp_application_uuid,
+        current_user=current_user,
+    )
+
+
+@router.get(
+    "/workspaces/{workspace_uuid}/applications/{rp_application_uuid}/usage/summary",
+    response_model=RPApplicationUsageSummaryRead,
+    responses=error_responses(400, 401, 403, 404, 409, 422, 500),
+)
+async def read_workspace_rp_application_usage_summary(
+    request: Request,
+    workspace_uuid: uuid_pkg.UUID,
+    rp_application_uuid: uuid_pkg.UUID,
+    db: Annotated[AsyncSession, Depends(async_get_db)],
+    service: Annotated[WorkspaceService, Depends(get_workspace_service)],
+    current_user: Annotated[dict[str, Any], Depends(get_current_user)],
+    ibm_sv_admin_service: Annotated[Any, Depends(get_ibm_sv_admin_service)],
+    selected_date: str | None = None,
+) -> dict[str, int]:
+    return await service.get_workspace_rp_application_usage_summary(
+        db=db,
+        workspace_uuid=workspace_uuid,
+        rp_application_uuid=rp_application_uuid,
+        current_user=current_user,
+        ibm_sv_admin_service=ibm_sv_admin_service,
+        selected_date=selected_date,
+    )
+
+
+@router.get(
+    "/workspaces/{workspace_uuid}/applications/{rp_application_uuid}/audit-events",
+    response_model=RPApplicationUsageAuditTrailRead,
+    responses=error_responses(400, 401, 403, 404, 409, 422, 500),
+)
+async def read_workspace_rp_application_audit_events(
+    request: Request,
+    workspace_uuid: uuid_pkg.UUID,
+    rp_application_uuid: uuid_pkg.UUID,
+    db: Annotated[AsyncSession, Depends(async_get_db)],
+    service: Annotated[WorkspaceService, Depends(get_workspace_service)],
+    current_user: Annotated[dict[str, Any], Depends(get_current_user)],
+    ibm_sv_admin_service: Annotated[Any, Depends(get_ibm_sv_admin_service)],
+    selected_date: str | None = None,
+    size: int = 25,
+) -> dict[str, Any]:
+    return await service.get_workspace_rp_application_audit_events(
+        db=db,
+        workspace_uuid=workspace_uuid,
+        rp_application_uuid=rp_application_uuid,
+        current_user=current_user,
+        ibm_sv_admin_service=ibm_sv_admin_service,
+        selected_date=selected_date,
+        size=size,
+    )
+
+
+@router.get(
+    "/workspaces/{workspace_uuid}/applications/{rp_application_uuid}/audit-events/search-after",
+    response_model=RPApplicationUsageAuditTrailRead,
+    responses=error_responses(400, 401, 403, 404, 409, 422, 500),
+)
+async def read_workspace_rp_application_audit_events_search_after(
+    request: Request,
+    workspace_uuid: uuid_pkg.UUID,
+    rp_application_uuid: uuid_pkg.UUID,
+    search_after: str,
+    db: Annotated[AsyncSession, Depends(async_get_db)],
+    service: Annotated[WorkspaceService, Depends(get_workspace_service)],
+    current_user: Annotated[dict[str, Any], Depends(get_current_user)],
+    ibm_sv_admin_service: Annotated[Any, Depends(get_ibm_sv_admin_service)],
+    selected_date: str | None = None,
+    size: int = 25,
+) -> dict[str, Any]:
+    return await service.get_workspace_rp_application_audit_events_search_after(
+        db=db,
+        workspace_uuid=workspace_uuid,
+        rp_application_uuid=rp_application_uuid,
+        current_user=current_user,
+        ibm_sv_admin_service=ibm_sv_admin_service,
+        selected_date=selected_date,
+        size=size,
+        search_after=search_after,
     )
 
 

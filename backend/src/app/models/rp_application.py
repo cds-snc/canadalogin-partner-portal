@@ -13,6 +13,11 @@ class RPApplication(Base):
     __tablename__ = "rp_application"
 
     id: Mapped[int] = mapped_column(autoincrement=True, primary_key=True, init=False)
+    workspace_id: Mapped[int | None] = mapped_column(
+        ForeignKey("workspace.id"),
+        index=True,
+        nullable=True,
+    )
     department_id: Mapped[int | None] = mapped_column(ForeignKey("department.id"), index=True, nullable=True)
     application_information_id: Mapped[int | None] = mapped_column(
         ForeignKey("application_information.id"),
@@ -20,10 +25,17 @@ class RPApplication(Base):
         nullable=True,
     )
     dnr_app_name: Mapped[str] = mapped_column(String(128), nullable=False)
-    created_by: Mapped[int | None] = mapped_column(ForeignKey("user.id"), nullable=True)
+    canada_login_environment: Mapped[str | None] = mapped_column(String(32), nullable=True, default=None)
+    status: Mapped[str | None] = mapped_column(String(64), nullable=True, default=None)
+    created_by: Mapped[int | None] = mapped_column(ForeignKey("user.id"), nullable=True, default=None)
     uuid: Mapped[uuid_pkg.UUID] = mapped_column(UUID(as_uuid=True), default_factory=uuid7, unique=True)
     ibm_sv_application_id: Mapped[str | None] = mapped_column(String(128), nullable=True, index=True, default=None)
     application_owner: Mapped[dict[str, object] | None] = mapped_column(JSON, nullable=True, default=None)
+    oidc_registration_payload: Mapped[dict[str, object] | None] = mapped_column(
+        JSON,
+        nullable=True,
+        default=None,
+    )
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default_factory=lambda: datetime.now(UTC))
     updated_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), default=None)
     deleted_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), default=None)

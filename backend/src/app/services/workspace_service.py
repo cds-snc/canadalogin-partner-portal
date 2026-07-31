@@ -1,3 +1,4 @@
+from datetime import UTC, datetime
 import uuid as uuid_pkg
 from typing import Any
 
@@ -28,6 +29,13 @@ from ..schemas.application_information import (
     ApplicationInformationRead,
     ApplicationInformationUpdate,
 )
+from ..schemas.rp_application import (
+    RPApplicationCreateInternal,
+    RPApplicationRead,
+    RPApplicationUpdateInternal,
+    WorkspaceRPApplicationRegistrationCreate,
+    WorkspaceRPApplicationRegistrationUpdate,
+)
 from ..schemas.workspace_member import (
     WorkspaceMemberCreate,
     WorkspaceMemberCreateInternal,
@@ -40,12 +48,16 @@ from ..schemas.workspace import (
     WorkspaceRead,
     WorkspaceUpdate,
 )
+from .ibm_sv_admin_service import IBMVerifyAdminService
 
 WORKSPACE_ADMIN_ROLE = "workspace_admin"
 WORKSPACE_MEMBER_ROLE = "workspace_member"
 WORKSPACE_MEMBER_ROLES = {WORKSPACE_ADMIN_ROLE, WORKSPACE_MEMBER_ROLE}
 LINKED_RP_APPLICATIONS_DELETE_BLOCK_MESSAGE = (
     "Linked RP applications must be unlinked or removed before deleting application information"
+)
+RP_APPLICATION_USAGE_UNAVAILABLE_MESSAGE = (
+    "RP application is not linked to an IBM Security Verify application"
 )
 
 
@@ -548,6 +560,248 @@ class WorkspaceService:
         await crud_application_information_contacts.delete(db=db, uuid=contact_uuid)
         return {"message": "Application information contact deleted"}
 
+    async def list_workspace_rp_applications(
+        self,
+        db: AsyncSession,
+        workspace_uuid: uuid_pkg.UUID | str,
+        current_user: dict[str, Any],
+    ) -> list[dict[str, Any]]:
+        workspace = await self.require_workspace_admin_access(
+            db=db,
+            workspace_uuid=workspace_uuid,
+            current_user=current_user,
+        )
+        records = await crud_rp_applications.get_multi(
+            db=db,
+            workspace_id=workspace["id"],
+            is_deleted=False,
+            schema_to_select=RPApplicationRead,
+        )
+        return records.get("data", [])
+
+    async def create_workspace_rp_application(
+        self,
+        db: AsyncSession,
+        workspace_uuid: uuid_pkg.UUID | str,
+        payload: WorkspaceRPApplicationRegistrationCreate,
+        current_user: dict[str, Any],
+    ) -> dict[str, Any]:
+        workspace = await self.require_workspace_admin_access(
+            db=db,
+            workspace_uuid=workspace_uuid,
+            current_user=current_user,
+        )
+        application_information_id = await self._resolve_workspace_application_information_id(
+            db=db,
+            workspace_id=workspace["id"],
+            application_information_uuid=payload.application_information_uuid,
+        )
+        registration_payload = payload.model_dump(
+            mode="json",
+            exclude={"application_information_uuid"},
+        )
+        created = await crud_rp_applications.create(
+            db=db,
+            object=RPApplicationCreateInternal(
+                workspace_id=workspace["id"],
+                department_id=workspace["department_id"],
+                application_information_id=application_information_id,
+                dnr_app_name=payload.service_name_en,
+                canada_login_environment=payload.canada_login_environment,
+                status=None,
+                ibm_sv_application_id=None,
+                oidc_registration_payload=registration_payload,
+                created_by=current_user.get("id"),
+                application_owner=None,
+            ),
+            schema_to_select=RPApplicationRead,
+        )
+        if created is None:
+            raise NotFoundException("Failed to create RP application")
+        return created
+
+    async def get_workspace_rp_application(
+        self,
+        db: AsyncSession,
+        workspace_uuid: uuid_pkg.UUID | str,
+        rp_application_uuid: uuid_pkg.UUID | str,
+        current_user: dict[str, Any],
+    ) -> dict[str, Any]:
+        workspace = await self.require_workspace_admin_access(
+            db=db,
+            workspace_uuid=workspace_uuid,
+            current_user=current_user,
+        )
+        return await self._get_workspace_rp_application(
+            db=db,
+            workspace_id=workspace["id"],
+            rp_application_uuid=rp_application_uuid,
+        )
+
+    async def update_workspace_rp_application(
+        self,
+        db: AsyncSession,
+        workspace_uuid: uuid_pkg.UUID | str,
+        rp_application_uuid: uuid_pkg.UUID | str,
+        payload: WorkspaceRPApplicationRegistrationUpdate,
+        current_user: dict[str, Any],
+    ) -> dict[str, Any]:
+        workspace = await self.require_workspace_admin_access(
+            db=db,
+            workspace_uuid=workspace_uuid,
+            current_user=current_user,
+        )
+        existing = await self._get_workspace_rp_application(
+            db=db,
+            workspace_id=workspace["id"],
+            rp_application_uuid=rp_application_uuid,
+        )
+        update_data = payload.model_dump(exclude_unset=True, mode="json")
+        if not update_data:
+            return existing
+
+        application_information_uuid = update_data.pop("application_information_uuid", None)
+        application_information_id: int | None = existing.get("application_information_id")
+        if application_information_uuid is not None:
+            application_information_id = await self._resolve_workspace_application_information_id(
+                db=db,
+                workspace_id=workspace["id"],
+                application_information_uuid=application_information_uuid,
+            )
+
+        current_payload = dict(existing.get("oidc_registration_payload") or {})
+        current_payload.update(update_data)
+        update_object = RPApplicationUpdateInternal(
+            workspace_id=workspace["id"],
+            department_id=workspace["department_id"],
+            application_information_id=application_information_id,
+            dnr_app_name=current_payload.get("service_name_en") or existing.get("dnr_app_name"),
+            canada_login_environment=current_payload.get("canada_login_environment")
+            or existing.get("canada_login_environment"),
+            status=existing.get("status"),
+            oidc_registration_payload=current_payload,
+            application_owner=existing.get("application_owner"),
+            updated_at=datetime.now(UTC),
+        )
+        await crud_rp_applications.update(
+            db=db,
+            object=update_object.model_dump(exclude_none=True),
+            uuid=rp_application_uuid,
+        )
+        return await self._get_workspace_rp_application(
+            db=db,
+            workspace_id=workspace["id"],
+            rp_application_uuid=rp_application_uuid,
+        )
+
+    async def delete_workspace_rp_application(
+        self,
+        db: AsyncSession,
+        workspace_uuid: uuid_pkg.UUID | str,
+        rp_application_uuid: uuid_pkg.UUID | str,
+        current_user: dict[str, Any],
+    ) -> dict[str, str]:
+        workspace = await self.require_workspace_admin_access(
+            db=db,
+            workspace_uuid=workspace_uuid,
+            current_user=current_user,
+        )
+        await self._get_workspace_rp_application(
+            db=db,
+            workspace_id=workspace["id"],
+            rp_application_uuid=rp_application_uuid,
+        )
+        await crud_rp_applications.delete(db=db, uuid=rp_application_uuid)
+        return {"message": "RP application deleted"}
+
+    async def get_workspace_rp_application_usage_summary(
+        self,
+        db: AsyncSession,
+        workspace_uuid: uuid_pkg.UUID | str,
+        rp_application_uuid: uuid_pkg.UUID | str,
+        current_user: dict[str, Any],
+        ibm_sv_admin_service: IBMVerifyAdminService,
+        selected_date: str | None = None,
+    ) -> dict[str, int]:
+        workspace = await self.require_workspace_admin_access(
+            db=db,
+            workspace_uuid=workspace_uuid,
+            current_user=current_user,
+        )
+        rp_application = await self._get_workspace_rp_application(
+            db=db,
+            workspace_id=workspace["id"],
+            rp_application_uuid=rp_application_uuid,
+        )
+        ibm_application_id = self._get_workspace_rp_application_ibm_application_id(rp_application)
+        from_date, to_date = self._resolve_selected_date_range(selected_date)
+        payload = await ibm_sv_admin_service.get_application_total_logins(
+            application_id=ibm_application_id,
+            from_date=from_date,
+            to_date=to_date,
+        )
+        return self._normalize_workspace_rp_application_usage_summary(payload)
+
+    async def get_workspace_rp_application_audit_events(
+        self,
+        db: AsyncSession,
+        workspace_uuid: uuid_pkg.UUID | str,
+        rp_application_uuid: uuid_pkg.UUID | str,
+        current_user: dict[str, Any],
+        ibm_sv_admin_service: IBMVerifyAdminService,
+        selected_date: str | None = None,
+        size: int = 25,
+    ) -> dict[str, Any]:
+        workspace = await self.require_workspace_admin_access(
+            db=db,
+            workspace_uuid=workspace_uuid,
+            current_user=current_user,
+        )
+        rp_application = await self._get_workspace_rp_application(
+            db=db,
+            workspace_id=workspace["id"],
+            rp_application_uuid=rp_application_uuid,
+        )
+        ibm_application_id = self._get_workspace_rp_application_ibm_application_id(rp_application)
+        from_date, to_date = self._resolve_selected_date_range(selected_date)
+        return await ibm_sv_admin_service.get_application_audit_trail(
+            application_id=ibm_application_id,
+            from_date=from_date,
+            to_date=to_date,
+            size=size,
+        )
+
+    async def get_workspace_rp_application_audit_events_search_after(
+        self,
+        db: AsyncSession,
+        workspace_uuid: uuid_pkg.UUID | str,
+        rp_application_uuid: uuid_pkg.UUID | str,
+        current_user: dict[str, Any],
+        ibm_sv_admin_service: IBMVerifyAdminService,
+        selected_date: str | None = None,
+        size: int = 25,
+        search_after: str | None = None,
+    ) -> dict[str, Any]:
+        workspace = await self.require_workspace_admin_access(
+            db=db,
+            workspace_uuid=workspace_uuid,
+            current_user=current_user,
+        )
+        rp_application = await self._get_workspace_rp_application(
+            db=db,
+            workspace_id=workspace["id"],
+            rp_application_uuid=rp_application_uuid,
+        )
+        ibm_application_id = self._get_workspace_rp_application_ibm_application_id(rp_application)
+        from_date, to_date = self._resolve_selected_date_range(selected_date)
+        return await ibm_sv_admin_service.get_application_audit_trail_search_after(
+            application_id=ibm_application_id,
+            from_date=from_date,
+            to_date=to_date,
+            size=size,
+            search_after=search_after,
+        )
+
     async def _resolve_department_id(
         self,
         db: AsyncSession,
@@ -665,6 +919,110 @@ class WorkspaceService:
         if contact is None:
             raise NotFoundException("Application information contact not found")
         return contact
+
+    async def _resolve_workspace_application_information_id(
+        self,
+        db: AsyncSession,
+        workspace_id: int,
+        application_information_uuid: uuid_pkg.UUID | str | None,
+    ) -> int | None:
+        if application_information_uuid is None:
+            return None
+        application_information = await self._get_workspace_application_information(
+            db=db,
+            workspace_id=workspace_id,
+            application_information_uuid=application_information_uuid,
+        )
+        return int(application_information["id"])
+
+    async def _get_workspace_rp_application(
+        self,
+        db: AsyncSession,
+        workspace_id: int,
+        rp_application_uuid: uuid_pkg.UUID | str,
+    ) -> dict[str, Any]:
+        rp_application = await crud_rp_applications.get(
+            db=db,
+            workspace_id=workspace_id,
+            uuid=rp_application_uuid,
+            is_deleted=False,
+            schema_to_select=RPApplicationRead,
+        )
+        if rp_application is None:
+            raise NotFoundException("RP application not found")
+        return rp_application
+
+    def _get_workspace_rp_application_ibm_application_id(
+        self,
+        rp_application: dict[str, Any],
+    ) -> str:
+        ibm_application_id = str(rp_application.get("ibm_sv_application_id") or "").strip()
+        if not ibm_application_id:
+            raise CustomException(
+                status_code=409,
+                detail=RP_APPLICATION_USAGE_UNAVAILABLE_MESSAGE,
+            )
+        return ibm_application_id
+
+    def _resolve_selected_date_range(self, selected_date: str | None) -> tuple[str | None, str | None]:
+        normalized_date = str(selected_date or "").strip()
+        if not normalized_date.isdigit():
+            return None, None
+
+        start_timestamp = int(normalized_date)
+        if start_timestamp < 0:
+            return None, None
+
+        end_timestamp = start_timestamp + 86_400_000 - 1
+        return str(start_timestamp), str(end_timestamp)
+
+    def _normalize_workspace_rp_application_usage_summary(
+        self,
+        payload: dict[str, Any],
+    ) -> dict[str, int]:
+        raw_response = payload.get("response") if isinstance(payload.get("response"), dict) else payload
+        if not isinstance(raw_response, dict):
+            raw_response = {}
+
+        total = self._coerce_int(raw_response.get("total"))
+        succeeded = self._coerce_int(
+            raw_response.get("succeeded")
+            if "succeeded" in raw_response
+            else raw_response.get("successful")
+        )
+        failed = self._coerce_int(
+            raw_response.get("failed")
+            if "failed" in raw_response
+            else raw_response.get("unsuccessful")
+        )
+
+        if total is None:
+            total = max((succeeded or 0) + (failed or 0), 0)
+
+        if succeeded is None and failed is None:
+            succeeded = total
+            failed = 0
+        elif succeeded is None:
+            succeeded = max(total - (failed or 0), 0)
+        elif failed is None:
+            failed = max(total - succeeded, 0)
+
+        return {
+            "total": total,
+            "succeeded": succeeded,
+            "failed": failed,
+        }
+
+    def _coerce_int(self, value: Any) -> int | None:
+        if isinstance(value, bool):
+            return int(value)
+        if isinstance(value, int):
+            return value
+        if isinstance(value, str):
+            normalized_value = value.strip()
+            if normalized_value.isdigit():
+                return int(normalized_value)
+        return None
 
     async def _ensure_slug_available(
         self,

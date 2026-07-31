@@ -12,7 +12,8 @@ from ..core.utils.rate_limit import rate_limiter
 from ..repositories.crud_rate_limit import crud_rate_limits
 from ..repositories.crud_tier import crud_tiers
 from ..repositories.crud_users import crud_users
-from ..repositories.dependencies import get_ibm_sv_user_client
+from ..repositories.dependencies import get_ibm_sv_admin_client, get_ibm_sv_user_client
+from ..repositories.ibm_sv_admin import IBMVerifyAdminClient
 from ..schemas.rate_limit import sanitize_path
 from ..services import (
     AuditService,
@@ -57,6 +58,14 @@ def get_department_service() -> DepartmentService:
 
 def get_workspace_service() -> WorkspaceService:
     return WorkspaceService()
+
+
+async def get_ibm_sv_admin_service(
+    client: Annotated[IBMVerifyAdminClient, Depends(get_ibm_sv_admin_client)],
+):
+    from ..services.ibm_sv_admin_service import IBMVerifyAdminService
+
+    return IBMVerifyAdminService(client=client)
 
 
 def get_tier_service() -> TierService:

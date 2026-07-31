@@ -1,3 +1,5 @@
+# Partner Portal Onboarding Oversight And Reporting
+
 ## ADDED Requirements
 
 ### Requirement: Internal oversight users have a cross-workspace onboarding view
@@ -7,9 +9,17 @@ The system SHALL provide an authenticated oversight view for reviewer or platfor
 - **WHEN** an authorized oversight user opens the onboarding oversight view
 - **THEN** the portal lists onboarding records across workspaces with filters for state, department, workspace, and record type
 
+#### Scenario: Oversight user filters production-bound promotion requests
+- **WHEN** an authorized oversight user filters the onboarding backlog for records targeting `production`
+- **THEN** the portal lists the relevant promotion requests with their latest promotion status and external review reference
+
 #### Scenario: Oversight view highlights work needing review
 - **WHEN** records exist in `submitted` or `under_review`
 - **THEN** the oversight view highlights them separately from `draft`, `approved`, and `launched` records
+
+#### Scenario: Oversight backlog omits RP secret values
+- **WHEN** an authorized oversight user inspects onboarding records from the oversight view
+- **THEN** the portal exposes only status, checklist, and review metadata and does not reveal current or rotated RP secret values
 
 ### Requirement: Reviewers capture onboarding notes and checklist outcomes
 The system SHALL allow authorized oversight users to record review notes and checklist outcomes against submitted or under-review application information records.
@@ -35,7 +45,7 @@ The system SHALL provide aggregate reporting for invitation conversion, secret r
 
 #### Scenario: Oversight user exports aggregate reporting results
 - **WHEN** an authorized oversight user requests an export for the current reporting filter set
-- **THEN** the portal exports the aggregate onboarding, invitation, or secret-hygiene results for those filters without exposing record-level data beyond the report scope
+- **THEN** the portal exports the aggregate onboarding, invitation, or secret-hygiene results for those filters without exposing record-level data beyond the report scope or any RP secret material
 
 #### Scenario: Invalid reporting filters fail safely
 - **WHEN** an authorized oversight user submits an unsupported or invalid reporting filter combination

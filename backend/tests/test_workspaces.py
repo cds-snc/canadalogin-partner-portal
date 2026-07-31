@@ -1,3 +1,4 @@
+import uuid as uuid_pkg
 from datetime import UTC, datetime
 from unittest.mock import AsyncMock, Mock
 
@@ -5,7 +6,7 @@ import casbin
 from fastcrud.exceptions.http_exceptions import CustomException
 from fastapi.testclient import TestClient
 
-from src.app.api.dependencies import get_current_user, get_workspace_service
+from src.app.api.dependencies import get_current_user, get_ibm_sv_admin_service, get_workspace_service
 from src.app.core.access_control import CASBIN_MODEL_PATH, database_enforcer_provider
 from src.app.core.db.database import async_get_db
 from src.app.core.exceptions.http_exceptions import ForbiddenException, NotFoundException
@@ -71,6 +72,30 @@ def sample_application_information_contact_payload(*, responsibility_en: str = "
         "updated_at": None,
         "deleted_at": None,
         "is_deleted": False,
+    }
+
+
+def sample_rp_application_payload(*, dnr_app_name: str = "Benefits Portal") -> dict[str, object]:
+    return {
+        "id": 33,
+        "uuid": "018f6f83-0000-0000-0000-000000000701",
+        "workspace_id": 9,
+        "department_id": 7,
+        "application_information_id": 17,
+        "dnr_app_name": dnr_app_name,
+        "canada_login_environment": "staging",
+        "status": None,
+        "created_by": 42,
+        "created_at": datetime(2026, 7, 30, 16, 0, tzinfo=UTC).isoformat(),
+        "updated_at": None,
+        "deleted_at": None,
+        "is_deleted": False,
+        "ibm_sv_application_id": None,
+        "oidc_registration_payload": {
+            "service_name_en": dnr_app_name,
+            "requested_scopes": ["openid", "profile"],
+        },
+        "application_owner": None,
     }
 
 
@@ -268,7 +293,6 @@ class TestWorkspaceRoutes:
         assert update_response.json()["name"] == "Renamed Workspace"
         assert update_response.json()["slug"] == "renamed-workspace"
         assert delete_response.status_code == 200
-        assert delete_response.json() == {"message": "Workspace deleted"}
 
     def test_workspace_members_crud_delegates_to_service_for_workspace_admin(self) -> None:
         service = Mock()
@@ -555,4 +579,202 @@ class TestWorkspaceRoutes:
         assert response.json()["error"]["code"] == "conflict"
         assert response.json()["error"]["message"] == (
             "Linked RP applications must be unlinked or removed before deleting application information"
+        )
+
+    def test_workspace_rp_application_crud_delegates_to_service_for_workspace_admin(self) -> None:
+        service = Mock()
+        service.list_workspace_rp_applications = AsyncMock(
+            return_value=[sample_rp_application_payload()]
+        )
+        service.create_workspace_rp_application = AsyncMock(
+            return_value=sample_rp_application_payload()
+        )
+        service.get_workspace_rp_application = AsyncMock(
+            return_value=sample_rp_application_payload()
+        )
+        service.update_workspace_rp_application = AsyncMock(
+            return_value=sample_rp_application_payload(dnr_app_name="Benefits Portal Updated")
+        )
+        service.delete_workspace_rp_application = AsyncMock(
+            return_value={"message": "RP application deleted"}
+        )
+        current_user = {
+            "id": 42,
+            "username": "workspace-admin@example.gc.ca",
+            "is_superuser": False,
+        }
+        db = Mock()
+
+        app.dependency_overrides[get_current_user] = lambda: current_user
+        app.dependency_overrides[get_workspace_service] = lambda: service
+        app.dependency_overrides[async_get_db] = lambda: db
+
+        try:
+            with TestClient(app) as client:
+                list_response = client.get(
+                    "/api/v1/workspaces/018f6f83-0000-0000-0000-000000000201/applications"
+                )
+                create_response = client.post(
+                    "/api/v1/workspaces/018f6f83-0000-0000-0000-000000000201/applications",
+                    json={
+                        "applicationInformationUuid": "018f6f83-0000-0000-0000-000000000501",
+                        "canadaLoginEnvironment": "staging",
+                        "serviceNameEn": "Benefits Portal",
+                        "serviceNameFr": "Portail des prestations",
+                        "applicationEnvironmentUrlEn": "https://benefits.canada.ca",
+                        "applicationEnvironmentUrlFr": "https://prestations.canada.ca",
+                        "redirectUris": ["https://benefits.canada.ca/callback"],
+                        "postLogoutRedirectUris": ["https://benefits.canada.ca/logout-complete"],
+                        "logoutMode": "front_channel",
+                        "logoutUri": "https://benefits.canada.ca/logout",
+                        "clientType": "confidential",
+                        "supportsAuthorizationCodeFlow": True,
+                        "clientAuthMethod": "client_secret_basic",
+                        "requestedScopes": ["openid", "profile"],
+                        "sectorIdentifier": "https://benefits.canada.ca",
+                        "sharesPairwiseIdentifiers": False,
+                        "pkceSupported": True,
+                        "pkceAlgorithms": ["S256"],
+                        "requestSigningSupported": False,
+                        "requestSigningRoadmap": False,
+                        "signatureValidationSupported": True,
+                        "signatureValidationTargets": ["id_token"],
+                        "signatureValidationAlgorithms": ["RS256"],
+                        "requestEncryptionSupported": False,
+                        "requestEncryptionRoadmap": False,
+                        "messageDecryptionSupported": True,
+                        "messageDecryptionTargets": ["id_token"],
+                        "messageDecryptionKeyManagementAlgorithms": ["RSA-OAEP-256"],
+                        "messageDecryptionContentAlgorithms": ["A256GCM"],
+                    },
+                )
+                detail_response = client.get(
+                    "/api/v1/workspaces/018f6f83-0000-0000-0000-000000000201/applications/018f6f83-0000-0000-0000-000000000701"
+                )
+                update_response = client.patch(
+                    "/api/v1/workspaces/018f6f83-0000-0000-0000-000000000201/applications/018f6f83-0000-0000-0000-000000000701",
+                    json={
+                        "serviceNameEn": "Benefits Portal Updated",
+                        "requestedScopes": ["openid", "profile", "email"],
+                    },
+                )
+                delete_response = client.delete(
+                    "/api/v1/workspaces/018f6f83-0000-0000-0000-000000000201/applications/018f6f83-0000-0000-0000-000000000701"
+                )
+        finally:
+            app.dependency_overrides.clear()
+
+        assert list_response.status_code == 200
+        assert list_response.json()[0]["dnrAppName"] == "Benefits Portal"
+        assert create_response.status_code == 201
+        assert create_response.json()["workspaceId"] == 9
+        assert detail_response.status_code == 200
+        assert detail_response.json()["applicationInformationId"] == 17
+        assert update_response.status_code == 200
+        assert update_response.json()["dnrAppName"] == "Benefits Portal Updated"
+        assert delete_response.status_code == 200
+        assert delete_response.json() == {"message": "RP application deleted"}
+
+    def test_workspace_rp_application_denied_for_non_admin_actor(self) -> None:
+        service = Mock()
+        service.list_workspace_rp_applications = AsyncMock(
+            side_effect=ForbiddenException("You do not have enough privileges.")
+        )
+
+        app.dependency_overrides[get_current_user] = lambda: {
+            "id": 55,
+            "username": "member@example.gc.ca",
+            "is_superuser": False,
+        }
+        app.dependency_overrides[get_workspace_service] = lambda: service
+        app.dependency_overrides[async_get_db] = lambda: Mock()
+
+        try:
+            with TestClient(app) as client:
+                response = client.get(
+                    "/api/v1/workspaces/018f6f83-0000-0000-0000-000000000201/applications"
+                )
+        finally:
+            app.dependency_overrides.clear()
+
+        assert response.status_code == 403
+        assert response.json()["error"]["code"] == "forbidden"
+
+    def test_workspace_rp_application_telemetry_routes_delegate_to_service_for_workspace_admin(self) -> None:
+        service = Mock()
+        service.get_workspace_rp_application_usage_summary = AsyncMock(
+            return_value={"total": 11, "succeeded": 9, "failed": 2}
+        )
+        service.get_workspace_rp_application_audit_events = AsyncMock(
+            return_value={"events": [], "next": '"1775692800000", "event-2"', "total": 20}
+        )
+        service.get_workspace_rp_application_audit_events_search_after = AsyncMock(
+            return_value={"events": [], "next": None, "total": 20}
+        )
+        current_user = {
+            "id": 42,
+            "username": "workspace-admin@example.gc.ca",
+            "is_superuser": False,
+        }
+        db = Mock()
+        ibm_sv_admin_service = Mock()
+
+        app.dependency_overrides[get_current_user] = lambda: current_user
+        app.dependency_overrides[get_workspace_service] = lambda: service
+        app.dependency_overrides[get_ibm_sv_admin_service] = lambda: ibm_sv_admin_service
+        app.dependency_overrides[async_get_db] = lambda: db
+
+        try:
+            with TestClient(app) as client:
+                usage_response = client.get(
+                    "/api/v1/workspaces/018f6f83-0000-0000-0000-000000000201/applications/018f6f83-0000-0000-0000-000000000701/usage/summary",
+                    params={"selected_date": "1775692800000"},
+                )
+                audit_response = client.get(
+                    "/api/v1/workspaces/018f6f83-0000-0000-0000-000000000201/applications/018f6f83-0000-0000-0000-000000000701/audit-events",
+                    params={"selected_date": "1775692800000", "size": 25},
+                )
+                search_after_response = client.get(
+                    "/api/v1/workspaces/018f6f83-0000-0000-0000-000000000201/applications/018f6f83-0000-0000-0000-000000000701/audit-events/search-after",
+                    params={
+                        "selected_date": "1775692800000",
+                        "size": 25,
+                        "search_after": '"1775692800000", "event-2"',
+                    },
+                )
+        finally:
+            app.dependency_overrides.clear()
+
+        assert usage_response.status_code == 200
+        assert usage_response.json() == {"total": 11, "succeeded": 9, "failed": 2}
+        assert audit_response.status_code == 200
+        assert audit_response.json()["total"] == 20
+        assert search_after_response.status_code == 200
+        assert search_after_response.json()["next"] is None
+        service.get_workspace_rp_application_usage_summary.assert_awaited_once_with(
+            db=db,
+            workspace_uuid=uuid_pkg.UUID("018f6f83-0000-0000-0000-000000000201"),
+            rp_application_uuid=uuid_pkg.UUID("018f6f83-0000-0000-0000-000000000701"),
+            current_user=current_user,
+            ibm_sv_admin_service=ibm_sv_admin_service,
+            selected_date="1775692800000",
+        )
+        service.get_workspace_rp_application_audit_events.assert_awaited_once_with(
+            db=db,
+            workspace_uuid=uuid_pkg.UUID("018f6f83-0000-0000-0000-000000000201"),
+            rp_application_uuid=uuid_pkg.UUID("018f6f83-0000-0000-0000-000000000701"),
+            current_user=current_user,
+            ibm_sv_admin_service=ibm_sv_admin_service,
+            selected_date="1775692800000",
+            size=25,
+        )
+        service.get_workspace_rp_application_audit_events_search_after.assert_awaited_once_with(
+            db=db,
+            workspace_uuid=uuid_pkg.UUID("018f6f83-0000-0000-0000-000000000201"),
+            rp_application_uuid=uuid_pkg.UUID("018f6f83-0000-0000-0000-000000000701"),
+            current_user=current_user,
+            ibm_sv_admin_service=ibm_sv_admin_service,
+            selected_date="1775692800000",
+            size=25,
+            search_after='"1775692800000", "event-2"',
         )
