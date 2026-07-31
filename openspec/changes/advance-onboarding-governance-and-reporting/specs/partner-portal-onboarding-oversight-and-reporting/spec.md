@@ -2,15 +2,15 @@
 
 ## ADDED Requirements
 
-### Requirement: Internal oversight users have a cross-workspace onboarding view
-The system SHALL provide an authenticated oversight view for reviewer or platform-admin users to monitor onboarding work across workspaces and departments.
+### Requirement: Platform-admin users have a cross-workspace onboarding view
+The system SHALL provide an authenticated oversight view for platform-admin users to monitor onboarding work across workspaces and departments.
 
 #### Scenario: Oversight user filters the onboarding backlog
-- **WHEN** an authorized oversight user opens the onboarding oversight view
+- **WHEN** an authorized platform-admin user opens the onboarding oversight view
 - **THEN** the portal lists onboarding records across workspaces with filters for state, department, workspace, and record type
 
 #### Scenario: Oversight user filters production-bound promotion requests
-- **WHEN** an authorized oversight user filters the onboarding backlog for records targeting `production`
+- **WHEN** an authorized platform-admin user filters the onboarding backlog for records targeting `production`
 - **THEN** the portal lists the relevant promotion requests with their latest promotion status and external review reference
 
 #### Scenario: Oversight view highlights work needing review
@@ -18,14 +18,14 @@ The system SHALL provide an authenticated oversight view for reviewer or platfor
 - **THEN** the oversight view highlights them separately from `draft`, `approved`, and `launched` records
 
 #### Scenario: Oversight backlog omits RP secret values
-- **WHEN** an authorized oversight user inspects onboarding records from the oversight view
+- **WHEN** an authorized platform-admin user inspects onboarding records from the oversight view
 - **THEN** the portal exposes only status, checklist, and review metadata and does not reveal current or rotated RP secret values
 
-### Requirement: Reviewers capture onboarding notes and checklist outcomes
-The system SHALL allow authorized oversight users to record review notes and checklist outcomes against submitted or under-review application information records.
+### Requirement: Platform admins capture onboarding notes and checklist outcomes
+The system SHALL allow authorized platform-admin users to record review notes and checklist outcomes against submitted or under-review application information records.
 
-#### Scenario: Reviewer records review findings
-- **WHEN** an authorized oversight user reviews an application information record
+#### Scenario: Platform admin records review findings
+- **WHEN** an authorized platform-admin user reviews an application information record
 - **THEN** the portal stores review notes and checklist status for that record and makes them available to authorized internal users
 
 #### Scenario: Unauthorized users cannot view or edit review findings

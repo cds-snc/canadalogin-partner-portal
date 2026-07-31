@@ -430,7 +430,7 @@ describe("rp_application-api", () => {
 			});
 
 			expect(fetchMock).toHaveBeenCalledWith(
-				`http://localhost:8000/api/v1/workspaces/${workspaceUuid}/applications/${applicationUuid}/usage/audit-trail?selected_date=1775692800000&size=25`,
+				`http://localhost:8000/api/v1/workspaces/${workspaceUuid}/applications/${applicationUuid}/audit-events?selected_date=1775692800000&size=25`,
 				expect.objectContaining({
 					credentials: "include",
 					method: "GET",
@@ -459,7 +459,7 @@ describe("rp_application-api", () => {
 			);
 
 			expect(fetchMock).toHaveBeenCalledWith(
-				`http://localhost:8000/api/v1/workspaces/${workspaceUuid}/applications/${applicationUuid}/usage/audit-trail/search-after?selected_date=1775692800000&search_after=%221744200000000%22%2C+%22event-2%22&size=25`,
+				`http://localhost:8000/api/v1/workspaces/${workspaceUuid}/applications/${applicationUuid}/audit-events/search-after?selected_date=1775692800000&search_after=%221744200000000%22%2C+%22event-2%22&size=25`,
 				expect.objectContaining({
 					credentials: "include",
 					method: "GET",

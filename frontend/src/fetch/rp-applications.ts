@@ -451,7 +451,7 @@ export const getRPApplicationUsageAuditTrail = async (
 	}
 
 	const result = await requestJson<RPApplicationUsageAuditTrailRead | null>(
-		`/api/v1/workspaces/${encodeURIComponent(workspaceUuid)}/applications/${encodeURIComponent(rpApplicationUuid)}/usage/audit-trail?${searchParameters.toString()}`,
+		`/api/v1/workspaces/${encodeURIComponent(workspaceUuid)}/applications/${encodeURIComponent(rpApplicationUuid)}/audit-events?${searchParameters.toString()}`,
 		{
 			cache: "no-store",
 			method: "GET",
@@ -479,7 +479,7 @@ export const getRPApplicationUsageAuditTrailSearchAfter = async (
 	}
 
 	const result = await requestJson<RPApplicationUsageAuditTrailRead | null>(
-		`/api/v1/workspaces/${encodeURIComponent(workspaceUuid)}/applications/${encodeURIComponent(rpApplicationUuid)}/usage/audit-trail/search-after?${searchParameters.toString()}`,
+		`/api/v1/workspaces/${encodeURIComponent(workspaceUuid)}/applications/${encodeURIComponent(rpApplicationUuid)}/audit-events/search-after?${searchParameters.toString()}`,
 		{
 			cache: "no-store",
 			method: "GET",

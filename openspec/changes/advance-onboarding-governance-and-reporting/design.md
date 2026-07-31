@@ -24,7 +24,7 @@ Relevant standards and baseline impact for planning:
 - Define environment progression rules and out-of-band promotion traceability for `test`, `staging`, and `production` onboarding steps.
 - Define readiness indicators for application information completion.
 - Define checklist, evidence-reference, and external process-link visibility needed before production progression.
-- Define the internal reviewer and administrator oversight experience at the requirement level.
+- Define the platform-admin oversight experience at the requirement level.
 - Define aggregate reporting expectations for onboarding throughput, invitation conversion, and secret rotation hygiene.
 - Keep role-boundary guidance explicit so workspace membership and invited-developer access are easier to understand.
 
@@ -44,23 +44,23 @@ Relevant standards and baseline impact for planning:
 
 - Choice: use `draft`, `submitted`, `under_review`, `approved`, and `launched` as the MVP2 state vocabulary for workspaces, application information records, and RP applications.
 - Rationale: the PRD already names this progression, and a consistent vocabulary reduces ambiguity across related onboarding artifacts.
-- Trade-off: exact transition ownership still needs a human decision before implementation.
+- Trade-off: finer-grained oversight-role routing can still change later, but MVP2 keeps reviewed production outcomes under platform-admin ownership.
 
 ### Decision 2: Start readiness indicators with application information records
 
 - Choice: add section-level completion indicators and an overall submit-ready signal for application information first.
 - Rationale: application information already carries the broadest onboarding context and is the highest-value place to surface incomplete data.
-- Trade-off: exact required-field rules and any weighted scoring remain a planning decision, not a spec-internal algorithm.
+- Trade-off: MVP2 uses these indicators for visibility and review context, not as hard in-portal gates for contact or evidence completeness.
 
 ### Decision 3: Treat oversight as an authenticated operational dashboard
 
-- Choice: model the reviewer and administrator experience as an operational oversight area with a compact overview route plus separate queue and reporting routes, instead of one overloaded screen.
+- Choice: model the platform-admin oversight experience as an operational area with a compact overview route plus separate queue and reporting routes, instead of one overloaded screen.
 - Route plan:
 	- `/onboarding-oversight` for the authenticated overview page
 	- `/onboarding-oversight/queue` for the filterable review backlog
 	- `/onboarding-oversight/reports` for aggregate reporting
 - Rationale: STD-006 and PAT-021 allow a dashboard for authenticated repeat users, but multiple user goals still need separate destination routes.
-- Trade-off: if a dedicated reviewer role is introduced later, route access wiring may expand without changing the route structure.
+- Trade-off: if a dedicated oversight role is introduced later, route access wiring may expand without changing the route structure.
 
 ### Decision 4: Keep role-boundary guidance informational in MVP2
 
@@ -80,21 +80,21 @@ Relevant standards and baseline impact for planning:
 
 ### Decision 6: Persist workflow state explicitly and keep review notes separate from the core record
 
-- Choice: add explicit onboarding-state fields to each onboarding-owned record type, and model review notes and checklist outcomes as separate related records for application-information review rather than embedding freeform reviewer history inside the core business row.
+- Choice: add explicit onboarding-state fields to each onboarding-owned record type, and model review notes and checklist outcomes as separate related records for application-information review rather than embedding freeform review history inside the core business row.
 - Rationale: STD-020 and PAT-012 favor visible ownership, explicit schema review, and audit-friendly related records over hidden JSON drift in primary rows.
 - Trade-off: this adds migration and repository work earlier, but keeps the data model reviewable and easier to extend.
 
 ### Decision 7: Make environment progression explicit and keep production review out of band
 
-- Choice: treat `test`, `staging`, and `production` as explicit environment-progression steps on workspace-scoped RP application records; allow `test` to be skipped when no IBM configuration change is required; allow `test` to `staging` progression without reviewer approval; and require `staging` to `production` progression to record a portal-visible request that stays review-tracked until an out-of-band CanadaLogin decision updates the outcome.
+- Choice: treat `test`, `staging`, and `production` as explicit environment-progression steps on workspace-scoped RP application records; allow `test` to be skipped when no IBM configuration change is required; allow `test` to `staging` progression without platform-admin approval; allow RP application creation for `test` and `staging`; and require `staging` to `production` progression to record a portal-visible request that stays review-tracked until a platform-admin user records the out-of-band CanadaLogin decision.
 - Rationale: the onboarding PRD makes these rules explicit and they are central to the product's onboarding lifecycle.
 - Trade-off: this change captures status and traceability, not a full in-portal approval engine.
 
 ### Decision 8: Surface checklist, evidence references, and process links without hard-coding the evidence mechanism
 
-- Choice: make onboarding checklist progress, required evidence references, and external process entry points visible in portal progression views; keep the first implementation neutral on whether CATS readiness evidence is uploaded, externally referenced, or both.
-- Rationale: the PRD requires traceable production readiness while leaving the exact evidence mechanism unresolved.
-- Trade-off: later implementation still needs a human decision on the evidence interaction model.
+- Choice: make onboarding checklist progress, external evidence references, and external process entry points visible in portal progression views; do not support CATS evidence upload in MVP2.
+- Rationale: the PRD requires traceable production readiness, and the current product decision keeps evidence gating outside the portal for this release.
+- Trade-off: later implementation can add first-class evidence upload or richer evidence workflows without rewriting the progression model.
 
 ## Standards impact
 
@@ -122,7 +122,7 @@ standards_impact:
 		exceptions: []
 	identity_access:
 		applies: true
-		decision: Reuse existing platform-admin or superuser access for the first slice unless a dedicated reviewer role is explicitly approved, and map the PRD's operational role labels incrementally instead of forcing a role-model rewrite in this package.
+		decision: Use platform-admin access for the first slice, and map the PRD's operational role labels incrementally instead of forcing a role-model rewrite in this package.
 		evidence: Route guards, backend permission checks, and task notes reflect the chosen oversight actor.
 		exceptions: []
 	information_management:
@@ -159,14 +159,14 @@ standards_impact:
 
 ### Slice 2: Application information readiness indicators
 
-- Outcome: workspace admins can identify incomplete application information sections, checklist items, and evidence prerequisites before submission or production progression.
+- Outcome: workspace admins can identify incomplete application information sections, checklist items, and external evidence references before submission or production progression.
 - Impacted areas: application information schemas, UI summaries, checklist state, process-link surfaces, validation, tests.
 - Notes: use PAT-017 for summary displays and GC Design System notices for incomplete-state feedback.
-- Exit condition: required sections, checklist visibility, submit-ready behavior, and production-readiness visibility are defined and testable.
+- Exit condition: required sections, checklist visibility, advisory readiness behavior, and production-readiness visibility are defined and testable.
 
-### Slice 3: Reviewer oversight and review notes
+### Slice 3: Platform-admin oversight and review notes
 
-- Outcome: internal reviewer or administrator users can find records needing review, including production-bound promotion requests, and capture checklist outcomes or notes.
+- Outcome: platform-admin users can find records needing review, including production-bound promotion requests, and capture checklist outcomes or notes.
 - Impacted areas: `/onboarding-oversight` overview route, `/onboarding-oversight/queue` queue route, list and filter APIs, review-note persistence, promotion-status context, access-control review, tests.
 - Notes: use PAT-021 for the overview route and PAT-023 for queue tables.
 - Exit condition: review workflow paths, queue behavior, and note/checklist behavior are defined.
@@ -191,13 +191,11 @@ standards_impact:
 - First recommended implementation order after dependency resolution:
 	1. Slice 1 lifecycle state model
 	2. Slice 2 application-information readiness
-	3. Slice 3 oversight queue and review notes
+	3. Slice 3 platform-admin oversight and review notes
 	4. Slice 5 aggregate reporting
 	5. Slice 4 role-boundary guidance
 - Current blockers:
 	- workspace, application-information, and invitation baselines are not yet reconciled with current code
-	- a dedicated reviewer role is not defined if the platform-admin default is rejected
-	- contact-type gating by stage and the CATS evidence interaction model remain unresolved if the first implementation wants them to act as hard gates
 
 ## Deferred follow-on areas
 
@@ -207,9 +205,6 @@ standards_impact:
 
 ## Open Questions
 
-- Human decision required only if the default platform-admin oversight assumption is rejected and a distinct reviewer role must be introduced before first implementation.
-- Human decision required only if product wants lifecycle state to newly block RP application creation rather than inform readiness and submission flow.
-- Human decision required: which onboarding checklist items are mandatory for the first release of reviewer notes.
-- Human decision required: whether contact-type requirements differ by `staging` versus `production` and should become hard readiness or progression gates.
-- Human decision required: whether CATS readiness evidence is captured as upload, external reference, or both in the first implementation slice.
+- Human decision required only if product wants a distinct oversight role after the MVP2 platform-admin default.
+- Human decision required: which onboarding checklist items should be shown or highlighted in the first release of platform-admin review notes.
 - Human decision required only if the default first-release reporting formulas, selected-period filtering, and CSV export behavior are not acceptable.
