@@ -20,6 +20,14 @@ depends_on: Union[str, Sequence[str], None] = None
 
 
 def upgrade() -> None:
+    op.alter_column(
+        "alembic_version",
+        "version_num",
+        existing_type=sa.String(length=32),
+        type_=sa.String(length=64),
+        existing_nullable=False,
+    )
+
     op.create_table(
         "application_information",
         sa.Column("id", sa.Integer(), autoincrement=True, nullable=False),

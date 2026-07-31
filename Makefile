@@ -3,8 +3,10 @@ PYTHON_BOOTSTRAP ?= python$(PYTHON_VERSION)
 VENV_DIR ?= .venv
 PYTHON ?= $(VENV_DIR)/bin/python
 PIP ?= $(PYTHON) -m pip
-NPM ?= npm
-PNPM ?= pnpm
+NODE ?= $(if $(NVM_BIN),$(NVM_BIN)/node,node)
+NPM ?= $(if $(NVM_BIN),$(NVM_BIN)/npm,npm)
+COREPACK ?= $(if $(NVM_BIN),$(NVM_BIN)/corepack,corepack)
+PNPM ?= $(COREPACK) pnpm
 UV ?= uv
 FRONTEND_DIR := frontend
 FRONTEND_HOST ?= 127.0.0.1
@@ -241,8 +243,15 @@ install-node:
 				nvm alias default "$(NODE_VERSION)"; \
 			fi; \
 		fi; \
-		node -v; \
-		npm -v; \
+		node_path="$$(nvm which current 2>/dev/null || true)"; \
+		if [ -n "$$node_path" ] && [ -x "$$node_path" ]; then \
+			npm_path="$${node_path%/node}/npm"; \
+		else \
+			node_path="$(NODE)"; \
+			npm_path="$(NPM)"; \
+		fi; \
+		"$$node_path" -v; \
+		"$$npm_path" -v; \
 	else \
 		if command -v node >/dev/null 2>&1 && NODE_MIN_VERSION="$(NODE_MIN_VERSION)" node -e 'const current = process.versions.node.split(".").map(Number); const min = process.env.NODE_MIN_VERSION.split(".").map(Number); for (let i = 0; i < 3; i += 1) { if ((current[i] || 0) > (min[i] || 0)) process.exit(0); if ((current[i] || 0) < (min[i] || 0)) process.exit(1); }'; then \
 			echo "Node.js $$(node -v) already satisfies minimum $(NODE_MIN_VERSION)."; \
@@ -260,11 +269,17 @@ check-node:
 		. "$$nvm_dir/nvm.sh"; \
 		nvm use "$(NODE_VERSION)" >/dev/null 2>&1 || nvm use default >/dev/null 2>&1 || true; \
 	fi; \
-	if ! command -v node >/dev/null 2>&1; then \
+	node_cmd="$(NODE)"; \
+	if [ "$$node_cmd" = "node" ]; then \
+		if ! command -v node >/dev/null 2>&1; then \
+			echo "Node.js is required. Run 'make install-node' or install Node.js $(NODE_MIN_VERSION) or higher." >&2; \
+			exit 1; \
+		fi; \
+	elif [ ! -x "$$node_cmd" ]; then \
 		echo "Node.js is required. Run 'make install-node' or install Node.js $(NODE_MIN_VERSION) or higher." >&2; \
 		exit 1; \
 	fi; \
-	NODE_MIN_VERSION="$(NODE_MIN_VERSION)" node -e 'const current = process.versions.node.split(".").map(Number); const min = process.env.NODE_MIN_VERSION.split(".").map(Number); for (let i = 0; i < 3; i += 1) { if ((current[i] || 0) > (min[i] || 0)) { console.log("Node.js " + process.versions.node + " satisfies minimum " + process.env.NODE_MIN_VERSION + "."); process.exit(0); } if ((current[i] || 0) < (min[i] || 0)) { console.error("Node.js " + process.env.NODE_MIN_VERSION + " or higher is required. Found " + process.versions.node + ". Run make install-node."); process.exit(1); } } console.log("Node.js " + process.versions.node + " satisfies minimum " + process.env.NODE_MIN_VERSION + ".");'
+	NODE_MIN_VERSION="$(NODE_MIN_VERSION)" "$$node_cmd" -e 'const current = process.versions.node.split(".").map(Number); const min = process.env.NODE_MIN_VERSION.split(".").map(Number); for (let i = 0; i < 3; i += 1) { if ((current[i] || 0) > (min[i] || 0)) { console.log("Node.js " + process.versions.node + " satisfies minimum " + process.env.NODE_MIN_VERSION + "."); process.exit(0); } if ((current[i] || 0) < (min[i] || 0)) { console.error("Node.js " + process.env.NODE_MIN_VERSION + " or higher is required. Found " + process.versions.node + ". Run make install-node."); process.exit(1); } } console.log("Node.js " + process.versions.node + " satisfies minimum " + process.env.NODE_MIN_VERSION + ".");'
 
 frontend-install: check-node
 	@echo "Installing frontend dependencies (pnpm)"
@@ -328,11 +343,17 @@ install-openspec-cli: check-node
 		. "$$nvm_dir/nvm.sh"; \
 		nvm use "$(NODE_VERSION)" >/dev/null 2>&1 || nvm use default >/dev/null 2>&1 || true; \
 	fi; \
-	if ! command -v $(NPM) >/dev/null 2>&1; then \
+	npm_cmd="$(NPM)"; \
+	if [ "$$npm_cmd" = "npm" ]; then \
+		if ! command -v npm >/dev/null 2>&1; then \
+			echo "npm is required to install the OpenSpec CLI."; \
+			exit 1; \
+		fi; \
+	elif [ ! -x "$$npm_cmd" ]; then \
 		echo "npm is required to install the OpenSpec CLI."; \
 		exit 1; \
 	fi; \
-	$(NPM) install -g $(OPENSPEC_NPM_PACKAGE)
+	"$$npm_cmd" install -g $(OPENSPEC_NPM_PACKAGE)
 	@$(MAKE) --no-print-directory check-openspec-cli
 
 check-openspec-cli: check-node
