@@ -12,41 +12,131 @@ export type RPApplicationSettings = {
 	[key: string]: unknown;
 };
 
-export type RPApplicationCreate = {
-	name: string;
-	applicationInfoUuid?: string;
-	application_url?: string;
-	client_type?: "public" | "confidential";
-	company_name?: string;
-	description?: string;
-	pkce_enabled?: boolean;
+export type CanadaLoginEnvironment = "test" | "staging" | "production";
+export type LogoutMode = "back_channel" | "front_channel";
+export type ClientType = "confidential" | "public";
+export type ClientAuthMethod =
+	"private_key_jwt" | "client_secret_basic" | "client_secret_post";
+export type PrivateKeyDistributionMethod =
+	"jwks_uri" | "offline_exchange" | "not_available";
+export type RequestedScope =
+	"openid" | "profile" | "email" | "phone" | "language";
+export type PKCEAlgorithm = "S256" | "other";
+export type SigningTarget = "request_object" | "token_endpoint";
+export type SignatureValidationTarget = "id_token" | "userinfo";
+export type SignatureAlgorithm =
+	| "RS256"
+	| "RS384"
+	| "RS512"
+	| "PS256"
+	| "PS384"
+	| "PS512"
+	| "ES256"
+	| "ES384"
+	| "ES512"
+	| "other";
+export type RequestEncryptionTarget = "request_object";
+export type MessageDecryptionTarget =
+	"token_endpoint_response" | "id_token" | "userinfo";
+export type KeyManagementAlgorithm = "RSA-OAEP-256" | "RSA-OAEP" | "other";
+export type ContentEncryptionAlgorithm =
+	"A128GCM" | "A192GCM" | "A256GCM" | "other";
+
+export type WorkspaceRPApplicationRegistrationBase = {
+	application_information_uuid?: string | null;
+	canada_login_environment?: CanadaLoginEnvironment;
+	service_name_en?: string;
+	service_name_fr?: string;
+	application_environment_url_en?: string;
+	application_environment_url_fr?: string;
 	redirect_uris?: Array<string>;
-	status?: string;
+	post_logout_redirect_uris?: Array<string>;
+	logout_mode?: LogoutMode;
+	logout_uri?: string;
+	client_type?: ClientType;
+	supports_authorization_code_flow?: boolean;
+	client_auth_method?: ClientAuthMethod;
+	private_key_distribution_method?: PrivateKeyDistributionMethod;
+	jwks_uri?: string;
+	offline_jwk_or_certificate?: string;
+	requested_scopes?: Array<RequestedScope>;
+	sector_identifier?: string;
+	shares_pairwise_identifiers?: boolean;
+	migration_sector_identifier_url?: string;
+	pkce_supported?: boolean;
+	pkce_algorithms?: Array<PKCEAlgorithm>;
+	pkce_other_algorithm?: string;
+	request_signing_supported?: boolean;
+	request_signing_targets?: Array<SigningTarget>;
+	request_signing_algorithms?: Array<SignatureAlgorithm>;
+	request_signing_other_algorithm?: string;
+	request_signing_roadmap?: boolean;
+	request_signing_revisit_on?: string;
+	signature_validation_supported?: boolean;
+	signature_validation_targets?: Array<SignatureValidationTarget>;
+	signature_validation_algorithms?: Array<SignatureAlgorithm>;
+	signature_validation_other_algorithm?: string;
+	signature_validation_roadmap?: boolean;
+	signature_validation_revisit_on?: string;
+	request_encryption_supported?: boolean;
+	request_encryption_targets?: Array<RequestEncryptionTarget>;
+	request_encryption_key_management_algorithms?: Array<KeyManagementAlgorithm>;
+	request_encryption_other_key_management_algorithm?: string;
+	request_encryption_content_algorithms?: Array<ContentEncryptionAlgorithm>;
+	request_encryption_other_content_algorithm?: string;
+	request_encryption_roadmap?: boolean;
+	request_encryption_revisit_on?: string;
+	message_decryption_supported?: boolean;
+	message_decryption_targets?: Array<MessageDecryptionTarget>;
+	message_decryption_key_management_algorithms?: Array<KeyManagementAlgorithm>;
+	message_decryption_other_key_management_algorithm?: string;
+	message_decryption_content_algorithms?: Array<ContentEncryptionAlgorithm>;
+	message_decryption_other_content_algorithm?: string;
+	message_decryption_roadmap?: boolean;
+	message_decryption_revisit_on?: string;
 };
 
-export type RPApplicationUpdate = {
-	name?: string;
-	application_url?: string;
-	client_type?: "public" | "confidential";
-	company_name?: string;
-	description?: string;
-	pkce_enabled?: boolean;
-	redirect_uris?: Array<string>;
-	status?: string;
+export type RPApplicationCreate = WorkspaceRPApplicationRegistrationBase & {
+	canada_login_environment: CanadaLoginEnvironment;
+	service_name_en: string;
+	service_name_fr: string;
+	application_environment_url_en: string;
+	application_environment_url_fr: string;
+	redirect_uris: Array<string>;
+	logout_mode: LogoutMode;
+	logout_uri: string;
+	client_type: ClientType;
+	supports_authorization_code_flow: boolean;
+	client_auth_method: ClientAuthMethod;
+	requested_scopes: Array<RequestedScope>;
+	sector_identifier: string;
+	shares_pairwise_identifiers: boolean;
+	pkce_supported: boolean;
+	request_signing_supported: boolean;
+	signature_validation_supported: boolean;
+	request_encryption_supported: boolean;
+	message_decryption_supported: boolean;
 };
+
+export type RPApplicationUpdate = WorkspaceRPApplicationRegistrationBase;
 
 export type RPApplicationRead = {
 	id: number;
 	uuid: string;
-	workspace_id: number;
-	applicationInfoId?: number | null;
-	name: string;
-	settings: RPApplicationSettings | null;
-	status: string;
+	workspace_id: number | null;
+	department_id?: number | null;
+	application_information_id?: number | null;
+	dnr_app_name: string;
+	oidc_registration_payload?: Record<string, unknown> | null;
+	status: string | null;
 	created_by: number | null;
 	created_at: string;
 	is_deleted: boolean;
+	canada_login_environment?: string | null;
 	ibm_sv_application_id?: string | null;
+	application_owner?: {
+		owners: Array<{ email: string }>;
+	} | null;
 };
 
 export type CurrentUserRPApplicationRead = {
@@ -276,6 +366,23 @@ export const getRPApplications = async (
 		}
 	);
 	return result ?? [];
+};
+
+export const getRPApplication = async (
+	workspaceUuid: string,
+	rpApplicationUuid: string
+): Promise<RPApplicationRead> => {
+	const result = await requestJson<RPApplicationRead | null>(
+		`/api/v1/workspaces/${encodeURIComponent(workspaceUuid)}/applications/${encodeURIComponent(rpApplicationUuid)}`,
+		{
+			cache: "no-store",
+			method: "GET",
+		}
+	);
+	if (!result) {
+		throw new Error("Failed to load application");
+	}
+	return result;
 };
 
 export const createRPApplication = async (

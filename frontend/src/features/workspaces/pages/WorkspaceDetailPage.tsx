@@ -80,6 +80,13 @@ export const WorkspaceDetailPage = (): FunctionComponent => {
 					<div className="flex flex-wrap gap-200">
 						<Button
 							buttonRole="secondary"
+							href={`/workspaces/${workspace.uuid}/applications`}
+							type="link"
+						>
+							{t("workspaces.manageApplications")}
+						</Button>
+						<Button
+							buttonRole="secondary"
 							href={`/workspaces/${workspace.uuid}/application-information`}
 							type="link"
 						>

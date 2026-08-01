@@ -6,8 +6,10 @@ export type UserRoleUpdate = {
 	roleUuid: string | null;
 };
 
-export const getUserRole = async (userUuid: string): Promise<RoleRead | null> =>
-	requestJson<RoleRead>(`/api/v1/user/${userUuid}/role`, {
+export const getUserRoles = async (
+	userUuid: string
+): Promise<Array<RoleRead>> =>
+	requestJson<Array<RoleRead>>(`/api/v1/user/${userUuid}/roles`, {
 		method: "GET",
 	});
 

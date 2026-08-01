@@ -118,7 +118,7 @@ class TestUserService:
         mock_blacklist.assert_awaited_once_with(token="token-value", db=mock_db)
 
     @pytest.mark.asyncio
-    async def test_get_user_role_returns_none_when_role_missing(self, mock_db, sample_user_read) -> None:
+    async def test_get_user_roles_returns_empty_list_when_role_missing(self, mock_db, sample_user_read) -> None:
         service = UserService()
         db_user = sample_user_read.model_dump()
         db_user["role_ids"] = None
@@ -127,9 +127,34 @@ class TestUserService:
         with patch("src.app.services.user_service.crud_users") as mock_users:
             mock_users.get = AsyncMock(return_value=db_user)
 
-            result = await service.get_user_role(db=mock_db, user_uuid=user_uuid)
+            result = await service.get_user_roles(db=mock_db, user_uuid=user_uuid)
 
-        assert result is None
+        assert result == []
+
+    @pytest.mark.asyncio
+    async def test_get_user_roles_returns_roles_in_assignment_order(self, mock_db, sample_user_read) -> None:
+        service = UserService()
+        db_user = sample_user_read.model_dump()
+        db_user["role_ids"] = [7, 9]
+        user_uuid = str(sample_user_read.uuid)
+
+        with patch("src.app.services.user_service.crud_users") as mock_users:
+            mock_users.get = AsyncMock(return_value=db_user)
+
+            with patch("src.app.services.user_service.crud_roles") as mock_roles:
+                mock_roles.get = AsyncMock(
+                    side_effect=[
+                        {"uuid": "role-uuid-7", "name": "editor", "created_at": "2026-03-17T00:00:00Z"},
+                        {"uuid": "role-uuid-9", "name": "reviewer", "created_at": "2026-03-18T00:00:00Z"},
+                    ]
+                )
+
+                result = await service.get_user_roles(db=mock_db, user_uuid=user_uuid)
+
+        assert result == [
+            {"uuid": "role-uuid-7", "name": "editor", "created_at": "2026-03-17T00:00:00Z"},
+            {"uuid": "role-uuid-9", "name": "reviewer", "created_at": "2026-03-18T00:00:00Z"},
+        ]
 
     @pytest.mark.asyncio
     async def test_add_role_to_user_rejects_missing_role(self, mock_db, sample_user_read) -> None:

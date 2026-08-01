@@ -13,6 +13,7 @@ vi.mock("react-i18next", () => ({
 				"workspaces.createdSuccess": "Workspace created successfully",
 				"workspaces.descriptionLabel": "Description",
 				"workspaces.detailSummary": "Review the current workspace metadata.",
+				"workspaces.manageApplications": "Manage RP applications",
 				"workspaces.metadataTitle": "Workspace details",
 				"workspaces.nameLabel": "Name",
 				"workspaces.noDescriptionText": "Not provided",
@@ -84,5 +85,10 @@ describe("WorkspaceDetailPage", () => {
 				.getByRole("link", { name: /workspace settings/i })
 				.getAttribute("href")
 		).toBe("/workspaces/workspace-uuid-1/settings");
+		expect(
+			screen
+				.getByRole("link", { name: /manage rp applications/i })
+				.getAttribute("href")
+		).toBe("/workspaces/workspace-uuid-1/applications");
 	});
 });

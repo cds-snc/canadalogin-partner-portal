@@ -221,15 +221,24 @@ class UserService:
         user_dict["tier_created_at"] = db_tier["created_at"]
         return user_dict
 
-    async def get_user_role(self, db: AsyncSession, user_uuid: uuid_pkg.UUID | str) -> dict[str, Any] | None:
+    async def get_user_roles(self, db: AsyncSession, user_uuid: uuid_pkg.UUID | str) -> list[dict[str, Any]]:
         db_user = await self._get_user(db=db, user_uuid=user_uuid, include_deleted=False)
-        if db_user.get("role_id") is None:
-            return None
+        role_ids = db_user.get("role_ids") or []
+        if len(role_ids) == 0:
+            return []
 
-        db_role = await crud_roles.get(db=db, id=db_user["role_id"], is_deleted=False, schema_to_select=RoleRead)
-        if db_role is None:
-            raise NotFoundException("Role not found")
-        return dict(db_role)
+        roles_by_id: dict[int, dict[str, Any]] = {}
+        for role_id in role_ids:
+            db_role = await crud_roles.get(
+                db=db,
+                id=role_id,
+                is_deleted=False,
+                schema_to_select=RoleRead,
+            )
+            if db_role is not None:
+                roles_by_id[role_id] = dict(db_role)
+
+        return [roles_by_id[role_id] for role_id in role_ids if role_id in roles_by_id]
 
     async def get_user_department(self, db: AsyncSession, user_uuid: uuid_pkg.UUID | str) -> dict[str, Any] | None:
         db_user = await self._get_user(db=db, user_uuid=user_uuid, include_deleted=False)

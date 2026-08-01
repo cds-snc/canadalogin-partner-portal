@@ -15,7 +15,7 @@ from src.app.api.v1.users import (
     read_user,
     read_user_department,
     read_user_rate_limits,
-    read_user_role,
+    read_user_roles,
     read_user_tier,
     read_users,
     remove_role_from_user,
@@ -150,17 +150,15 @@ class TestEraseUser:
 
 class TestUserRoleEndpoints:
     @pytest.mark.asyncio
-    async def test_read_user_role_returns_none_when_user_has_no_role(self, mock_db, sample_user_read):
-        user_dict = sample_user_read.model_dump()
-        user_dict["role_ids"] = None
+    async def test_read_user_roles_returns_empty_list_when_user_has_no_roles(self, mock_db, sample_user_read):
         user_uuid = str(sample_user_read.uuid)
         mock_service = Mock()
-        mock_service.get_user_role = AsyncMock(return_value=None)
+        mock_service.get_user_roles = AsyncMock(return_value=[])
 
-        result = await unwrap_endpoint(read_user_role)(Mock(), user_uuid, mock_db, mock_service)
+        result = await unwrap_endpoint(read_user_roles)(Mock(), user_uuid, mock_db, mock_service)
 
-        assert result is None
-        mock_service.get_user_role.assert_awaited_once_with(db=mock_db, user_uuid=user_uuid)
+        assert result == []
+        mock_service.get_user_roles.assert_awaited_once_with(db=mock_db, user_uuid=user_uuid)
 
     @pytest.mark.asyncio
     async def test_add_role_to_user(self, mock_db, sample_user_read):

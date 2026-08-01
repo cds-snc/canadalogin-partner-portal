@@ -1,7 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
 	addRoleToUser,
-	getUserRole,
+	getUserRoles,
 	removeRoleFromUser,
 } from "@/fetch/user-roles";
 
@@ -15,7 +15,7 @@ export type UserRoleState = {
 	isLoading: boolean;
 	isRemoving: boolean;
 	removeRole: (userUuid: string, roleUuid: string) => Promise<void>;
-	role: Awaited<ReturnType<typeof getUserRole>>;
+	roles: Awaited<ReturnType<typeof getUserRoles>>;
 };
 
 export const useUserRole = (
@@ -24,7 +24,7 @@ export const useUserRole = (
 	const queryClient = useQueryClient();
 	const query = useQuery({
 		enabled: Boolean(userUuid),
-		queryFn: () => getUserRole(userUuid ?? ""),
+		queryFn: () => getUserRoles(userUuid ?? ""),
 		queryKey: userRoleQueryKey(userUuid),
 	});
 
@@ -74,6 +74,6 @@ export const useUserRole = (
 		): Promise<void> => {
 			await removeMutation.mutateAsync({ roleUuid, userUuid: nextUserUuid });
 		},
-		role: query.data ?? null,
+		roles: query.data ?? [],
 	};
 };

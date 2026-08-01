@@ -250,7 +250,7 @@ describe("UsersPage", () => {
 			isLoading: false,
 			isRemoving: false,
 			removeRole: vi.fn((): Promise<void> => Promise.resolve()),
-			role: { created_at: "2026-03-17T00:00:00Z", description: "Administrator role", name: "admin", uuid: "role-uuid-3" },
+			roles: [{ created_at: "2026-03-17T00:00:00Z", description: "Administrator role", name: "admin", uuid: "role-uuid-3" }],
 		});
 
 		render(
@@ -327,7 +327,7 @@ describe("UsersPage", () => {
 			isAdding: false,
 			isLoading: false,
 			isRemoving: false,
-			role: null,
+			roles: [],
 			addRole: vi.fn((): Promise<void> => Promise.resolve()),
 			removeRole: vi.fn((): Promise<void> => Promise.resolve()),
 		});

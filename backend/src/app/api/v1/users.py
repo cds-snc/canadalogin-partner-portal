@@ -204,15 +204,15 @@ async def read_user_tier(
     return await service.get_user_tier(db=db, user_uuid=user_uuid)
 
 
-@router.get("/user/{user_uuid}/role", response_model=RoleRead | None)
+@router.get("/user/{user_uuid}/roles", response_model=list[RoleRead])
 @casbin_guard.require_permission("users_admin", "read")
-async def read_user_role(
+async def read_user_roles(
     request: Request,
     user_uuid: uuid_pkg.UUID,
     db: Annotated[AsyncSession, Depends(async_get_db)],
     service: Annotated[UserService, Depends(get_user_service)],
-) -> dict | None:
-    return await service.get_user_role(db=db, user_uuid=user_uuid)
+) -> list[dict[str, Any]]:
+    return await service.get_user_roles(db=db, user_uuid=user_uuid)
 
 
 @router.get("/user/{user_uuid}/department", response_model=UserDepartmentRead | None)
