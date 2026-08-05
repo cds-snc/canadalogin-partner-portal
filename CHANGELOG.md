@@ -1,5 +1,39 @@
 # Changelog
 
+## [1.2.0](https://github.com/cds-snc/canadalogin-partner-portal/compare/v1.1.0...v1.2.0) (2026-08-05)
+
+
+### Features
+
+* **actions:** add intial dev release pipeline ([#124](https://github.com/cds-snc/canadalogin-partner-portal/issues/124)) ([3571b96](https://github.com/cds-snc/canadalogin-partner-portal/commit/3571b96a32151cab075458422b64f2cb773c740f))
+
+
+### Bug Fixes
+
+* **actions:** resolve pnpm setup and SBOM permission issues ([#127](https://github.com/cds-snc/canadalogin-partner-portal/issues/127)) ([80fb81f](https://github.com/cds-snc/canadalogin-partner-portal/commit/80fb81fe5993c3e61ea7e7acf33ea4075d1cdd4d))
+
+
+### Miscellaneous Chores
+
+* Configure Renovate ([#140](https://github.com/cds-snc/canadalogin-partner-portal/issues/140)) ([c09615a](https://github.com/cds-snc/canadalogin-partner-portal/commit/c09615a73c36c7b983e66a5e410b2bd8f48e395a))
+* **deps:** add renovate.json ([c09615a](https://github.com/cds-snc/canadalogin-partner-portal/commit/c09615a73c36c7b983e66a5e410b2bd8f48e395a))
+* **deps:** bump joserfc from 1.6.5 to 1.6.8 in /backend ([#105](https://github.com/cds-snc/canadalogin-partner-portal/issues/105)) ([07c6414](https://github.com/cds-snc/canadalogin-partner-portal/commit/07c64149fb7f81f1c25327f86867bdcbc9cd4f8a))
+* **deps:** bump pyasn1 from 0.6.3 to 0.6.4 in /backend ([#130](https://github.com/cds-snc/canadalogin-partner-portal/issues/130)) ([2508db7](https://github.com/cds-snc/canadalogin-partner-portal/commit/2508db7e80de7eebbb3d0ec270bf7a350e78d18a))
+* **frontend:** add pnpm lockfile ([#129](https://github.com/cds-snc/canadalogin-partner-portal/issues/129)) ([6e67fd1](https://github.com/cds-snc/canadalogin-partner-portal/commit/6e67fd14818aefc514617d0d824d7b149dccb876))
+
+
+### Continuous Integration
+
+* add Slack notifications for deployment start, success, and failure ([#136](https://github.com/cds-snc/canadalogin-partner-portal/issues/136)) ([5b074d7](https://github.com/cds-snc/canadalogin-partner-portal/commit/5b074d7e6cd80d92504cab9334a1ffc2d3ee1187))
+* integrate release-please into release-pipeline and add deployed_versions ([#133](https://github.com/cds-snc/canadalogin-partner-portal/issues/133)) ([e2ef77c](https://github.com/cds-snc/canadalogin-partner-portal/commit/e2ef77cb6601657da6474f5b4a54a5cbc7898cab))
+* introduce matrix structure for build and deploy jobs (dev only) ([#135](https://github.com/cds-snc/canadalogin-partner-portal/issues/135)) ([764bbe7](https://github.com/cds-snc/canadalogin-partner-portal/commit/764bbe7a55ef8e50b17d4a2a75357067350e032d))
+* tag Docker images with semver versions ([#134](https://github.com/cds-snc/canadalogin-partner-portal/issues/134)) ([c946e60](https://github.com/cds-snc/canadalogin-partner-portal/commit/c946e60b58df4f677b5d6e41fa5cb4187647566d))
+
+
+### Documentation
+
+* add partner portal onboarding PRD draft ([#131](https://github.com/cds-snc/canadalogin-partner-portal/issues/131)) ([a052914](https://github.com/cds-snc/canadalogin-partner-portal/commit/a05291418976a7326fe772e994ddccebdb089916))
+
 ## [1.1.0](https://github.com/cds-snc/canadalogin-partner-portal/compare/v1.0.0...v1.1.0) (2026-07-17)
 
 
