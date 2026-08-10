@@ -1,8 +1,9 @@
 # Tasks
 
-## 0. Baseline Dependency Resolution
+## 0. Residual Dependency Resolution
 
-- [ ] 0.1 Resolve [openspec/changes/reconcile-prd-current-spec-gaps](../reconcile-prd-current-spec-gaps/proposal.md) or explicitly narrow the PRD so this change no longer depends on missing workspace, application-information, or invitation baseline surfaces.
+- [x] 0.1 Confirm current workspace, application-information, and workspace-scoped RP application baselines remain the shipped foundation, and limit any remaining dependency on [openspec/changes/reconcile-prd-current-spec-gaps](../reconcile-prd-current-spec-gaps/proposal.md) to dashboard-summary or invitation surfaces.
+	Progress note (2026-08-10): frontend `/workspaces` routes and backend `/api/v1/workspaces` plus application-information and workspace-scoped RP application APIs are live in the repo, so this change no longer depends on those surfaces being restored.
 - [x] 0.2 Confirm whether the default platform-admin oversight assumption is accepted or whether a dedicated oversight role is required before implementation.
 	Progress note (2026-07-30): MVP2 keeps production-approval and oversight ownership with platform-admin users for now; any current superuser-only technical guard remains an implementation detail rather than a product-role decision.
 
@@ -34,7 +35,7 @@
 
 ## 4. Role-Boundary Guidance And Process Links
 
-- [ ] 4.1 Identify the pages or flows where workspace-member versus invited-developer guidance and onboarding documentation or process links must appear.
+- [ ] 4.1 Identify the pages or flows where workspace-member versus invited-developer guidance and onboarding documentation or process links must appear, using [openspec/changes/restore-external-developer-invitations](../restore-external-developer-invitations/proposal.md) for invitation-management and acceptance destinations.
 - [ ] 4.2 Define English and French guidance copy, documentation/process-link labels, and parity expectations under STD-017 official-languages expectations.
 - [ ] 4.3 Add tests or review fixtures that cover the new help, link, and guidance surfaces.
 - [ ] 4.4 Record the follow-on change boundary for partner volume-spike notification, incident reporting, and deprecation workflow so those PRD items stay visible without widening this package.
@@ -48,7 +49,8 @@
 
 ## 6. Verification And Readiness
 
-- [ ] 6.1 Run `make validate-openspec-change CHANGE_ID=advance-onboarding-governance-and-reporting`.
+- [x] 6.1 Run `make validate-openspec-change CHANGE_ID=advance-onboarding-governance-and-reporting`.
+	Progress note (2026-08-10): strict OpenSpec validation passed for `advance-onboarding-governance-and-reporting` using the local CLI workflow.
 - [ ] 6.2 Run targeted backend and frontend tests for state, oversight, and reporting work once implementation exists.
 - [ ] 6.3 Capture standards impact for UI, accessibility, bilingual content, API, persistence, and baseline applicability before implementation handoff.
 - [ ] 6.4 Keep PRD and OpenSpec terminology aligned if lifecycle-state, platform-admin terminology, or operational role labels change during planning.

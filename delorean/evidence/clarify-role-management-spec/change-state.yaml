@@ -15,12 +15,13 @@ openspec:
   activeChangeId: "clarify-role-management-spec"
   activeChangePath: "openspec/changes/clarify-role-management-spec"
   currentSpecRefs:
-    - "openspec/specs/partner-portal-role-management/spec.md"
+    - "openspec/specs/partner-portal-platform-administration-and-supportability/spec.md"
   proposalPath: "openspec/changes/clarify-role-management-spec/proposal.md"
   designPath: "openspec/changes/clarify-role-management-spec/design.md"
   tasksPath: "openspec/changes/clarify-role-management-spec/tasks.md"
   deltaSpecPaths:
     - "openspec/changes/clarify-role-management-spec/specs/partner-portal-role-management/spec.md"
+    - "openspec/changes/clarify-role-management-spec/specs/partner-portal-platform-administration-and-supportability/spec.md"
   validation:
     status: "passed"
     command: "make validate-openspec-change CHANGE_ID=clarify-role-management-spec"
@@ -99,6 +100,7 @@ gates:
       - "openspec/changes/clarify-role-management-spec/design.md"
       - "openspec/changes/clarify-role-management-spec/tasks.md"
       - "openspec/changes/clarify-role-management-spec/specs/partner-portal-role-management/spec.md"
+      - "openspec/changes/clarify-role-management-spec/specs/partner-portal-platform-administration-and-supportability/spec.md"
     notes: ""
   control-boundary:
     level: "block_with_exception"

@@ -8,27 +8,36 @@ This change should:
 
 - add a new `partner-portal-role-management` capability delta for reusable platform roles and platform user-role assignment behavior
 - add a targeted delta for `partner-portal-platform-administration-and-supportability` so the existing catch-all governance requirement no longer owns detailed role behavior
+- record that MVP2 authorization uses locally managed roles instead of deriving application access from the OIDC `application owners` group
 - keep workspace membership ownership in the existing workspace-management capability, while documenting that workspace membership roles are not reusable platform roles
 
-The spec stays fact-grounded to the current implementation:
+The spec stays fact-grounded to the current implementation where possible, while also recording one accepted MVP2 behavior change:
 
 - the roles admin surface uses `/api/v1/roles` and `/api/v1/role/{role_uuid}` for paginated role CRUD
 - the users admin surface adds and removes role assignments through `/api/v1/user/{user_uuid}/roles/{role_uuid}` and should read assigned roles as a list-based contract
 - user records already expose `role_uuids` arrays, which indicates a multi-role user model
 - workspace membership roles remain limited to `workspace_admin` and `workspace_member`
+- current `sync_oidc_user` still denies users when neither configured upstream group matches and still rewrites local role IDs from upstream group membership
 
 A current-spec review found no additional cross-reference work outside the platform-administration capability. `partner-portal-access-and-dashboard` only describes displaying available role context in the shared shell, and `partner-portal-workspace-and-rp-application-management` already owns the distinct workspace-scoped membership behavior that the new role-management capability references as a boundary.
 
 Implementation decisions confirmed in this slice:
 
 - platform users may intentionally hold multiple reusable platform roles
-- reusable platform roles are durable governance records and are not deleted in normal admin flows; access changes happen through assignment and unassignment
+- current admin behavior still allows reusable platform roles to be deleted through the roles UI and `DELETE /api/v1/role/{role_uuid}`
+- MVP2 authorization must stop using upstream `application owners` group membership as the source of portal access and must stop overwriting locally managed role assignments on sign-in
+- MVP2 cutover should not auto-grant partner access from legacy state. A small initial `CL Admin` set is seeded operationally, and partner access is then created through the built-in role-assignment and invitation flows.
 
-Recommended first implementation slice:
+Recommended first follow-on implementation slice:
 
-- align the user-role read contract with the existing multi-role data model
-- make Casbin route authorization evaluate all assigned role subjects instead of one arbitrary role subject
-- keep the current owner-snapshot and OIDC-group replacement work visible as explicit follow-on design and implementation work
+- preserve the list-based user-role read contract and multi-subject Casbin evaluation that already match the multi-role data model
+- replace the current OIDC group-based role overwrite and eligibility gate with role-managed authorization after identity is established
+
+Rollout and cutover note:
+
+- Do not make runtime implementation depend on a historical-user migration.
+- If go-live needs initial data setup, treat that as an operational cutover step: seed the first `CL Admin` users before enabling the MVP2 authorization rule.
+- Do not backfill partner users during cutover. After the initial `CL Admin` seed step, use the normal admin and invitation flows to create partner access instead of keeping a legacy fallback gate.
 
 ## Work context impact
 
@@ -97,7 +106,6 @@ Recommended first slice:
 Possible later slices:
 
 - Remove role deletion from the admin UI and backend contract so the role catalog matches the durable-record rule.
-- Replace OIDC group-driven role assignment with explicit role-managed authorization rules for login and ongoing access.
 - Replace RP-application owner-email permission checks with a durable app-scoped access model that can be governed through role-management and assignment flows.
 - Add or update frontend and backend tests for role CRUD, duplicate handling, assignment, unassignment, and permission evaluation flows.
 
@@ -108,9 +116,9 @@ Possible later slices:
 - Accessibility: no new UI is introduced in this spec-only change, but any follow-on admin-page changes should still use the existing GC Design System review path.
 - Operations: no deployment or monitoring change is expected from the spec-only refinement.
 - IAM: role assignment and role catalog changes affect authorization governance, so follow-on implementation should include IAM and safe-error review.
+- IAM: OIDC should remain the authentication source, but MVP2 authorization should load locally managed roles after sign-in rather than deriving portal access from upstream `application owners` membership.
 - GC web application baseline: do not start a BAS-001 assessment for this spec-only refinement; reassess when a role-management implementation change is prepared for release.
 
 ## Open questions that block non-local work
 
 - What durable app-scoped assignment model should replace RP-application owner-email snapshots when current-user RP-application permissions move under role-management?
-- Should OIDC login allow existing locally managed users without any upstream group claim, or should there still be an upstream eligibility gate separate from role assignment?

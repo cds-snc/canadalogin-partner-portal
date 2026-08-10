@@ -6,7 +6,7 @@ The onboarding PRD at `docs/plans/partner-portal-onboarding-prd.md` documents a 
 
 The same PRD also makes explicit that governed onboarding must cover environment progression, out-of-band production review traceability, checklist and evidence visibility, and external process links without forcing a full in-portal approval engine into the first slice.
 
-This change is implementation-ready only after the baseline dashboard, workspace, application-information, and invitation scope is either restored in code or explicitly narrowed through [openspec/changes/reconcile-prd-current-spec-gaps](../reconcile-prd-current-spec-gaps/proposal.md). Treat that change as a prerequisite when a slice depends on those surfaces.
+Current workspace, application-information, and workspace-scoped RP application surfaces are now evidenced in code and current specs. This change depends on [openspec/changes/reconcile-prd-current-spec-gaps](../reconcile-prd-current-spec-gaps/proposal.md) only when a slice needs missing dashboard-summary or invitation-management surfaces. Treat that change as a prerequisite only for those slice-specific dependencies, not for the lifecycle, readiness, oversight, or reporting slices.
 
 Relevant standards and baseline impact for planning:
 
@@ -144,11 +144,11 @@ standards_impact:
 
 ## Slice Plan
 
-### Slice 0: Baseline dependency resolution
+### Slice 0: Residual dependency resolution
 
-- Outcome: this change has a stable foundation for workspace, application-information, and invitation behaviors.
-- Dependency: [openspec/changes/reconcile-prd-current-spec-gaps](../reconcile-prd-current-spec-gaps/proposal.md) is resolved or the PRD is narrowed so these requirements no longer depend on missing baseline surfaces.
-- Exit condition: implementation can reference real current or planned baseline capabilities without ambiguity.
+- Outcome: this change makes any remaining dashboard-summary or invitation dependency explicit without treating shipped workspace and application-information behavior as missing.
+- Dependency: [openspec/changes/reconcile-prd-current-spec-gaps](../reconcile-prd-current-spec-gaps/proposal.md) is resolved only where a slice needs dashboard-summary or invitation surfaces that are not yet current.
+- Exit condition: slices 1, 2, 3, and 5 can proceed against current workspace and application-information baselines, and slice 4 has an explicit plan for any invitation-surface dependency.
 
 ### Slice 1: Lifecycle state model
 
@@ -175,7 +175,7 @@ standards_impact:
 
 - Outcome: workspace admins and invited developers can see clearer help content about collaboration boundaries and can reach the required onboarding documentation or external process entry points from the relevant flows.
 - Impacted areas: frontend copy, help surfaces, documentation/process-link surfaces, translation files, tests.
-- Notes: keep guidance informational and bilingual; do not silently broaden permissions or embed the full external workflow.
+- Notes: keep guidance informational and bilingual; do not silently broaden permissions or embed the full external workflow. Invitation-management and acceptance behavior for these surfaces now moves under [openspec/changes/restore-external-developer-invitations](../restore-external-developer-invitations/proposal.md).
 - Exit condition: guidance surfaces, documentation/process links, target audiences, and copy ownership are defined in spec and tasks.
 
 ### Slice 5: Aggregate onboarding reporting
@@ -187,7 +187,7 @@ standards_impact:
 
 ## Implementation readiness
 
-- Ready after: Slice 0 baseline dependency resolution is complete.
+- Ready after: Slice 0 has narrowed any remaining dashboard-summary or invitation dependency.
 - First recommended implementation order after dependency resolution:
 	1. Slice 1 lifecycle state model
 	2. Slice 2 application-information readiness
@@ -195,7 +195,7 @@ standards_impact:
 	4. Slice 5 aggregate reporting
 	5. Slice 4 role-boundary guidance
 - Current blockers:
-	- workspace, application-information, and invitation baselines are not yet reconciled with current code
+	- Slice 4 role-boundary guidance still needs the first-release invited-developer surface list from [openspec/changes/restore-external-developer-invitations](../restore-external-developer-invitations/proposal.md) so guidance matches the implemented access boundary.
 
 ## Deferred follow-on areas
 

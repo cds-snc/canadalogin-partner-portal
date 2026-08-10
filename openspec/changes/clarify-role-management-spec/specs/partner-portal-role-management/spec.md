@@ -4,7 +4,7 @@
 
 ### Requirement: Platform administrators manage reusable portal roles
 
-Platform administrators SHALL be able to create, list, and update reusable platform roles from the administration experience and the roles API. Active role names SHALL remain unique among non-deleted role records. Reusable platform roles SHALL remain durable governance records and SHALL NOT be deleted through normal administration flows.
+Platform administrators SHALL be able to create, list, update, and delete reusable platform roles from the administration experience and the roles API. Active role names SHALL remain unique among non-deleted role records.
 
 #### Scenario: Platform admin creates a reusable role
 
@@ -27,12 +27,12 @@ Platform administrators SHALL be able to create, list, and update reusable platf
 - THEN the portal updates the role through `PATCH /api/v1/role/{role_uuid}`
 - AND the roles list refreshes to reflect the updated metadata
 
-#### Scenario: Access changes happen through assignment or unassignment instead of role deletion
+#### Scenario: Platform admin deletes a reusable role
 
-- GIVEN a reusable platform role should no longer grant access to a user
-- WHEN a platform administrator removes that role from the user
-- THEN the portal keeps the reusable role record available for governance use
-- AND the user's effective access changes through role unassignment rather than deleting the role definition
+- GIVEN a reusable platform role exists
+- WHEN a platform administrator confirms deletion of that role from the administration experience
+- THEN the portal deletes the role through `DELETE /api/v1/role/{role_uuid}`
+- AND subsequent role reads no longer return that role as an active role record
 
 ### Requirement: Platform administrators manage user role assignments
 
@@ -72,6 +72,30 @@ Platform administrators SHALL be able to assign and remove one or more reusable 
 - WHEN a platform administrator attempts to remove that role from the user
 - THEN the system rejects the request
 - AND the user's remaining role assignments stay unchanged
+
+### Requirement: MVP2 authorization uses locally managed roles instead of the OIDC `application owners` group
+
+After OIDC authentication establishes the user's identity, the portal SHALL authorize access from locally managed role assignments instead of deriving portal access from upstream `application owners` group membership.
+
+#### Scenario: Local role assignments are not overwritten on sign-in
+
+- GIVEN an existing user has locally managed portal roles assigned
+- WHEN the user signs in through OIDC
+- THEN the portal preserves the user's locally managed role assignments for authorization
+- AND the sign-in flow does not replace those assignments solely from upstream group claims
+
+#### Scenario: Upstream `application owners` membership does not grant portal access by itself in MVP2
+
+- GIVEN a user has no locally managed portal role that authorizes portal access
+- WHEN the user signs in with an upstream `application owners` group claim
+- THEN the portal does not grant role-managed portal access from that claim alone
+
+#### Scenario: Locally managed roles allow access without upstream `application owners` membership
+
+- GIVEN an existing user has a locally managed portal role that authorizes portal access
+- WHEN the user signs in without the upstream `application owners` group claim
+- THEN the portal evaluates authorization from the user's locally managed roles
+- AND the absence of that upstream group claim does not block access by itself
 
 ### Requirement: Workspace membership roles stay distinct from platform roles
 

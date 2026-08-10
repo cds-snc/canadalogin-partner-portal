@@ -2,11 +2,13 @@
 
 ## Summary
 
-Create a dedicated role-management capability spec and clarify how platform and workspace role assignment behaviors are specified.
+Create a dedicated role-management capability spec and clarify how platform and workspace role assignment behaviors are specified, including the MVP2 shift away from OIDC group-derived application access.
 
 ## Problem or opportunity
 
 Role-management behavior is currently spread across a broad platform-administration requirement, the workspace membership spec, and the implemented frontend and backend admin flows. The current specs do not give role catalog CRUD, user role assignment and removal, or the platform-role versus workspace-role boundary a dedicated home.
+
+The current code also still treats upstream OIDC group membership as an authorization source by mapping the `application owners` group into local role IDs and denying access when neither configured group matches. That was acceptable for MVP1, but MVP2 needs locally managed roles to become the source of truth for authorization.
 
 The existing implementation already exposes concrete role-management behavior:
 
@@ -54,6 +56,7 @@ Other options:
 
 - Add a dedicated OpenSpec capability delta for `partner-portal-role-management`.
 - Specify platform role catalog CRUD behavior and platform user role assignment and removal behavior from the existing admin surfaces.
+- Specify that MVP2 authorization uses locally managed roles instead of deriving application access from the OIDC `application owners` group.
 - Clarify that workspace membership roles remain workspace-scoped and separate from reusable platform roles.
 - Narrow the broad platform-administration current spec so role behavior is owned by the dedicated capability instead of a catch-all requirement.
 - Identify follow-on implementation and verification work needed to align the API contract with the documented behavior.
@@ -62,8 +65,9 @@ Other options:
 
 - Production deployment unless explicitly approved.
 - Real secrets, real production data, or external system changes unless explicitly approved.
-- Changing runtime authorization policy or user-facing workflows in this change.
+- Invitation-scoped access modeling, which remains owned by `restore-external-developer-invitations`.
 - Moving workspace membership requirements out of the workspace-management capability.
+- Automatic migration or runtime backfill that grants partner access during MVP2 cutover. The only expected cutover seed is a small initial `CL Admin` set; partner access is created afterward through the normal invitation and role-assignment flows.
 
 ## Requirements or scenarios affected
 
@@ -78,7 +82,7 @@ Other options:
 
 - Missing environment details could block non-local work. Continue locally and record what is needed before shared-environment or production work.
 - Historical singular user-role references in tests or planning notes can obscure the adopted multi-role contract unless the plural `/api/v1/user/{user_uuid}/roles` read surface remains the authoritative path.
-- Current route-level permission checks collapse multiple assigned roles to one effective Casbin subject, which can hide assigned permissions.
+- OIDC login still rewrites user role IDs from upstream group claims on sign-in, which can override locally managed role assignments unless MVP2 removes that mapping as intended.
 - RP-application current-user access is still enforced through owner-email snapshots in service code. Replacing that with role-managed access will need a durable app-scoped access model instead of a global role swap.
 
 ## Links
