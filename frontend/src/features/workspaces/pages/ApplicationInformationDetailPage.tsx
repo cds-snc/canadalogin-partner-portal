@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { useNavigate, useParams, useSearch } from "@tanstack/react-router";
 import { useTranslation } from "react-i18next";
 import type { FunctionComponent } from "@/common/types";
@@ -17,6 +17,7 @@ import type { DataTableColumn } from "@/components/ui/DataTable";
 import { getRequestErrorNotice } from "@/fetch";
 import type {
 	ApplicationInformationContactRead,
+	ApplicationInformationReviewChecklistSummaryRead,
 	ApplicationInformationReviewChecklistStatus,
 	ApplicationInformationReviewDisposition,
 } from "@/fetch/workspaces";
@@ -38,6 +39,11 @@ import {
 	type ApplicationInformationReadinessKey,
 	type ApplicationInformationReadinessStatus,
 } from "../onboarding-readiness";
+
+type Translate = (
+	key: string | Array<string>,
+	options?: Record<string, unknown>
+) => string;
 
 type ContactRow = {
 	email: string;
@@ -77,13 +83,203 @@ const createEmptyReviewChecklistForm = (): ReviewChecklistFormState => ({
 	reviewDisposition: "pending",
 });
 
-export const ApplicationInformationDetailPage = (): FunctionComponent => {
-	const { t } = useTranslation() as unknown as {
-		t: (
-			key: string | Array<string>,
-			options?: Record<string, unknown>
-		) => string;
+const toReviewChecklistForm = (
+	checklistSummary: ApplicationInformationReviewChecklistSummaryRead | null
+): ReviewChecklistFormState => {
+	if (!checklistSummary) {
+		return createEmptyReviewChecklistForm();
+	}
+
+	return {
+		applicationInformationStatus:
+			checklistSummary.applicationInformationStatus,
+		contactsStatus: checklistSummary.contactsStatus,
+		environmentRegistrationStatus:
+			checklistSummary.environmentRegistrationStatus,
+		evidenceReferenceStatus: checklistSummary.evidenceReferenceStatus,
+		processLinksStatus: checklistSummary.processLinksStatus,
+		promotionMetadataStatus: checklistSummary.promotionMetadataStatus,
+		rationale: checklistSummary.rationale ?? "",
+		reviewDisposition: checklistSummary.reviewDisposition,
 	};
+};
+
+type ReviewChecklistEditorProps = {
+	initialForm: ReviewChecklistFormState;
+	isSavingChecklist: boolean;
+	onSave: (form: ReviewChecklistFormState) => Promise<void>;
+	t: Translate;
+};
+
+const ReviewChecklistEditor = ({
+	initialForm,
+	isSavingChecklist,
+	onSave,
+	t,
+}: ReviewChecklistEditorProps): FunctionComponent => {
+	const [reviewChecklistForm, setReviewChecklistForm] =
+		useState<ReviewChecklistFormState>(initialForm);
+
+	const updateReviewChecklistField = (
+		field: keyof ReviewChecklistFormState,
+		value: string
+	): void => {
+		setReviewChecklistForm((currentForm) => ({
+			...currentForm,
+			[field]: value,
+		}));
+	};
+
+	return (
+		<div className="grid gap-150 rounded-sm border border-solid border-[#d9d9d9] p-200">
+			<Select
+				label={t("workspaces.appInfoInternalReviewDispositionLabel")}
+				name="reviewDisposition"
+				selectId="review-disposition"
+				value={reviewChecklistForm.reviewDisposition}
+				onInput={(event): void => {
+					updateReviewChecklistField(
+						"reviewDisposition",
+						(event.target as HTMLSelectElement).value
+					);
+				}}
+			>
+				<option value="pending">
+					{t("workspaces.appInfoInternalReviewDispositionPending")}
+				</option>
+				<option value="changes_requested">
+					{t("workspaces.appInfoInternalReviewDispositionChangesRequested")}
+				</option>
+				<option value="ready_for_next_step">
+					{t("workspaces.appInfoInternalReviewDispositionReadyForNextStep")}
+				</option>
+			</Select>
+			<Select
+				label={t("workspaces.appInfoInternalReviewApplicationInformationLabel")}
+				name="applicationInformationStatus"
+				selectId="review-application-information-status"
+				value={reviewChecklistForm.applicationInformationStatus}
+				onInput={(event): void => {
+					updateReviewChecklistField(
+						"applicationInformationStatus",
+						(event.target as HTMLSelectElement).value
+					);
+				}}
+			>
+				<option value="not_started">{t("workspaces.appInfoReadinessStatusNotStarted")}</option>
+				<option value="incomplete">{t("workspaces.appInfoReadinessStatusIncomplete")}</option>
+				<option value="complete">{t("workspaces.appInfoReadinessStatusComplete")}</option>
+			</Select>
+			<Select
+				label={t("workspaces.appInfoReadinessContactsLabel")}
+				name="contactsStatus"
+				selectId="review-contacts-status"
+				value={reviewChecklistForm.contactsStatus}
+				onInput={(event): void => {
+					updateReviewChecklistField(
+						"contactsStatus",
+						(event.target as HTMLSelectElement).value
+					);
+				}}
+			>
+				<option value="not_started">{t("workspaces.appInfoReadinessStatusNotStarted")}</option>
+				<option value="incomplete">{t("workspaces.appInfoReadinessStatusIncomplete")}</option>
+				<option value="complete">{t("workspaces.appInfoReadinessStatusComplete")}</option>
+			</Select>
+			<Select
+				label={t("workspaces.appInfoInternalReviewEnvironmentRegistrationLabel")}
+				name="environmentRegistrationStatus"
+				selectId="review-environment-registration-status"
+				value={reviewChecklistForm.environmentRegistrationStatus}
+				onInput={(event): void => {
+					updateReviewChecklistField(
+						"environmentRegistrationStatus",
+						(event.target as HTMLSelectElement).value
+					);
+				}}
+			>
+				<option value="not_started">{t("workspaces.appInfoReadinessStatusNotStarted")}</option>
+				<option value="incomplete">{t("workspaces.appInfoReadinessStatusIncomplete")}</option>
+				<option value="complete">{t("workspaces.appInfoReadinessStatusComplete")}</option>
+			</Select>
+			<Select
+				label={t("workspaces.appInfoInternalReviewPromotionMetadataLabel")}
+				name="promotionMetadataStatus"
+				selectId="review-promotion-metadata-status"
+				value={reviewChecklistForm.promotionMetadataStatus}
+				onInput={(event): void => {
+					updateReviewChecklistField(
+						"promotionMetadataStatus",
+						(event.target as HTMLSelectElement).value
+					);
+				}}
+			>
+				<option value="not_started">{t("workspaces.appInfoReadinessStatusNotStarted")}</option>
+				<option value="incomplete">{t("workspaces.appInfoReadinessStatusIncomplete")}</option>
+				<option value="complete">{t("workspaces.appInfoReadinessStatusComplete")}</option>
+			</Select>
+			<Select
+				label={t("workspaces.appInfoInternalReviewEvidenceReferenceLabel")}
+				name="evidenceReferenceStatus"
+				selectId="review-evidence-reference-status"
+				value={reviewChecklistForm.evidenceReferenceStatus}
+				onInput={(event): void => {
+					updateReviewChecklistField(
+						"evidenceReferenceStatus",
+						(event.target as HTMLSelectElement).value
+					);
+				}}
+			>
+				<option value="not_started">{t("workspaces.appInfoReadinessStatusNotStarted")}</option>
+				<option value="incomplete">{t("workspaces.appInfoReadinessStatusIncomplete")}</option>
+				<option value="complete">{t("workspaces.appInfoReadinessStatusComplete")}</option>
+			</Select>
+			<Select
+				label={t("workspaces.appInfoInternalReviewProcessLinksLabel")}
+				name="processLinksStatus"
+				selectId="review-process-links-status"
+				value={reviewChecklistForm.processLinksStatus}
+				onInput={(event): void => {
+					updateReviewChecklistField(
+						"processLinksStatus",
+						(event.target as HTMLSelectElement).value
+					);
+				}}
+			>
+				<option value="not_started">{t("workspaces.appInfoReadinessStatusNotStarted")}</option>
+				<option value="incomplete">{t("workspaces.appInfoReadinessStatusIncomplete")}</option>
+				<option value="complete">{t("workspaces.appInfoReadinessStatusComplete")}</option>
+			</Select>
+			<Textarea
+				label={t("workspaces.appInfoInternalReviewRationaleLabel")}
+				name="reviewRationale"
+				textareaId="review-rationale"
+				value={reviewChecklistForm.rationale}
+				onInput={(event): void => {
+					updateReviewChecklistField(
+						"rationale",
+						(event.target as HTMLTextAreaElement).value
+					);
+				}}
+			/>
+			<Button
+				buttonRole="secondary"
+				disabled={isSavingChecklist}
+				type="button"
+				onGcdsClick={() => {
+					void onSave(reviewChecklistForm);
+				}}
+			>
+				{isSavingChecklist
+					? t("workspaces.appInfoInternalReviewChecklistSavingAction")
+					: t("workspaces.appInfoInternalReviewChecklistSaveAction")}
+			</Button>
+		</div>
+	);
+};
+
+export const ApplicationInformationDetailPage = (): FunctionComponent => {
+	const { t } = useTranslation() as unknown as { t: Translate };
 	const navigate = useNavigate();
 	const { currentUser } = useSession();
 	const { applicationInformationUuid, workspaceUuid } = useParams({
@@ -135,8 +331,6 @@ export const ApplicationInformationDetailPage = (): FunctionComponent => {
 		useState<ApplicationInformationContactFormState>(
 			createEmptyApplicationInformationContactForm
 		);
-	const [reviewChecklistForm, setReviewChecklistForm] =
-		useState<ReviewChecklistFormState>(createEmptyReviewChecklistForm);
 	const [reviewNoteBody, setReviewNoteBody] = useState("");
 	const [deleteApplicationInformationDialogOpen, setDeleteApplicationInformationDialogOpen] =
 		useState(false);
@@ -283,26 +477,6 @@ export const ApplicationInformationDetailPage = (): FunctionComponent => {
 		}
 	};
 
-	useEffect(() => {
-		if (!checklistSummary) {
-			setReviewChecklistForm(createEmptyReviewChecklistForm());
-			return;
-		}
-
-		setReviewChecklistForm({
-			applicationInformationStatus:
-				checklistSummary.applicationInformationStatus,
-			contactsStatus: checklistSummary.contactsStatus,
-			environmentRegistrationStatus:
-				checklistSummary.environmentRegistrationStatus,
-			evidenceReferenceStatus: checklistSummary.evidenceReferenceStatus,
-			processLinksStatus: checklistSummary.processLinksStatus,
-			promotionMetadataStatus: checklistSummary.promotionMetadataStatus,
-			rationale: checklistSummary.rationale ?? "",
-			reviewDisposition: checklistSummary.reviewDisposition,
-		});
-	}, [checklistSummary]);
-
 	const updateContactFormField = (
 		field: keyof ApplicationInformationContactFormState,
 		value: string
@@ -415,36 +589,27 @@ export const ApplicationInformationDetailPage = (): FunctionComponent => {
 		}
 	};
 
-	const updateReviewChecklistField = (
-		field: keyof ReviewChecklistFormState,
-		value: string
-	): void => {
-		setReviewChecklistForm((currentForm) => ({
-			...currentForm,
-			[field]: value,
-		}));
-	};
-
-	const handleSaveReviewChecklist = async (): Promise<void> => {
+	const handleSaveReviewChecklist = async (
+		form: ReviewChecklistFormState
+	): Promise<void> => {
 		setLocalError(null);
 
 		try {
 			await saveChecklistSummary({
 				applicationInformationStatus:
-					reviewChecklistForm.applicationInformationStatus,
-				contactsStatus: reviewChecklistForm.contactsStatus,
+					form.applicationInformationStatus,
+				contactsStatus: form.contactsStatus,
 				environmentRegistrationStatus:
-					reviewChecklistForm.environmentRegistrationStatus,
+					form.environmentRegistrationStatus,
 				evidenceReferenceStatus:
-					reviewChecklistForm.evidenceReferenceStatus,
-				processLinksStatus: reviewChecklistForm.processLinksStatus,
+					form.evidenceReferenceStatus,
+				processLinksStatus: form.processLinksStatus,
 				promotionMetadataStatus:
-					reviewChecklistForm.promotionMetadataStatus,
-				rationale:
-					reviewChecklistForm.rationale.trim().length > 0
-						? reviewChecklistForm.rationale.trim()
+					form.promotionMetadataStatus,
+				rationale: form.rationale.trim().length > 0
+					? form.rationale.trim()
 						: null,
-				reviewDisposition: reviewChecklistForm.reviewDisposition,
+				reviewDisposition: form.reviewDisposition,
 			});
 			setLocalSuccessMessage(
 				t("workspaces.appInfoInternalReviewChecklistSavedSuccess")
@@ -571,10 +736,10 @@ export const ApplicationInformationDetailPage = (): FunctionComponent => {
 							{isLoadingReview ? (
 								<Notice
 									noticeRole="info"
+									noticeTitleTag="h3"
 									noticeTitle={t(
 										"workspaces.appInfoInternalReviewLoadingTitle"
 									)}
-									noticeTitleTag="h3"
 								>
 									<Text>
 										{t("workspaces.appInfoInternalReviewLoadingBody")}
@@ -585,10 +750,10 @@ export const ApplicationInformationDetailPage = (): FunctionComponent => {
 							{reviewError ? (
 								<Notice
 									noticeRole="warning"
+									noticeTitleTag="h3"
 									noticeTitle={t(
 										"workspaces.appInfoInternalReviewErrorTitle"
 									)}
-									noticeTitleTag="h3"
 								>
 									<Text>
 										{t("workspaces.appInfoInternalReviewErrorBody")}
@@ -641,10 +806,10 @@ export const ApplicationInformationDetailPage = (): FunctionComponent => {
 										) : (
 											<Notice
 												noticeRole="info"
+												noticeTitleTag="h4"
 												noticeTitle={t(
 													"workspaces.appInfoInternalReviewNoChecklistTitle"
 												)}
-												noticeTitleTag="h4"
 											>
 												<Text>
 													{t(
@@ -655,179 +820,20 @@ export const ApplicationInformationDetailPage = (): FunctionComponent => {
 										)}
 
 										{canEditInternalReview ? (
-											<div className="grid gap-150 rounded-sm border border-solid border-[#d9d9d9] p-200">
-												<Select
-													label={t(
-														"workspaces.appInfoInternalReviewDispositionLabel"
-													)}
-													name="reviewDisposition"
-													onInput={(event): void => {
-														updateReviewChecklistField(
-															"reviewDisposition",
-															(event.target as HTMLSelectElement).value
-														);
-													}}
-													selectId="review-disposition"
-													value={reviewChecklistForm.reviewDisposition}
-												>
-													<option value="pending">
-														{t(
-															"workspaces.appInfoInternalReviewDispositionPending"
-														)}
-													</option>
-													<option value="changes_requested">
-														{t(
-															"workspaces.appInfoInternalReviewDispositionChangesRequested"
-														)}
-													</option>
-													<option value="ready_for_next_step">
-														{t(
-															"workspaces.appInfoInternalReviewDispositionReadyForNextStep"
-														)}
-													</option>
-												</Select>
-												<Select
-													label={t(
-														"workspaces.appInfoInternalReviewApplicationInformationLabel"
-													)}
-													name="applicationInformationStatus"
-													onInput={(event): void => {
-														updateReviewChecklistField(
-															"applicationInformationStatus",
-															(event.target as HTMLSelectElement).value
-														);
-													}}
-													selectId="review-application-information-status"
-													value={reviewChecklistForm.applicationInformationStatus}
-												>
-													<option value="not_started">{t("workspaces.appInfoReadinessStatusNotStarted")}</option>
-													<option value="incomplete">{t("workspaces.appInfoReadinessStatusIncomplete")}</option>
-													<option value="complete">{t("workspaces.appInfoReadinessStatusComplete")}</option>
-												</Select>
-												<Select
-													label={t("workspaces.appInfoReadinessContactsLabel")}
-													name="contactsStatus"
-													onInput={(event): void => {
-														updateReviewChecklistField(
-															"contactsStatus",
-															(event.target as HTMLSelectElement).value
-														);
-													}}
-													selectId="review-contacts-status"
-													value={reviewChecklistForm.contactsStatus}
-												>
-													<option value="not_started">{t("workspaces.appInfoReadinessStatusNotStarted")}</option>
-													<option value="incomplete">{t("workspaces.appInfoReadinessStatusIncomplete")}</option>
-													<option value="complete">{t("workspaces.appInfoReadinessStatusComplete")}</option>
-												</Select>
-												<Select
-													label={t(
-														"workspaces.appInfoInternalReviewEnvironmentRegistrationLabel"
-													)}
-													name="environmentRegistrationStatus"
-													onInput={(event): void => {
-														updateReviewChecklistField(
-															"environmentRegistrationStatus",
-															(event.target as HTMLSelectElement).value
-														);
-													}}
-													selectId="review-environment-registration-status"
-													value={reviewChecklistForm.environmentRegistrationStatus}
-												>
-													<option value="not_started">{t("workspaces.appInfoReadinessStatusNotStarted")}</option>
-													<option value="incomplete">{t("workspaces.appInfoReadinessStatusIncomplete")}</option>
-													<option value="complete">{t("workspaces.appInfoReadinessStatusComplete")}</option>
-												</Select>
-												<Select
-													label={t(
-														"workspaces.appInfoInternalReviewPromotionMetadataLabel"
-													)}
-													name="promotionMetadataStatus"
-													onInput={(event): void => {
-														updateReviewChecklistField(
-															"promotionMetadataStatus",
-															(event.target as HTMLSelectElement).value
-														);
-													}}
-													selectId="review-promotion-metadata-status"
-													value={reviewChecklistForm.promotionMetadataStatus}
-												>
-													<option value="not_started">{t("workspaces.appInfoReadinessStatusNotStarted")}</option>
-													<option value="incomplete">{t("workspaces.appInfoReadinessStatusIncomplete")}</option>
-													<option value="complete">{t("workspaces.appInfoReadinessStatusComplete")}</option>
-												</Select>
-												<Select
-													label={t(
-														"workspaces.appInfoInternalReviewEvidenceReferenceLabel"
-													)}
-													name="evidenceReferenceStatus"
-													onInput={(event): void => {
-														updateReviewChecklistField(
-															"evidenceReferenceStatus",
-															(event.target as HTMLSelectElement).value
-														);
-													}}
-													selectId="review-evidence-reference-status"
-													value={reviewChecklistForm.evidenceReferenceStatus}
-												>
-													<option value="not_started">{t("workspaces.appInfoReadinessStatusNotStarted")}</option>
-													<option value="incomplete">{t("workspaces.appInfoReadinessStatusIncomplete")}</option>
-													<option value="complete">{t("workspaces.appInfoReadinessStatusComplete")}</option>
-												</Select>
-												<Select
-													label={t(
-														"workspaces.appInfoInternalReviewProcessLinksLabel"
-													)}
-													name="processLinksStatus"
-													onInput={(event): void => {
-														updateReviewChecklistField(
-															"processLinksStatus",
-															(event.target as HTMLSelectElement).value
-														);
-													}}
-													selectId="review-process-links-status"
-													value={reviewChecklistForm.processLinksStatus}
-												>
-													<option value="not_started">{t("workspaces.appInfoReadinessStatusNotStarted")}</option>
-													<option value="incomplete">{t("workspaces.appInfoReadinessStatusIncomplete")}</option>
-													<option value="complete">{t("workspaces.appInfoReadinessStatusComplete")}</option>
-												</Select>
-												<Textarea
-													label={t("workspaces.appInfoInternalReviewRationaleLabel")}
-													name="reviewRationale"
-													onInput={(event): void => {
-														updateReviewChecklistField(
-															"rationale",
-															(event.target as HTMLTextAreaElement).value
-														);
-													}}
-													textareaId="review-rationale"
-													value={reviewChecklistForm.rationale}
-												/>
-												<Button
-													buttonRole="secondary"
-													disabled={isSavingChecklist}
-													type="button"
-													onGcdsClick={() => {
-														void handleSaveReviewChecklist();
-													}}
-												>
-													{isSavingChecklist
-														? t(
-															"workspaces.appInfoInternalReviewChecklistSavingAction"
-														)
-														: t(
-															"workspaces.appInfoInternalReviewChecklistSaveAction"
-														)}
-												</Button>
-											</div>
+											<ReviewChecklistEditor
+												key={checklistSummary?.updatedAt ?? checklistSummary?.createdAt ?? "empty"}
+												initialForm={toReviewChecklistForm(checklistSummary)}
+												isSavingChecklist={isSavingChecklist}
+												t={t}
+												onSave={handleSaveReviewChecklist}
+											/>
 										) : (
 											<Notice
 												noticeRole="info"
+												noticeTitleTag="h4"
 												noticeTitle={t(
 													"workspaces.appInfoInternalReviewReadOnlyTitle"
 												)}
-												noticeTitleTag="h4"
 											>
 												<Text>
 													{t("workspaces.appInfoInternalReviewReadOnlyBody")}
@@ -844,10 +850,10 @@ export const ApplicationInformationDetailPage = (): FunctionComponent => {
 										{reviewNotes.length === 0 ? (
 											<Notice
 												noticeRole="info"
+												noticeTitleTag="h4"
 												noticeTitle={t(
 													"workspaces.appInfoInternalReviewNoNotesTitle"
 												)}
-												noticeTitleTag="h4"
 											>
 												<Text>
 													{t("workspaces.appInfoInternalReviewNoNotesBody")}
@@ -874,20 +880,20 @@ export const ApplicationInformationDetailPage = (): FunctionComponent => {
 												<Textarea
 													label={t("workspaces.appInfoInternalReviewNoteLabel")}
 													name="reviewNote"
+													textareaId="review-note-body"
+													value={reviewNoteBody}
 													onInput={(event): void => {
 														setReviewNoteBody(
 															(event.target as HTMLTextAreaElement).value
 														);
 													}}
-													textareaId="review-note-body"
-													value={reviewNoteBody}
 												/>
 												<Button
 													buttonRole="secondary"
+													type="button"
 													disabled={
 														isAddingNote || reviewNoteBody.trim().length === 0
 													}
-													type="button"
 													onGcdsClick={() => {
 														void handleSaveReviewNote();
 													}}

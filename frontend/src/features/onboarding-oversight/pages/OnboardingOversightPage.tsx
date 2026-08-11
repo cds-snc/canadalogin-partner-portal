@@ -187,9 +187,9 @@ export const OnboardingOversightPage = (): FunctionComponent => {
 								<ul className="grid gap-200">
 									{recentRows.map((row) => (
 										<li key={`${row.recordType}-${row.recordUuid}`}>
-											<a className="font-semibold underline" href={row.detailPath}>
+											<Button href={row.detailPath} type="link">
 												{row.primaryRecordLabel}
-											</a>
+											</Button>
 											<Text>
 												{t("onboardingOversight.overview.recentActivityRow", {
 													lastActivityAt: formatLastActivity(

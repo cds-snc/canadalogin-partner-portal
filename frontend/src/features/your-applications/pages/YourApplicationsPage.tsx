@@ -3,11 +3,13 @@ import type { FunctionComponent } from "@/common/types";
 import { Card, Grid, Heading, Link, Notice, Text } from "@/components/ui";
 import { getDepartment } from "@/fetch/departments";
 import { getRequestErrorNotice } from "@/fetch";
-import { getCurrentUserRPApplications } from "@/fetch/rp-applications";
+import {
+	getCurrentUserRPApplications,
+	type CurrentUserRPApplicationRead,
+} from "@/fetch/rp-applications";
 import { useQuery } from "@tanstack/react-query";
 import { useRoles, useSession } from "@/hooks";
 import { useWorkspaces } from "@/features/workspaces/hooks/use-workspaces";
-import type { CurrentUserRPApplicationRead } from "@/fetch/rp-applications";
 
 const getCurrentUserRPApplicationTitle = (
 	application: {

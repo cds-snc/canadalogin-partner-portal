@@ -183,6 +183,7 @@ export const WorkspaceApplicationDetailPage = (): FunctionComponent => {
 					{showLinkedReadinessWarning ? (
 						<Notice
 							noticeRole="warning"
+							noticeTitleTag="h2"
 							noticeTitle={
 								linkedApplicationInformation
 									? t(
@@ -192,7 +193,6 @@ export const WorkspaceApplicationDetailPage = (): FunctionComponent => {
 											"workspaces.applicationsProductionLinkInfoWarningTitle"
 									  )
 							}
-							noticeTitleTag="h2"
 						>
 							<Text>
 								{linkedApplicationInformation
@@ -209,10 +209,10 @@ export const WorkspaceApplicationDetailPage = (): FunctionComponent => {
 					{isProductionBound ? (
 						<Notice
 							noticeRole="info"
+							noticeTitleTag="h2"
 							noticeTitle={t(
 								"workspaces.applicationsProductionReadinessInfoTitle"
 							)}
-							noticeTitleTag="h2"
 						>
 							<Text>
 								{t(

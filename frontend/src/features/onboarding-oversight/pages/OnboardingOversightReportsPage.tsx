@@ -1,4 +1,5 @@
 import {
+	startTransition,
 	useEffect,
 	useMemo,
 	useState,
@@ -249,27 +250,157 @@ const reportKpis = (
 	];
 };
 
+const buildExportQueryString = (
+	filters: Pick<
+		OnboardingOversightReportRead["appliedFilters"],
+		"metric" | "startDate" | "endDate" | "groupBy"
+	>
+): string => {
+	const normalizedFilters = normalizeOnboardingOversightReportFilters({
+		endDate: filters.endDate,
+		groupBy: filters.groupBy ?? undefined,
+		metric: filters.metric,
+		startDate: filters.startDate,
+	});
+	const params = new URLSearchParams();
+	params.set("metric", normalizedFilters.metric);
+	params.set("start_date", normalizedFilters.startDate);
+	params.set("end_date", normalizedFilters.endDate);
+	if (normalizedFilters.groupBy) {
+		params.set("group_by", normalizedFilters.groupBy);
+	}
+	return `?${params.toString()}`;
+};
+
+type ReportFiltersFormProps = {
+	initialFilters: OnboardingOversightReportFilters;
+	onSubmit: (filters: OnboardingOversightReportFilters) => void;
+	t: Translate;
+};
+
+const ReportFiltersForm = ({
+	initialFilters,
+	onSubmit,
+	t,
+}: ReportFiltersFormProps): FunctionComponent => {
+	const [draftFilters, setDraftFilters] = useState<OnboardingOversightReportFilters>(
+		initialFilters
+	);
+	const showGroupBy = supportsOnboardingOversightGrouping(draftFilters.metric);
+
+	const handleFilterSubmit = (event: FormEvent<HTMLFormElement>): void => {
+		event.preventDefault();
+		onSubmit(draftFilters);
+	};
+
+	return (
+		<form
+			className="flex flex-col gap-300 rounded-sm border border-[var(--gcds-border-default)] bg-[var(--gcds-bg-white)] p-300"
+			onSubmit={handleFilterSubmit}
+		>
+			<Heading tag="h2">{t("onboardingOversight.reports.filtersTitle")}</Heading>
+			<div className="grid gap-300 md:grid-cols-2 xl:grid-cols-4">
+				<Select
+					label={t("onboardingOversight.reports.filtersMetricLabel")}
+					name="metric"
+					selectId="oversight-report-metric"
+					value={draftFilters.metric}
+					onInput={(event): void => {
+						const nextMetric = (event.target as HTMLSelectElement)
+							.value as OnboardingOversightReportMetric;
+						setDraftFilters((currentFilters) =>
+							normalizeOnboardingOversightReportFilters({
+								...currentFilters,
+								groupBy: currentFilters.groupBy,
+								metric: nextMetric,
+							})
+						);
+					}}
+				>
+					{onboardingOversightReportMetrics.map((value) => (
+						<option key={value} value={value}>
+							{metricLabel(t, value)}
+						</option>
+					))}
+				</Select>
+				<DateInput
+					required
+					format="full"
+					legend={t("onboardingOversight.reports.filtersStartDateLabel")}
+					max={draftFilters.endDate}
+					name="oversight-report-start-date"
+					value={draftFilters.startDate}
+					onInput={(event): void => {
+						setDraftFilters((currentFilters) => ({
+							...currentFilters,
+							startDate: (event.target as HTMLInputElement).value,
+						}));
+					}}
+				/>
+				<DateInput
+					required
+					format="full"
+					legend={t("onboardingOversight.reports.filtersEndDateLabel")}
+					min={draftFilters.startDate}
+					name="oversight-report-end-date"
+					value={draftFilters.endDate}
+					onInput={(event): void => {
+						setDraftFilters((currentFilters) => ({
+							...currentFilters,
+							endDate: (event.target as HTMLInputElement).value,
+						}));
+					}}
+				/>
+				{showGroupBy ? (
+					<Select
+						label={t("onboardingOversight.reports.filtersGroupByLabel")}
+						name="groupBy"
+						selectId="oversight-report-group-by"
+						value={draftFilters.groupBy ?? "week"}
+						onInput={(event): void => {
+							setDraftFilters((currentFilters) => ({
+								...currentFilters,
+								groupBy: (event.target as HTMLSelectElement)
+									.value as OnboardingOversightReportGroupBy,
+							}));
+						}}
+					>
+						{onboardingOversightReportGroupByOptions.map((value) => (
+							<option key={value} value={value}>
+								{groupByLabel(t, value)}
+							</option>
+						))}
+					</Select>
+				) : null}
+			</div>
+			<div className="flex flex-wrap gap-200">
+				<Button type="submit">
+					{t("onboardingOversight.reports.applyAction")}
+				</Button>
+			</div>
+		</form>
+	);
+};
+
 export const OnboardingOversightReportsPage = (): FunctionComponent => {
 	const { t } = useTranslation() as unknown as { t: Translate };
 	const navigate = useNavigate();
 	const search = useSearch({ from: "/onboarding-oversight/reports" });
 	const normalizedSearch = normalizeOnboardingOversightReportFilters(search);
-	const [draftFilters, setDraftFilters] = useState<OnboardingOversightReportFilters>(
-		() => normalizedSearch
-	);
+	const filterFormKey = JSON.stringify(normalizedSearch);
 	const [lastSuccessfulReport, setLastSuccessfulReport] =
 		useState<OnboardingOversightReportRead | null>(null);
 	const { error, isLoading, isRefetching, report } =
 		useOnboardingOversightReport(normalizedSearch);
 
 	useEffect(() => {
-		setDraftFilters(normalizeOnboardingOversightReportFilters(search));
-	}, [search]);
-
-	useEffect(() => {
-		if (report) {
-			setLastSuccessfulReport(report);
+		if (!report) {
+			return;
 		}
+
+		startTransition(() => {
+			setLastSuccessfulReport(report);
+		});
 	}, [report]);
 
 	const displayedReport = report ?? lastSuccessfulReport;
@@ -282,8 +413,8 @@ export const OnboardingOversightReportsPage = (): FunctionComponent => {
 		[displayedReport]
 	);
 	const columns = useMemo(
-		() => reportColumns(t, displayedReport?.metric ?? draftFilters.metric),
-		[displayedReport?.metric, draftFilters.metric, t]
+		() => reportColumns(t, displayedReport?.metric ?? normalizedSearch.metric),
+		[displayedReport?.metric, normalizedSearch.metric, t]
 	);
 	const kpis = useMemo(
 		() => reportKpis(t, displayedReport),
@@ -297,12 +428,11 @@ export const OnboardingOversightReportsPage = (): FunctionComponent => {
 			)
 		: undefined;
 
-	const showGroupBy = supportsOnboardingOversightGrouping(draftFilters.metric);
-
-	const handleFilterSubmit = (event: FormEvent<HTMLFormElement>): void => {
-		event.preventDefault();
+	const handleFilterSubmit = (
+		filters: OnboardingOversightReportFilters
+	): void => {
 		void navigate({
-			search: normalizeOnboardingOversightReportFilters(draftFilters),
+			search: normalizeOnboardingOversightReportFilters(filters),
 			to: "/onboarding-oversight/reports",
 		});
 	};
@@ -319,97 +449,19 @@ export const OnboardingOversightReportsPage = (): FunctionComponent => {
 				<Text>{t("onboardingOversight.reports.accessNoticeBody")}</Text>
 			</Notice>
 
-			<form
-				className="flex flex-col gap-300 rounded-sm border border-[var(--gcds-border-default)] bg-[var(--gcds-bg-white)] p-300"
+			<ReportFiltersForm
+				key={filterFormKey}
+				initialFilters={normalizedSearch}
+				t={t}
 				onSubmit={handleFilterSubmit}
-			>
-				<Heading tag="h2">{t("onboardingOversight.reports.filtersTitle")}</Heading>
-				<div className="grid gap-300 md:grid-cols-2 xl:grid-cols-4">
-					<Select
-						label={t("onboardingOversight.reports.filtersMetricLabel")}
-						name="metric"
-						selectId="oversight-report-metric"
-						value={draftFilters.metric}
-						onInput={(event): void => {
-							const nextMetric = (
-								(event.target as HTMLSelectElement).value as OnboardingOversightReportMetric
-							);
-							setDraftFilters((currentFilters) =>
-								normalizeOnboardingOversightReportFilters({
-									...currentFilters,
-									groupBy: currentFilters.groupBy,
-									metric: nextMetric,
-								})
-							);
-						}}
-					>
-						{onboardingOversightReportMetrics.map((value) => (
-							<option key={value} value={value}>
-								{metricLabel(t, value)}
-							</option>
-						))}
-					</Select>
-					<DateInput
-						required
-						format="full"
-						legend={t("onboardingOversight.reports.filtersStartDateLabel")}
-						max={draftFilters.endDate}
-						name="oversight-report-start-date"
-						value={draftFilters.startDate}
-						onInput={(event): void => {
-							setDraftFilters((currentFilters) => ({
-								...currentFilters,
-								startDate: (event.target as HTMLInputElement).value,
-							}));
-						}}
-					/>
-					<DateInput
-						required
-						format="full"
-						legend={t("onboardingOversight.reports.filtersEndDateLabel")}
-						min={draftFilters.startDate}
-						name="oversight-report-end-date"
-						value={draftFilters.endDate}
-						onInput={(event): void => {
-							setDraftFilters((currentFilters) => ({
-								...currentFilters,
-								endDate: (event.target as HTMLInputElement).value,
-							}));
-						}}
-					/>
-					{showGroupBy ? (
-						<Select
-							label={t("onboardingOversight.reports.filtersGroupByLabel")}
-							name="groupBy"
-							selectId="oversight-report-group-by"
-							value={draftFilters.groupBy ?? "week"}
-							onInput={(event): void => {
-								setDraftFilters((currentFilters) => ({
-									...currentFilters,
-									groupBy: (event.target as HTMLSelectElement)
-										.value as OnboardingOversightReportGroupBy,
-								}));
-							}}
-						>
-							{onboardingOversightReportGroupByOptions.map((value) => (
-								<option key={value} value={value}>
-									{groupByLabel(t, value)}
-								</option>
-							))}
-						</Select>
-					) : null}
-				</div>
+			/>
+			{exportHref ? (
 				<div className="flex flex-wrap gap-200">
-					<Button type="submit">
-						{t("onboardingOversight.reports.applyAction")}
+					<Button href={exportHref} type="link">
+						{t("onboardingOversight.reports.exportAction")}
 					</Button>
-					{exportHref ? (
-						<Button href={exportHref} type="link">
-							{t("onboardingOversight.reports.exportAction")}
-						</Button>
-					) : null}
 				</div>
-			</form>
+			) : null}
 
 			{isLoading || isRefetching ? (
 				<Notice
@@ -424,10 +476,10 @@ export const OnboardingOversightReportsPage = (): FunctionComponent => {
 			{errorNotice ? (
 				<Notice
 					noticeRole={errorNotice.noticeRole}
-					noticeTitle={t(errorNotice.titleKey as never)}
+					noticeTitle={t(errorNotice.titleKey)}
 					noticeTitleTag="h2"
 				>
-					<Text>{errorNotice.bodyText ?? t(errorNotice.bodyKey as never)}</Text>
+					<Text>{errorNotice.bodyText ?? t(errorNotice.bodyKey)}</Text>
 				</Notice>
 			) : null}
 
@@ -498,26 +550,4 @@ export const OnboardingOversightReportsPage = (): FunctionComponent => {
 			) : null}
 		</Grid>
 	);
-};
-
-const buildExportQueryString = (
-	filters: Pick<
-		OnboardingOversightReportRead["appliedFilters"],
-		"metric" | "startDate" | "endDate" | "groupBy"
-	>
-): string => {
-	const normalizedFilters = normalizeOnboardingOversightReportFilters({
-		endDate: filters.endDate,
-		groupBy: filters.groupBy ?? undefined,
-		metric: filters.metric,
-		startDate: filters.startDate,
-	});
-	const params = new URLSearchParams();
-	params.set("metric", normalizedFilters.metric);
-	params.set("start_date", normalizedFilters.startDate);
-	params.set("end_date", normalizedFilters.endDate);
-	if (normalizedFilters.groupBy) {
-		params.set("group_by", normalizedFilters.groupBy);
-	}
-	return `?${params.toString()}`;
 };

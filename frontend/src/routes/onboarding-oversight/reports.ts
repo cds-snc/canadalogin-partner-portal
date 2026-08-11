@@ -13,7 +13,7 @@ const OnboardingOversightReportsPage = lazy(async () => ({
 }));
 
 export const Route = createFileRoute("/onboarding-oversight/reports")({
-	beforeLoad: async () => ({
+	beforeLoad: () => ({
 		backLink: { href: "/", label: i18n.t("nav.home") },
 	}) satisfies RouteBackLinkContext,
 	component: OnboardingOversightReportsPage,
