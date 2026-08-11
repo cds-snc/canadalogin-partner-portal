@@ -126,9 +126,6 @@ jobs:
           role-session-name: DevBackendDeploy
           aws-region: ${{ env.AWS_REGION }}
 
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@8d2750c68a42422c14e847fe6c8ac0403b4cbd6f # v3.12.0
-
       - name: Login to Amazon ECR
         uses: aws-actions/amazon-ecr-login@d539f0932e70871a027e9d5a9d8fc38589180a64 # v2.1.6
 
@@ -149,21 +146,25 @@ jobs:
           IMAGE_URI: ${{ steps.image.outputs.image_uri }}
           RELEASE_VERSION: ${{ steps.image.outputs.release_version }}
         run: |
-          docker buildx build \
-            --platform linux/amd64 \
+          docker build \
             --build-arg APP_VERSION="$RELEASE_VERSION" \
             --tag "$IMAGE_URI" \
-            --tag "${{ vars.ARTIFACT_ECR_REPOSITORY }}:latest" \
-            --push \
             backend
+
+          docker push "$IMAGE_URI"
+
+          docker tag "$IMAGE_URI" "${{ vars.ARTIFACT_ECR_REPOSITORY }}:latest"
+          docker push "${{ vars.ARTIFACT_ECR_REPOSITORY }}:latest"
 
       - name: Tag and push semver image
         if: needs.detect-release-tag.outputs.release_tag != ''
         run: |
           RELEASE_TAG="${{ needs.detect-release-tag.outputs.release_tag }}"
+
           docker tag \
             "${{ steps.image.outputs.image_uri }}" \
             "${{ vars.ARTIFACT_ECR_REPOSITORY }}:$RELEASE_TAG"
+
           docker push "${{ vars.ARTIFACT_ECR_REPOSITORY }}:$RELEASE_TAG"
 
       - name: Docker generate SBOM
