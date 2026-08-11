@@ -101,6 +101,7 @@ export const UsersPage = (): FunctionComponent => {
 		isUpdating: isUpdatingDepartment,
 		updateUserDepartment,
 	} = useUserDepartment(modalMode === "edit" ? selectedUserUuid : null);
+	const shouldLoadUserRoles = modalMode === "edit" || isRolesModalOpen;
 	const {
 		addRole,
 		error: userRoleError,
@@ -108,7 +109,8 @@ export const UsersPage = (): FunctionComponent => {
 		isLoading: isUserRoleLoading,
 		isRemoving,
 		removeRole,
-	} = useUserRole(modalMode === "edit" ? selectedUserUuid : null);
+		roles: assignedUserRoles,
+	} = useUserRole(shouldLoadUserRoles ? selectedUserUuid : null);
 	const selectedUser =
 		users.find((user) => user.uuid === selectedUserUuid) ?? null;
 	// Resolve department display consistently from the full departments list to avoid showing incorrect fields.
@@ -227,12 +229,16 @@ export const UsersPage = (): FunctionComponent => {
 			)
 		: 1;
 
-	// Get role UUIDs from selected user
-	const selectedUserRoleUuids =
-		(selectedUser as unknown as UserApi | null)?.roleUuids ?? [];
-	const selectedUserRoles = selectedUserRoleUuids
+	const selectedUserRolesFromList = (
+		(selectedUser as unknown as UserApi | null)?.roleUuids ?? []
+	)
 		.map((roleUuid) => roles.find((role) => role.uuid === roleUuid))
 		.filter((role): role is NonNullable<typeof role> => role !== undefined);
+	const selectedUserRoles =
+		shouldLoadUserRoles && !isUserRoleLoading
+			? assignedUserRoles
+			: selectedUserRolesFromList;
+	const selectedUserRoleUuids = selectedUserRoles.map((role) => role.uuid);
 
 	// Get available roles (not already assigned to user)
 	const availableRoles = roles.filter(
@@ -368,8 +374,6 @@ export const UsersPage = (): FunctionComponent => {
 		await addRole(selectedUser.uuid, selectedRoleUuid);
 		success(t("users.roleAddedSuccess"));
 		setSelectedRoleUuid("");
-		setPage(1);
-		setIsRolesModalOpen(false);
 	};
 
 	const handleRemoveRole = async (): Promise<void> => {
@@ -379,9 +383,7 @@ export const UsersPage = (): FunctionComponent => {
 
 		await removeRole(selectedUser.uuid, roleToRemove.uuid);
 		success(t("users.roleRemovedSuccess"));
-		setPage(1);
 		setRoleToRemove(null);
-		setIsRolesModalOpen(false);
 	};
 
 	const isModalOpen = modalMode !== null;

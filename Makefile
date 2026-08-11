@@ -8,6 +8,7 @@ NPM ?= $(if $(NVM_BIN),$(NVM_BIN)/npm,npm)
 COREPACK ?= $(if $(NVM_BIN),$(NVM_BIN)/corepack,corepack)
 PNPM ?= $(COREPACK) pnpm
 UV ?= uv
+UV_CACHE_DIR ?= $(if $(TMPDIR),$(TMPDIR)/copilot-uv-cache,$(ROOT_DIR)/.uv-cache)
 FRONTEND_DIR := frontend
 FRONTEND_HOST ?= 127.0.0.1
 FRONTEND_PORT ?= 3000
@@ -15,14 +16,16 @@ BACKEND_DIR := backend
 ROOT_DIR := $(CURDIR)
 ROOT_VENV := $(ROOT_DIR)/$(VENV_DIR)
 UV_PROJECT_ENVIRONMENT ?= $(ROOT_VENV)
-BACKEND_CMD := cd $(BACKEND_DIR) && UV_PROJECT_ENVIRONMENT="$(UV_PROJECT_ENVIRONMENT)" $(UV) run
-ALEMBIC_CMD := cd $(BACKEND_DIR)/src && UV_PROJECT_ENVIRONMENT="$(UV_PROJECT_ENVIRONMENT)" $(UV) run alembic
+BACKEND_CMD := cd $(BACKEND_DIR) && UV_CACHE_DIR="$(UV_CACHE_DIR)" UV_PROJECT_ENVIRONMENT="$(UV_PROJECT_ENVIRONMENT)" $(UV) run
+ALEMBIC_CMD := cd $(BACKEND_DIR)/src && UV_CACHE_DIR="$(UV_CACHE_DIR)" UV_PROJECT_ENVIRONMENT="$(UV_PROJECT_ENVIRONMENT)" $(UV) run alembic
 FRONTEND_CMD := cd $(FRONTEND_DIR) && $(PNPM) run
 BACKEND_HOST ?= 127.0.0.1
 BACKEND_IMAGE ?= delorean-template-backend:local
 BACKEND_CONTAINER ?= delorean-template-backend
 BACKEND_PORT ?= 8000
 DATABASE_COMPOSE_FILE ?= $(BACKEND_DIR)/docker-compose.yml
+POSTGRES_USER ?= postgres
+POSTGRES_DB ?= postgres
 DB_MIGRATION_MESSAGE ?= change
 OPENAPI_FILE ?= openapi/openapi.json
 NODE_MIN_VERSION ?= 20.19.0
@@ -64,7 +67,7 @@ LOAD_NVM = nvm_dir="$${NVM_DIR:-$$HOME/.nvm}"; \
 		nvm use "$(NODE_VERSION)" >/dev/null 2>&1 || nvm use default >/dev/null 2>&1 || true; \
 	fi
 
-.PHONY: help help-all doctor setup setup-delorean setup-local-env install-node check-node setup-python-venv install test lint format typecheck install-python install-dev-python install-frontend-deps install-backend-deps install-openspec-cli check-openspec-cli validate-openspec-change pick-openspec-change validate-active-openspec-change check-delorean-setup start start-dev dev backend-dev worker start-frontend start-backend frontend-install frontend-build frontend-dev frontend-test frontend-lint frontend-format frontend-preview all-install all-build all-test all-lint all-format bk-install bk-test bk-lint bk-format bk-typecheck bk-dev bk-worker bk-migration ft-install ft-build ft-dev ft-test ft-lint ft-format ft-preview backend-image frontend-image bk-image ft-image db-up db-down db-logs db-upgrade db-downgrade db-revision migration update-from-template update-from-template-dry-run update-existing-solution update-existing-solution-dry-run update-architecture-docs update-architecture-docs-dry-run update-agent-configs update-agent-configs-dry-run sync-codex-adapters check-codex-adapters collect-agent-run new-openspec-change fix autofix format-fix fmt-python fmt-ci-python format-python check-python-format lint-python run-pytest pytest export-openapi check-openapi container-checks build-backend-container run-backend-container stop-backend-container test-backend-container scan-backend-container setup-hooks uninstall-hooks
+.PHONY: help help-all doctor setup setup-delorean setup-local-env install-node check-node setup-python-venv install test lint format typecheck install-python install-dev-python install-frontend-deps install-backend-deps install-openspec-cli check-openspec-cli validate-openspec-change pick-openspec-change validate-active-openspec-change check-delorean-setup start start-dev dev backend-dev worker start-frontend start-backend frontend-install frontend-build frontend-dev frontend-test frontend-lint frontend-format frontend-preview all-install all-build all-test all-lint all-format bk-install bk-test bk-lint bk-format bk-typecheck bk-dev bk-worker bk-migration ft-install ft-build ft-dev ft-test ft-lint ft-format ft-preview backend-image frontend-image bk-image ft-image db-up db-wait db-down db-logs db-upgrade db-downgrade db-revision db-reset-local ensure-local-db-ready migration update-from-template update-from-template-dry-run update-existing-solution update-existing-solution-dry-run update-architecture-docs update-architecture-docs-dry-run update-agent-configs update-agent-configs-dry-run sync-codex-adapters check-codex-adapters collect-agent-run new-openspec-change fix autofix format-fix fmt-python fmt-ci-python format-python check-python-format lint-python run-pytest pytest export-openapi check-openapi container-checks build-backend-container run-backend-container stop-backend-container test-backend-container scan-backend-container setup-hooks uninstall-hooks
 
 help:
 	@echo "Starter commands (Delorean Level $(HELP_LEVEL); override with LEVEL=2|3|4; use make help-all for the full list):"
@@ -89,6 +92,7 @@ help:
 	@echo "  make start-frontend"
 	@echo "  make start-backend"
 	@echo "  make db-up"
+	@echo "  make db-reset-local"
 	@echo "  make db-upgrade"
 	@echo "  make db-down"
 	@echo ""
@@ -421,7 +425,11 @@ start: start-dev
 
 dev: backend-dev
 
-backend-dev:
+ensure-local-db-ready:
+	@$(MAKE) --no-print-directory db-up
+	@$(MAKE) --no-print-directory db-upgrade
+
+backend-dev: ensure-local-db-ready
 	@if [ ! -x "$(PYTHON)" ]; then \
 		echo "Backend development dependencies are missing. Run 'make install-backend-deps' first."; \
 		exit 1; \
@@ -552,12 +560,38 @@ migration: db-upgrade
 
 db-up:
 	docker compose -f $(DATABASE_COMPOSE_FILE) up -d db redis
+	@$(MAKE) --no-print-directory db-wait
+
+db-wait:
+	@printf 'Waiting for Postgres to accept connections'
+	@attempts=0; \
+	until docker compose -f $(DATABASE_COMPOSE_FILE) exec -T db sh -lc 'pg_isready -U "$(POSTGRES_USER)" -d "$(POSTGRES_DB)" >/dev/null 2>&1'; do \
+		attempts=$$((attempts + 1)); \
+		if [ "$$attempts" -ge 30 ]; then \
+			echo ''; \
+			echo 'Postgres did not become ready within 30 seconds.' >&2; \
+			exit 1; \
+		fi; \
+		printf '.'; \
+		sleep 1; \
+	done; \
+	echo ' ready'
 
 db-down:
 	docker compose -f $(DATABASE_COMPOSE_FILE) stop db redis
 
 db-logs:
 	docker compose -f $(DATABASE_COMPOSE_FILE) logs -f db redis
+
+db-reset-local:
+	docker compose -f $(DATABASE_COMPOSE_FILE) down -v
+	docker compose -f $(DATABASE_COMPOSE_FILE) up -d db redis
+	@$(MAKE) --no-print-directory db-wait
+	$(ALEMBIC_CMD) upgrade head
+	$(BACKEND_CMD) python -m src.scripts.create_first_superuser
+	$(BACKEND_CMD) python -m src.scripts.seed_access_policies
+	@echo "Local database reset complete."
+	@echo "Next step: make start-dev"
 
 db-upgrade:
 	$(ALEMBIC_CMD) upgrade head
@@ -577,6 +611,7 @@ start-dev:
 		echo "Backend development dependencies are missing. Run 'make install-backend-deps' first."; \
 		exit 1; \
 	fi
+	@$(MAKE) --no-print-directory ensure-local-db-ready
 	@echo "Starting backend at http://$(BACKEND_HOST):$(BACKEND_PORT)"
 	@echo "Starting frontend at http://$(FRONTEND_HOST):$(FRONTEND_PORT)"
 	@echo "Stop both with Ctrl-C."
@@ -588,7 +623,7 @@ start-dev:
 	}; \
 	trap 'cleanup; exit 130' INT TERM; \
 	trap 'cleanup' EXIT; \
-	( cd $(BACKEND_DIR) && exec env UV_PROJECT_ENVIRONMENT="$(UV_PROJECT_ENVIRONMENT)" $(UV) run uvicorn src.app.main:app --reload --host $(BACKEND_HOST) --port $(BACKEND_PORT) ) & \
+	( cd $(BACKEND_DIR) && exec env UV_CACHE_DIR="$(UV_CACHE_DIR)" UV_PROJECT_ENVIRONMENT="$(UV_PROJECT_ENVIRONMENT)" $(UV) run uvicorn src.app.main:app --reload --host $(BACKEND_HOST) --port $(BACKEND_PORT) ) & \
 	backend_pid=$$!; \
 	( cd $(FRONTEND_DIR) && exec $(PNPM) run dev -- --host $(FRONTEND_HOST) --port $(FRONTEND_PORT) ) & \
 	frontend_pid=$$!; \

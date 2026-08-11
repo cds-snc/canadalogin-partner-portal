@@ -1,11 +1,22 @@
-import { useState } from "react";
+import { useState, type FormEvent } from "react";
 import { useNavigate, useParams, useSearch } from "@tanstack/react-router";
 import { useTranslation } from "react-i18next";
 import type { FunctionComponent } from "@/common/types";
-import { Button, ConfirmDialog, Heading, Notice, Text } from "@/components/ui";
+import {
+	Button,
+	ConfirmDialog,
+	DateInput,
+	Heading,
+	Input,
+	Link,
+	Notice,
+	Select,
+	Text,
+} from "@/components/ui";
 import { getRequestErrorNotice } from "@/fetch";
 import { useApplicationInformationContacts } from "../hooks/use-application-information-contacts";
 import { useWorkspaceApplicationInformationList } from "../hooks/use-workspace-application-information";
+import { useWorkspaceRPApplicationDeveloperInvitations } from "../hooks/use-workspace-rp-application-developer-invitations";
 import { useWorkspaceRPApplicationManagement } from "../hooks/use-workspace-rp-application-management";
 import { useWorkspaceRPApplication } from "../hooks/use-workspace-rp-applications";
 import {
@@ -37,6 +48,78 @@ const readStringArray = (
 	);
 };
 
+type InvitationFormState = {
+	inviteExpiresAt: string;
+	invitedEmail: string;
+	role: string;
+};
+
+type CreatedInvitationState = {
+	acceptanceUrl: string;
+	invitedEmail: string;
+	role: string;
+};
+
+const RP_USER_EDIT_ROLE = "RP User (Edit)";
+
+const getToday = (): string => new Date().toISOString().slice(0, 10);
+
+const getDefaultInvitationExpiry = (): string => {
+	const nextWeek = new Date();
+	nextWeek.setUTCDate(nextWeek.getUTCDate() + 7);
+	return nextWeek.toISOString().slice(0, 10);
+};
+
+const createEmptyInvitationForm = (): InvitationFormState => ({
+	inviteExpiresAt: getDefaultInvitationExpiry(),
+	invitedEmail: "",
+	role: RP_USER_EDIT_ROLE,
+});
+
+const toInvitationExpiryTimestamp = (selectedDate: string): string => {
+	const trimmedDate = selectedDate.trim();
+	const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(trimmedDate);
+	if (!match) {
+		throw new Error("Invitation expiry must be in YYYY-MM-DD format");
+	}
+
+	const year = Number(match[1]);
+	const month = Number(match[2]);
+	const day = Number(match[3]);
+	const timestamp = Date.UTC(year, month - 1, day, 23, 59, 59, 999);
+	const normalizedDate = new Date(timestamp);
+	if (
+		normalizedDate.getUTCFullYear() !== year ||
+		normalizedDate.getUTCMonth() !== month - 1 ||
+		normalizedDate.getUTCDate() !== day
+	) {
+		throw new Error("Invitation expiry must be a valid calendar date");
+	}
+
+	return normalizedDate.toISOString();
+};
+
+const getInvitationStatusLabel = (
+	t: (
+		key: string | Array<string>,
+		options?: Record<string, unknown>
+	) => string,
+	status: string | null | undefined
+): string => {
+	switch ((status ?? "").trim().toLowerCase()) {
+		case "accepted":
+			return t("workspaces.applicationsInvitationStatusAccepted");
+		case "expired":
+			return t("workspaces.applicationsInvitationStatusExpired");
+		case "pending":
+			return t("workspaces.applicationsInvitationStatusPending");
+		case "revoked":
+			return t("workspaces.applicationsInvitationStatusRevoked");
+		default:
+			return status?.trim() || t("common.notAvailable");
+	}
+};
+
 export const WorkspaceApplicationDetailPage = (): FunctionComponent => {
 	const { t } = useTranslation() as unknown as {
 		t: (
@@ -57,9 +140,27 @@ export const WorkspaceApplicationDetailPage = (): FunctionComponent => {
 	);
 	const { deleteRPApplication, isDeleting } =
 		useWorkspaceRPApplicationManagement();
+	const {
+		createInvitation,
+		error: invitationError,
+		invitations,
+		isCreating: isCreatingInvitation,
+		isLoading: isLoadingInvitations,
+		isRevoking: isRevokingInvitation,
+		revokeInvitation,
+	} = useWorkspaceRPApplicationDeveloperInvitations(
+		workspaceUuid,
+		rpApplicationUuid
+	);
 	const { applicationInformationRecords } =
 		useWorkspaceApplicationInformationList(workspaceUuid);
 	const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+	const [createdInvitation, setCreatedInvitation] =
+		useState<CreatedInvitationState | null>(null);
+	const [invitationForm, setInvitationForm] =
+		useState<InvitationFormState>(createEmptyInvitationForm);
+	const [invitationLocalError, setInvitationLocalError] =
+		useState<Error | null>(null);
 	const [localError, setLocalError] = useState<Error | null>(null);
 	const linkedApplicationInformation =
 		!application?.application_information_id
@@ -97,6 +198,13 @@ export const WorkspaceApplicationDetailPage = (): FunctionComponent => {
 		bodyKey: "workspaces.applicationsErrorBody",
 		titleKey: "workspaces.applicationsErrorTitle",
 	});
+	const invitationErrorNotice = getRequestErrorNotice(
+		invitationLocalError ?? invitationError,
+		{
+			bodyKey: "workspaces.applicationsInvitationErrorBody",
+			titleKey: "workspaces.applicationsInvitationErrorTitle",
+		}
+	);
 	const registrationPayload =
 		(application?.oidc_registration_payload as Record<
 			string,
@@ -118,6 +226,44 @@ export const WorkspaceApplicationDetailPage = (): FunctionComponent => {
 			: search.updated === "1"
 				? t("workspaces.applicationsUpdatedSuccess")
 				: null;
+
+	const handleCreateInvitation = async (
+		event: FormEvent<HTMLFormElement>
+	): Promise<void> => {
+		event.preventDefault();
+		setCreatedInvitation(null);
+		setInvitationLocalError(null);
+
+		try {
+			const created = await createInvitation({
+				inviteExpiresAt: toInvitationExpiryTimestamp(
+					invitationForm.inviteExpiresAt
+				),
+				invitedEmail: invitationForm.invitedEmail.trim(),
+				role: invitationForm.role,
+			});
+			setCreatedInvitation({
+				acceptanceUrl: created.acceptanceUrl,
+				invitedEmail: created.invitedEmail,
+				role: created.role,
+			});
+			setInvitationForm(createEmptyInvitationForm());
+		} catch (requestError) {
+			setInvitationLocalError(requestError as Error);
+		}
+	};
+
+	const handleRevokeInvitation = async (
+		invitationUuid: string
+	): Promise<void> => {
+		setInvitationLocalError(null);
+
+		try {
+			await revokeInvitation(invitationUuid);
+		} catch (requestError) {
+			setInvitationLocalError(requestError as Error);
+		}
+	};
 
 	const handleDeleteApplication = async (): Promise<void> => {
 		setLocalError(null);
@@ -262,6 +408,183 @@ export const WorkspaceApplicationDetailPage = (): FunctionComponent => {
 							</ul>
 						) : (
 							<Text>{t("workspaces.applicationsNoRedirectUris")}</Text>
+						)}
+					</div>
+
+					<div className="grid gap-200 rounded-sm border border-[var(--gcds-border-default)] bg-[var(--gcds-bg-white)] p-300">
+						<Heading tag="h2">
+							{t("workspaces.applicationsInvitationsTitle")}
+						</Heading>
+						<Text>{t("workspaces.applicationsInvitationsSummary")}</Text>
+						<Text>
+							{t("workspaces.applicationsInvitationsDeliveryNotice")}
+						</Text>
+
+						{createdInvitation ? (
+							<Notice
+								noticeRole="success"
+								noticeTitleTag="h3"
+								noticeTitle={t(
+									"workspaces.applicationsInvitationCreatedTitle"
+								)}
+							>
+								<Text>
+									{t("workspaces.applicationsInvitationCreatedBody", {
+										email: createdInvitation.invitedEmail,
+										role: createdInvitation.role,
+									})}
+								</Text>
+								<Text>
+									{`${t("workspaces.applicationsInvitationAcceptanceUrlLabel")}: ${createdInvitation.acceptanceUrl}`}
+								</Text>
+								<Link href={createdInvitation.acceptanceUrl}>
+									{t("workspaces.applicationsInvitationOpenLinkAction")}
+								</Link>
+							</Notice>
+						) : null}
+
+						{invitationErrorNotice ? (
+							<Notice
+								noticeRole={invitationErrorNotice.noticeRole}
+								noticeTitle={t(invitationErrorNotice.titleKey)}
+								noticeTitleTag="h3"
+							>
+								<Text>
+									{invitationErrorNotice.bodyText ??
+										t(invitationErrorNotice.bodyKey)}
+								</Text>
+							</Notice>
+						) : null}
+
+						<form className="grid gap-200" onSubmit={handleCreateInvitation}>
+							<Input
+								required
+								inputId="developer-invitation-email"
+								label={t("workspaces.applicationsInvitationEmailLabel")}
+								name="developer-invitation-email"
+								type="email"
+								value={invitationForm.invitedEmail}
+								onInput={(event): void => {
+									setInvitationForm((currentForm) => ({
+										...currentForm,
+										invitedEmail: (
+											event.target as HTMLInputElement
+										).value,
+									}));
+								}}
+							/>
+							<Select
+								required
+								label={t("workspaces.applicationsInvitationRoleLabel")}
+								name="developer-invitation-role"
+								selectId="developer-invitation-role"
+								value={invitationForm.role}
+								onInput={(event): void => {
+									setInvitationForm((currentForm) => ({
+										...currentForm,
+										role: (
+											event.target as HTMLSelectElement
+										).value,
+									}));
+								}}
+							>
+								<option value="RP Admin">
+									{t("workspaces.applicationsInvitationRoleAdmin")}
+								</option>
+								<option value="RP User (Edit)">
+									{t("workspaces.applicationsInvitationRoleEdit")}
+								</option>
+								<option value="Read Only">
+									{t("workspaces.applicationsInvitationRoleReadOnly")}
+								</option>
+							</Select>
+							<DateInput
+								required
+								format="full"
+								max="2099-12-31"
+								min={getToday()}
+								name="developer-invitation-expires-at"
+								value={invitationForm.inviteExpiresAt}
+								legend={t(
+									"workspaces.applicationsInvitationExpiresAtLabel"
+								)}
+								onInput={(event): void => {
+									setInvitationForm((currentForm) => ({
+										...currentForm,
+										inviteExpiresAt: (
+											event.target as HTMLInputElement
+										).value,
+									}));
+								}}
+							/>
+							<div>
+								<Button className="w-full md:w-auto" type="submit">
+									{isCreatingInvitation
+										? t(
+												"workspaces.applicationsInvitationCreatingAction"
+										  )
+										: t(
+												"workspaces.applicationsInvitationCreateAction"
+										  )}
+								</Button>
+							</div>
+						</form>
+
+						{isLoadingInvitations ? (
+							<Notice
+								noticeRole="info"
+								noticeTitleTag="h3"
+								noticeTitle={t(
+									"workspaces.applicationsInvitationsLoadingTitle"
+								)}
+							>
+								<Text>
+									{t("workspaces.applicationsInvitationsLoadingBody")}
+								</Text>
+							</Notice>
+						) : invitations.length === 0 ? (
+							<Text>{t("workspaces.applicationsInvitationsEmpty")}</Text>
+						) : (
+							<div className="grid gap-200">
+								{invitations.map((invitation) => (
+									<div
+										key={invitation.uuid}
+										className="grid gap-100 rounded-sm border border-[var(--gcds-border-default)] bg-[var(--gcds-bg-white)] p-200"
+									>
+										<Text>
+											{`${t("workspaces.applicationsInvitationEmailLabel")}: ${invitation.invitedEmail}`}
+										</Text>
+										<Text>
+											{`${t("workspaces.applicationsInvitationRoleLabel")}: ${invitation.role}`}
+										</Text>
+										<Text>
+											{`${t("workspaces.applicationsInvitationStatusLabel")}: ${getInvitationStatusLabel(t, invitation.status)}`}
+										</Text>
+										<Text>
+											{`${t("workspaces.applicationsInvitationExpiresAtDisplayLabel")}: ${invitation.inviteExpiresAt}`}
+										</Text>
+										{invitation.status === "pending" ? (
+											<div>
+												<Button
+													buttonRole="danger"
+													type="button"
+													onGcdsClick={() => {
+														void handleRevokeInvitation(invitation.uuid);
+													}}
+												>
+													{isRevokingInvitation
+														? t(
+																"workspaces.applicationsInvitationRevokingAction"
+														  )
+														: t(
+																"workspaces.applicationsInvitationRevokeAction"
+														  )}
+												</Button>
+											</div>
+										) : null}
+									</div>
+								))}
+							</div>
 						)}
 					</div>
 

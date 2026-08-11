@@ -14,8 +14,9 @@ architecture decisions, and development conventions.
 This repository provides a top-level `Makefile` to simplify common developer tasks for both backend and frontend. **Use `make` targets instead of running commands directly.**
 
 Backend `make` targets pin `uv` to the repo-root `.venv`, which avoids accidentally creating or using a separate `backend/.venv`.
+They also default `UV_CACHE_DIR` to a writable local path so sandboxed shells do not fail on `~/.cache/uv` permissions.
 
-For local host-run backend development, start the dependency services first. The backend expects PostgreSQL on `localhost:5432` and Redis on `localhost:6379`. Start your local container runtime first, for example `colima start` on macOS or Docker Desktop, then run `make db-up`.
+For local host-run backend development, start your local container runtime first, for example `colima start` on macOS or Docker Desktop. The backend expects PostgreSQL on `localhost:5432` and Redis on `localhost:6379`; `make dev`, `make bk-dev`, and `make start-dev` now bring those dependency services up and apply migrations automatically before launching the app.
 
 Key targets:
 
@@ -23,6 +24,7 @@ Key targets:
 |---|---|---|---|
 | Install dependencies | `make install` | `make frontend-install` | `make all-install` |
 | Start Postgres and Redis | `make db-up` | — | — |
+| Reset local DB and reseed local access | `make db-reset-local` | — | — |
 | Build | — | `make frontend-build` | `make all-build` (frontend only) |
 | Development server | `make dev` or `make bk-dev` | `make frontend-dev` | `make start-dev` |
 | Test | `make test` | `make frontend-test` (unit) | `make all-test` (backend + frontend unit) |
@@ -32,7 +34,7 @@ Key targets:
 
 Shortcuts: `make bk-*` for backend, `make ft-*` for frontend (e.g., `make bk-test`, `make ft-lint`).
 
-Common local service helpers: `make db-up`, `make db-logs`, and `make db-down`.
+Common local service helpers: `make db-up`, `make db-logs`, `make db-down`, and `make db-reset-local`.
 
 Run `make help` for a full list of available targets.
 
@@ -85,15 +87,14 @@ make bk-install
 # 2. Create local configuration on first use, then fill in safe local values
 cp backend/.env.sample backend/.env
 
-# 3. Start your container runtime if needed, then bring up Postgres and Redis
+# 3. Start your container runtime if needed
 # macOS example: colima start
-make db-up
 
 # 4. Start the backend development server
 make bk-dev
 ```
 
-`make bk-dev` runs the backend on the host, not in Docker, so it needs the dependency services from `make db-up` to be reachable on `localhost`.
+`make bk-dev` runs the backend on the host, not in Docker. It now starts Postgres and Redis and applies migrations automatically before launching, but your container runtime still needs to be available.
 
 Common backend tasks (via Makefile):
 
@@ -106,6 +107,10 @@ make db-logs
 
 # Stop dependency services
 make db-down
+
+# Rebuild the local Postgres/Redis state, apply migrations, and rerun
+# the local superuser and access-policy seed scripts
+make db-reset-local
 
 # Run backend tests
 make test
@@ -170,7 +175,7 @@ cd frontend && pnpm run test:e2e
 
 The `backend/docker-compose.yml` can run the backend and required services (Postgres, Redis). The frontend can be built and served by a static server or included in a multi-service compose stack.
 
-For the common mixed local workflow, use `make db-up` from the repo root to start only Postgres and Redis, then run `make bk-dev` or `make start-dev` on the host. This compose file publishes PostgreSQL on `localhost:5432` and Redis on `localhost:6379` so the host-run backend can connect.
+For the common mixed local workflow, run `make bk-dev` or `make start-dev` from the repo root after your container runtime is available. Those targets now ensure Postgres and Redis are up and migrate the local database before the host-run backend starts. You can still use `make db-up` when you only want the dependency services. This compose file publishes PostgreSQL on `localhost:5432` and Redis on `localhost:6379` so the host-run backend can connect.
 
 Example (from `backend/`):
 

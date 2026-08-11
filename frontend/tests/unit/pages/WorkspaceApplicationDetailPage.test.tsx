@@ -4,11 +4,14 @@ import { describe, expect, it, vi } from "vitest";
 import { WorkspaceApplicationDetailPage } from "@/features/workspaces/pages/WorkspaceApplicationDetailPage";
 import { useApplicationInformationContacts } from "@/features/workspaces/hooks/use-application-information-contacts";
 import { useWorkspaceApplicationInformationList } from "@/features/workspaces/hooks/use-workspace-application-information";
+import { useWorkspaceRPApplicationDeveloperInvitations } from "@/features/workspaces/hooks/use-workspace-rp-application-developer-invitations";
 import { useWorkspaceRPApplicationManagement } from "@/features/workspaces/hooks/use-workspace-rp-application-management";
 import { useWorkspaceRPApplication } from "@/features/workspaces/hooks/use-workspace-rp-applications";
 
 const navigateMock = vi.fn();
+const createInvitationMock = vi.fn();
 const deleteRPApplicationMock = vi.fn();
+const revokeInvitationMock = vi.fn();
 const useSearchMock = vi.fn((): { created?: "1"; updated?: "1" } => ({ created: "1" }));
 
 vi.mock("react-i18next", () => ({
@@ -36,6 +39,34 @@ vi.mock("react-i18next", () => ({
 				"workspaces.applicationsCreatedSuccess": "RP application created successfully",
 				"workspaces.applicationsCreatedAtLabel": "Created",
 				"workspaces.applicationsDetailSummary": "Review the current workspace-scoped RP application context and operational links.",
+				"workspaces.applicationsInvitationAcceptanceUrlLabel": "Invitation link",
+				"workspaces.applicationsInvitationCreateAction": "Create invitation",
+				"workspaces.applicationsInvitationCreatedBody": "Share this acceptance link with {{email}} for the {{role}} role.",
+				"workspaces.applicationsInvitationCreatedTitle": "Invitation ready",
+				"workspaces.applicationsInvitationCreatingAction": "Creating invitation...",
+				"workspaces.applicationsInvitationEmailLabel": "Invitee email",
+				"workspaces.applicationsInvitationErrorBody": "The developer invitation request could not be completed from this page.",
+				"workspaces.applicationsInvitationErrorTitle": "Unable to manage developer invitations",
+				"workspaces.applicationsInvitationExpiresAtDisplayLabel": "Expires",
+				"workspaces.applicationsInvitationExpiresAtLabel": "Invitation expiry date",
+				"workspaces.applicationsInvitationOpenLinkAction": "Open invitation link",
+				"workspaces.applicationsInvitationRevokingAction": "Revoking invitation...",
+				"workspaces.applicationsInvitationRevokeAction": "Revoke invitation",
+				"workspaces.applicationsInvitationRoleAdmin": "RP Admin",
+				"workspaces.applicationsInvitationRoleEdit": "RP User (Edit)",
+				"workspaces.applicationsInvitationRoleLabel": "Invitation role",
+				"workspaces.applicationsInvitationRoleReadOnly": "Read Only",
+				"workspaces.applicationsInvitationStatusAccepted": "Accepted",
+				"workspaces.applicationsInvitationStatusExpired": "Expired",
+				"workspaces.applicationsInvitationStatusLabel": "Status",
+				"workspaces.applicationsInvitationStatusPending": "Pending",
+				"workspaces.applicationsInvitationStatusRevoked": "Revoked",
+				"workspaces.applicationsInvitationsDeliveryNotice": "Invitation emails are not sent automatically in this release. Copy and share the generated acceptance link with the invited collaborator.",
+				"workspaces.applicationsInvitationsEmpty": "No developer invitations have been created for this RP application yet.",
+				"workspaces.applicationsInvitationsLoadingBody": "Loading developer invitations for this RP application.",
+				"workspaces.applicationsInvitationsLoadingTitle": "Loading developer invitations",
+				"workspaces.applicationsInvitationsSummary": "Invite RP Admin, RP User (Edit), or Read Only collaborators into this partner context.",
+				"workspaces.applicationsInvitationsTitle": "Developer invitations",
 				"workspaces.applicationsEditAction": "Edit application",
 				"workspaces.applicationsEnvironmentLabel": "CanadaLogin environment",
 				"workspaces.applicationsIbmIdLabel": "IBM Security Verify application ID",
@@ -81,10 +112,25 @@ vi.mock("@/components/ui", () => ({
 		type === "link" ? (
 			<a href={href}>{children}</a>
 		) : (
-			<button onClick={onGcdsClick} type="button">
+			<button onClick={onGcdsClick} type={type === "submit" ? "submit" : "button"}>
 				{children}
 			</button>
 		),
+	DateInput: ({ legend, name, onInput, value }: { legend: string; name: string; onInput?: (event: { target: { value: string } }) => void; value?: string }): ReactElement => (
+		<label>
+			<span>{legend}</span>
+			<input
+				name={name}
+				type="date"
+				value={value}
+				onInput={(event): void =>
+					onInput?.({
+						target: { value: (event.target as HTMLInputElement).value },
+					})
+				}
+			/>
+		</label>
+	),
 	ConfirmDialog: ({ cancelLabel, confirmLabel, description, isOpen, onCancel, onConfirm, title }: {
 		cancelLabel: string;
 		confirmLabel: string;
@@ -108,11 +154,44 @@ vi.mock("@/components/ui", () => ({
 		) : null,
 	Heading: ({ children, tag }: PropsWithChildren<{ tag?: string }>): ReactElement =>
 		tag === "h2" ? <h2>{children}</h2> : <h1>{children}</h1>,
+	Input: ({ inputId, label, name, onInput, type, value }: { inputId: string; label: string; name: string; onInput?: (event: { target: { value: string } }) => void; type?: string; value?: string }): ReactElement => (
+		<label htmlFor={inputId}>
+			<span>{label}</span>
+			<input
+				id={inputId}
+				name={name}
+				type={type}
+				value={value}
+				onInput={(event): void =>
+					onInput?.({
+						target: { value: (event.target as HTMLInputElement).value },
+					})
+				}
+			/>
+		</label>
+	),
 	Notice: ({ children, noticeTitle }: PropsWithChildren<{ noticeTitle: string }>): ReactElement => (
 		<section>
 			<h2>{noticeTitle}</h2>
 			{children}
 		</section>
+	),
+	Select: ({ children, label, name, onInput, selectId, value }: PropsWithChildren<{ label: string; name: string; onInput?: (event: { target: { value: string } }) => void; selectId: string; value?: string }>): ReactElement => (
+		<label htmlFor={selectId}>
+			<span>{label}</span>
+			<select
+				id={selectId}
+				name={name}
+				value={value}
+				onInput={(event): void =>
+					onInput?.({
+						target: { value: (event.target as HTMLSelectElement).value },
+					})
+				}
+			>
+				{children}
+			</select>
+		</label>
 	),
 	Text: ({ children }: PropsWithChildren): ReactElement => <p>{children}</p>,
 }));
@@ -125,6 +204,13 @@ vi.mock("@/features/workspaces/hooks/use-workspace-rp-application-management", (
 	useWorkspaceRPApplicationManagement: vi.fn(),
 }));
 
+vi.mock(
+	"@/features/workspaces/hooks/use-workspace-rp-application-developer-invitations",
+	() => ({
+		useWorkspaceRPApplicationDeveloperInvitations: vi.fn(),
+	})
+);
+
 vi.mock("@/features/workspaces/hooks/use-application-information-contacts", () => ({
 	useApplicationInformationContacts: vi.fn(),
 }));
@@ -134,8 +220,22 @@ vi.mock("@/features/workspaces/hooks/use-workspace-application-information", () 
 }));
 
 describe("WorkspaceApplicationDetailPage", () => {
+	const mockInvitationState = {
+		createInvitation: createInvitationMock,
+		error: null,
+		invitations: [],
+		isCreating: false,
+		isLoading: false,
+		isRevoking: false,
+		refetch: vi.fn((): Promise<unknown> => Promise.resolve()),
+		revokeInvitation: revokeInvitationMock,
+	};
+
 	it("shows the unlinked application-information state when no canonical record is attached", () => {
 		useSearchMock.mockReturnValue({});
+		vi.mocked(useWorkspaceRPApplicationDeveloperInvitations).mockReturnValue(
+			mockInvitationState
+		);
 		vi.mocked(useWorkspaceRPApplicationManagement).mockReturnValue({
 			createRPApplication: vi.fn(),
 			deleteRPApplication: deleteRPApplicationMock,
@@ -201,6 +301,9 @@ describe("WorkspaceApplicationDetailPage", () => {
 
 	it("deletes the workspace application and returns to the list", async () => {
 		useSearchMock.mockReturnValue({});
+		vi.mocked(useWorkspaceRPApplicationDeveloperInvitations).mockReturnValue(
+			mockInvitationState
+		);
 		deleteRPApplicationMock.mockResolvedValue({
 			message: "RP application deleted successfully",
 		});
@@ -276,6 +379,30 @@ describe("WorkspaceApplicationDetailPage", () => {
 
 	it("renders the linked application context and operational links", () => {
 		useSearchMock.mockReturnValue({ created: "1" });
+		vi.mocked(useWorkspaceRPApplicationDeveloperInvitations).mockReturnValue({
+			...mockInvitationState,
+			invitations: [
+				{
+					acceptedAt: null,
+					createdAt: "2026-08-11T10:00:00Z",
+					delegatedByGrantUuid: null,
+					deletedAt: null,
+					gcNotifyNotificationId: null,
+					id: 18,
+					invitedBy: 7,
+					invitedEmail: "invitee@example.gc.ca",
+					inviteExpiresAt: "2026-08-20T23:59:59.999Z",
+					isDeleted: false,
+					rpApplicationId: 21,
+					role: "RP User (Edit)",
+					revokedAt: null,
+					status: "pending",
+					updatedAt: null,
+					uuid: "invitation-uuid-1",
+					workspaceId: 9,
+				},
+			],
+		});
 		vi.mocked(useWorkspaceRPApplicationManagement).mockReturnValue({
 			createRPApplication: vi.fn(),
 			deleteRPApplication: deleteRPApplicationMock,
@@ -393,10 +520,163 @@ describe("WorkspaceApplicationDetailPage", () => {
 		expect(
 			screen.getByRole("link", { name: /review usage summary/i }).getAttribute("href")
 		).toBe("/workspaces/workspace-uuid-1/applications/rp-application-uuid-1/usage");
+		expect(
+			screen.getByRole("heading", { name: /developer invitations/i })
+		).toBeTruthy();
+		expect(screen.getByText(/invitee@example.gc.ca/i)).toBeTruthy();
+		expect(screen.getByText(/status: pending/i)).toBeTruthy();
+	});
+
+	it("creates and revokes developer invitations from the application detail page", async () => {
+		useSearchMock.mockReturnValue({});
+		createInvitationMock.mockResolvedValue({
+			acceptanceUrl:
+				"http://localhost:3000/invitations/rp-applications/invite-token",
+			acceptedAt: null,
+			createdAt: "2026-08-11T12:00:00Z",
+			delegatedByGrantUuid: null,
+			deletedAt: null,
+			gcNotifyNotificationId: null,
+			id: 19,
+			invitedBy: 7,
+			invitedEmail: "new.invitee@example.gc.ca",
+			inviteExpiresAt: "2026-08-20T23:59:59.999Z",
+			isDeleted: false,
+			rpApplicationId: 21,
+			role: "Read Only",
+			revokedAt: null,
+			status: "pending",
+			updatedAt: null,
+			uuid: "invitation-uuid-2",
+			workspaceId: 9,
+		});
+		revokeInvitationMock.mockResolvedValue({
+			acceptedAt: null,
+			createdAt: "2026-08-11T10:00:00Z",
+			delegatedByGrantUuid: null,
+			deletedAt: null,
+			gcNotifyNotificationId: null,
+			id: 18,
+			invitedBy: 7,
+			invitedEmail: "invitee@example.gc.ca",
+			inviteExpiresAt: "2026-08-20T23:59:59.999Z",
+			isDeleted: false,
+			rpApplicationId: 21,
+			role: "RP User (Edit)",
+			revokedAt: "2026-08-11T12:05:00Z",
+			status: "revoked",
+			updatedAt: "2026-08-11T12:05:00Z",
+			uuid: "invitation-uuid-1",
+			workspaceId: 9,
+		});
+		vi.mocked(useWorkspaceRPApplicationDeveloperInvitations).mockReturnValue({
+			...mockInvitationState,
+			invitations: [
+				{
+					acceptedAt: null,
+					createdAt: "2026-08-11T10:00:00Z",
+					delegatedByGrantUuid: null,
+					deletedAt: null,
+					gcNotifyNotificationId: null,
+					id: 18,
+					invitedBy: 7,
+					invitedEmail: "invitee@example.gc.ca",
+					inviteExpiresAt: "2026-08-20T23:59:59.999Z",
+					isDeleted: false,
+					rpApplicationId: 21,
+					role: "RP User (Edit)",
+					revokedAt: null,
+					status: "pending",
+					updatedAt: null,
+					uuid: "invitation-uuid-1",
+					workspaceId: 9,
+				},
+			],
+		});
+		vi.mocked(useWorkspaceRPApplicationManagement).mockReturnValue({
+			createRPApplication: vi.fn(),
+			deleteRPApplication: deleteRPApplicationMock,
+			isCreating: false,
+			isDeleting: false,
+			isUpdating: false,
+			updateRPApplication: vi.fn(),
+		});
+		vi.mocked(useApplicationInformationContacts).mockReturnValue({
+			addContact: vi.fn(),
+			contacts: [],
+			error: null,
+			isAdding: false,
+			isDeleting: false,
+			isLoading: false,
+			isUpdating: false,
+			refetch: vi.fn((): Promise<unknown> => Promise.resolve()),
+			removeContact: vi.fn(),
+			updateContact: vi.fn(),
+		});
+		vi.mocked(useWorkspaceRPApplication).mockReturnValue({
+			application: {
+				application_information_id: null,
+				application_owner: { owners: [{ email: "owner@example.gc.ca" }] },
+				canada_login_environment: "staging",
+				created_at: "2026-07-31T10:05:00Z",
+				created_by: 7,
+				dnr_app_name: "Benefits Portal",
+				ibm_sv_application_id: "ibm-app-123",
+				id: 21,
+				is_deleted: false,
+				oidc_registration_payload: null,
+				status: "active",
+				uuid: "rp-application-uuid-1",
+				workspace_id: 9,
+			},
+			error: null,
+			isLoading: false,
+			refetch: vi.fn((): Promise<unknown> => Promise.resolve()),
+		});
+		vi.mocked(useWorkspaceApplicationInformationList).mockReturnValue({
+			applicationInformationRecords: [],
+			error: null,
+			isLoading: false,
+			refetch: vi.fn((): Promise<unknown> => Promise.resolve()),
+		});
+
+		render(<WorkspaceApplicationDetailPage />);
+
+		fireEvent.input(screen.getByLabelText(/invitee email/i), {
+			target: { value: "new.invitee@example.gc.ca" },
+		});
+		fireEvent.input(screen.getByLabelText(/invitation role/i), {
+			target: { value: "Read Only" },
+		});
+		fireEvent.input(screen.getByLabelText(/invitation expiry date/i), {
+			target: { value: "2026-08-20" },
+		});
+		fireEvent.click(screen.getByRole("button", { name: /create invitation/i }));
+
+		await waitFor(() => {
+			expect(createInvitationMock).toHaveBeenCalledWith({
+				inviteExpiresAt: "2026-08-20T23:59:59.999Z",
+				invitedEmail: "new.invitee@example.gc.ca",
+				role: "Read Only",
+			});
+		});
+
+		expect(
+			screen.getByRole("link", { name: /open invitation link/i })
+		).toBeTruthy();
+
+		fireEvent.click(screen.getByRole("button", { name: /revoke invitation/i }));
+
+		await waitFor(() => {
+			expect(revokeInvitationMock).toHaveBeenCalledWith("invitation-uuid-1");
+		});
 	});
 
 	it("shows an advisory production warning when linked readiness is incomplete", () => {
 		useSearchMock.mockReturnValue({});
+		vi.mocked(useWorkspaceRPApplicationDeveloperInvitations).mockReturnValue(
+			mockInvitationState
+		);
 		vi.mocked(useWorkspaceRPApplicationManagement).mockReturnValue({
 			createRPApplication: vi.fn(),
 			deleteRPApplication: deleteRPApplicationMock,

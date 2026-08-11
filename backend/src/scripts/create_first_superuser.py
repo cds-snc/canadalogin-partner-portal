@@ -1,70 +1,96 @@
 import asyncio
 import logging
-from datetime import UTC, datetime
 
-from sqlalchemy import Boolean, Column, DateTime, ForeignKey, Integer, MetaData, String, Table, insert, select
-from sqlalchemy.dialects.postgresql import UUID
-from uuid6 import uuid7  # 126
+from sqlalchemy import select
 
 from ..app.core.config import settings
-from ..app.core.db.database import AsyncSession, async_engine, local_session
+from ..app.core.db.database import AsyncSession, local_session
+from ..app.models.role import Role
 from ..app.models.user import User
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
+
+def _normalize_email(value: str) -> str:
+    return value.strip().lower()
+
+
+def _merge_role_ids(role_ids: list[int] | None, role_id: int) -> list[int]:
+    merged_role_ids = list(role_ids or [])
+    if role_id not in merged_role_ids:
+        merged_role_ids.append(role_id)
+    return merged_role_ids
+
+
+async def _ensure_admin_role(session: AsyncSession) -> Role:
+    role_name = settings.CLPP_ADMIN_ROLE_NAME.strip()
+    result = await session.execute(select(Role).filter_by(name=role_name))
+    role = result.scalar_one_or_none()
+
+    if role is None:
+        role = Role(
+            name=role_name,
+            description="Administrator role mapped from OIDC admin group",
+        )
+        session.add(role)
+        await session.flush()
+        logger.info("Created local bootstrap admin role %s.", role_name)
+    elif role.is_deleted:
+        role.is_deleted = False
+        role.deleted_at = None
+        logger.info("Reactivated local bootstrap admin role %s.", role_name)
+
+    if role.id is None:
+        raise RuntimeError("Failed to resolve bootstrap admin role id")
+
+    return role
+
+
 async def create_first_user(session: AsyncSession) -> None:
     try:
         email = settings.SUPERUSER
-        if email is None:
+        if email is None or not email.strip():
             logger.info("No SUPERUSER email configured; skipping first superuser seed.")
             return
 
-        name = email
-        username = email
+        normalized_email = _normalize_email(email)
+        admin_role = await _ensure_admin_role(session)
 
-        query = select(User).filter_by(email=email)
+        query = select(User).filter_by(email=normalized_email)
         result = await session.execute(query)
         user = result.scalar_one_or_none()
 
         if user is None:
-            metadata = MetaData()
-            user_table = Table(
-                "user",
-                metadata,
-                Column("id", Integer, primary_key=True, autoincrement=True, nullable=False),
-                Column("name", String(30), nullable=False),
-                Column("username", String(255), nullable=False, unique=True, index=True),
-                Column("email", String(255), nullable=False, unique=True, index=True),
-                Column("profile_image_url", String, default="https://profileimageurl.com"),
-                Column("uuid", UUID(as_uuid=True), default=uuid7, unique=True),
-                Column("created_at", DateTime(timezone=True), default=lambda: datetime.now(UTC), nullable=False),
-                Column("updated_at", DateTime),
-                Column("deleted_at", DateTime),
-                Column("is_deleted", Boolean, default=False, index=True),
-                Column("is_superuser", Boolean, default=False),
-                Column("tier_id", Integer, ForeignKey("tier.id"), index=True),
+            user = User(
+                name=normalized_email,
+                email=normalized_email,
+                username=normalized_email,
+                is_superuser=True,
+                enabled=True,
+                role_ids=[admin_role.id],
             )
+            session.add(user)
 
-            data = {
-                "name": name,
-                "email": email,
-                "username": username,
-                "is_superuser": True,
-            }
-
-            stmt = insert(user_table).values(data)
-            async with async_engine.connect() as conn:
-                await conn.execute(stmt)
-                await conn.commit()
-
-            logger.info(f"Admin user {username} created successfully.")
+            logger.info("Admin user %s created successfully.", normalized_email)
 
         else:
-            logger.info(f"Admin user {username} already exists.")
+            if not user.name:
+                user.name = normalized_email
+            user.email = normalized_email
+            user.username = normalized_email
+            user.is_superuser = True
+            user.enabled = True
+            user.is_deleted = False
+            user.deleted_at = None
+            user.role_ids = _merge_role_ids(user.role_ids, admin_role.id)
+
+            logger.info("Admin user %s already exists; refreshed local admin access.", normalized_email)
+
+        await session.commit()
 
     except Exception as e:
-        logger.error(f"Error creating admin user: {e}")
+        logger.error("Error creating admin user: %s", e)
 
 
 async def main():

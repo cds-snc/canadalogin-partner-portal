@@ -319,7 +319,7 @@ describe("UsersPage", () => {
 						name: "Jane Doe",
 						"profileImageUrl": "https://example.com/jane.png",
 						"departmentUuid": "department-uuid-1",
-						"roleUuids": ["role-uuid-3"],
+						"roleUuids": [],
 						"tierUuid": "tier-uuid-3",
 						uuid: "user-uuid-7",
 					},
@@ -338,7 +338,7 @@ describe("UsersPage", () => {
 					name: "Jane Doe",
 					"profileImageUrl": "https://example.com/jane.png",
 					"departmentUuid": "department-uuid-1",
-					"roleUuids": ["role-uuid-3"],
+					"roleUuids": [],
 					"tierUuid": "tier-uuid-3",
 					uuid: "user-uuid-7",
 				},
@@ -389,7 +389,14 @@ describe("UsersPage", () => {
 			isLoading: false,
 			isRemoving: false,
 			removeRole,
-			roles: [],
+			roles: [
+				{
+					created_at: "2026-03-17T00:00:00Z",
+					description: "Administrator role",
+					name: "admin",
+					uuid: "role-uuid-3",
+				},
+			],
 		});
 
 		render(
@@ -399,6 +406,11 @@ describe("UsersPage", () => {
 		);
 
 		fireEvent.click(screen.getByRole("button", { name: /manage roles/i }));
+
+		await waitFor(() => {
+			expect(useUserRole).toHaveBeenLastCalledWith("user-uuid-7");
+		});
+		expect(screen.getByText("admin")).toBeTruthy();
 		fireEvent.input(screen.getByLabelText(/^role$/i), {
 			target: { value: "role-uuid-4" },
 		});

@@ -78,7 +78,7 @@ def upgrade() -> None:
         sa.PrimaryKeyConstraint("id"),
         sa.UniqueConstraint(
             "application_information_id",
-            name="uq_application_information_review_checklist_application_information_id",
+            name="uq_app_info_review_checklist_app_info_id",
         ),
         sa.UniqueConstraint("uuid"),
     )

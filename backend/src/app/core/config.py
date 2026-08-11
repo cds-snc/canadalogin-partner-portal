@@ -26,7 +26,7 @@ class CryptSettings(BaseSettings):
 class SessionSettings(BaseSettings):
     SESSION_COOKIE_NAME: str = "app_session"
     SESSION_COOKIE_SECURE: bool = False
-    SESSION_COOKIE_DOMAIN: str = ".canada.ca"
+    SESSION_COOKIE_DOMAIN: str | None = ".canada.ca"
     SESSION_COOKIE_SAMESITE: str = "lax"
     SESSION_MAX_AGE: int = 60 * 60 * 8
     SESSION_ROLLING: bool = False
@@ -296,6 +296,7 @@ class Settings(
     )
 
     @field_validator(
+        "SESSION_COOKIE_DOMAIN",
         "REDIS_SESSION_PASSWORD",
         "REDIS_CACHE_HOST",
         "REDIS_CACHE_PORT",
@@ -327,6 +328,9 @@ class Settings(
         DB number is intentionally NOT cascaded — each client keeps its own default
         (session=1, cache/queue/rate-limit=0).
         """
+        if self.ENVIRONMENT == EnvironmentOption.LOCAL and self.SESSION_COOKIE_DOMAIN == ".canada.ca":
+            self.SESSION_COOKIE_DOMAIN = None
+
         if not self.REDIS_CACHE_HOST:
             self.REDIS_CACHE_HOST = self.REDIS_SESSION_HOST
         if self.REDIS_CACHE_PORT is None:
