@@ -193,6 +193,9 @@ vi.mock("@/components/ui", () => ({
 			</select>
 		</label>
 	),
+	Link: ({ children, href }: PropsWithChildren<{ href: string }>): ReactElement => (
+		<a href={href}>{children}</a>
+	),
 	Text: ({ children }: PropsWithChildren): ReactElement => <p>{children}</p>,
 }));
 
