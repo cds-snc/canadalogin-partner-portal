@@ -17,6 +17,7 @@ import { Route as TermsAndConditionsRouteImport } from './routes/terms-and-condi
 import { Route as SupportRouteImport } from './routes/support'
 import { Route as RolesRouteImport } from './routes/roles'
 import { Route as PoliciesRouteImport } from './routes/policies'
+import { Route as OnboardingOversightRouteImport } from './routes/onboarding-oversight'
 import { Route as LogoutRouteImport } from './routes/logout'
 import { Route as InvitationsRouteImport } from './routes/invitations'
 import { Route as ErrorRouteImport } from './routes/error'
@@ -28,10 +29,13 @@ import { Route as AcceptTermsRouteImport } from './routes/accept-terms'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as YourApplicationsIndexRouteImport } from './routes/your-applications/index'
 import { Route as WorkspacesIndexRouteImport } from './routes/workspaces/index'
+import { Route as OnboardingOversightIndexRouteImport } from './routes/onboarding-oversight/index'
 import { Route as YourApplicationsRpApplicationUuidRouteImport } from './routes/your-applications/$rpApplicationUuid'
 import { Route as WorkspacesNewRouteImport } from './routes/workspaces/new'
 import { Route as WorkspacesWorkspaceUuidRouteImport } from './routes/workspaces/$workspaceUuid'
 import { Route as ProfileSetupRouteImport } from './routes/profile/setup'
+import { Route as OnboardingOversightReportsRouteImport } from './routes/onboarding-oversight/reports'
+import { Route as OnboardingOversightQueueRouteImport } from './routes/onboarding-oversight/queue'
 import { Route as InvitationsRpApplicationsRouteImport } from './routes/invitations/rp-applications'
 import { Route as YourApplicationsRpApplicationUuidIndexRouteImport } from './routes/your-applications/$rpApplicationUuid/index'
 import { Route as WorkspacesWorkspaceUuidIndexRouteImport } from './routes/workspaces/$workspaceUuid/index'
@@ -97,6 +101,11 @@ const PoliciesRoute = PoliciesRouteImport.update({
   path: '/policies',
   getParentRoute: () => rootRouteImport,
 } as any)
+const OnboardingOversightRoute = OnboardingOversightRouteImport.update({
+  id: '/onboarding-oversight',
+  path: '/onboarding-oversight',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const LogoutRoute = LogoutRouteImport.update({
   id: '/logout',
   path: '/logout',
@@ -152,6 +161,12 @@ const WorkspacesIndexRoute = WorkspacesIndexRouteImport.update({
   path: '/',
   getParentRoute: () => WorkspacesRoute,
 } as any)
+const OnboardingOversightIndexRoute =
+  OnboardingOversightIndexRouteImport.update({
+    id: '/',
+    path: '/',
+    getParentRoute: () => OnboardingOversightRoute,
+  } as any)
 const YourApplicationsRpApplicationUuidRoute =
   YourApplicationsRpApplicationUuidRouteImport.update({
     id: '/$rpApplicationUuid',
@@ -173,6 +188,18 @@ const ProfileSetupRoute = ProfileSetupRouteImport.update({
   path: '/profile/setup',
   getParentRoute: () => rootRouteImport,
 } as any)
+const OnboardingOversightReportsRoute =
+  OnboardingOversightReportsRouteImport.update({
+    id: '/reports',
+    path: '/reports',
+    getParentRoute: () => OnboardingOversightRoute,
+  } as any)
+const OnboardingOversightQueueRoute =
+  OnboardingOversightQueueRouteImport.update({
+    id: '/queue',
+    path: '/queue',
+    getParentRoute: () => OnboardingOversightRoute,
+  } as any)
 const InvitationsRpApplicationsRoute =
   InvitationsRpApplicationsRouteImport.update({
     id: '/rp-applications',
@@ -340,6 +367,7 @@ export interface FileRoutesByFullPath {
   '/error': typeof ErrorRoute
   '/invitations': typeof InvitationsRouteWithChildren
   '/logout': typeof LogoutRoute
+  '/onboarding-oversight': typeof OnboardingOversightRouteWithChildren
   '/policies': typeof PoliciesRoute
   '/roles': typeof RolesRoute
   '/support': typeof SupportRoute
@@ -349,10 +377,13 @@ export interface FileRoutesByFullPath {
   '/workspaces': typeof WorkspacesRouteWithChildren
   '/your-applications': typeof YourApplicationsRouteWithChildren
   '/invitations/rp-applications': typeof InvitationsRpApplicationsRouteWithChildren
+  '/onboarding-oversight/queue': typeof OnboardingOversightQueueRoute
+  '/onboarding-oversight/reports': typeof OnboardingOversightReportsRoute
   '/profile/setup': typeof ProfileSetupRoute
   '/workspaces/$workspaceUuid': typeof WorkspacesWorkspaceUuidRouteWithChildren
   '/workspaces/new': typeof WorkspacesNewRoute
   '/your-applications/$rpApplicationUuid': typeof YourApplicationsRpApplicationUuidRouteWithChildren
+  '/onboarding-oversight/': typeof OnboardingOversightIndexRoute
   '/workspaces/': typeof WorkspacesIndexRoute
   '/your-applications/': typeof YourApplicationsIndexRoute
   '/invitations/rp-applications/$token': typeof InvitationsRpApplicationsTokenRoute
@@ -395,8 +426,11 @@ export interface FileRoutesByTo {
   '/terms-and-conditions': typeof TermsAndConditionsRoute
   '/tiers': typeof TiersRoute
   '/users': typeof UsersRoute
+  '/onboarding-oversight/queue': typeof OnboardingOversightQueueRoute
+  '/onboarding-oversight/reports': typeof OnboardingOversightReportsRoute
   '/profile/setup': typeof ProfileSetupRoute
   '/workspaces/new': typeof WorkspacesNewRoute
+  '/onboarding-oversight': typeof OnboardingOversightIndexRoute
   '/workspaces': typeof WorkspacesIndexRoute
   '/your-applications': typeof YourApplicationsIndexRoute
   '/invitations/rp-applications/$token': typeof InvitationsRpApplicationsTokenRoute
@@ -430,6 +464,7 @@ export interface FileRoutesById {
   '/error': typeof ErrorRoute
   '/invitations': typeof InvitationsRouteWithChildren
   '/logout': typeof LogoutRoute
+  '/onboarding-oversight': typeof OnboardingOversightRouteWithChildren
   '/policies': typeof PoliciesRoute
   '/roles': typeof RolesRoute
   '/support': typeof SupportRoute
@@ -439,10 +474,13 @@ export interface FileRoutesById {
   '/workspaces': typeof WorkspacesRouteWithChildren
   '/your-applications': typeof YourApplicationsRouteWithChildren
   '/invitations/rp-applications': typeof InvitationsRpApplicationsRouteWithChildren
+  '/onboarding-oversight/queue': typeof OnboardingOversightQueueRoute
+  '/onboarding-oversight/reports': typeof OnboardingOversightReportsRoute
   '/profile/setup': typeof ProfileSetupRoute
   '/workspaces/$workspaceUuid': typeof WorkspacesWorkspaceUuidRouteWithChildren
   '/workspaces/new': typeof WorkspacesNewRoute
   '/your-applications/$rpApplicationUuid': typeof YourApplicationsRpApplicationUuidRouteWithChildren
+  '/onboarding-oversight/': typeof OnboardingOversightIndexRoute
   '/workspaces/': typeof WorkspacesIndexRoute
   '/your-applications/': typeof YourApplicationsIndexRoute
   '/invitations/rp-applications/$token': typeof InvitationsRpApplicationsTokenRoute
@@ -481,6 +519,7 @@ export interface FileRouteTypes {
     | '/error'
     | '/invitations'
     | '/logout'
+    | '/onboarding-oversight'
     | '/policies'
     | '/roles'
     | '/support'
@@ -490,10 +529,13 @@ export interface FileRouteTypes {
     | '/workspaces'
     | '/your-applications'
     | '/invitations/rp-applications'
+    | '/onboarding-oversight/queue'
+    | '/onboarding-oversight/reports'
     | '/profile/setup'
     | '/workspaces/$workspaceUuid'
     | '/workspaces/new'
     | '/your-applications/$rpApplicationUuid'
+    | '/onboarding-oversight/'
     | '/workspaces/'
     | '/your-applications/'
     | '/invitations/rp-applications/$token'
@@ -536,8 +578,11 @@ export interface FileRouteTypes {
     | '/terms-and-conditions'
     | '/tiers'
     | '/users'
+    | '/onboarding-oversight/queue'
+    | '/onboarding-oversight/reports'
     | '/profile/setup'
     | '/workspaces/new'
+    | '/onboarding-oversight'
     | '/workspaces'
     | '/your-applications'
     | '/invitations/rp-applications/$token'
@@ -570,6 +615,7 @@ export interface FileRouteTypes {
     | '/error'
     | '/invitations'
     | '/logout'
+    | '/onboarding-oversight'
     | '/policies'
     | '/roles'
     | '/support'
@@ -579,10 +625,13 @@ export interface FileRouteTypes {
     | '/workspaces'
     | '/your-applications'
     | '/invitations/rp-applications'
+    | '/onboarding-oversight/queue'
+    | '/onboarding-oversight/reports'
     | '/profile/setup'
     | '/workspaces/$workspaceUuid'
     | '/workspaces/new'
     | '/your-applications/$rpApplicationUuid'
+    | '/onboarding-oversight/'
     | '/workspaces/'
     | '/your-applications/'
     | '/invitations/rp-applications/$token'
@@ -620,6 +669,7 @@ export interface RootRouteChildren {
   ErrorRoute: typeof ErrorRoute
   InvitationsRoute: typeof InvitationsRouteWithChildren
   LogoutRoute: typeof LogoutRoute
+  OnboardingOversightRoute: typeof OnboardingOversightRouteWithChildren
   PoliciesRoute: typeof PoliciesRoute
   RolesRoute: typeof RolesRoute
   SupportRoute: typeof SupportRoute
@@ -687,6 +737,13 @@ declare module '@tanstack/react-router' {
       path: '/policies'
       fullPath: '/policies'
       preLoaderRoute: typeof PoliciesRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/onboarding-oversight': {
+      id: '/onboarding-oversight'
+      path: '/onboarding-oversight'
+      fullPath: '/onboarding-oversight'
+      preLoaderRoute: typeof OnboardingOversightRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/logout': {
@@ -766,6 +823,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof WorkspacesIndexRouteImport
       parentRoute: typeof WorkspacesRoute
     }
+    '/onboarding-oversight/': {
+      id: '/onboarding-oversight/'
+      path: '/'
+      fullPath: '/onboarding-oversight/'
+      preLoaderRoute: typeof OnboardingOversightIndexRouteImport
+      parentRoute: typeof OnboardingOversightRoute
+    }
     '/your-applications/$rpApplicationUuid': {
       id: '/your-applications/$rpApplicationUuid'
       path: '/$rpApplicationUuid'
@@ -793,6 +857,20 @@ declare module '@tanstack/react-router' {
       fullPath: '/profile/setup'
       preLoaderRoute: typeof ProfileSetupRouteImport
       parentRoute: typeof rootRouteImport
+    }
+    '/onboarding-oversight/reports': {
+      id: '/onboarding-oversight/reports'
+      path: '/reports'
+      fullPath: '/onboarding-oversight/reports'
+      preLoaderRoute: typeof OnboardingOversightReportsRouteImport
+      parentRoute: typeof OnboardingOversightRoute
+    }
+    '/onboarding-oversight/queue': {
+      id: '/onboarding-oversight/queue'
+      path: '/queue'
+      fullPath: '/onboarding-oversight/queue'
+      preLoaderRoute: typeof OnboardingOversightQueueRouteImport
+      parentRoute: typeof OnboardingOversightRoute
     }
     '/invitations/rp-applications': {
       id: '/invitations/rp-applications'
@@ -993,6 +1071,21 @@ const InvitationsRouteWithChildren = InvitationsRoute._addFileChildren(
   InvitationsRouteChildren,
 )
 
+interface OnboardingOversightRouteChildren {
+  OnboardingOversightQueueRoute: typeof OnboardingOversightQueueRoute
+  OnboardingOversightReportsRoute: typeof OnboardingOversightReportsRoute
+  OnboardingOversightIndexRoute: typeof OnboardingOversightIndexRoute
+}
+
+const OnboardingOversightRouteChildren: OnboardingOversightRouteChildren = {
+  OnboardingOversightQueueRoute: OnboardingOversightQueueRoute,
+  OnboardingOversightReportsRoute: OnboardingOversightReportsRoute,
+  OnboardingOversightIndexRoute: OnboardingOversightIndexRoute,
+}
+
+const OnboardingOversightRouteWithChildren =
+  OnboardingOversightRoute._addFileChildren(OnboardingOversightRouteChildren)
+
 interface WorkspacesWorkspaceUuidApplicationInformationApplicationInformationUuidRouteChildren {
   WorkspacesWorkspaceUuidApplicationInformationApplicationInformationUuidEditRoute: typeof WorkspacesWorkspaceUuidApplicationInformationApplicationInformationUuidEditRoute
   WorkspacesWorkspaceUuidApplicationInformationApplicationInformationUuidIndexRoute: typeof WorkspacesWorkspaceUuidApplicationInformationApplicationInformationUuidIndexRoute
@@ -1165,6 +1258,7 @@ const rootRouteChildren: RootRouteChildren = {
   ErrorRoute: ErrorRoute,
   InvitationsRoute: InvitationsRouteWithChildren,
   LogoutRoute: LogoutRoute,
+  OnboardingOversightRoute: OnboardingOversightRouteWithChildren,
   PoliciesRoute: PoliciesRoute,
   RolesRoute: RolesRoute,
   SupportRoute: SupportRoute,

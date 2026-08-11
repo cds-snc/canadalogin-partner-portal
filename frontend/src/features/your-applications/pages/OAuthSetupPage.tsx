@@ -30,6 +30,66 @@ const StatusBadge = ({ status }: { status: string }): ReactNode => {
 	);
 };
 
+const formatTokenLabel = (value: string): string =>
+	value
+		.trim()
+		.replace(/_/g, " ")
+		.replace(/\s+/g, " ");
+
+const getEnvironmentLabel = (
+	t: (key: string) => string,
+	environment: string
+): string => {
+	switch (environment.trim().toLowerCase()) {
+		case "test":
+			return t("rpOAuthSetup.environmentTest");
+		case "staging":
+			return t("rpOAuthSetup.environmentStaging");
+		case "production":
+			return t("rpOAuthSetup.environmentProduction");
+		default:
+			return formatTokenLabel(environment);
+	}
+};
+
+const getOnboardingStateLabel = (
+	t: (key: string) => string,
+	state: string
+): string => {
+	switch (state.trim().toLowerCase()) {
+		case "draft":
+			return t("rpOAuthSetup.onboardingStateDraft");
+		case "submitted":
+			return t("rpOAuthSetup.onboardingStateSubmitted");
+		case "under_review":
+			return t("rpOAuthSetup.onboardingStateUnderReview");
+		case "approved":
+			return t("rpOAuthSetup.onboardingStateApproved");
+		case "launched":
+			return t("rpOAuthSetup.onboardingStateLaunched");
+		default:
+			return formatTokenLabel(state);
+	}
+};
+
+const getPromotionStatusLabel = (
+	t: (key: string) => string,
+	status: string
+): string => {
+	switch (status.trim().toLowerCase()) {
+		case "review_tracked":
+			return t("rpOAuthSetup.promotionStatusReviewTracked");
+		case "changes_requested":
+			return t("rpOAuthSetup.promotionStatusChangesRequested");
+		case "approved":
+			return t("rpOAuthSetup.promotionStatusApproved");
+		case "launched":
+			return t("rpOAuthSetup.promotionStatusLaunched");
+		default:
+			return formatTokenLabel(status);
+	}
+};
+
 export const OAuthSetupPage = (): FunctionComponent => {
 	const { rpApplicationUuid } = useParams({
 		from: "/your-applications/$rpApplicationUuid",
@@ -127,7 +187,16 @@ export const OAuthSetupPage = (): FunctionComponent => {
 			? t("rpOAuthSetup.pkceEnabled")
 			: oauthSetup.pkceEnabled === false
 				? t("rpOAuthSetup.pkceDisabled")
-				: t("common.notAvailable");
+				: t("rpOAuthSetup.notAvailable");
+	const environmentLabel = oauthSetup.canadaLoginEnvironment?.trim()
+		? getEnvironmentLabel(t, oauthSetup.canadaLoginEnvironment)
+		: t("rpOAuthSetup.notAvailable");
+	const onboardingStateLabel = oauthSetup.onboardingState?.trim()
+		? getOnboardingStateLabel(t, oauthSetup.onboardingState)
+		: t("rpOAuthSetup.notAvailable");
+	const promotionStatusLabel = oauthSetup.promotionStatus?.trim()
+		? getPromotionStatusLabel(t, oauthSetup.promotionStatus)
+		: null;
 
 	return (
 		<Grid columns="1fr" tag="div">
@@ -161,6 +230,24 @@ export const OAuthSetupPage = (): FunctionComponent => {
 						</dd>
 					</Grid>
 				) : null}
+				<Grid columns="1fr" columnsTablet="auto 1fr" tag="dl">
+					<dt>
+						<strong>{t("rpOAuthSetup.environmentLabel")}:</strong>
+					</dt>
+					<dd>{environmentLabel}</dd>
+					<dt>
+						<strong>{t("rpOAuthSetup.onboardingStateLabel")}:</strong>
+					</dt>
+					<dd>{onboardingStateLabel}</dd>
+					{promotionStatusLabel ? (
+						<>
+							<dt>
+								<strong>{t("rpOAuthSetup.productionReviewLabel")}:</strong>
+							</dt>
+							<dd>{promotionStatusLabel}</dd>
+						</>
+					) : null}
+				</Grid>
 			</Grid>
 
 			<Details detailsTitle={t("rpOAuthSetup.oauthSectionTitle")}>

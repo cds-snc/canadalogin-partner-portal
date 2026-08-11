@@ -14,7 +14,7 @@ from src.app.api.dependencies import (
 )
 from src.app.core.access_control import CASBIN_MODEL_PATH, database_enforcer_provider
 from src.app.core.db.database import async_get_db
-from src.app.core.exceptions.http_exceptions import ForbiddenException, NotFoundException
+from src.app.core.exceptions.http_exceptions import BadRequestException, ForbiddenException, NotFoundException
 from src.app.main import app
 
 
@@ -80,6 +80,43 @@ def sample_application_information_contact_payload(*, responsibility_en: str = "
     }
 
 
+def sample_application_information_review_note_payload(
+    *,
+    body: str = "Checklist evidence reference still missing",
+) -> dict[str, object]:
+    return {
+        "id": 2,
+        "uuid": "018f6f83-0000-0000-0000-000000000911",
+        "application_information_id": 17,
+        "body": body,
+        "author_name": "CL Admin",
+        "author_email": "admin@example.gc.ca",
+        "author_user_uuid": "018f6f83-0000-0000-0000-000000000001",
+        "created_at": datetime(2026, 8, 11, 12, 30, tzinfo=UTC).isoformat(),
+        "updated_at": None,
+    }
+
+
+def sample_application_information_review_checklist_payload() -> dict[str, object]:
+    return {
+        "id": 3,
+        "uuid": "018f6f83-0000-0000-0000-000000000912",
+        "application_information_id": 17,
+        "review_disposition": "changes_requested",
+        "application_information_status": "complete",
+        "contacts_status": "incomplete",
+        "environment_registration_status": "complete",
+        "promotion_metadata_status": "not_started",
+        "evidence_reference_status": "incomplete",
+        "process_links_status": "complete",
+        "rationale": "Need a linked evidence reference before approval",
+        "reviewed_by_name": "CL Admin",
+        "reviewed_by_user_uuid": "018f6f83-0000-0000-0000-000000000001",
+        "created_at": datetime(2026, 8, 11, 12, 10, tzinfo=UTC).isoformat(),
+        "updated_at": datetime(2026, 8, 11, 12, 35, tzinfo=UTC).isoformat(),
+    }
+
+
 def sample_rp_application_payload(*, dnr_app_name: str = "Benefits Portal") -> dict[str, object]:
     return {
         "id": 33,
@@ -101,6 +138,112 @@ def sample_rp_application_payload(*, dnr_app_name: str = "Benefits Portal") -> d
             "requested_scopes": ["openid", "profile"],
         },
         "application_owner": None,
+        "promotion_target_environment": None,
+        "promotion_status": None,
+        "promotion_external_reference": None,
+        "promotion_reviewed_by_user_uuid": None,
+        "promotion_reviewed_by_team": None,
+        "promotion_requested_at": None,
+        "promotion_reviewed_at": None,
+        "promotion_decided_at": None,
+    }
+
+
+def sample_submitted_rp_application_payload() -> dict[str, object]:
+    return {
+        **sample_rp_application_payload(),
+        "onboarding_state": "submitted",
+        "submitted_at": datetime(2026, 8, 11, 12, 0, tzinfo=UTC).isoformat(),
+        "under_review_at": None,
+        "approved_at": None,
+        "launched_at": None,
+    }
+
+
+def sample_review_tracked_production_rp_application_payload() -> dict[str, object]:
+    return {
+        **sample_rp_application_payload(),
+        "canada_login_environment": "production",
+        "onboarding_state": "under_review",
+        "submitted_at": datetime(2026, 8, 11, 11, 30, tzinfo=UTC).isoformat(),
+        "under_review_at": datetime(2026, 8, 11, 11, 45, tzinfo=UTC).isoformat(),
+        "approved_at": None,
+        "launched_at": None,
+        "promotion_target_environment": "production",
+        "promotion_status": "review_tracked",
+        "promotion_external_reference": "CAB-123",
+        "promotion_reviewed_by_user_uuid": None,
+        "promotion_reviewed_by_team": None,
+        "promotion_requested_at": datetime(2026, 8, 11, 11, 45, tzinfo=UTC).isoformat(),
+        "promotion_reviewed_at": None,
+        "promotion_decided_at": None,
+    }
+
+
+def sample_approved_production_rp_application_payload() -> dict[str, object]:
+    return {
+        **sample_review_tracked_production_rp_application_payload(),
+        "promotion_status": "approved",
+        "promotion_reviewed_by_user_uuid": "018f6f83-0000-0000-0000-000000000001",
+        "promotion_reviewed_by_team": "CanadaLogin",
+        "promotion_reviewed_at": datetime(2026, 8, 11, 12, 15, tzinfo=UTC).isoformat(),
+        "promotion_decided_at": datetime(2026, 8, 11, 12, 15, tzinfo=UTC).isoformat(),
+    }
+
+
+def sample_promotion_request_payload() -> dict[str, object]:
+    return {
+        "target_environment": "production",
+        "status": "approved",
+        "external_reference": "CAB-123",
+        "reviewed_by_user_uuid": "018f6f83-0000-0000-0000-000000000001",
+        "reviewed_by_team": "CanadaLogin",
+        "requested_at": datetime(2026, 8, 11, 11, 45, tzinfo=UTC).isoformat(),
+        "reviewed_at": datetime(2026, 8, 11, 12, 15, tzinfo=UTC).isoformat(),
+        "decided_at": datetime(2026, 8, 11, 12, 15, tzinfo=UTC).isoformat(),
+        "created_at": datetime(2026, 8, 11, 11, 45, tzinfo=UTC).isoformat(),
+        "updated_at": datetime(2026, 8, 11, 12, 15, tzinfo=UTC).isoformat(),
+    }
+
+
+def assert_default_onboarding_fields(payload: dict[str, object]) -> None:
+    assert payload["onboardingState"] == "draft"
+    assert payload["submittedAt"] is None
+    assert payload["underReviewAt"] is None
+    assert payload["approvedAt"] is None
+    assert payload["launchedAt"] is None
+
+
+def assert_default_promotion_fields(payload: dict[str, object]) -> None:
+    assert payload["promotionTargetEnvironment"] is None
+    assert payload["promotionStatus"] is None
+    assert payload["promotionExternalReference"] is None
+    assert payload["promotionReviewedByUserUuid"] is None
+    assert payload["promotionReviewedByTeam"] is None
+    assert payload["promotionRequestedAt"] is None
+    assert payload["promotionReviewedAt"] is None
+    assert payload["promotionDecidedAt"] is None
+
+
+def sample_submitted_workspace_payload() -> dict[str, object]:
+    return {
+        **sample_workspace_payload(),
+        "onboarding_state": "submitted",
+        "submitted_at": datetime(2026, 8, 11, 12, 0, tzinfo=UTC).isoformat(),
+        "under_review_at": None,
+        "approved_at": None,
+        "launched_at": None,
+    }
+
+
+def sample_submitted_application_information_payload() -> dict[str, object]:
+    return {
+        **sample_application_information_payload(),
+        "onboarding_state": "submitted",
+        "submitted_at": datetime(2026, 8, 11, 12, 0, tzinfo=UTC).isoformat(),
+        "under_review_at": None,
+        "approved_at": None,
+        "launched_at": None,
     }
 
 
@@ -156,21 +299,11 @@ class TestWorkspaceRoutes:
             app.dependency_overrides.clear()
 
         assert response.status_code == 200
-        assert response.json() == [
-            {
-                "id": 9,
-                "uuid": "018f6f83-0000-0000-0000-000000000201",
-                "name": "Benefits Workspace",
-                "slug": "benefits-workspace",
-                "departmentId": 7,
-                "description": "Primary workspace",
-                "createdBy": 42,
-                "createdAt": "2026-07-30T12:00:00+00:00",
-                "updatedAt": None,
-                "deletedAt": None,
-                "isDeleted": False,
-            }
-        ]
+        body = response.json()
+        assert body[0]["uuid"] == "018f6f83-0000-0000-0000-000000000201"
+        assert body[0]["name"] == "Benefits Workspace"
+        assert body[0]["departmentId"] == 7
+        assert_default_onboarding_fields(body[0])
 
     def test_current_user_workspaces_list_uses_authenticated_current_user_scope(self) -> None:
         service = Mock()
@@ -196,6 +329,7 @@ class TestWorkspaceRoutes:
 
         assert response.status_code == 200
         assert response.json()[0]["uuid"] == "018f6f83-0000-0000-0000-000000000201"
+        assert_default_onboarding_fields(response.json()[0])
         service.list_current_user_workspaces.assert_awaited_once_with(
             db=db,
             current_user=current_user,
@@ -275,11 +409,74 @@ class TestWorkspaceRoutes:
 
         assert response.status_code == 200
         assert response.json()["uuid"] == "018f6f83-0000-0000-0000-000000000201"
+        assert_default_onboarding_fields(response.json())
         service.get_workspace_by_uuid.assert_awaited_once_with(
             db=db,
             workspace_uuid=uuid_pkg.UUID("018f6f83-0000-0000-0000-000000000201"),
             current_user=current_user,
         )
+
+    def test_workspace_onboarding_state_transition_delegates_to_service(self) -> None:
+        service = Mock()
+        service.transition_workspace_onboarding_state = AsyncMock(
+            return_value=sample_submitted_workspace_payload()
+        )
+        current_user = {
+            "id": 42,
+            "username": "workspace-admin@example.gc.ca",
+            "is_superuser": False,
+        }
+        db = Mock()
+
+        app.dependency_overrides[get_current_user] = lambda: current_user
+        app.dependency_overrides[get_workspace_service] = lambda: service
+        app.dependency_overrides[async_get_db] = lambda: db
+
+        try:
+            with TestClient(app) as client:
+                response = client.post(
+                    "/api/v1/workspaces/018f6f83-0000-0000-0000-000000000201/onboarding-state",
+                    json={"targetState": "submitted"},
+                )
+        finally:
+            app.dependency_overrides.clear()
+
+        assert response.status_code == 200
+        assert response.json()["onboardingState"] == "submitted"
+        assert response.json()["submittedAt"] == "2026-08-11T12:00:00+00:00"
+        transition_kwargs = service.transition_workspace_onboarding_state.await_args.kwargs
+        assert transition_kwargs["db"] is db
+        assert transition_kwargs["workspace_uuid"] == uuid_pkg.UUID(
+            "018f6f83-0000-0000-0000-000000000201"
+        )
+        assert transition_kwargs["current_user"] == current_user
+        assert transition_kwargs["payload"].target_state == "submitted"
+
+    def test_workspace_onboarding_state_transition_surfaces_forbidden(self) -> None:
+        service = Mock()
+        service.transition_workspace_onboarding_state = AsyncMock(
+            side_effect=ForbiddenException("You do not have enough privileges.")
+        )
+
+        app.dependency_overrides[get_current_user] = lambda: {
+            "id": 55,
+            "username": "member@example.gc.ca",
+            "is_superuser": False,
+        }
+        app.dependency_overrides[get_workspace_service] = lambda: service
+        app.dependency_overrides[async_get_db] = lambda: Mock()
+
+        try:
+            with TestClient(app) as client:
+                response = client.post(
+                    "/api/v1/workspaces/018f6f83-0000-0000-0000-000000000201/onboarding-state",
+                    json={"targetState": "approved"},
+                )
+        finally:
+            app.dependency_overrides.clear()
+
+        assert response.status_code == 403
+        assert response.json()["error"]["code"] == "forbidden"
 
     def test_workspace_crud_mutations_delegate_to_service_for_admin(self) -> None:
         service = Mock()
@@ -325,9 +522,11 @@ class TestWorkspaceRoutes:
 
         assert create_response.status_code == 201
         assert create_response.json()["departmentId"] == 7
+        assert_default_onboarding_fields(create_response.json())
         assert update_response.status_code == 200
         assert update_response.json()["name"] == "Renamed Workspace"
         assert update_response.json()["slug"] == "renamed-workspace"
+        assert_default_onboarding_fields(update_response.json())
         assert delete_response.status_code == 200
 
     def test_workspace_members_crud_delegates_to_service_for_workspace_admin(self) -> None:
@@ -542,12 +741,16 @@ class TestWorkspaceRoutes:
 
         assert list_response.status_code == 200
         assert list_response.json()[0]["serviceNameEn"] == "Example service"
+        assert_default_onboarding_fields(list_response.json()[0])
         assert create_response.status_code == 201
         assert create_response.json()["serviceNameFr"] == "Service exemple"
+        assert_default_onboarding_fields(create_response.json())
         assert detail_response.status_code == 200
         assert detail_response.json()["uuid"] == "018f6f83-0000-0000-0000-000000000501"
+        assert_default_onboarding_fields(detail_response.json())
         assert update_response.status_code == 200
         assert update_response.json()["serviceNameEn"] == "Updated service"
+        assert_default_onboarding_fields(update_response.json())
         assert delete_response.status_code == 200
         assert delete_response.json() == {"message": "Application information deleted"}
         assert contacts_list_response.status_code == 200
@@ -558,6 +761,45 @@ class TestWorkspaceRoutes:
         assert contact_update_response.json()["responsibilityEn"] == "Updated responsibility"
         assert contact_delete_response.status_code == 200
         assert contact_delete_response.json() == {"message": "Application information contact deleted"}
+
+    def test_workspace_application_information_onboarding_state_transition_delegates_to_service(self) -> None:
+        service = Mock()
+        service.transition_workspace_application_information_onboarding_state = AsyncMock(
+            return_value=sample_submitted_application_information_payload()
+        )
+        current_user = {
+            "id": 42,
+            "username": "workspace-admin@example.gc.ca",
+            "is_superuser": False,
+        }
+        db = Mock()
+
+        app.dependency_overrides[get_current_user] = lambda: current_user
+        app.dependency_overrides[get_workspace_service] = lambda: service
+        app.dependency_overrides[async_get_db] = lambda: db
+
+        try:
+            with TestClient(app) as client:
+                response = client.post(
+                    "/api/v1/workspaces/018f6f83-0000-0000-0000-000000000201/application-information/018f6f83-0000-0000-0000-000000000501/onboarding-state",
+                    json={"targetState": "submitted"},
+                )
+        finally:
+            app.dependency_overrides.clear()
+
+        assert response.status_code == 200
+        assert response.json()["onboardingState"] == "submitted"
+        assert response.json()["submittedAt"] == "2026-08-11T12:00:00+00:00"
+        transition_kwargs = service.transition_workspace_application_information_onboarding_state.await_args.kwargs
+        assert transition_kwargs["db"] is db
+        assert transition_kwargs["workspace_uuid"] == uuid_pkg.UUID(
+            "018f6f83-0000-0000-0000-000000000201"
+        )
+        assert transition_kwargs["application_information_uuid"] == uuid_pkg.UUID(
+            "018f6f83-0000-0000-0000-000000000501"
+        )
+        assert transition_kwargs["current_user"] == current_user
+        assert transition_kwargs["payload"].target_state == "submitted"
 
     def test_workspace_application_information_denied_for_non_admin_actor(self) -> None:
         service = Mock()
@@ -616,6 +858,122 @@ class TestWorkspaceRoutes:
         assert response.json()["error"]["message"] == (
             "Linked RP applications must be unlinked or removed before deleting application information"
         )
+
+    def test_workspace_application_information_review_routes_delegate_for_superuser(self) -> None:
+        service = Mock()
+        service.get_workspace_application_information_review_context = AsyncMock(
+            return_value={
+                "notes": [sample_application_information_review_note_payload()],
+                "checklist_summary": sample_application_information_review_checklist_payload(),
+            }
+        )
+        service.add_workspace_application_information_review_note = AsyncMock(
+            return_value=sample_application_information_review_note_payload(
+                body="Ready for external review once evidence is linked"
+            )
+        )
+        service.upsert_workspace_application_information_review_checklist = AsyncMock(
+            return_value={
+                **sample_application_information_review_checklist_payload(),
+                "review_disposition": "ready_for_next_step",
+            }
+        )
+        current_user = {
+            "id": 1,
+            "username": "admin@example.gc.ca",
+            "is_superuser": True,
+        }
+        db = Mock()
+
+        app.dependency_overrides[get_current_user] = lambda: current_user
+        app.dependency_overrides[get_workspace_service] = lambda: service
+        app.dependency_overrides[async_get_db] = lambda: db
+
+        try:
+            with TestClient(app) as client:
+                read_response = client.get(
+                    "/api/v1/workspaces/018f6f83-0000-0000-0000-000000000201/application-information/018f6f83-0000-0000-0000-000000000501/review"
+                )
+                note_response = client.post(
+                    "/api/v1/workspaces/018f6f83-0000-0000-0000-000000000201/application-information/018f6f83-0000-0000-0000-000000000501/review/notes",
+                    json={"body": "Ready for external review once evidence is linked"},
+                )
+                checklist_response = client.put(
+                    "/api/v1/workspaces/018f6f83-0000-0000-0000-000000000201/application-information/018f6f83-0000-0000-0000-000000000501/review/checklist",
+                    json={
+                        "reviewDisposition": "ready_for_next_step",
+                        "applicationInformationStatus": "complete",
+                        "contactsStatus": "complete",
+                        "environmentRegistrationStatus": "complete",
+                        "promotionMetadataStatus": "incomplete",
+                        "evidenceReferenceStatus": "incomplete",
+                        "processLinksStatus": "complete",
+                        "rationale": "Ready for external review once evidence is linked",
+                    },
+                )
+        finally:
+            app.dependency_overrides.clear()
+
+        assert read_response.status_code == 200
+        assert read_response.json()["notes"][0]["authorName"] == "CL Admin"
+        assert read_response.json()["checklistSummary"]["reviewDisposition"] == "changes_requested"
+        assert note_response.status_code == 201
+        assert note_response.json()["body"] == "Ready for external review once evidence is linked"
+        assert checklist_response.status_code == 200
+        assert checklist_response.json()["reviewDisposition"] == "ready_for_next_step"
+        read_kwargs = service.get_workspace_application_information_review_context.await_args.kwargs
+        assert read_kwargs["db"] is db
+        assert read_kwargs["workspace_uuid"] == uuid_pkg.UUID(
+            "018f6f83-0000-0000-0000-000000000201"
+        )
+        assert read_kwargs["application_information_uuid"] == uuid_pkg.UUID(
+            "018f6f83-0000-0000-0000-000000000501"
+        )
+
+    def test_workspace_application_information_review_routes_deny_non_superuser(self) -> None:
+        service = Mock()
+        service.get_workspace_application_information_review_context = AsyncMock()
+        service.add_workspace_application_information_review_note = AsyncMock()
+        service.upsert_workspace_application_information_review_checklist = AsyncMock()
+
+        app.dependency_overrides[get_current_user] = lambda: {
+            "id": 42,
+            "username": "workspace-admin@example.gc.ca",
+            "is_superuser": False,
+        }
+        app.dependency_overrides[get_workspace_service] = lambda: service
+        app.dependency_overrides[async_get_db] = lambda: Mock()
+
+        try:
+            with TestClient(app) as client:
+                read_response = client.get(
+                    "/api/v1/workspaces/018f6f83-0000-0000-0000-000000000201/application-information/018f6f83-0000-0000-0000-000000000501/review"
+                )
+                note_response = client.post(
+                    "/api/v1/workspaces/018f6f83-0000-0000-0000-000000000201/application-information/018f6f83-0000-0000-0000-000000000501/review/notes",
+                    json={"body": "Need more review"},
+                )
+                checklist_response = client.put(
+                    "/api/v1/workspaces/018f6f83-0000-0000-0000-000000000201/application-information/018f6f83-0000-0000-0000-000000000501/review/checklist",
+                    json={
+                        "reviewDisposition": "pending",
+                        "applicationInformationStatus": "complete",
+                        "contactsStatus": "complete",
+                        "environmentRegistrationStatus": "complete",
+                        "promotionMetadataStatus": "complete",
+                        "evidenceReferenceStatus": "incomplete",
+                        "processLinksStatus": "complete",
+                    },
+                )
+        finally:
+            app.dependency_overrides.clear()
+
+        assert read_response.status_code == 403
+        assert note_response.status_code == 403
+        assert checklist_response.status_code == 403
+        service.get_workspace_application_information_review_context.assert_not_called()
+        service.add_workspace_application_information_review_note.assert_not_called()
+        service.upsert_workspace_application_information_review_checklist.assert_not_called()
 
     def test_workspace_rp_application_crud_delegates_to_service_for_workspace_admin(self) -> None:
         service = Mock()
@@ -702,14 +1060,212 @@ class TestWorkspaceRoutes:
 
         assert list_response.status_code == 200
         assert list_response.json()[0]["dnrAppName"] == "Benefits Portal"
+        assert_default_onboarding_fields(list_response.json()[0])
+        assert_default_promotion_fields(list_response.json()[0])
         assert create_response.status_code == 201
         assert create_response.json()["workspaceId"] == 9
+        assert_default_onboarding_fields(create_response.json())
+        assert_default_promotion_fields(create_response.json())
         assert detail_response.status_code == 200
         assert detail_response.json()["applicationInformationId"] == 17
+        assert_default_onboarding_fields(detail_response.json())
+        assert_default_promotion_fields(detail_response.json())
         assert update_response.status_code == 200
         assert update_response.json()["dnrAppName"] == "Benefits Portal Updated"
+        assert_default_onboarding_fields(update_response.json())
+        assert_default_promotion_fields(update_response.json())
         assert delete_response.status_code == 200
         assert delete_response.json() == {"message": "RP application deleted"}
+
+    def test_workspace_rp_application_onboarding_state_transition_delegates_to_service(self) -> None:
+        service = Mock()
+        service.transition_workspace_rp_application_onboarding_state = AsyncMock(
+            return_value=sample_submitted_rp_application_payload()
+        )
+        current_user = {
+            "id": 42,
+            "username": "workspace-admin@example.gc.ca",
+            "is_superuser": False,
+        }
+        db = Mock()
+
+        app.dependency_overrides[get_current_user] = lambda: current_user
+        app.dependency_overrides[get_workspace_service] = lambda: service
+        app.dependency_overrides[async_get_db] = lambda: db
+
+        try:
+            with TestClient(app) as client:
+                response = client.post(
+                    "/api/v1/workspaces/018f6f83-0000-0000-0000-000000000201/applications/018f6f83-0000-0000-0000-000000000701/onboarding-state",
+                    json={"targetState": "submitted"},
+                )
+        finally:
+            app.dependency_overrides.clear()
+
+        assert response.status_code == 200
+        assert response.json()["onboardingState"] == "submitted"
+        assert response.json()["submittedAt"] == "2026-08-11T12:00:00+00:00"
+        assert_default_promotion_fields(response.json())
+        transition_kwargs = service.transition_workspace_rp_application_onboarding_state.await_args.kwargs
+        assert transition_kwargs["db"] is db
+        assert transition_kwargs["workspace_uuid"] == uuid_pkg.UUID(
+            "018f6f83-0000-0000-0000-000000000201"
+        )
+        assert transition_kwargs["rp_application_uuid"] == uuid_pkg.UUID(
+            "018f6f83-0000-0000-0000-000000000701"
+        )
+        assert transition_kwargs["current_user"] == current_user
+        assert transition_kwargs["payload"].target_state == "submitted"
+
+    def test_workspace_rp_application_onboarding_state_transition_surfaces_bad_request(self) -> None:
+        service = Mock()
+        service.transition_workspace_rp_application_onboarding_state = AsyncMock(
+            side_effect=BadRequestException(
+                "Production RP applications cannot move to 'approved' or 'launched' without a recorded promotion request"
+            )
+        )
+
+        app.dependency_overrides[get_current_user] = lambda: {
+            "id": 1,
+            "username": "admin@example.gc.ca",
+            "is_superuser": True,
+        }
+        app.dependency_overrides[get_workspace_service] = lambda: service
+        app.dependency_overrides[async_get_db] = lambda: Mock()
+
+        try:
+            with TestClient(app) as client:
+                response = client.post(
+                    "/api/v1/workspaces/018f6f83-0000-0000-0000-000000000201/applications/018f6f83-0000-0000-0000-000000000701/onboarding-state",
+                    json={"targetState": "approved"},
+                )
+        finally:
+            app.dependency_overrides.clear()
+
+        assert response.status_code == 400
+        assert response.json()["error"]["message"] == (
+            "Production RP applications cannot move to 'approved' or 'launched' without a recorded promotion request"
+        )
+
+    def test_read_workspace_rp_application_promotion_request_delegates_to_service(self) -> None:
+        service = Mock()
+        service.get_workspace_rp_application_promotion_request = AsyncMock(
+            return_value=sample_promotion_request_payload()
+        )
+        current_user = {
+            "id": 42,
+            "username": "workspace-admin@example.gc.ca",
+            "is_superuser": False,
+        }
+        db = Mock()
+
+        app.dependency_overrides[get_current_user] = lambda: current_user
+        app.dependency_overrides[get_workspace_service] = lambda: service
+        app.dependency_overrides[async_get_db] = lambda: db
+
+        try:
+            with TestClient(app) as client:
+                response = client.get(
+                    "/api/v1/workspaces/018f6f83-0000-0000-0000-000000000201/applications/018f6f83-0000-0000-0000-000000000701/promotion-request"
+                )
+        finally:
+            app.dependency_overrides.clear()
+
+        assert response.status_code == 200
+        assert response.json()["targetEnvironment"] == "production"
+        assert response.json()["status"] == "approved"
+        assert response.json()["externalReference"] == "CAB-123"
+        get_kwargs = service.get_workspace_rp_application_promotion_request.await_args.kwargs
+        assert get_kwargs["db"] is db
+        assert get_kwargs["workspace_uuid"] == uuid_pkg.UUID(
+            "018f6f83-0000-0000-0000-000000000201"
+        )
+        assert get_kwargs["rp_application_uuid"] == uuid_pkg.UUID(
+            "018f6f83-0000-0000-0000-000000000701"
+        )
+        assert get_kwargs["current_user"] == current_user
+
+    def test_workspace_rp_application_promotion_request_post_delegates_to_service(self) -> None:
+        service = Mock()
+        service.upsert_workspace_rp_application_promotion_request = AsyncMock(
+            return_value=sample_review_tracked_production_rp_application_payload()
+        )
+        current_user = {
+            "id": 42,
+            "username": "workspace-admin@example.gc.ca",
+            "is_superuser": False,
+        }
+        db = Mock()
+
+        app.dependency_overrides[get_current_user] = lambda: current_user
+        app.dependency_overrides[get_workspace_service] = lambda: service
+        app.dependency_overrides[async_get_db] = lambda: db
+
+        try:
+            with TestClient(app) as client:
+                response = client.post(
+                    "/api/v1/workspaces/018f6f83-0000-0000-0000-000000000201/applications/018f6f83-0000-0000-0000-000000000701/promotion-request",
+                    json={"externalReference": "CAB-123"},
+                )
+        finally:
+            app.dependency_overrides.clear()
+
+        assert response.status_code == 200
+        assert response.json()["promotionTargetEnvironment"] == "production"
+        assert response.json()["promotionStatus"] == "review_tracked"
+        assert response.json()["promotionExternalReference"] == "CAB-123"
+        write_kwargs = service.upsert_workspace_rp_application_promotion_request.await_args.kwargs
+        assert write_kwargs["db"] is db
+        assert write_kwargs["workspace_uuid"] == uuid_pkg.UUID(
+            "018f6f83-0000-0000-0000-000000000201"
+        )
+        assert write_kwargs["rp_application_uuid"] == uuid_pkg.UUID(
+            "018f6f83-0000-0000-0000-000000000701"
+        )
+        assert write_kwargs["current_user"] == current_user
+        assert write_kwargs["payload"].external_reference == "CAB-123"
+
+    def test_workspace_rp_application_promotion_request_patch_delegates_to_service(self) -> None:
+        service = Mock()
+        service.review_workspace_rp_application_promotion_request = AsyncMock(
+            return_value=sample_approved_production_rp_application_payload()
+        )
+
+        app.dependency_overrides[get_current_user] = lambda: {
+            "id": 1,
+            "username": "admin@example.gc.ca",
+            "is_superuser": True,
+        }
+        app.dependency_overrides[get_workspace_service] = lambda: service
+        app.dependency_overrides[async_get_db] = lambda: Mock()
+
+        try:
+            with TestClient(app) as client:
+                response = client.patch(
+                    "/api/v1/workspaces/018f6f83-0000-0000-0000-000000000201/applications/018f6f83-0000-0000-0000-000000000701/promotion-request",
+                    json={
+                        "status": "approved",
+                        "externalReference": "CAB-123",
+                        "reviewedByTeam": "CanadaLogin",
+                    },
+                )
+        finally:
+            app.dependency_overrides.clear()
+
+        assert response.status_code == 200
+        assert response.json()["promotionStatus"] == "approved"
+        assert response.json()["promotionReviewedByTeam"] == "CanadaLogin"
+        assert response.json()["promotionReviewedAt"] == "2026-08-11T12:15:00Z"
+        patch_kwargs = service.review_workspace_rp_application_promotion_request.await_args.kwargs
+        assert patch_kwargs["workspace_uuid"] == uuid_pkg.UUID(
+            "018f6f83-0000-0000-0000-000000000201"
+        )
+        assert patch_kwargs["rp_application_uuid"] == uuid_pkg.UUID(
+            "018f6f83-0000-0000-0000-000000000701"
+        )
+        assert patch_kwargs["payload"].status == "approved"
+        assert patch_kwargs["payload"].external_reference == "CAB-123"
+        assert patch_kwargs["payload"].reviewed_by_team == "CanadaLogin"
 
     def test_workspace_rp_application_denied_for_non_admin_actor(self) -> None:
         service = Mock()

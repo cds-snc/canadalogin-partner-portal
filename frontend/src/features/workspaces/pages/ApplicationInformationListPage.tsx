@@ -6,8 +6,10 @@ import type { DataTableColumn } from "@/components/ui/DataTable";
 import { getRequestErrorNotice } from "@/fetch";
 import { useWorkspace } from "../hooks/use-workspace";
 import { useWorkspaceApplicationInformationList } from "../hooks/use-workspace-application-information";
+import { getWorkspaceOnboardingStateLabel } from "../onboarding-display";
 
 type ApplicationInformationRow = {
+	onboardingState: string;
 	serviceNameEn: string;
 	serviceNameFr: string;
 	uuid: string;
@@ -41,6 +43,9 @@ export const ApplicationInformationListPage = (): FunctionComponent => {
 		search.deleted === "1" ? t("workspaces.appInfoDeletedSuccess") : null;
 	const rows: Array<ApplicationInformationRow> =
 		applicationInformationRecords.map((applicationInformation) => ({
+			onboardingState: applicationInformation.onboardingState?.trim()
+				? getWorkspaceOnboardingStateLabel(t, applicationInformation.onboardingState)
+				: t("common.notAvailable"),
 			serviceNameEn: applicationInformation.serviceNameEn,
 			serviceNameFr: applicationInformation.serviceNameFr,
 			uuid: applicationInformation.uuid,
@@ -53,6 +58,10 @@ export const ApplicationInformationListPage = (): FunctionComponent => {
 		{
 			field: "serviceNameFr",
 			headerName: t("workspaces.appInfoServiceNameFrLabel"),
+		},
+		{
+			field: "onboardingState",
+			headerName: t("workspaces.onboardingStateColumn"),
 		},
 	];
 

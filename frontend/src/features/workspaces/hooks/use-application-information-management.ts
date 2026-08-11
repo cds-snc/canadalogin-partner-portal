@@ -8,6 +8,7 @@ import {
 	type ApplicationInformationUpdate,
 } from "@/fetch/workspaces";
 import { applicationInformationContactsQueryKey } from "./use-application-information-contacts";
+import { applicationInformationReviewQueryKey } from "./use-application-information-review";
 import {
 	workspaceApplicationInformationListQueryKey,
 	workspaceApplicationInformationQueryKey,
@@ -52,6 +53,12 @@ export const useApplicationInformationManagement = (): ApplicationInformationMan
 			});
 			await queryClient.invalidateQueries({
 				queryKey: applicationInformationContactsQueryKey(
+					workspaceUuid,
+					applicationInformationUuid
+				),
+			});
+			await queryClient.invalidateQueries({
+				queryKey: applicationInformationReviewQueryKey(
 					workspaceUuid,
 					applicationInformationUuid
 				),
@@ -124,6 +131,12 @@ export const useApplicationInformationManagement = (): ApplicationInformationMan
 			});
 			queryClient.removeQueries({
 				queryKey: applicationInformationContactsQueryKey(
+					variables.workspaceUuid,
+					variables.applicationInformationUuid
+				),
+			});
+			queryClient.removeQueries({
+				queryKey: applicationInformationReviewQueryKey(
 					variables.workspaceUuid,
 					variables.applicationInformationUuid
 				),

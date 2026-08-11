@@ -128,6 +128,13 @@ export type RPApplicationRead = {
 	application_information_id?: number | null;
 	dnr_app_name: string;
 	oidc_registration_payload?: Record<string, unknown> | null;
+	onboarding_state?: string | null;
+	submitted_at?: string | null;
+	under_review_at?: string | null;
+	approved_at?: string | null;
+	launched_at?: string | null;
+	promotion_status?: string | null;
+	promotion_requested_at?: string | null;
 	status: string | null;
 	created_by: number | null;
 	created_at: string;
@@ -148,6 +155,9 @@ export type CurrentUserRPApplicationRead = {
 	settings?: RPApplicationSettings | null;
 	ibm_sv_application_id?: string | null;
 	departmentId?: number | null;
+	canadaLoginEnvironment?: string | null;
+	onboardingState?: string | null;
+	promotionStatus?: string | null;
 	applicationOwner?: {
 		owners: Array<{ email: string }>;
 	} | null;
@@ -156,6 +166,9 @@ export type CurrentUserRPApplicationRead = {
 export type CurrentUserRPOAuthSetupRead = {
 	rpApplicationName: string;
 	status: string;
+	canadaLoginEnvironment?: string | null;
+	onboardingState?: string | null;
+	promotionStatus?: string | null;
 	applicationUrl?: string | null;
 	discoveryEndpoint?: string | null;
 	departmentName?: string | null;

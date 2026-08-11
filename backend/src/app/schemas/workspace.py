@@ -5,6 +5,7 @@ from pydantic import BaseModel, ConfigDict, Field
 from pydantic.alias_generators import to_camel
 
 from ..core.schemas import PersistentDeletion, TimestampSchema
+from .onboarding import OnboardingLifecycleRead
 
 
 class WorkspaceBase(BaseModel):
@@ -20,7 +21,7 @@ class WorkspaceBase(BaseModel):
     description: str | None = None
 
 
-class WorkspaceRead(WorkspaceBase, TimestampSchema, PersistentDeletion):
+class WorkspaceRead(WorkspaceBase, OnboardingLifecycleRead, TimestampSchema, PersistentDeletion):
     model_config = ConfigDict(
         validate_by_name=True,
         validate_by_alias=True,

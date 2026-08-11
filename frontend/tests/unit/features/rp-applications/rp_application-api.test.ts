@@ -256,13 +256,16 @@ describe("rp_application-api", () => {
 			json: () =>
 				Promise.resolve({
 					applicationUrl: "https://benefits.example.gc.ca",
+					canadaLoginEnvironment: "production",
 					discoveryEndpoint:
 						"https://cds-gcsignin-dev.verify.ibm.com/oauth2/.well-known/openid-configuration",
 					logoutRedirectUris: [
 						"https://benefits.example.gc.ca/logout-complete",
 					],
 					logoutUri: "https://benefits.example.gc.ca/backchannel-logout",
+					onboardingState: "under_review",
 					pkceEnabled: true,
+					promotionStatus: "review_tracked",
 					rpApplicationName: "Benefits Portal",
 					redirectUris: ["https://benefits.example.gc.ca/callback"],
 					status: "active",
@@ -282,6 +285,8 @@ describe("rp_application-api", () => {
 			})
 		);
 		expect(response.rpApplicationName).toBe("Benefits Portal");
+		expect(response.onboardingState).toBe("under_review");
+		expect(response.promotionStatus).toBe("review_tracked");
 	});
 
 	it("deletes an RP application through the backend API", async () => {

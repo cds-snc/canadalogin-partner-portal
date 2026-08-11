@@ -11,6 +11,7 @@ vi.mock("react-i18next", () => ({
 	useTranslation: (): { t: (key: string, options?: Record<string, unknown>) => string } => ({
 		t: (key: string, options?: Record<string, unknown>): string => {
 			const translations: Record<string, string> = {
+				"common.notAvailable": "Not available",
 				"workspaces.createAction": "Create workspace",
 				"workspaces.deletedSuccess": "Workspace deleted successfully",
 				"workspaces.emptyBody": "No workspaces are available for your account yet.",
@@ -18,6 +19,8 @@ vi.mock("react-i18next", () => ({
 				"workspaces.loadingBody": "Loading workspaces available to your account.",
 				"workspaces.loadingTitle": "Loading workspaces",
 				"workspaces.nameLabel": "Name",
+				"workspaces.onboardingStateColumn": "Onboarding status",
+				"workspaces.onboardingStateUnderReview": "Under review",
 				"workspaces.slugLabel": "Slug",
 				"workspaces.summary": "Review and manage workspaces.",
 				"workspaces.title": "Workspaces",
@@ -63,16 +66,23 @@ vi.mock("@/components/ui", () => ({
 		rows,
 		title,
 	}: {
-		action?: { buttonLabel: string; onAction: (row: { name: string; slug: string; uuid: string }) => void };
+		action?: { buttonLabel: string; onAction: (row: { name: string; onboardingState: string; slug: string; uuid: string }) => void };
 		columns: Array<{ headerName: string }>;
 		primaryAction?: { buttonLabel: string; onAction: () => void };
-		rows: Array<{ name: string; slug: string; uuid: string }>;
+		rows: Array<{ name: string; onboardingState: string; slug: string; uuid: string }>;
 		title: string;
 	}): ReactElement => (
 		<section>
 			<h2>{title}</h2>
 			{columns.map((column) => (
 				<span key={column.headerName}>{column.headerName}</span>
+			))}
+			{rows.map((row) => (
+				<div key={row.uuid}>
+					<span>{row.name}</span>
+					<span>{row.slug}</span>
+					<span>{row.onboardingState}</span>
+				</div>
 			))}
 			{primaryAction ? (
 				<button onClick={primaryAction.onAction} type="button">
@@ -159,6 +169,7 @@ describe("WorkspacesPage", () => {
 					id: 9,
 					isDeleted: false,
 					name: "Benefits Workspace",
+					onboardingState: "under_review",
 					slug: "benefits-workspace",
 					updatedAt: null,
 					uuid: "workspace-uuid-1",
@@ -167,6 +178,7 @@ describe("WorkspacesPage", () => {
 		});
 
 		render(<WorkspacesPage />);
+		expect(screen.getByText(/under review/i)).toBeTruthy();
 		fireEvent.click(screen.getByRole("button", { name: /view workspace/i }));
 
 		expect(navigateMock).toHaveBeenCalledWith({

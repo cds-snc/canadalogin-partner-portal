@@ -19,13 +19,25 @@ vi.mock("react-i18next", () => ({
 		i18n: { language: "en" },
 		t: (key: string): string => {
 			const map: Record<string, string> = {
+					"common.notAvailable": "Not available",
 				"nav.home": "Home",
 				"nav.dashboard": "Dashboard",
+					"rpOAuthSetup.environmentLabel": "Environment",
+					"rpOAuthSetup.environmentProduction": "Production",
+					"rpOAuthSetup.environmentStaging": "Staging",
+					"rpOAuthSetup.environmentTest": "Test",
 				"rpOAuthSetup.applicationSectionTitle": "Application details",
 				"rpOAuthSetup.applicationUrlLabel": "Application URL",
 				"rpOAuthSetup.departmentLabel": "Department",
 				"rpOAuthSetup.loadingBody": "Loading OAuth setup details for this RP application.",
 				"rpOAuthSetup.loadingTitle": "Loading OAuth setup",
+					"rpOAuthSetup.notAvailable": "Not available",
+					"rpOAuthSetup.onboardingStateApproved": "Approved",
+					"rpOAuthSetup.onboardingStateDraft": "Draft",
+					"rpOAuthSetup.onboardingStateLabel": "Onboarding status",
+					"rpOAuthSetup.onboardingStateLaunched": "Launched",
+					"rpOAuthSetup.onboardingStateSubmitted": "Submitted",
+					"rpOAuthSetup.onboardingStateUnderReview": "Under review",
 				"rpOAuthSetup.logoutRedirectUrisLabel": "Logout redirect URIs",
 				"rpOAuthSetup.logoutUriLabel": "Logout URI",
 				"rpOAuthSetup.noLogoutRedirectUris":
@@ -36,6 +48,11 @@ vi.mock("react-i18next", () => ({
 				"rpOAuthSetup.pkceDisabled": "Disabled",
 				"rpOAuthSetup.pkceEnabled": "Enabled",
 				"rpOAuthSetup.pkceEnabledLabel": "PKCE",
+					"rpOAuthSetup.productionReviewLabel": "Production review",
+					"rpOAuthSetup.promotionStatusApproved": "Approved",
+					"rpOAuthSetup.promotionStatusChangesRequested": "Changes requested",
+					"rpOAuthSetup.promotionStatusLaunched": "Launched",
+					"rpOAuthSetup.promotionStatusReviewTracked": "Review tracked",
 				"rpOAuthSetup.redirectUrisLabel": "Redirect URIs",
 				"rpOAuthSetup.statusLabel": "Status",
 				"rpOAuthSetup.summary": "Review this RP application's read-only OAuth setup details.",
@@ -135,13 +152,16 @@ describe("YourApplicationsOAuthSetupPage", () => {
 	it("renders read-only OAuth setup with a link to the dedicated client info page", async () => {
 		mockedGetCurrentUserRPOAuthSetup.mockResolvedValue({
 			applicationUrl: "https://benefits.example.gc.ca",
+			canadaLoginEnvironment: "production",
 			discoveryEndpoint:
 				"https://cds-gcsignin-dev.verify.ibm.com/oauth2/.well-known/openid-configuration",
 			logoutRedirectUris: [
 				"https://benefits.example.gc.ca/logout-complete",
 			],
 			logoutUri: "https://benefits.example.gc.ca/backchannel-logout",
+			onboardingState: "under_review",
 			pkceEnabled: true,
+			promotionStatus: "review_tracked",
 			rpApplicationName: "Benefits Portal",
 			redirectUris: ["https://benefits.example.gc.ca/callback"],
 			status: "active",
@@ -154,6 +174,12 @@ describe("YourApplicationsOAuthSetupPage", () => {
 		expect(
 			screen.getByText("https://benefits.example.gc.ca/backchannel-logout")
 		).toBeTruthy();
+		expect(screen.getByText("Environment:")).toBeTruthy();
+		expect(screen.getByText("Production")).toBeTruthy();
+		expect(screen.getByText("Onboarding status:")).toBeTruthy();
+		expect(screen.getByText("Under review")).toBeTruthy();
+		expect(screen.getByText("Production review:")).toBeTruthy();
+		expect(screen.getByText("Review tracked")).toBeTruthy();
 		expect(screen.getByText("Logout redirect URIs")).toBeTruthy();
 		expect(
 			screen.getByText("https://benefits.example.gc.ca/logout-complete")
@@ -220,12 +246,15 @@ describe("YourApplicationsOAuthSetupPage", () => {
 	it("renders department row when department name is present", async () => {
 		mockedGetCurrentUserRPOAuthSetup.mockResolvedValue({
 			applicationUrl: null,
+			canadaLoginEnvironment: "staging",
 			discoveryEndpoint: null,
 			departmentName: "Treasury Board of Canada Secretariat",
 			departmentNameFr: null,
 			logoutRedirectUris: [],
 			logoutUri: null,
+			onboardingState: "submitted",
 			pkceEnabled: null,
+			promotionStatus: null,
 			rpApplicationName: "Benefits Portal",
 			redirectUris: [],
 			status: "active",
@@ -243,12 +272,15 @@ describe("YourApplicationsOAuthSetupPage", () => {
 	it("does not render department row when department name is null", async () => {
 		mockedGetCurrentUserRPOAuthSetup.mockResolvedValue({
 			applicationUrl: null,
+			canadaLoginEnvironment: null,
 			discoveryEndpoint: null,
 			departmentName: null,
 			departmentNameFr: null,
 			logoutRedirectUris: [],
 			logoutUri: null,
+			onboardingState: null,
 			pkceEnabled: null,
+			promotionStatus: null,
 			rpApplicationName: "Benefits Portal",
 			redirectUris: [],
 			status: "active",
@@ -258,5 +290,6 @@ describe("YourApplicationsOAuthSetupPage", () => {
 
 		await screen.findByRole("heading", { name: "Benefits Portal" });
 		expect(screen.queryByText("Organization:")).toBeNull();
+		expect(screen.getAllByText("Not available").length).toBeGreaterThan(0);
 	});
 });

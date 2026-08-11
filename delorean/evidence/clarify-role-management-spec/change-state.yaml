@@ -5,23 +5,24 @@ change:
   title: "Clarify role management specifications"
   summary: "Create a dedicated role-management capability spec and clarify how platform and workspace role assignment behaviors are specified."
   workContext: "local"
-  currentPhase: "implement"
+  currentPhase: "archived"
   decisionState: "draft"
   owner: ""
 
 openspec:
   inScope: true
-  lifecycleState: "draft active change"
+  lifecycleState: "archived"
   activeChangeId: "clarify-role-management-spec"
-  activeChangePath: "openspec/changes/clarify-role-management-spec"
+  activeChangePath: "openspec/changes/archive/2026-08-11-clarify-role-management-spec"
   currentSpecRefs:
+    - "openspec/specs/partner-portal-role-management/spec.md"
     - "openspec/specs/partner-portal-platform-administration-and-supportability/spec.md"
-  proposalPath: "openspec/changes/clarify-role-management-spec/proposal.md"
-  designPath: "openspec/changes/clarify-role-management-spec/design.md"
-  tasksPath: "openspec/changes/clarify-role-management-spec/tasks.md"
+  proposalPath: "openspec/changes/archive/2026-08-11-clarify-role-management-spec/proposal.md"
+  designPath: "openspec/changes/archive/2026-08-11-clarify-role-management-spec/design.md"
+  tasksPath: "openspec/changes/archive/2026-08-11-clarify-role-management-spec/tasks.md"
   deltaSpecPaths:
-    - "openspec/changes/clarify-role-management-spec/specs/partner-portal-role-management/spec.md"
-    - "openspec/changes/clarify-role-management-spec/specs/partner-portal-platform-administration-and-supportability/spec.md"
+    - "openspec/changes/archive/2026-08-11-clarify-role-management-spec/specs/partner-portal-role-management/spec.md"
+    - "openspec/changes/archive/2026-08-11-clarify-role-management-spec/specs/partner-portal-platform-administration-and-supportability/spec.md"
   validation:
     status: "passed"
     command: "make validate-openspec-change CHANGE_ID=clarify-role-management-spec"
@@ -29,13 +30,13 @@ openspec:
     skippedReason: ""
   archive:
     required: "unknown"
-    status: "not_started"
-    archivePath: ""
+    status: "passed"
+    archivePath: "openspec/changes/archive/2026-08-11-clarify-role-management-spec"
     reasonIfNotArchived: ""
 
 controlBoundary:
   required: true
-  status: "pending"
+  status: "passed"
   permissionProfile: "local-agent-standard"
   allowedTools:
     - "repo read"
@@ -110,7 +111,7 @@ gates:
     notes: ""
   implementation-tasks:
     level: "block_with_exception"
-    status: "not_started"
+    status: "passed"
     evidence:
       - "openspec/changes/clarify-role-management-spec/tasks.md"
     notes: ""
@@ -121,9 +122,10 @@ gates:
     notes: "Run when official OpenSpec CLI is enabled."
   local-quality-checks:
     level: "block_with_exception"
-    status: "not_started"
-    evidence: []
-    notes: ""
+    status: "passed"
+    evidence:
+      - ".venv/bin/pytest backend/tests/test_ibm_sv_user_service.py backend/tests/test_rp_application_department_setup.py backend/tests/test_rp_application_oauth_setup.py backend/tests/test_rp_application_mau_report.py"
+    notes: "Focused backend verification passed on 2026-08-11 after retiring the owner-email fallback from current-user RP application access."
   baseline-assessment:
     level: "warn"
     status: "not_started"
@@ -142,16 +144,20 @@ gates:
     notes: ""
   openspec-archive:
     level: "block_with_exception"
-    status: "not_started"
-    evidence: []
-    notes: "Archive during lightweight developer readiness or release-readiness after implementation and verification are complete."
+    status: "passed"
+    evidence:
+      - "openspec/changes/archive/2026-08-11-clarify-role-management-spec"
+      - "openspec/specs/partner-portal-role-management/spec.md"
+      - "openspec/specs/partner-portal-platform-administration-and-supportability/spec.md"
+    notes: "Archived on 2026-08-11 after implementation and focused local verification completed."
 
 evidence:
   evidenceBundlePath: "delorean/evidence/clarify-role-management-spec/evidence-bundle.md"
   approvalResponsePath: ""
   waiverPath: ""
   agentRunLinks: []
-  testResultLinks: []
+  testResultLinks:
+    - ".venv/bin/pytest backend/tests/test_ibm_sv_user_service.py backend/tests/test_rp_application_department_setup.py backend/tests/test_rp_application_oauth_setup.py backend/tests/test_rp_application_mau_report.py"
   screenshotLinks: []
   openFindings: []
   skippedChecks: []

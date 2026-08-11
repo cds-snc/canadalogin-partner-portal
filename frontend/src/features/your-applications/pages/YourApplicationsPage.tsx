@@ -7,6 +7,7 @@ import { getCurrentUserRPApplications } from "@/fetch/rp-applications";
 import { useQuery } from "@tanstack/react-query";
 import { useRoles, useSession } from "@/hooks";
 import { useWorkspaces } from "@/features/workspaces/hooks/use-workspaces";
+import type { CurrentUserRPApplicationRead } from "@/fetch/rp-applications";
 
 const getCurrentUserRPApplicationTitle = (
 	application: {
@@ -19,6 +20,98 @@ const getCurrentUserRPApplicationTitle = (
 	application.name?.trim() ||
 	application.ibm_sv_application_id?.trim() ||
 	null;
+
+const formatTokenLabel = (value: string): string =>
+	value
+		.trim()
+		.replace(/_/g, " ")
+		.replace(/\s+/g, " ");
+
+const getEnvironmentLabel = (
+	t: (key: string) => string,
+	environment: string
+): string => {
+	switch (environment.trim().toLowerCase()) {
+		case "test":
+			return t("yourApplications.environmentTest");
+		case "staging":
+			return t("yourApplications.environmentStaging");
+		case "production":
+			return t("yourApplications.environmentProduction");
+		default:
+			return formatTokenLabel(environment);
+	}
+};
+
+const getOnboardingStateLabel = (
+	t: (key: string) => string,
+	state: string
+): string => {
+	switch (state.trim().toLowerCase()) {
+		case "draft":
+			return t("yourApplications.onboardingStateDraft");
+		case "submitted":
+			return t("yourApplications.onboardingStateSubmitted");
+		case "under_review":
+			return t("yourApplications.onboardingStateUnderReview");
+		case "approved":
+			return t("yourApplications.onboardingStateApproved");
+		case "launched":
+			return t("yourApplications.onboardingStateLaunched");
+		default:
+			return formatTokenLabel(state);
+	}
+};
+
+const getPromotionStatusLabel = (
+	t: (key: string) => string,
+	status: string
+): string => {
+	switch (status.trim().toLowerCase()) {
+		case "review_tracked":
+			return t("yourApplications.promotionStatusReviewTracked");
+		case "changes_requested":
+			return t("yourApplications.promotionStatusChangesRequested");
+		case "approved":
+			return t("yourApplications.promotionStatusApproved");
+		case "launched":
+			return t("yourApplications.promotionStatusLaunched");
+		default:
+			return formatTokenLabel(status);
+	}
+};
+
+const getCurrentUserRPApplicationSummary = (
+	application: CurrentUserRPApplicationRead,
+	t: (key: string) => string
+): string => {
+	const segments: Array<string> = [];
+	const environment = application.canadaLoginEnvironment?.trim();
+	const onboardingState = application.onboardingState?.trim();
+	const promotionStatus = application.promotionStatus?.trim();
+
+	if (environment) {
+		segments.push(
+			`${t("yourApplications.environmentLabel")}: ${getEnvironmentLabel(t, environment)}`
+		);
+	}
+	if (onboardingState) {
+		segments.push(
+			`${t("yourApplications.onboardingStateLabel")}: ${getOnboardingStateLabel(t, onboardingState)}`
+		);
+	}
+	if (promotionStatus) {
+		segments.push(
+			`${t("yourApplications.productionReviewLabel")}: ${getPromotionStatusLabel(t, promotionStatus)}`
+		);
+	}
+
+	if (segments.length === 0) {
+		return t("yourApplications.lifecycleUnavailable");
+	}
+
+	return segments.join(". ");
+};
 
 const DashboardSection = ({
 	children,
@@ -197,6 +290,7 @@ export const YourApplicationsPage = (): FunctionComponent => {
 									<Card
 										key={application.uuid}
 										cardTitleTag="h3"
+										description={getCurrentUserRPApplicationSummary(application, t)}
 										href={`/your-applications/${application.uuid}`}
 										cardTitle={
 											getCurrentUserRPApplicationTitle(application) ??

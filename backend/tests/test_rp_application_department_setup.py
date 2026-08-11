@@ -245,6 +245,9 @@ class TestMissingDepartmentConflictRoutes:
                     "uuid": _APP_UUID,
                     "dnr_app_name": "Benefits Portal",
                     "department_id": 7,
+                    "canada_login_environment": "production",
+                    "onboarding_state": "under_review",
+                    "promotion_status": "review_tracked",
                     "ibm_sv_application_id": "ibm-app-333",
                     "application_owner": {
                         "owners": [{"email": "owner@example.gc.ca"}]
@@ -275,6 +278,9 @@ class TestMissingDepartmentConflictRoutes:
 
         assert response.status_code == 200
         assert response.json()[0]["dnrAppName"] == "Benefits Portal"
+        assert response.json()[0]["canadaLoginEnvironment"] == "production"
+        assert response.json()[0]["onboardingState"] == "under_review"
+        assert response.json()[0]["promotionStatus"] == "review_tracked"
         service.list_current_user_rp_applications.assert_awaited_once_with(
             db=db,
             current_user=current_user,
@@ -478,8 +484,9 @@ class TestDepartmentPreflightServiceMethod:
     """Service-level tests for the department preflight logic."""
 
     @pytest.mark.asyncio
-    async def test_preflight_returns_summary_read_for_owner(self) -> None:
+    async def test_preflight_raises_not_found_without_workspace_grant(self) -> None:
         import src.app.services.rp_application_service as rp_module
+        from src.app.core.exceptions.http_exceptions import NotFoundException
 
         service = RPApplicationService()
         db = Mock()
@@ -496,16 +503,14 @@ class TestDepartmentPreflightServiceMethod:
         original_get = rp_module.crud_rp_applications.get
         rp_module.crud_rp_applications.get = AsyncMock(return_value=app_record)
         try:
-            result = await service.get_current_user_rp_application_department_preflight(
-                db=db,
-                rp_application_uuid="018f6f83-0000-0000-0000-000000000333",
-                current_user={"email": "owner@example.gc.ca"},
-            )
+            with pytest.raises(NotFoundException):
+                await service.get_current_user_rp_application_department_preflight(
+                    db=db,
+                    rp_application_uuid="018f6f83-0000-0000-0000-000000000333",
+                    current_user={"email": "owner@example.gc.ca"},
+                )
         finally:
             rp_module.crud_rp_applications.get = original_get
-
-        assert result["dnrAppName"] == "Benefits Portal"
-        assert result["departmentId"] is None
 
     @pytest.mark.asyncio
     async def test_preflight_returns_summary_read_for_grant_user(self) -> None:
@@ -573,7 +578,7 @@ class TestDepartmentPreflightServiceMethod:
             rp_module.crud_rp_applications.get = original_get
 
     @pytest.mark.asyncio
-    async def test_assignment_raises_not_found_for_unknown_department(self) -> None:
+    async def test_assignment_raises_not_found_without_workspace_grant(self) -> None:
         import uuid as uuid_pkg
 
         import src.app.services.rp_application_service as rp_module

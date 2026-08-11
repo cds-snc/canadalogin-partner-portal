@@ -10,7 +10,7 @@ from starlette.exceptions import HTTPException as StarletteHTTPException
 from ..logger import logging
 from ..schemas import ErrorDetail, ErrorResponse
 from .cache_exceptions import CacheIdentificationInferenceError, InvalidRequestError, MissingClientError
-from .http_exceptions import RPApplicationDepartmentRequiredException
+from .http_exceptions import OnboardingReportRequestException, RPApplicationDepartmentRequiredException
 from .ibm_sv_exceptions import IBMVerifyException
 from .standardized_logger import StandardizedLogger
 
@@ -138,6 +138,19 @@ def register_exception_handlers(application: FastAPI) -> None:
             request=request,
             status_code=409,
             code="rp_application_department_required",
+            message=exc.message,
+        )
+        standardized_logger.log(request, response)
+        return response
+
+    @application.exception_handler(OnboardingReportRequestException)
+    async def onboarding_report_request_handler(
+        request: Request, exc: OnboardingReportRequestException
+    ) -> JSONResponse:
+        response = _serialize_error_response(
+            request=request,
+            status_code=400,
+            code=exc.code,
             message=exc.message,
         )
         standardized_logger.log(request, response)

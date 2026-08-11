@@ -25,6 +25,9 @@ vi.mock("react-i18next", () => ({
 				"workspaces.applicationsNoLinkedInfo": "Not linked",
 				"workspaces.applicationsSectionTitle": "RP applications",
 				"workspaces.applicationsStatusColumn": "Status",
+				"workspaces.onboardingStateColumn": "Onboarding status",
+				"workspaces.onboardingStateDraft": "Draft",
+				"workspaces.onboardingStateUnderReview": "Under review",
 				"workspaces.applicationsViewAction": "View application",
 			};
 
@@ -47,11 +50,12 @@ vi.mock("@/components/ui", () => ({
 	Button: ({ children, href }: PropsWithChildren<{ href?: string }>): ReactElement => (
 		<a href={href}>{children}</a>
 	),
-	DataTable: ({ action, rows }: { action: { buttonLabel: string; onAction: (row: { linkedApplicationInformation: string; name: string; uuid: string }) => void }; rows: Array<{ linkedApplicationInformation: string; name: string; uuid: string }> }): ReactElement => (
+	DataTable: ({ action, rows }: { action: { buttonLabel: string; onAction: (row: { linkedApplicationInformation: string; name: string; onboardingState: string; uuid: string }) => void }; rows: Array<{ linkedApplicationInformation: string; name: string; onboardingState: string; uuid: string }> }): ReactElement => (
 		<section>
 			{rows.map((row) => (
 				<div key={row.uuid}>
 					<span>{row.name}</span>
+					<span>{row.onboardingState}</span>
 					<span>{row.linkedApplicationInformation}</span>
 					<button onClick={() => action.onAction(row)} type="button">
 						{action.buttonLabel}
@@ -177,10 +181,12 @@ describe("WorkspaceApplicationsListPage", () => {
 					dnr_app_name: "Benefits Portal",
 					id: 21,
 					is_deleted: false,
+					onboarding_state: "under_review",
 					oidc_registration_payload: null,
 					status: "active",
 					uuid: "rp-application-uuid-1",
 					workspace_id: 9,
+					promotion_status: null,
 				},
 				{
 					application_information_id: null,
@@ -190,10 +196,12 @@ describe("WorkspaceApplicationsListPage", () => {
 					dnr_app_name: "Standalone Portal",
 					id: 22,
 					is_deleted: false,
+					onboarding_state: "draft",
 					oidc_registration_payload: null,
 					status: "draft",
 					uuid: "rp-application-uuid-2",
 					workspace_id: 9,
+					promotion_status: null,
 				},
 			],
 			error: null,
@@ -204,6 +212,7 @@ describe("WorkspaceApplicationsListPage", () => {
 		render(<WorkspaceApplicationsListPage />);
 
 		expect(screen.getByText("Benefits portal")).toBeTruthy();
+		expect(screen.getByText(/under review/i)).toBeTruthy();
 		expect(screen.getByText("Not linked")).toBeTruthy();
 	});
 
@@ -261,10 +270,12 @@ describe("WorkspaceApplicationsListPage", () => {
 					dnr_app_name: "Benefits Portal",
 					id: 21,
 					is_deleted: false,
+					onboarding_state: "under_review",
 					oidc_registration_payload: null,
 					status: "active",
 					uuid: "rp-application-uuid-1",
 					workspace_id: 9,
+					promotion_status: null,
 				},
 			],
 			error: null,

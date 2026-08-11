@@ -6,6 +6,7 @@ from pydantic import AnyHttpUrl, BaseModel, ConfigDict, Field, model_validator
 from pydantic.alias_generators import to_camel
 
 from ..core.schemas import PersistentDeletion, UUIDSchema
+from .onboarding import OnboardingLifecycleRead, OnboardingState
 
 CanadaLoginEnvironment = Literal["test", "staging", "production"]
 LogoutMode = Literal["back_channel", "front_channel"]
@@ -86,7 +87,7 @@ class RPApplicationOwnerSnapshotRead(BaseModel):
     owners: list[RPApplicationOwnerRead] = Field(default_factory=list)
 
 
-class RPApplicationRead(RPApplicationBase, UUIDSchema, PersistentDeletion):
+class RPApplicationRead(RPApplicationBase, OnboardingLifecycleRead, UUIDSchema, PersistentDeletion):
     id: int
     workspace_id: int | None = None
     department_id: int | None
@@ -98,6 +99,14 @@ class RPApplicationRead(RPApplicationBase, UUIDSchema, PersistentDeletion):
     ibm_sv_application_id: str | None = None
     oidc_registration_payload: dict[str, object] | None = None
     application_owner: RPApplicationOwnerSnapshotRead | None = None
+    promotion_target_environment: str | None = None
+    promotion_status: str | None = None
+    promotion_external_reference: str | None = None
+    promotion_reviewed_by_user_uuid: uuid_pkg.UUID | None = None
+    promotion_reviewed_by_team: str | None = None
+    promotion_requested_at: datetime | None = None
+    promotion_reviewed_at: datetime | None = None
+    promotion_decided_at: datetime | None = None
 
 
 class RPApplicationCurrentUserRead(BaseModel):
@@ -114,6 +123,9 @@ class RPApplicationCurrentUserRead(BaseModel):
     ibm_sv_application_id: str | None = None
     department_id: int | None
     application_owner: RPApplicationOwnerSnapshotRead | None = None
+    canada_login_environment: str | None = None
+    onboarding_state: OnboardingState | None = None
+    promotion_status: str | None = None
 
 
 class RPApplicationCurrentUserOAuthSetupRead(BaseModel):
@@ -126,6 +138,9 @@ class RPApplicationCurrentUserOAuthSetupRead(BaseModel):
 
     rp_application_name: str
     status: str
+    canada_login_environment: str | None = None
+    onboarding_state: OnboardingState | None = None
+    promotion_status: str | None = None
     application_url: str | None = None
     discovery_endpoint: str | None = None
     department_name: Optional[str] = None

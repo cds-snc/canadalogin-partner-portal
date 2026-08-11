@@ -4,9 +4,15 @@ import { useTranslation } from "react-i18next";
 import type { FunctionComponent } from "@/common/types";
 import { Button, ConfirmDialog, Heading, Notice, Text } from "@/components/ui";
 import { getRequestErrorNotice } from "@/fetch";
+import { useApplicationInformationContacts } from "../hooks/use-application-information-contacts";
 import { useWorkspaceApplicationInformationList } from "../hooks/use-workspace-application-information";
 import { useWorkspaceRPApplicationManagement } from "../hooks/use-workspace-rp-application-management";
 import { useWorkspaceRPApplication } from "../hooks/use-workspace-rp-applications";
+import {
+	getWorkspaceOnboardingStateLabel,
+	getWorkspacePromotionStatusLabel,
+} from "../onboarding-display";
+import { getApplicationInformationReadinessSummary } from "../onboarding-readiness";
 
 const readString = (
 	payload: Record<string, unknown> | null | undefined,
@@ -63,7 +69,31 @@ export const WorkspaceApplicationDetailPage = (): FunctionComponent => {
 						applicationInformation.id ===
 						application.application_information_id
 			  ) ?? null);
-	const errorNotice = getRequestErrorNotice(localError ?? error, {
+	const {
+		contacts: linkedApplicationInformationContacts,
+		error: linkedContactsError,
+		isLoading: isLoadingLinkedContacts,
+	} = useApplicationInformationContacts(
+		workspaceUuid,
+		linkedApplicationInformation?.uuid ?? ""
+	);
+	const linkedReadinessSummary =
+		linkedApplicationInformation && !isLoadingLinkedContacts
+			? getApplicationInformationReadinessSummary(
+					linkedApplicationInformation,
+					linkedApplicationInformationContacts
+				)
+			: null;
+	const isProductionBound =
+		(application?.canada_login_environment?.trim().toLowerCase() ?? "") ===
+			"production" ||
+		(application?.promotion_requested_at?.trim().length ?? 0) > 0 ||
+		(application?.promotion_status?.trim().length ?? 0) > 0;
+	const showLinkedReadinessWarning =
+		isProductionBound &&
+		(linkedApplicationInformation === null ||
+			(linkedReadinessSummary !== null && !linkedReadinessSummary.submitReady));
+	const errorNotice = getRequestErrorNotice(localError ?? error ?? linkedContactsError, {
 		bodyKey: "workspaces.applicationsErrorBody",
 		titleKey: "workspaces.applicationsErrorTitle",
 	});
@@ -150,9 +180,57 @@ export const WorkspaceApplicationDetailPage = (): FunctionComponent => {
 
 			{application ? (
 				<div className="grid gap-300">
+					{showLinkedReadinessWarning ? (
+						<Notice
+							noticeRole="warning"
+							noticeTitle={
+								linkedApplicationInformation
+									? t(
+											"workspaces.applicationsProductionReadinessWarningTitle"
+									  )
+									: t(
+											"workspaces.applicationsProductionLinkInfoWarningTitle"
+									  )
+							}
+							noticeTitleTag="h2"
+						>
+							<Text>
+								{linkedApplicationInformation
+									? t(
+											"workspaces.applicationsProductionReadinessWarningBody"
+									  )
+									: t(
+											"workspaces.applicationsProductionLinkInfoWarningBody"
+									  )}
+							</Text>
+						</Notice>
+					) : null}
+
+					{isProductionBound ? (
+						<Notice
+							noticeRole="info"
+							noticeTitle={t(
+								"workspaces.applicationsProductionReadinessInfoTitle"
+							)}
+							noticeTitleTag="h2"
+						>
+							<Text>
+								{t(
+									"workspaces.applicationsProductionReadinessInfoBody"
+								)}
+							</Text>
+						</Notice>
+					) : null}
+
 					<Heading tag="h2">{t("workspaces.applicationsSectionTitle")}</Heading>
 					<Text>{`${t("workspaces.applicationsEnvironmentLabel")}: ${application.canada_login_environment ?? t("common.notAvailable")}`}</Text>
 					<Text>{`${t("workspaces.applicationsStatusLabel")}: ${application.status ?? t("common.notAvailable")}`}</Text>
+					<Text>
+						{`${t("workspaces.onboardingStateLabel")}: ${application.onboarding_state?.trim() ? getWorkspaceOnboardingStateLabel(t, application.onboarding_state) : t("common.notAvailable")}`}
+					</Text>
+					<Text>
+						{`${t("workspaces.productionReviewLabel")}: ${application.promotion_status?.trim() ? getWorkspacePromotionStatusLabel(t, application.promotion_status) : t("common.notAvailable")}`}
+					</Text>
 					<Text>{`${t("workspaces.applicationsIbmIdLabel")}: ${application.ibm_sv_application_id ?? t("common.notAvailable")}`}</Text>
 					<Text>
 						{`${t("workspaces.applicationsLinkedInfoLabel")}: ${linkedApplicationInformation?.serviceNameEn ?? t("workspaces.applicationsNoLinkedInfo")}`}
@@ -160,6 +238,10 @@ export const WorkspaceApplicationDetailPage = (): FunctionComponent => {
 					<Text>
 						{`${t("workspaces.applicationsOwnersLabel")}: ${owners.length > 0 ? owners.map((owner) => owner.email).join(", ") : t("common.notAvailable")}`}
 					</Text>
+					<Text>{`${t("workspaces.submittedAtLabel")}: ${application.submitted_at ?? t("common.notAvailable")}`}</Text>
+					<Text>{`${t("workspaces.underReviewAtLabel")}: ${application.under_review_at ?? t("common.notAvailable")}`}</Text>
+					<Text>{`${t("workspaces.approvedAtLabel")}: ${application.approved_at ?? t("common.notAvailable")}`}</Text>
+					<Text>{`${t("workspaces.launchedAtLabel")}: ${application.launched_at ?? t("common.notAvailable")}`}</Text>
 					<Text>{`${t("workspaces.applicationsCreatedAtLabel")}: ${application.created_at}`}</Text>
 
 					{applicationUrlEn ? (

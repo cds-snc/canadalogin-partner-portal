@@ -1,18 +1,25 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useNavigate, useParams, useSearch } from "@tanstack/react-router";
 import { useTranslation } from "react-i18next";
 import type { FunctionComponent } from "@/common/types";
+import { useSession } from "@/hooks";
 import {
 	Button,
 	ConfirmDialog,
 	DataTable,
 	Heading,
 	Notice,
+	Select,
 	Text,
+	Textarea,
 } from "@/components/ui";
 import type { DataTableColumn } from "@/components/ui/DataTable";
 import { getRequestErrorNotice } from "@/fetch";
-import type { ApplicationInformationContactRead } from "@/fetch/workspaces";
+import type {
+	ApplicationInformationContactRead,
+	ApplicationInformationReviewChecklistStatus,
+	ApplicationInformationReviewDisposition,
+} from "@/fetch/workspaces";
 import {
 	createEmptyApplicationInformationContactForm,
 	toApplicationInformationContactCreatePayload,
@@ -23,7 +30,14 @@ import {
 import { ApplicationInformationContactForm } from "../components/ApplicationInformationContactForm";
 import { useApplicationInformationContacts } from "../hooks/use-application-information-contacts";
 import { useApplicationInformationManagement } from "../hooks/use-application-information-management";
+import { useApplicationInformationReview } from "../hooks/use-application-information-review";
 import { useWorkspaceApplicationInformation } from "../hooks/use-workspace-application-information";
+import { getWorkspaceOnboardingStateLabel } from "../onboarding-display";
+import {
+	getApplicationInformationReadinessSummary,
+	type ApplicationInformationReadinessKey,
+	type ApplicationInformationReadinessStatus,
+} from "../onboarding-readiness";
 
 type ContactRow = {
 	email: string;
@@ -33,6 +47,36 @@ type ContactRow = {
 	uuid: string;
 };
 
+type ReadinessDisplayItem = {
+	key: ApplicationInformationReadinessKey;
+	label: string;
+	nextStep: string;
+	status: ApplicationInformationReadinessStatus;
+	statusLabel: string;
+};
+
+type ReviewChecklistFormState = {
+	applicationInformationStatus: ApplicationInformationReviewChecklistStatus;
+	contactsStatus: ApplicationInformationReviewChecklistStatus;
+	environmentRegistrationStatus: ApplicationInformationReviewChecklistStatus;
+	evidenceReferenceStatus: ApplicationInformationReviewChecklistStatus;
+	processLinksStatus: ApplicationInformationReviewChecklistStatus;
+	promotionMetadataStatus: ApplicationInformationReviewChecklistStatus;
+	rationale: string;
+	reviewDisposition: ApplicationInformationReviewDisposition;
+};
+
+const createEmptyReviewChecklistForm = (): ReviewChecklistFormState => ({
+	applicationInformationStatus: "not_started",
+	contactsStatus: "not_started",
+	environmentRegistrationStatus: "not_started",
+	evidenceReferenceStatus: "not_started",
+	processLinksStatus: "not_started",
+	promotionMetadataStatus: "not_started",
+	rationale: "",
+	reviewDisposition: "pending",
+});
+
 export const ApplicationInformationDetailPage = (): FunctionComponent => {
 	const { t } = useTranslation() as unknown as {
 		t: (
@@ -41,6 +85,7 @@ export const ApplicationInformationDetailPage = (): FunctionComponent => {
 		) => string;
 	};
 	const navigate = useNavigate();
+	const { currentUser } = useSession();
 	const { applicationInformationUuid, workspaceUuid } = useParams({
 		from: "/workspaces/$workspaceUuid/application-information/$applicationInformationUuid",
 	});
@@ -71,10 +116,28 @@ export const ApplicationInformationDetailPage = (): FunctionComponent => {
 	);
 	const { deleteApplicationInformation, isDeleting: isDeletingApplicationInformation } =
 		useApplicationInformationManagement();
+	const isInternalReviewer = currentUser?.isSuperuser === true;
+	const {
+		addNote,
+		checklistSummary,
+		error: reviewError,
+		isAddingNote,
+		isLoading: isLoadingReview,
+		isSavingChecklist,
+		notes: reviewNotes,
+		saveChecklistSummary,
+	} = useApplicationInformationReview(
+		workspaceUuid,
+		applicationInformationUuid,
+		isInternalReviewer
+	);
 	const [contactForm, setContactForm] =
 		useState<ApplicationInformationContactFormState>(
 			createEmptyApplicationInformationContactForm
 		);
+	const [reviewChecklistForm, setReviewChecklistForm] =
+		useState<ReviewChecklistFormState>(createEmptyReviewChecklistForm);
+	const [reviewNoteBody, setReviewNoteBody] = useState("");
 	const [deleteApplicationInformationDialogOpen, setDeleteApplicationInformationDialogOpen] =
 		useState(false);
 	const [deleteContactTarget, setDeleteContactTarget] =
@@ -119,6 +182,126 @@ export const ApplicationInformationDetailPage = (): FunctionComponent => {
 			titleKey: "workspaces.appInfoErrorTitle",
 		}
 	);
+	const readinessSummary =
+		applicationInformation && !isLoadingContacts
+			? getApplicationInformationReadinessSummary(
+					applicationInformation,
+					contacts
+				)
+			: null;
+	const readinessStatusLabel = (
+		status: ApplicationInformationReadinessStatus
+	): string => {
+		switch (status) {
+			case "complete":
+				return t("workspaces.appInfoReadinessStatusComplete");
+			case "incomplete":
+				return t("workspaces.appInfoReadinessStatusIncomplete");
+			default:
+				return t("workspaces.appInfoReadinessStatusNotStarted");
+		}
+	};
+	const readinessItems: Array<ReadinessDisplayItem> =
+		readinessSummary?.items.map((item) => {
+			switch (item.key) {
+				case "service_identity":
+					return {
+						key: item.key,
+						label: t("workspaces.appInfoReadinessServiceIdentityLabel"),
+						nextStep: t(
+							"workspaces.appInfoReadinessServiceIdentityNextStep"
+						),
+						status: item.status,
+						statusLabel: readinessStatusLabel(item.status),
+					};
+				case "business_context":
+					return {
+						key: item.key,
+						label: t("workspaces.appInfoReadinessBusinessContextLabel"),
+						nextStep: t(
+							"workspaces.appInfoReadinessBusinessContextNextStep"
+						),
+						status: item.status,
+						statusLabel: readinessStatusLabel(item.status),
+					};
+				case "technical_integration":
+					return {
+						key: item.key,
+						label: t(
+							"workspaces.appInfoReadinessTechnicalIntegrationLabel"
+						),
+						nextStep: t(
+							"workspaces.appInfoReadinessTechnicalIntegrationNextStep"
+						),
+						status: item.status,
+						statusLabel: readinessStatusLabel(item.status),
+					};
+				case "security_posture":
+					return {
+						key: item.key,
+						label: t("workspaces.appInfoReadinessSecurityPostureLabel"),
+						nextStep: t(
+							"workspaces.appInfoReadinessSecurityPostureNextStep"
+						),
+						status: item.status,
+						statusLabel: readinessStatusLabel(item.status),
+					};
+				case "migration_planning":
+					return {
+						key: item.key,
+						label: t("workspaces.appInfoReadinessMigrationPlanningLabel"),
+						nextStep: t(
+							"workspaces.appInfoReadinessMigrationPlanningNextStep"
+						),
+						status: item.status,
+						statusLabel: readinessStatusLabel(item.status),
+					};
+				case "contacts":
+					return {
+						key: item.key,
+						label: t("workspaces.appInfoReadinessContactsLabel"),
+						nextStep: t("workspaces.appInfoReadinessContactsNextStep"),
+						status: item.status,
+						statusLabel: readinessStatusLabel(item.status),
+					};
+			}
+		}) ?? [];
+	const canEditInternalReview =
+		isInternalReviewer &&
+		(applicationInformation?.onboardingState === "submitted" ||
+			applicationInformation?.onboardingState === "under_review");
+	const reviewDispositionLabel = (
+		disposition: ApplicationInformationReviewDisposition
+	): string => {
+		switch (disposition) {
+			case "changes_requested":
+				return t("workspaces.appInfoInternalReviewDispositionChangesRequested");
+			case "ready_for_next_step":
+				return t("workspaces.appInfoInternalReviewDispositionReadyForNextStep");
+			default:
+				return t("workspaces.appInfoInternalReviewDispositionPending");
+		}
+	};
+
+	useEffect(() => {
+		if (!checklistSummary) {
+			setReviewChecklistForm(createEmptyReviewChecklistForm());
+			return;
+		}
+
+		setReviewChecklistForm({
+			applicationInformationStatus:
+				checklistSummary.applicationInformationStatus,
+			contactsStatus: checklistSummary.contactsStatus,
+			environmentRegistrationStatus:
+				checklistSummary.environmentRegistrationStatus,
+			evidenceReferenceStatus: checklistSummary.evidenceReferenceStatus,
+			processLinksStatus: checklistSummary.processLinksStatus,
+			promotionMetadataStatus: checklistSummary.promotionMetadataStatus,
+			rationale: checklistSummary.rationale ?? "",
+			reviewDisposition: checklistSummary.reviewDisposition,
+		});
+	}, [checklistSummary]);
 
 	const updateContactFormField = (
 		field: keyof ApplicationInformationContactFormState,
@@ -215,6 +398,62 @@ export const ApplicationInformationDetailPage = (): FunctionComponent => {
 		}
 	};
 
+	const handleSaveReviewNote = async (): Promise<void> => {
+		const trimmedBody = reviewNoteBody.trim();
+		if (trimmedBody.length === 0) {
+			return;
+		}
+
+		setLocalError(null);
+
+		try {
+			await addNote({ body: trimmedBody });
+			setReviewNoteBody("");
+			setLocalSuccessMessage(t("workspaces.appInfoInternalReviewNoteSavedSuccess"));
+		} catch (requestError) {
+			setLocalError(requestError as Error);
+		}
+	};
+
+	const updateReviewChecklistField = (
+		field: keyof ReviewChecklistFormState,
+		value: string
+	): void => {
+		setReviewChecklistForm((currentForm) => ({
+			...currentForm,
+			[field]: value,
+		}));
+	};
+
+	const handleSaveReviewChecklist = async (): Promise<void> => {
+		setLocalError(null);
+
+		try {
+			await saveChecklistSummary({
+				applicationInformationStatus:
+					reviewChecklistForm.applicationInformationStatus,
+				contactsStatus: reviewChecklistForm.contactsStatus,
+				environmentRegistrationStatus:
+					reviewChecklistForm.environmentRegistrationStatus,
+				evidenceReferenceStatus:
+					reviewChecklistForm.evidenceReferenceStatus,
+				processLinksStatus: reviewChecklistForm.processLinksStatus,
+				promotionMetadataStatus:
+					reviewChecklistForm.promotionMetadataStatus,
+				rationale:
+					reviewChecklistForm.rationale.trim().length > 0
+						? reviewChecklistForm.rationale.trim()
+						: null,
+				reviewDisposition: reviewChecklistForm.reviewDisposition,
+			});
+			setLocalSuccessMessage(
+				t("workspaces.appInfoInternalReviewChecklistSavedSuccess")
+			);
+		} catch (requestError) {
+			setLocalError(requestError as Error);
+		}
+	};
+
 	return (
 		<>
 			<Heading tag="h1">
@@ -258,14 +497,440 @@ export const ApplicationInformationDetailPage = (): FunctionComponent => {
 
 			{applicationInformation ? (
 				<div className="grid gap-300">
+					{readinessSummary ? (
+						<div className="grid gap-200 rounded-sm border border-solid border-[#d9d9d9] p-300">
+							<Heading tag="h2">
+								{t("workspaces.appInfoReadinessTitle")}
+							</Heading>
+							<dl className="grid gap-150">
+								<div>
+									<dt>
+										<strong>
+											{t(
+												"workspaces.appInfoReadinessSummaryLabel"
+											)}
+										</strong>
+									</dt>
+									<dd>
+										{readinessSummary.submitReady
+											? t("workspaces.appInfoReadinessReady")
+											: t("workspaces.appInfoReadinessAttentionRequired")}
+									</dd>
+								</div>
+							</dl>
+
+							{!readinessSummary.submitReady ? (
+								<Notice
+									noticeRole="warning"
+									noticeTitle={t("workspaces.appInfoReadinessWarningTitle")}
+									noticeTitleTag="h3"
+								>
+									<Text>
+										{t("workspaces.appInfoReadinessWarningBody")}
+									</Text>
+								</Notice>
+							) : null}
+
+							<ul className="grid gap-150 list-none pl-0">
+								{readinessItems.map((item) => (
+									<li
+										key={item.key}
+										className="rounded-sm border border-solid border-[#d9d9d9] p-200"
+									>
+										<Text>
+											<strong>{item.label}</strong>: {item.statusLabel}
+										</Text>
+										{item.status !== "complete" ? (
+											<Text>{item.nextStep}</Text>
+										) : null}
+									</li>
+								))}
+							</ul>
+
+							<Notice
+								noticeRole="info"
+								noticeTitle={t("workspaces.appInfoReadinessExternalInfoTitle")}
+								noticeTitleTag="h3"
+							>
+								<Text>
+									{t("workspaces.appInfoReadinessExternalInfoBody")}
+								</Text>
+							</Notice>
+						</div>
+					) : null}
+
+					{isInternalReviewer ? (
+						<div className="grid gap-200 rounded-sm border border-solid border-[#d9d9d9] p-300">
+							<Heading tag="h2">
+								{t("workspaces.appInfoInternalReviewTitle")}
+							</Heading>
+							<Text>
+								{t("workspaces.appInfoInternalReviewSummary")}
+							</Text>
+
+							{isLoadingReview ? (
+								<Notice
+									noticeRole="info"
+									noticeTitle={t(
+										"workspaces.appInfoInternalReviewLoadingTitle"
+									)}
+									noticeTitleTag="h3"
+								>
+									<Text>
+										{t("workspaces.appInfoInternalReviewLoadingBody")}
+									</Text>
+								</Notice>
+							) : null}
+
+							{reviewError ? (
+								<Notice
+									noticeRole="warning"
+									noticeTitle={t(
+										"workspaces.appInfoInternalReviewErrorTitle"
+									)}
+									noticeTitleTag="h3"
+								>
+									<Text>
+										{t("workspaces.appInfoInternalReviewErrorBody")}
+									</Text>
+								</Notice>
+							) : null}
+
+							{!isLoadingReview && !reviewError ? (
+								<div className="grid gap-250">
+									<div className="grid gap-200">
+										<Heading tag="h3">
+											{t("workspaces.appInfoInternalReviewChecklistTitle")}
+										</Heading>
+
+										{checklistSummary ? (
+											<div className="grid gap-150 rounded-sm border border-solid border-[#d9d9d9] p-200">
+												<Text>
+													{`${t("workspaces.appInfoInternalReviewDispositionLabel")}: ${reviewDispositionLabel(checklistSummary.reviewDisposition)}`}
+												</Text>
+												<Text>
+													{`${t("workspaces.appInfoInternalReviewReviewedByLabel")}: ${checklistSummary.reviewedByName ?? t("common.notAvailable")}`}
+												</Text>
+												<Text>
+													{`${t("workspaces.appInfoInternalReviewUpdatedAtLabel")}: ${checklistSummary.updatedAt ?? checklistSummary.createdAt}`}
+												</Text>
+												<Text>
+													{`${t("workspaces.appInfoInternalReviewApplicationInformationLabel")}: ${readinessStatusLabel(checklistSummary.applicationInformationStatus)}`}
+												</Text>
+												<Text>
+													{`${t("workspaces.appInfoReadinessContactsLabel")}: ${readinessStatusLabel(checklistSummary.contactsStatus)}`}
+												</Text>
+												<Text>
+													{`${t("workspaces.appInfoInternalReviewEnvironmentRegistrationLabel")}: ${readinessStatusLabel(checklistSummary.environmentRegistrationStatus)}`}
+												</Text>
+												<Text>
+													{`${t("workspaces.appInfoInternalReviewPromotionMetadataLabel")}: ${readinessStatusLabel(checklistSummary.promotionMetadataStatus)}`}
+												</Text>
+												<Text>
+													{`${t("workspaces.appInfoInternalReviewEvidenceReferenceLabel")}: ${readinessStatusLabel(checklistSummary.evidenceReferenceStatus)}`}
+												</Text>
+												<Text>
+													{`${t("workspaces.appInfoInternalReviewProcessLinksLabel")}: ${readinessStatusLabel(checklistSummary.processLinksStatus)}`}
+												</Text>
+												{checklistSummary.rationale ? (
+													<Text>
+														{`${t("workspaces.appInfoInternalReviewRationaleLabel")}: ${checklistSummary.rationale}`}
+													</Text>
+												) : null}
+											</div>
+										) : (
+											<Notice
+												noticeRole="info"
+												noticeTitle={t(
+													"workspaces.appInfoInternalReviewNoChecklistTitle"
+												)}
+												noticeTitleTag="h4"
+											>
+												<Text>
+													{t(
+														"workspaces.appInfoInternalReviewNoChecklistBody"
+													)}
+												</Text>
+											</Notice>
+										)}
+
+										{canEditInternalReview ? (
+											<div className="grid gap-150 rounded-sm border border-solid border-[#d9d9d9] p-200">
+												<Select
+													label={t(
+														"workspaces.appInfoInternalReviewDispositionLabel"
+													)}
+													name="reviewDisposition"
+													onInput={(event): void => {
+														updateReviewChecklistField(
+															"reviewDisposition",
+															(event.target as HTMLSelectElement).value
+														);
+													}}
+													selectId="review-disposition"
+													value={reviewChecklistForm.reviewDisposition}
+												>
+													<option value="pending">
+														{t(
+															"workspaces.appInfoInternalReviewDispositionPending"
+														)}
+													</option>
+													<option value="changes_requested">
+														{t(
+															"workspaces.appInfoInternalReviewDispositionChangesRequested"
+														)}
+													</option>
+													<option value="ready_for_next_step">
+														{t(
+															"workspaces.appInfoInternalReviewDispositionReadyForNextStep"
+														)}
+													</option>
+												</Select>
+												<Select
+													label={t(
+														"workspaces.appInfoInternalReviewApplicationInformationLabel"
+													)}
+													name="applicationInformationStatus"
+													onInput={(event): void => {
+														updateReviewChecklistField(
+															"applicationInformationStatus",
+															(event.target as HTMLSelectElement).value
+														);
+													}}
+													selectId="review-application-information-status"
+													value={reviewChecklistForm.applicationInformationStatus}
+												>
+													<option value="not_started">{t("workspaces.appInfoReadinessStatusNotStarted")}</option>
+													<option value="incomplete">{t("workspaces.appInfoReadinessStatusIncomplete")}</option>
+													<option value="complete">{t("workspaces.appInfoReadinessStatusComplete")}</option>
+												</Select>
+												<Select
+													label={t("workspaces.appInfoReadinessContactsLabel")}
+													name="contactsStatus"
+													onInput={(event): void => {
+														updateReviewChecklistField(
+															"contactsStatus",
+															(event.target as HTMLSelectElement).value
+														);
+													}}
+													selectId="review-contacts-status"
+													value={reviewChecklistForm.contactsStatus}
+												>
+													<option value="not_started">{t("workspaces.appInfoReadinessStatusNotStarted")}</option>
+													<option value="incomplete">{t("workspaces.appInfoReadinessStatusIncomplete")}</option>
+													<option value="complete">{t("workspaces.appInfoReadinessStatusComplete")}</option>
+												</Select>
+												<Select
+													label={t(
+														"workspaces.appInfoInternalReviewEnvironmentRegistrationLabel"
+													)}
+													name="environmentRegistrationStatus"
+													onInput={(event): void => {
+														updateReviewChecklistField(
+															"environmentRegistrationStatus",
+															(event.target as HTMLSelectElement).value
+														);
+													}}
+													selectId="review-environment-registration-status"
+													value={reviewChecklistForm.environmentRegistrationStatus}
+												>
+													<option value="not_started">{t("workspaces.appInfoReadinessStatusNotStarted")}</option>
+													<option value="incomplete">{t("workspaces.appInfoReadinessStatusIncomplete")}</option>
+													<option value="complete">{t("workspaces.appInfoReadinessStatusComplete")}</option>
+												</Select>
+												<Select
+													label={t(
+														"workspaces.appInfoInternalReviewPromotionMetadataLabel"
+													)}
+													name="promotionMetadataStatus"
+													onInput={(event): void => {
+														updateReviewChecklistField(
+															"promotionMetadataStatus",
+															(event.target as HTMLSelectElement).value
+														);
+													}}
+													selectId="review-promotion-metadata-status"
+													value={reviewChecklistForm.promotionMetadataStatus}
+												>
+													<option value="not_started">{t("workspaces.appInfoReadinessStatusNotStarted")}</option>
+													<option value="incomplete">{t("workspaces.appInfoReadinessStatusIncomplete")}</option>
+													<option value="complete">{t("workspaces.appInfoReadinessStatusComplete")}</option>
+												</Select>
+												<Select
+													label={t(
+														"workspaces.appInfoInternalReviewEvidenceReferenceLabel"
+													)}
+													name="evidenceReferenceStatus"
+													onInput={(event): void => {
+														updateReviewChecklistField(
+															"evidenceReferenceStatus",
+															(event.target as HTMLSelectElement).value
+														);
+													}}
+													selectId="review-evidence-reference-status"
+													value={reviewChecklistForm.evidenceReferenceStatus}
+												>
+													<option value="not_started">{t("workspaces.appInfoReadinessStatusNotStarted")}</option>
+													<option value="incomplete">{t("workspaces.appInfoReadinessStatusIncomplete")}</option>
+													<option value="complete">{t("workspaces.appInfoReadinessStatusComplete")}</option>
+												</Select>
+												<Select
+													label={t(
+														"workspaces.appInfoInternalReviewProcessLinksLabel"
+													)}
+													name="processLinksStatus"
+													onInput={(event): void => {
+														updateReviewChecklistField(
+															"processLinksStatus",
+															(event.target as HTMLSelectElement).value
+														);
+													}}
+													selectId="review-process-links-status"
+													value={reviewChecklistForm.processLinksStatus}
+												>
+													<option value="not_started">{t("workspaces.appInfoReadinessStatusNotStarted")}</option>
+													<option value="incomplete">{t("workspaces.appInfoReadinessStatusIncomplete")}</option>
+													<option value="complete">{t("workspaces.appInfoReadinessStatusComplete")}</option>
+												</Select>
+												<Textarea
+													label={t("workspaces.appInfoInternalReviewRationaleLabel")}
+													name="reviewRationale"
+													onInput={(event): void => {
+														updateReviewChecklistField(
+															"rationale",
+															(event.target as HTMLTextAreaElement).value
+														);
+													}}
+													textareaId="review-rationale"
+													value={reviewChecklistForm.rationale}
+												/>
+												<Button
+													buttonRole="secondary"
+													disabled={isSavingChecklist}
+													type="button"
+													onGcdsClick={() => {
+														void handleSaveReviewChecklist();
+													}}
+												>
+													{isSavingChecklist
+														? t(
+															"workspaces.appInfoInternalReviewChecklistSavingAction"
+														)
+														: t(
+															"workspaces.appInfoInternalReviewChecklistSaveAction"
+														)}
+												</Button>
+											</div>
+										) : (
+											<Notice
+												noticeRole="info"
+												noticeTitle={t(
+													"workspaces.appInfoInternalReviewReadOnlyTitle"
+												)}
+												noticeTitleTag="h4"
+											>
+												<Text>
+													{t("workspaces.appInfoInternalReviewReadOnlyBody")}
+												</Text>
+											</Notice>
+										)}
+									</div>
+
+									<div className="grid gap-200">
+										<Heading tag="h3">
+											{t("workspaces.appInfoInternalReviewNotesTitle")}
+										</Heading>
+
+										{reviewNotes.length === 0 ? (
+											<Notice
+												noticeRole="info"
+												noticeTitle={t(
+													"workspaces.appInfoInternalReviewNoNotesTitle"
+												)}
+												noticeTitleTag="h4"
+											>
+												<Text>
+													{t("workspaces.appInfoInternalReviewNoNotesBody")}
+												</Text>
+											</Notice>
+										) : (
+											<ul className="grid gap-150 list-none pl-0">
+												{reviewNotes.map((note) => (
+													<li
+														key={note.uuid}
+														className="rounded-sm border border-solid border-[#d9d9d9] p-200"
+													>
+														<Text>
+															{`${note.authorName ?? t("common.notAvailable")} - ${note.createdAt}`}
+														</Text>
+														<Text>{note.body}</Text>
+													</li>
+												))}
+											</ul>
+										)}
+
+										{canEditInternalReview ? (
+											<div className="grid gap-150 rounded-sm border border-solid border-[#d9d9d9] p-200">
+												<Textarea
+													label={t("workspaces.appInfoInternalReviewNoteLabel")}
+													name="reviewNote"
+													onInput={(event): void => {
+														setReviewNoteBody(
+															(event.target as HTMLTextAreaElement).value
+														);
+													}}
+													textareaId="review-note-body"
+													value={reviewNoteBody}
+												/>
+												<Button
+													buttonRole="secondary"
+													disabled={
+														isAddingNote || reviewNoteBody.trim().length === 0
+													}
+													type="button"
+													onGcdsClick={() => {
+														void handleSaveReviewNote();
+													}}
+												>
+													{isAddingNote
+														? t(
+															"workspaces.appInfoInternalReviewNoteSavingAction"
+														)
+														: t(
+															"workspaces.appInfoInternalReviewNoteSaveAction"
+														)}
+												</Button>
+											</div>
+										) : null}
+									</div>
+								</div>
+							) : null}
+						</div>
+					) : null}
+
 					<Heading tag="h2">{t("workspaces.appInfoSectionTitle")}</Heading>
 					<Text>{`${t("workspaces.appInfoServiceNameEnLabel")}: ${applicationInformation.serviceNameEn}`}</Text>
 					<Text>{`${t("workspaces.appInfoServiceNameFrLabel")}: ${applicationInformation.serviceNameFr}`}</Text>
+					<Text>
+						{`${t("workspaces.onboardingStateLabel")}: ${applicationInformation.onboardingState?.trim() ? getWorkspaceOnboardingStateLabel(t, applicationInformation.onboardingState) : t("common.notAvailable")}`}
+					</Text>
 					<Text>{`${t("workspaces.appInfoOverviewLabel")}: ${applicationInformation.overview}`}</Text>
 					<Text>{`${t("workspaces.appInfoTechnologyAndProtocolLabel")}: ${applicationInformation.technologyAndProtocol}`}</Text>
 					<Text>{`${t("workspaces.appInfoSecurityAndPrivacyLabel")}: ${applicationInformation.securityAndPrivacy}`}</Text>
 					<Text>{`${t("workspaces.appInfoUsageLabel")}: ${applicationInformation.usage}`}</Text>
 					<Text>{`${t("workspaces.appInfoMigrationOrTransitionPlanLabel")}: ${applicationInformation.migrationOrTransitionPlan}`}</Text>
+					<Text>
+						{`${t("workspaces.submittedAtLabel")}: ${applicationInformation.submittedAt ?? t("common.notAvailable")}`}
+					</Text>
+					<Text>
+						{`${t("workspaces.underReviewAtLabel")}: ${applicationInformation.underReviewAt ?? t("common.notAvailable")}`}
+					</Text>
+					<Text>
+						{`${t("workspaces.approvedAtLabel")}: ${applicationInformation.approvedAt ?? t("common.notAvailable")}`}
+					</Text>
+					<Text>
+						{`${t("workspaces.launchedAtLabel")}: ${applicationInformation.launchedAt ?? t("common.notAvailable")}`}
+					</Text>
 					<div className="flex flex-wrap gap-200">
 						<Button
 							buttonRole="secondary"

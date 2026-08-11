@@ -36,6 +36,16 @@ class RPApplication(Base):
         nullable=True,
         default=None,
     )
+    onboarding_state: Mapped[str | None] = mapped_column(
+        String(32),
+        nullable=True,
+        default="draft",
+        index=True,
+    )
+    submitted_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), default=None)
+    under_review_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), default=None)
+    approved_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), default=None)
+    launched_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), default=None)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default_factory=lambda: datetime.now(UTC))
     updated_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), default=None)
     deleted_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), default=None)

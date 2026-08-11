@@ -5,6 +5,7 @@ from .gc_notify_service import GCNotifyService
 from .health_service import HealthService
 from .ibm_sv_user_service import IBMVerifyUserService
 from .mau_service import MAUService
+from .onboarding_oversight_service import OnboardingOversightService
 from .oidc_logout_service import OidcLogoutService
 from .oidc_service import OidcService
 from .policy_service import PolicyService
@@ -24,6 +25,7 @@ __all__ = [
     "GCNotifyService",
     "HealthService",
     "MAUService",
+    "OnboardingOversightService",
     "OidcService",
     "OidcLogoutService",
     "PolicyService",

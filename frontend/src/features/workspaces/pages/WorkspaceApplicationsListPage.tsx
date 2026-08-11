@@ -8,11 +8,13 @@ import { getRequestErrorNotice } from "@/fetch";
 import { useWorkspaceApplicationInformationList } from "../hooks/use-workspace-application-information";
 import { useWorkspace } from "../hooks/use-workspace";
 import { useWorkspaceRPApplications } from "../hooks/use-workspace-rp-applications";
+import { getWorkspaceOnboardingStateLabel } from "../onboarding-display";
 
 type RPApplicationRow = {
 	environment: string;
 	linkedApplicationInformation: string;
 	name: string;
+	onboardingState: string;
 	status: string;
 	uuid: string;
 };
@@ -61,6 +63,9 @@ export const WorkspaceApplicationsListPage = (): FunctionComponent => {
 						?.serviceNameEn
 				: null) ?? t("workspaces.applicationsNoLinkedInfo"),
 		name: application.dnr_app_name,
+		onboardingState: application.onboarding_state?.trim()
+			? getWorkspaceOnboardingStateLabel(t, application.onboarding_state)
+			: t("common.notAvailable"),
 		status: application.status ?? t("common.notAvailable"),
 		uuid: application.uuid,
 	}));
@@ -76,6 +81,10 @@ export const WorkspaceApplicationsListPage = (): FunctionComponent => {
 		{
 			field: "status",
 			headerName: t("workspaces.applicationsStatusColumn"),
+		},
+		{
+			field: "onboardingState",
+			headerName: t("workspaces.onboardingStateColumn"),
 		},
 		{
 			field: "linkedApplicationInformation",

@@ -82,6 +82,85 @@ class TestRPApplicationServiceSync:
         updated_object = update_mock.await_args.kwargs["object"]
         assert updated_object["application_owner"] == {"owners": [{"email": "updated@example.gc.ca"}]}
 
+    @pytest.mark.asyncio
+    async def test_sync_rp_applications_backfills_workspace_access_grants_for_local_owner_users(self) -> None:
+        service = RPApplicationService()
+        db = Mock()
+        ibm_admin_client = Mock()
+        ibm_admin_client.list_applications = AsyncMock(
+            return_value=ListApplicationsResponse.model_validate(
+                {
+                    "_embedded": {
+                        "applications": [
+                            {"applicationRefId": "ibm-app-2", "name": "Existing App"},
+                        ]
+                    }
+                }
+            )
+        )
+        ibm_admin_client.get_application_detail = AsyncMock(
+            return_value=GetApplicationResponse.model_validate(
+                {"owners": [{"email": "owner@example.gc.ca"}]}
+            )
+        )
+
+        existing_application = {
+            "uuid": "018f6f83-0000-0000-0000-000000000201",
+            "workspace_id": 9,
+            "dnr_app_name": "Existing App",
+            "application_owner": {"owners": [{"email": "owner@example.gc.ca"}]},
+        }
+
+        original_application_get = rp_application_sync_module.crud_rp_applications.get
+        original_application_update = rp_application_sync_module.crud_rp_applications.update
+        original_user_get = rp_application_sync_module.crud_users.get
+        original_grant_get = rp_application_sync_module.crud_rp_application_access_grants.get
+        original_grant_create = rp_application_sync_module.crud_rp_application_access_grants.create
+
+        application_get_mock = AsyncMock(return_value=existing_application)
+        application_update_mock = AsyncMock(return_value=None)
+        user_get_mock = AsyncMock(
+            return_value={
+                "id": 42,
+                "uuid": "018f6f83-0000-0000-0000-000000000301",
+                "email": "owner@example.gc.ca",
+            }
+        )
+        grant_get_mock = AsyncMock(return_value=None)
+        grant_create_mock = AsyncMock(
+            return_value={
+                "uuid": "018f6f83-0000-0000-0000-000000000999",
+                "workspace_id": 9,
+                "user_id": 42,
+                "role": "RP User (Edit)",
+                "status": "active",
+            }
+        )
+        rp_application_sync_module.crud_rp_applications.get = application_get_mock
+        rp_application_sync_module.crud_rp_applications.update = application_update_mock
+        rp_application_sync_module.crud_users.get = user_get_mock
+        rp_application_sync_module.crud_rp_application_access_grants.get = grant_get_mock
+        rp_application_sync_module.crud_rp_application_access_grants.create = grant_create_mock
+
+        try:
+            result = await service.sync_rp_applications_from_ibm_verify(
+                db=db,
+                ibm_admin_client=ibm_admin_client,
+            )
+        finally:
+            rp_application_sync_module.crud_rp_applications.get = original_application_get
+            rp_application_sync_module.crud_rp_applications.update = original_application_update
+            rp_application_sync_module.crud_users.get = original_user_get
+            rp_application_sync_module.crud_rp_application_access_grants.get = original_grant_get
+            rp_application_sync_module.crud_rp_application_access_grants.create = original_grant_create
+
+        assert result == {"created": 0, "updated": 0, "skipped": 1, "processed": 1}
+        application_update_mock.assert_not_awaited()
+        grant_create_kwargs = grant_create_mock.await_args.kwargs
+        assert grant_create_kwargs["object"].workspace_id == 9
+        assert grant_create_kwargs["object"].user_id == 42
+        assert grant_create_kwargs["object"].role == "RP User (Edit)"
+
 
 class TestWorkerCronConfiguration:
     def test_worker_settings_registers_cron_jobs(self) -> None:

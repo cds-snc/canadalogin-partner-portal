@@ -11,12 +11,15 @@ vi.mock("react-i18next", () => ({
 	useTranslation: (): { t: (key: string, options?: Record<string, unknown>) => string } => ({
 		t: (key: string, options?: Record<string, unknown>): string => {
 			const translations: Record<string, string> = {
+				"common.notAvailable": "Not available",
 				"workspaces.appInfoCreateButton": "Create application information",
 				"workspaces.appInfoDeletedSuccess": "Application information deleted successfully",
 				"workspaces.appInfoListSummary": "Create, review, and update canonical bilingual application details for this workspace.",
 				"workspaces.appInfoSectionTitle": "Application Information",
 				"workspaces.appInfoServiceNameEnLabel": "Service name (English)",
 				"workspaces.appInfoServiceNameFrLabel": "Service name (French)",
+				"workspaces.onboardingStateColumn": "Onboarding status",
+				"workspaces.onboardingStateUnderReview": "Under review",
 				"workspaces.viewAction": "View workspace",
 			};
 
@@ -44,7 +47,7 @@ vi.mock("@/components/ui", () => ({
 				{children}
 			</button>
 		),
-	DataTable: ({ action, primaryAction, rows }: { action: { buttonLabel: string; onAction: (row: { serviceNameEn: string; serviceNameFr: string; uuid: string }) => void }; primaryAction: { buttonLabel: string; onAction: () => void }; rows: Array<{ serviceNameEn: string; serviceNameFr: string; uuid: string }> }): ReactElement => (
+	DataTable: ({ action, primaryAction, rows }: { action: { buttonLabel: string; onAction: (row: { onboardingState: string; serviceNameEn: string; serviceNameFr: string; uuid: string }) => void }; primaryAction: { buttonLabel: string; onAction: () => void }; rows: Array<{ onboardingState: string; serviceNameEn: string; serviceNameFr: string; uuid: string }> }): ReactElement => (
 		<section>
 			<button onClick={primaryAction.onAction} type="button">
 				{primaryAction.buttonLabel}
@@ -52,6 +55,7 @@ vi.mock("@/components/ui", () => ({
 			{rows.map((row) => (
 				<div key={row.uuid}>
 					<span>{row.serviceNameEn}</span>
+					<span>{row.onboardingState}</span>
 					<button onClick={() => action.onAction(row)} type="button">
 						{action.buttonLabel}
 					</button>
@@ -107,14 +111,19 @@ describe("ApplicationInformationListPage", () => {
 					isDeleted: false,
 					migrationOrTransitionPlan: "Phased transition",
 					overview: "Overview text",
+					onboardingState: "under_review",
 					securityAndPrivacy: "Protected B controls apply",
 					serviceNameEn: "Example service",
 					serviceNameFr: "Service exemple",
+					submittedAt: null,
 					technologyAndProtocol: "OIDC with backend mediation",
+					underReviewAt: null,
 					updatedAt: null,
 					usage: "Partner onboarding usage",
 					uuid: "application-information-uuid-1",
 					workspaceId: 9,
+					approvedAt: null,
+					launchedAt: null,
 				},
 			],
 			error: null,
@@ -123,6 +132,7 @@ describe("ApplicationInformationListPage", () => {
 		});
 
 		render(<ApplicationInformationListPage />);
+		expect(screen.getByText(/under review/i)).toBeTruthy();
 
 		expect(
 			screen.getByRole("heading", {

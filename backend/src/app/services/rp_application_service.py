@@ -14,6 +14,7 @@ from ..core.exceptions.http_exceptions import NotFoundException, RPApplicationDe
 from ..repositories.crud_departments import crud_departments
 from ..repositories.crud_rp_application_access_grants import crud_rp_application_access_grants
 from ..repositories.crud_rp_applications import crud_rp_applications
+from ..repositories.crud_users import crud_users
 from ..repositories.ibm_sv_admin import IBMVerifyAdminClient
 from ..schemas.rp_application import (
     CurrentUserRPApplicationDepartmentAssignRequest,
@@ -31,7 +32,10 @@ from ..schemas.rp_application import (
     RPApplicationRead,
     RPApplicationUpdate,
 )
-from ..schemas.rp_application_access_grant import RPApplicationAccessGrantRead
+from ..schemas.rp_application_access_grant import (
+    RPApplicationAccessGrantCreateInternal,
+    RPApplicationAccessGrantRead,
+)
 from .audit_service import AuditService
 from .ibm_sv_user_service import IBMVerifyUserService
 
@@ -39,6 +43,7 @@ logger = logging.getLogger(__name__)
 APPLICATION_ID_PATTERN = re.compile(r"/applications/([^/?#]+)")
 SUMMARY_ACCESS_GRANT_ROLES = frozenset({"rp admin", "rp user (edit)", "read only"})
 SECRET_ACCESS_GRANT_ROLES = frozenset({"rp admin", "rp user (edit)"})
+OWNER_ACCESS_GRANT_ROLE = "RP User (Edit)"
 
 
 class RPApplicationService:
@@ -467,13 +472,6 @@ class RPApplicationService:
             raise NotFoundException("RP application not found")
 
         rp_application_data = self._as_dict(rp_application)
-        current_user_email = self._extract_current_user_email(current_user)
-        if current_user_email is not None and self._is_owner_email_match(
-            rp_application_data.get("application_owner"),
-            current_user_email,
-        ):
-            return rp_application_data, None
-
         if allowed_grant_roles is None:
             raise NotFoundException("RP application not found")
 
@@ -492,6 +490,72 @@ class RPApplicationService:
             raise NotFoundException("RP application not found")
 
         return rp_application_data, grant_role
+
+    async def _ensure_workspace_access_grant(
+        self,
+        db: AsyncSession,
+        workspace_id: int | None,
+        user_id: int | None,
+        role: str,
+    ) -> None:
+        if workspace_id is None or user_id is None:
+            return
+
+        existing_grant = await crud_rp_application_access_grants.get(
+            db=db,
+            workspace_id=workspace_id,
+            user_id=user_id,
+            status="active",
+            is_deleted=False,
+            schema_to_select=RPApplicationAccessGrantRead,
+        )
+        if existing_grant is not None:
+            return
+
+        created_grant = await crud_rp_application_access_grants.create(
+            db=db,
+            object=RPApplicationAccessGrantCreateInternal(
+                workspace_id=workspace_id,
+                user_id=user_id,
+                role=role,
+                status="active",
+            ),
+            schema_to_select=RPApplicationAccessGrantRead,
+        )
+        if created_grant is None:
+            raise NotFoundException("Failed to create RP application access grant")
+
+    async def _backfill_workspace_owner_access_grants(
+        self,
+        db: AsyncSession,
+        workspace_id: int | None,
+        application_owner: RPApplicationOwnerSnapshotRead | None,
+    ) -> None:
+        if workspace_id is None or application_owner is None:
+            return
+
+        seen_emails: set[str] = set()
+        for owner in application_owner.owners:
+            normalized_email = owner.email.strip().lower()
+            if not normalized_email or normalized_email in seen_emails:
+                continue
+            seen_emails.add(normalized_email)
+
+            local_user = await crud_users.get(
+                db=db,
+                email=normalized_email,
+                is_deleted=False,
+            )
+            if local_user is None:
+                continue
+
+            local_user_id = self._extract_current_user_id(self._as_dict(local_user))
+            await self._ensure_workspace_access_grant(
+                db=db,
+                workspace_id=workspace_id,
+                user_id=local_user_id,
+                role=OWNER_ACCESS_GRANT_ROLE,
+            )
 
     async def _get_current_user_application_detail_context(
         self,
@@ -620,12 +684,11 @@ class RPApplicationService:
         ibm_user_service: IBMVerifyUserService,
     ) -> list[dict[str, Any]]:
         _ = ibm_user_service
-        current_user_email = self._extract_current_user_email(current_user)
         granted_workspace_roles = await self._list_current_user_granted_workspace_roles(
             db=db,
             current_user=current_user,
         )
-        if current_user_email is None and len(granted_workspace_roles) == 0:
+        if len(granted_workspace_roles) == 0:
             return []
 
         local_applications_data = await crud_rp_applications.get_multi(
@@ -645,11 +708,7 @@ class RPApplicationService:
             workspace_id = application_data.get("workspace_id")
             normalized_grant_role = granted_workspace_roles.get(workspace_id) if isinstance(workspace_id, int) else None
             has_workspace_grant = normalized_grant_role in SUMMARY_ACCESS_GRANT_ROLES
-            has_owner_email_match = current_user_email is not None and self._is_owner_email_match(
-                application_data.get("application_owner"),
-                current_user_email,
-            )
-            if not has_workspace_grant and not has_owner_email_match:
+            if not has_workspace_grant:
                 continue
 
             application_read = RPApplicationCurrentUserRead.model_validate(application_data).model_dump()
@@ -855,6 +914,9 @@ class RPApplicationService:
         response = RPApplicationCurrentUserOAuthSetupRead(
             rp_application_name=rp_application_data["dnr_app_name"],
             status=status,
+            canada_login_environment=rp_application_data.get("canada_login_environment"),
+            onboarding_state=rp_application_data.get("onboarding_state"),
+            promotion_status=rp_application_data.get("promotion_status"),
             application_url=application_url,
             discovery_endpoint=settings.OIDC_SERVER_METADATA_URL,
             department_name=department_name,
@@ -1143,6 +1205,12 @@ class RPApplicationService:
                     "Created RP application from IBM Verify: %s",
                     application_name,
                 )
+                created_application_data = self._as_dict(created_application)
+                await self._backfill_workspace_owner_access_grants(
+                    db=db,
+                    workspace_id=created_application_data.get("workspace_id"),
+                    application_owner=application_owner,
+                )
                 created += 1
                 continue
 
@@ -1152,6 +1220,11 @@ class RPApplicationService:
             if existing_application_data.get("application_owner") == (
                 application_owner.model_dump(by_alias=True) if application_owner is not None else None
             ):
+                await self._backfill_workspace_owner_access_grants(
+                    db=db,
+                    workspace_id=existing_application_data.get("workspace_id"),
+                    application_owner=application_owner,
+                )
                 logger.info(
                     "Skipping RP application sync item because it is already up to date: %s",
                     application_name,
@@ -1166,6 +1239,11 @@ class RPApplicationService:
                     "updated_at": datetime.now(UTC),
                 },
                 uuid=existing_application_data["uuid"],
+            )
+            await self._backfill_workspace_owner_access_grants(
+                db=db,
+                workspace_id=existing_application_data.get("workspace_id"),
+                application_owner=application_owner,
             )
             logger.info(
                 "Updated RP application from IBM Verify: %s",

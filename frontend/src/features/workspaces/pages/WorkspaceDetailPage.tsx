@@ -4,6 +4,7 @@ import type { FunctionComponent } from "@/common/types";
 import { Button, Heading, Notice, Text } from "@/components/ui";
 import { getRequestErrorNotice } from "@/fetch";
 import { useWorkspace } from "../hooks/use-workspace";
+import { getWorkspaceOnboardingStateLabel } from "../onboarding-display";
 
 export const WorkspaceDetailPage = (): FunctionComponent => {
 	const { t } = useTranslation() as unknown as {
@@ -71,7 +72,22 @@ export const WorkspaceDetailPage = (): FunctionComponent => {
 					<Text>{`${t("workspaces.nameLabel")}: ${workspace.name}`}</Text>
 					<Text>{`${t("workspaces.slugLabel")}: ${workspace.slug}`}</Text>
 					<Text>
+						{`${t("workspaces.onboardingStateLabel")}: ${workspace.onboardingState?.trim() ? getWorkspaceOnboardingStateLabel(t, workspace.onboardingState) : t("common.notAvailable")}`}
+					</Text>
+					<Text>
 						{`${t("workspaces.descriptionLabel")}: ${workspace.description ?? t("workspaces.noDescriptionText")}`}
+					</Text>
+					<Text>
+						{`${t("workspaces.submittedAtLabel")}: ${workspace.submittedAt ?? t("common.notAvailable")}`}
+					</Text>
+					<Text>
+						{`${t("workspaces.underReviewAtLabel")}: ${workspace.underReviewAt ?? t("common.notAvailable")}`}
+					</Text>
+					<Text>
+						{`${t("workspaces.approvedAtLabel")}: ${workspace.approvedAt ?? t("common.notAvailable")}`}
+					</Text>
+					<Text>
+						{`${t("workspaces.launchedAtLabel")}: ${workspace.launchedAt ?? t("common.notAvailable")}`}
 					</Text>
 					<Text>{`${t("workspaces.createdAtLabel")}: ${workspace.createdAt}`}</Text>
 					<Text>

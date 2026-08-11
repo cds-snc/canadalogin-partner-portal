@@ -5,9 +5,11 @@ import { Button, DataTable, Heading, Notice, Text } from "@/components/ui";
 import type { DataTableColumn } from "@/components/ui/DataTable";
 import { getRequestErrorNotice } from "@/fetch";
 import { useWorkspaces } from "../hooks/use-workspaces";
+import { getWorkspaceOnboardingStateLabel } from "../onboarding-display";
 
 type WorkspaceTableRow = {
 	name: string;
+	onboardingState: string;
 	slug: string;
 	uuid: string;
 };
@@ -30,11 +32,18 @@ export const WorkspacesPage = (): FunctionComponent => {
 		search.deleted === "1" ? t("workspaces.deletedSuccess") : null;
 	const rows: Array<WorkspaceTableRow> = workspaces.map((workspace) => ({
 		name: workspace.name,
+		onboardingState: workspace.onboardingState?.trim()
+			? getWorkspaceOnboardingStateLabel(t, workspace.onboardingState)
+			: t("common.notAvailable"),
 		slug: workspace.slug,
 		uuid: workspace.uuid,
 	}));
 	const columns: Array<DataTableColumn<WorkspaceTableRow>> = [
 		{ field: "name", headerName: t("workspaces.nameLabel") },
+		{
+			field: "onboardingState",
+			headerName: t("workspaces.onboardingStateColumn"),
+		},
 		{ field: "slug", headerName: t("workspaces.slugLabel") },
 	];
 

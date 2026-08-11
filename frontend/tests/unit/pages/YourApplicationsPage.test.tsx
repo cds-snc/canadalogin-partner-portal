@@ -16,9 +16,14 @@ vi.mock("react-i18next", () => ({
 				"nav.organization": "Organization",
 				"nav.roles": "Roles",
 				"yourApplications.applicationsSectionTitle": "RP applications",
+				"yourApplications.environmentLabel": "Environment",
+				"yourApplications.environmentProduction": "Production",
+				"yourApplications.environmentStaging": "Staging",
+				"yourApplications.environmentTest": "Test",
 				"yourApplications.emailLabel": "Email",
 					"yourApplications.errorBody": "Your applications could not be loaded for this session.",
 					"yourApplications.errorTitle": "Unable to load your applications",
+				"yourApplications.lifecycleUnavailable": "Lifecycle status unavailable.",
 				"yourApplications.loadingBody": "Loading your applications.",
 				"yourApplications.loadingTitle": "Loading your applications",
 				"yourApplications.nameLabel": "Name",
@@ -26,7 +31,18 @@ vi.mock("react-i18next", () => ({
 				"yourApplications.noRoles": "No roles assigned.",
 				"yourApplications.noWorkspaces": "No accessible workspaces found.",
 				"yourApplications.noRPApplications": "No RP applications found.",
+				"yourApplications.onboardingStateApproved": "Approved",
+				"yourApplications.onboardingStateDraft": "Draft",
+				"yourApplications.onboardingStateLabel": "Onboarding status",
+				"yourApplications.onboardingStateLaunched": "Launched",
+				"yourApplications.onboardingStateSubmitted": "Submitted",
+				"yourApplications.onboardingStateUnderReview": "Under review",
 				"yourApplications.profileSectionTitle": "Profile summary",
+				"yourApplications.productionReviewLabel": "Production review",
+				"yourApplications.promotionStatusApproved": "Approved",
+				"yourApplications.promotionStatusChangesRequested": "Changes requested",
+				"yourApplications.promotionStatusLaunched": "Launched",
+				"yourApplications.promotionStatusReviewTracked": "Review tracked",
 				"yourApplications.roleContextUnavailable": "Your role labels are unavailable right now.",
 				"yourApplications.rolesLoading": "Loading your role context.",
 				"yourApplications.summary": "Review your profile, accessible workspaces, and RP applications.",
@@ -149,8 +165,19 @@ describe("YourApplicationsPage", () => {
 			})
 			.mockReturnValueOnce({
 			data: [
-				{ dnrAppName: "Benefits Portal", uuid: "application-uuid-1" },
-				{ dnrAppName: "Claims Service", uuid: "application-uuid-2" },
+				{
+					canadaLoginEnvironment: "production",
+					dnrAppName: "Benefits Portal",
+					onboardingState: "under_review",
+					promotionStatus: "review_tracked",
+					uuid: "application-uuid-1",
+				},
+				{
+					canadaLoginEnvironment: "staging",
+					dnrAppName: "Claims Service",
+					onboardingState: "submitted",
+					uuid: "application-uuid-2",
+				},
 			],
 			error: null,
 			isLoading: false,
@@ -223,14 +250,24 @@ describe("YourApplicationsPage", () => {
 				expect(screen.getByText(/^rp admin$/i)).toBeTruthy();
 				expect(screen.getByRole("link", { name: /review all workspaces/i })).toBeTruthy();
 				expect(screen.getByRole("link", { name: /benefits workspace/i })).toBeTruthy();
-				expect(screen.getByRole("link", { name: /^benefits portal$/i })).toBeTruthy();
-				expect(screen.getByRole("link", { name: /^claims service$/i })).toBeTruthy();
+				expect(screen.getByRole("link", { name: /benefits portal/i })).toBeTruthy();
+				expect(screen.getByRole("link", { name: /claims service/i })).toBeTruthy();
 				expect(
 					screen.getByRole("link", { name: /benefits workspace/i }).getAttribute("href")
 				).toBe("/workspaces/workspace-uuid-1");
 		expect(screen.getByRole("heading", { name: /your applications/i })).toBeTruthy();
-		expect(screen.getByRole("link", { name: /^benefits portal$/i })).toBeTruthy();
-		expect(screen.getByRole("link", { name: /^claims service$/i })).toBeTruthy();
+		expect(screen.getByRole("link", { name: /benefits portal/i })).toBeTruthy();
+		expect(screen.getByRole("link", { name: /claims service/i })).toBeTruthy();
+		expect(
+			screen.getByRole("link", {
+				name: /benefits portal.*Environment: Production\. Onboarding status: Under review\. Production review: Review tracked/i,
+			})
+		).toBeTruthy();
+		expect(
+			screen.getByRole("link", {
+				name: /claims service.*Environment: Staging\. Onboarding status: Submitted/i,
+			})
+		).toBeTruthy();
 			});
 
 			it("renders empty workspace and application states", () => {
@@ -284,6 +321,57 @@ describe("YourApplicationsPage", () => {
 				expect(screen.getByText(/no roles assigned\./i)).toBeTruthy();
 				expect(screen.getByText(/no accessible workspaces found\./i)).toBeTruthy();
 				expect(screen.getByText(/no rp applications found\./i)).toBeTruthy();
+			});
+
+			it("renders a neutral lifecycle placeholder when current-user application status is unavailable", () => {
+				mockedUseQuery
+					.mockReturnValueOnce({
+						data: null,
+						error: null,
+						isLoading: false,
+					})
+					.mockReturnValueOnce({
+						data: [{ dnrAppName: "Benefits Portal", uuid: "application-uuid-1" }],
+						error: null,
+						isLoading: false,
+					});
+				mockedUseRoles.mockReturnValue({
+					error: null,
+					isLoading: false,
+					itemsPerPage: 1000,
+					page: 1,
+					refetch: vi.fn(async () => null),
+					response: { data: [], has_more: false, items_per_page: 1000, page: 1, total_count: 0 },
+					roles: [],
+				});
+				mockedUseWorkspaces.mockReturnValue({
+					error: null,
+					isLoading: false,
+					refetch: vi.fn(async () => null),
+					workspaces: [],
+				});
+				mockedUseSession.mockReturnValue({
+					currentUser: {
+						authProvider: "gc-sso",
+						authSubject: "subject-123",
+						departmentUuid: null,
+						email: "jane@example.com",
+						name: "Jane Doe",
+						profileImageUrl: null,
+						roleUuids: [],
+						tierUuid: null,
+						uuid: "user-uuid-1",
+					},
+					isAuthenticated: true,
+					isLoading: false,
+					login: vi.fn(),
+					logout: vi.fn(async () => undefined),
+					refreshSession: vi.fn(async () => null),
+				});
+
+				render(<YourApplicationsPage />);
+
+				expect(screen.getByText(/lifecycle status unavailable\./i)).toBeTruthy();
 			});
 
 			it("renders workspace and application error notices", () => {

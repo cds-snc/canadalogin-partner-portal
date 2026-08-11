@@ -73,7 +73,7 @@ class TestRPApplicationServiceCurrentUserSync:
         ibm_user_service.get_applications.assert_not_awaited()
 
     @pytest.mark.asyncio
-    async def test_list_current_user_rp_applications_includes_owner_email_matches(self, mock_db) -> None:
+    async def test_list_current_user_rp_applications_ignores_owner_email_matches_without_grant(self, mock_db) -> None:
         service = RPApplicationService()
         current_user = {"id": 11, "email": "yiwei.wang@cds-snc.ca"}
         ibm_user_service = Mock()
@@ -121,8 +121,7 @@ class TestRPApplicationServiceCurrentUserSync:
                     ibm_user_service=ibm_user_service,
                 )
 
-        assert len(result) == 1
-        assert result[0]["ibm_sv_application_id"] == "app-owner-match"
+            assert result == []
         mock_crud.create.assert_not_awaited()
         ibm_user_service.get_applications.assert_not_awaited()
 
@@ -141,6 +140,9 @@ class TestRPApplicationServiceCurrentUserSync:
             "dnr_app_name": "Workspace Granted App",
             "created_by": 2,
             "ibm_sv_application_id": "app-workspace-grant",
+            "canada_login_environment": "production",
+            "onboarding_state": "under_review",
+            "promotion_status": "review_tracked",
             "application_owner": {
                 "owners": [
                     {"email": "someone.else@cds-snc.ca"},
@@ -187,4 +189,7 @@ class TestRPApplicationServiceCurrentUserSync:
 
         assert len(result) == 1
         assert result[0]["ibm_sv_application_id"] == "app-workspace-grant"
+        assert result[0]["canada_login_environment"] == "production"
+        assert result[0]["onboarding_state"] == "under_review"
+        assert result[0]["promotion_status"] == "review_tracked"
         ibm_user_service.get_applications.assert_not_awaited()

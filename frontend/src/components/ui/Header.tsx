@@ -89,6 +89,7 @@ const Header = (): FunctionComponent => {
 	];
 
 	const superuserItems: Array<NavigationItem> = [
+		{ href: "/onboarding-oversight", label: t("nav.onboardingOversight") },
 		{ href: "/users", label: t("nav.users") },
 		{ href: "/departments", label: t("nav.departments") },
 		{ href: "/roles", label: t("nav.roles") },

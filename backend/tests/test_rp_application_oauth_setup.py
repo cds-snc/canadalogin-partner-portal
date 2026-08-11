@@ -37,6 +37,9 @@ class TestCurrentUserRPOAuthSetupAPI:
             return_value={
                 "rpApplicationName": "Benefits Portal",
                 "status": "active",
+                "canadaLoginEnvironment": "production",
+                "onboardingState": "under_review",
+                "promotionStatus": "review_tracked",
                 "applicationUrl": "https://benefits.example.gc.ca",
                 "discoveryEndpoint": "https://cds-gcsignin-dev.verify.ibm.com/oauth2/.well-known/openid-configuration",
                 "departmentName": "Benefits",
@@ -71,6 +74,8 @@ class TestCurrentUserRPOAuthSetupAPI:
 
         assert response.status_code == 200
         assert response.json()["rpApplicationName"] == "Benefits Portal"
+        assert response.json()["onboardingState"] == "under_review"
+        assert response.json()["promotionStatus"] == "review_tracked"
         service.get_current_user_rp_application_oauth_setup.assert_awaited_once()
 
     def test_oauth_setup_owner_success_response_contract(self) -> None:
@@ -79,6 +84,9 @@ class TestCurrentUserRPOAuthSetupAPI:
             return_value={
                 "rpApplicationName": "Benefits Portal",
                 "status": "active",
+                "canadaLoginEnvironment": "staging",
+                "onboardingState": "submitted",
+                "promotionStatus": None,
                 "applicationUrl": "https://benefits.example.gc.ca",
                 "discoveryEndpoint": "https://cds-gcsignin-dev.verify.ibm.com/oauth2/.well-known/openid-configuration",
                 "departmentName": None,
@@ -119,6 +127,9 @@ class TestCurrentUserRPOAuthSetupAPI:
         assert response.json() == {
             "rpApplicationName": "Benefits Portal",
             "status": "active",
+            "canadaLoginEnvironment": "staging",
+            "onboardingState": "submitted",
+            "promotionStatus": None,
             "applicationUrl": "https://benefits.example.gc.ca",
             "discoveryEndpoint": "https://cds-gcsignin-dev.verify.ibm.com/oauth2/.well-known/openid-configuration",
             "departmentName": None,
@@ -464,6 +475,9 @@ class TestCurrentUserRPOAuthSetupService:
                 "department_id": 7,
                 "dnr_app_name": "Benefits Portal",
                 "ibm_sv_application_id": "ibm-app-336",
+                "canada_login_environment": "production",
+                "onboarding_state": "under_review",
+                "promotion_status": "review_tracked",
                 "application_owner": {
                     "owners": [{"email": "owner@example.gc.ca"}],
                 },
@@ -490,6 +504,9 @@ class TestCurrentUserRPOAuthSetupService:
 
         assert result["rpApplicationName"] == "Benefits Portal"
         assert result["departmentName"] == "Benefits"
+        assert result["canadaLoginEnvironment"] == "production"
+        assert result["onboardingState"] == "under_review"
+        assert result["promotionStatus"] == "review_tracked"
 
     @pytest.mark.asyncio
     async def test_client_credentials_rejects_read_only_grant_user(self) -> None:
@@ -611,16 +628,21 @@ class TestCurrentUserRPOAuthSetupService:
         ibm_admin_client.get_client_secret = AsyncMock(return_value={})
 
         original_get = rp_application_module.crud_rp_applications.get
+        original_grant_get = rp_application_module.crud_rp_application_access_grants.get
         original_log_action = rp_application_module.AuditService.log_action
         rp_application_module.crud_rp_applications.get = AsyncMock(
             return_value={
                 "uuid": "018f6f83-0000-0000-0000-000000000337",
+                "workspace_id": 23,
                 "dnr_app_name": "Benefits Portal",
                 "ibm_sv_application_id": "ibm-app-337",
                 "application_owner": {
                     "owners": [{"email": "owner@example.gc.ca"}],
                 },
             }
+        )
+        rp_application_module.crud_rp_application_access_grants.get = AsyncMock(
+            return_value={"workspace_id": 23, "user_id": 77, "role": "RP User (Edit)", "status": "active"}
         )
         rp_application_module.AuditService.log_action = AsyncMock()
 
@@ -629,11 +651,12 @@ class TestCurrentUserRPOAuthSetupService:
                 await service.get_current_user_rp_application_client_credentials(
                     db=db,
                     rp_application_uuid="018f6f83-0000-0000-0000-000000000337",
-                    current_user={"email": "owner@example.gc.ca"},
+                    current_user={"id": 77},
                     ibm_admin_client=ibm_admin_client,
                 )
         finally:
             rp_application_module.crud_rp_applications.get = original_get
+            rp_application_module.crud_rp_application_access_grants.get = original_grant_get
             rp_application_module.AuditService.log_action = original_log_action
 
         ibm_admin_client.get_application_detail.assert_awaited_once_with("ibm-app-337")
@@ -671,10 +694,12 @@ class TestCurrentUserRPOAuthSetupService:
         )
 
         original_get = rp_application_module.crud_rp_applications.get
+        original_grant_get = rp_application_module.crud_rp_application_access_grants.get
         original_log_action = rp_application_module.AuditService.log_action
         rp_application_module.crud_rp_applications.get = AsyncMock(
             return_value={
                 "uuid": "018f6f83-0000-0000-0000-000000000338",
+                "workspace_id": 23,
                 "dnr_app_name": "Benefits Portal",
                 "ibm_sv_application_id": "ibm-app-338",
                 "application_owner": {
@@ -682,17 +707,21 @@ class TestCurrentUserRPOAuthSetupService:
                 },
             }
         )
+        rp_application_module.crud_rp_application_access_grants.get = AsyncMock(
+            return_value={"workspace_id": 23, "user_id": 77, "role": "RP User (Edit)", "status": "active"}
+        )
         rp_application_module.AuditService.log_action = AsyncMock()
 
         try:
             result = await service.list_current_user_rp_application_rotated_secrets(
                 db=db,
                 rp_application_uuid="018f6f83-0000-0000-0000-000000000338",
-                current_user={"email": "owner@example.gc.ca"},
+                current_user={"id": 77},
                 ibm_admin_client=ibm_admin_client,
             )
         finally:
             rp_application_module.crud_rp_applications.get = original_get
+            rp_application_module.crud_rp_application_access_grants.get = original_grant_get
             rp_application_module.AuditService.log_action = original_log_action
 
         assert result == [
@@ -738,10 +767,12 @@ class TestCurrentUserRPOAuthSetupService:
         ibm_admin_client.delete_rotated_client_secrets = AsyncMock(return_value=True)
 
         original_get = rp_application_module.crud_rp_applications.get
+        original_grant_get = rp_application_module.crud_rp_application_access_grants.get
         original_log_action = rp_application_module.AuditService.log_action
         rp_application_module.crud_rp_applications.get = AsyncMock(
             return_value={
                 "uuid": "018f6f83-0000-0000-0000-000000000339",
+                "workspace_id": 23,
                 "dnr_app_name": "Benefits Portal",
                 "ibm_sv_application_id": "ibm-app-339",
                 "application_owner": {
@@ -749,18 +780,22 @@ class TestCurrentUserRPOAuthSetupService:
                 },
             }
         )
+        rp_application_module.crud_rp_application_access_grants.get = AsyncMock(
+            return_value={"workspace_id": 23, "user_id": 77, "role": "RP User (Edit)", "status": "active"}
+        )
         rp_application_module.AuditService.log_action = AsyncMock()
 
         try:
             result = await service.delete_current_user_rp_application_rotated_secret(
                 db=db,
                 rp_application_uuid="018f6f83-0000-0000-0000-000000000339",
-                current_user={"email": "owner@example.gc.ca"},
+                current_user={"id": 77},
                 value="{sha512}redacted",
                 ibm_admin_client=ibm_admin_client,
             )
         finally:
             rp_application_module.crud_rp_applications.get = original_get
+            rp_application_module.crud_rp_application_access_grants.get = original_grant_get
             rp_application_module.AuditService.log_action = original_log_action
 
         assert result is True

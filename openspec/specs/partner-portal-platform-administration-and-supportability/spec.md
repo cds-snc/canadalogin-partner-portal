@@ -2,15 +2,15 @@
 
 ## Purpose
 Define the current MVP1 platform administration and service-supportability baseline.
-
 ## Requirements
-
 ### Requirement: Platform administrators manage portal governance records
-Platform administrators SHALL be able to manage users, roles, policies, departments, and tiers, including assignment of department, roles, and tier values to users.
+
+Platform administrators SHALL be able to manage users, policies, departments, and tiers through the administration modules. Detailed reusable role catalog behavior and user role assignment behavior SHALL be specified by the role-management capability.
 
 #### Scenario: Platform admin maintains user governance data
+
 - **WHEN** a platform admin uses the administration modules
-- **THEN** the portal supports create, update, delete, search, and assignment flows for users and CRUD management flows for roles, policies, departments, and tiers
+- **THEN** the portal supports create, update, delete, search, and assignment flows for users and CRUD management flows for policies, departments, and tiers
 
 ### Requirement: Platform administration exposes IBM Security Verify management operations
 The backend SHALL expose IBM Security Verify administration capabilities needed for platform operations across users, applications, groups, entitlements, logins, and audit queries.
@@ -29,3 +29,4 @@ The system SHALL expose health and readiness endpoints and SHALL return a consis
 #### Scenario: API failure returns the standard error contract
 - **WHEN** a handled API error occurs
 - **THEN** the response body uses the shared error envelope with code, message, details, and request identifier fields
+
