@@ -1,5 +1,5 @@
-from datetime import UTC, datetime
 import uuid as uuid_pkg
+from datetime import UTC, datetime
 from typing import Any
 
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -11,9 +11,9 @@ from ..core.exceptions.http_exceptions import (
     ForbiddenException,
     NotFoundException,
 )
+from ..core.utils.slugify import slugify
 from ..repositories.crud_application_information import crud_application_information
 from ..repositories.crud_application_information_contacts import crud_application_information_contacts
-from ..core.utils.slugify import slugify
 from ..repositories.crud_departments import crud_departments
 from ..repositories.crud_rp_applications import crud_rp_applications
 from ..repositories.crud_users import crud_users
@@ -36,17 +36,17 @@ from ..schemas.rp_application import (
     WorkspaceRPApplicationRegistrationCreate,
     WorkspaceRPApplicationRegistrationUpdate,
 )
-from ..schemas.workspace_member import (
-    WorkspaceMemberCreate,
-    WorkspaceMemberCreateInternal,
-    WorkspaceMemberRead,
-    WorkspaceMemberUpdate,
-)
 from ..schemas.workspace import (
     WorkspaceCreate,
     WorkspaceCreateInternal,
     WorkspaceRead,
     WorkspaceUpdate,
+)
+from ..schemas.workspace_member import (
+    WorkspaceMemberCreate,
+    WorkspaceMemberCreateInternal,
+    WorkspaceMemberRead,
+    WorkspaceMemberUpdate,
 )
 from .ibm_sv_admin_service import IBMVerifyAdminService
 
@@ -75,13 +75,47 @@ class WorkspaceService:
         db: AsyncSession,
         current_user: dict[str, Any],
     ) -> list[dict[str, Any]]:
-        _ = current_user
-        return await self.list_workspaces(db=db)
+        if current_user.get("is_superuser"):
+            return await self.list_workspaces(db=db)
+
+        user_id = current_user.get("id")
+        if user_id is None:
+            raise ForbiddenException("You do not have enough privileges.")
+
+        memberships_data = await crud_workspace_members.get_multi(
+            db=db,
+            user_id=user_id,
+            is_deleted=False,
+            schema_to_select=WorkspaceMemberRead,
+        )
+        memberships = memberships_data.get("data", [])
+
+        workspaces: list[dict[str, Any]] = []
+        seen_workspace_ids: set[int] = set()
+        for membership in memberships:
+            workspace_id = membership.get("workspace_id")
+            if not isinstance(workspace_id, int) or workspace_id in seen_workspace_ids:
+                continue
+
+            workspace = await crud_workspaces.get(
+                db=db,
+                id=workspace_id,
+                is_deleted=False,
+                schema_to_select=WorkspaceRead,
+            )
+            if workspace is None:
+                continue
+
+            seen_workspace_ids.add(workspace_id)
+            workspaces.append(workspace)
+
+        return workspaces
 
     async def get_workspace_by_uuid(
         self,
         db: AsyncSession,
         workspace_uuid: uuid_pkg.UUID | str,
+        current_user: dict[str, Any] | None = None,
     ) -> dict[str, Any]:
         db_workspace = await crud_workspaces.get(
             db=db,
@@ -91,6 +125,14 @@ class WorkspaceService:
         )
         if db_workspace is None:
             raise NotFoundException("Workspace not found")
+
+        if current_user is not None:
+            await self._require_workspace_member_access(
+                db=db,
+                workspace_id=db_workspace["id"],
+                current_user=current_user,
+            )
+
         return db_workspace
 
     async def create_workspace(
@@ -885,6 +927,28 @@ class WorkspaceService:
         )
         if membership is None or membership.get("role") != WORKSPACE_ADMIN_ROLE:
             raise ForbiddenException("You do not have enough privileges.")
+
+    async def _require_workspace_member_access(
+        self,
+        db: AsyncSession,
+        workspace_id: int,
+        current_user: dict[str, Any],
+    ) -> None:
+        if current_user.get("is_superuser"):
+            return
+
+        user_id = current_user.get("id")
+        if user_id is None:
+            raise NotFoundException("Workspace not found")
+
+        membership = await crud_workspace_members.get(
+            db=db,
+            workspace_id=workspace_id,
+            user_id=user_id,
+            is_deleted=False,
+        )
+        if membership is None:
+            raise NotFoundException("Workspace not found")
 
     async def _get_workspace_application_information(
         self,

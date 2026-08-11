@@ -1,5 +1,5 @@
 import type { PropsWithChildren, ReactElement } from "react";
-import { fireEvent, render, screen } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 import { UnauthorizedRequestError } from "@/fetch";
 import { UsersPage } from "@/features/users/pages/UsersPage";
@@ -16,6 +16,7 @@ vi.mock("react-i18next", () => ({
 	useTranslation: (): { t: (key: string, options?: Record<string, string>) => string } => ({
 			t: (key: string, options?: Record<string, string>): string => {
 				const translations: Record<string, string> = {
+					"users.addRole": "Add role",
 					"users.currentRoles": "Assigned roles",
 					"users.department": `Department: ${options?.["value"] ?? ""}`,
 					"users.departmentFilterLabel": "Filter departments",
@@ -29,6 +30,8 @@ vi.mock("react-i18next", () => ({
 				"users.loadingRoleBody": "Loading role assignment.",
 					"users.manageDepartmentTitle": "Assigned department",
 				"users.manageAction": "Manage user",
+					"users.manageRolesAction": "Manage roles",
+					"users.manageRolesTitle": `Manage roles for ${options?.["email"] ?? ""}`,
 				"users.manageRoleTitle": "Assigned roles",
 					"users.noDepartment": "No department assigned",
 					"users.noRole": "No roles assigned",
@@ -41,6 +44,10 @@ vi.mock("react-i18next", () => ({
 				"users.roleLabel": "Role",
 				"users.resultsSummary": `Showing ${options?.["count"] ?? "0"} users on page ${options?.["page"] ?? "1"}`,
 				"users.roleSaveAction": "Save role",
+					"users.roleRemovedSuccess": "Role removed.",
+					"users.roleAddedSuccess": "Role added.",
+					"users.removeRole": "Remove role",
+					"users.removeRoleConfirmTitle": "Remove role?",
 				"users.summary": "Protected list of backend users.",
 				"users.title": "Users",
 					"users.username": `Username: ${options?.["value"] ?? ""}`,
@@ -71,7 +78,13 @@ vi.mock("@/components/ui", () => ({
 			{children}
 		</button>
 	),
-	ConfirmDialog: ({ isOpen, title }: { isOpen: boolean; title: string }): ReactElement | null => (isOpen ? <section><h2>{title}</h2></section> : null),
+	ConfirmDialog: ({ confirmLabel, isOpen, onConfirm, title }: { confirmLabel?: string; isOpen: boolean; onConfirm?: () => void; title: string }): ReactElement | null =>
+		isOpen ? (
+			<section aria-label={title} role="dialog">
+				<h2>{title}</h2>
+				<button type="button" onClick={onConfirm}>{confirmLabel ?? "Confirm"}</button>
+			</section>
+		) : null,
 	DataTable: ({ action, pageNumber, primaryAction, rows, title, summary }: { action?: any; pageNumber?: number; primaryAction?: { buttonLabel: string; onAction: () => void }; rows?: Array<{ email: string; name: string; provider: string; roleName: string; uuid: string }>; title?: string; summary?: string }): ReactElement => (
     <section>
         {title ? <h2>{title}</h2> : null}
@@ -106,7 +119,7 @@ vi.mock("@/components/ui", () => ({
 		</label>
 	),
 	Text: ({ children }: PropsWithChildren): ReactElement => <p>{children}</p>,
-	Modal: ({ children, isOpen, title }: PropsWithChildren<{ isOpen: boolean; title: string }>): ReactElement | null => (isOpen ? <section><h2>{title}</h2>{children}</section> : null),
+	Modal: ({ children, footer, isOpen, title }: PropsWithChildren<{ footer?: ReactElement; isOpen: boolean; title: string }>): ReactElement | null => (isOpen ? <section><h2>{title}</h2>{children}{footer}</section> : null),
 	ToastProvider: ({ children }: PropsWithChildren): ReactElement => <>{children}</>,
 }));
 
@@ -280,6 +293,130 @@ describe("UsersPage", () => {
 		fireEvent.input(screen.getByLabelText(/^department$/i), { target: { value: "FIN" } });
 		fireEvent.click(screen.getByRole("button", { name: /save department/i }));
 		expect(vi.mocked(useUserDepartment).mock.results[0]?.value.updateUserDepartment).toHaveBeenCalledWith("user-uuid-7", { departmentAbbreviation: "FIN" });
+	});
+
+	it("supports inline role assignment and removal from the roles modal", async () => {
+		const addRole = vi.fn((): Promise<void> => Promise.resolve());
+		const removeRole = vi.fn((): Promise<void> => Promise.resolve());
+
+		vi.mocked(useUserManagement).mockReturnValue({
+			error: null,
+			createUser: vi.fn((): Promise<void> => Promise.resolve()),
+			deleteUser: vi.fn((): Promise<void> => Promise.resolve()),
+			isCreating: false,
+			isDeleting: false,
+			isLoading: false,
+			isUpdating: false,
+			itemsPerPage: 10,
+			page: 1,
+			response: {
+				data: [
+					{
+						"authProvider": "gc-sso",
+						"authSubject": "subject-123",
+						"departmentAbbreviation": "AAFC",
+						email: "jane@example.com",
+						name: "Jane Doe",
+						"profileImageUrl": "https://example.com/jane.png",
+						"departmentUuid": "department-uuid-1",
+						"roleUuids": ["role-uuid-3"],
+						"tierUuid": "tier-uuid-3",
+						uuid: "user-uuid-7",
+					},
+				],
+				"has_more": false,
+				"items_per_page": 10,
+				page: 1,
+				"total_count": 1,
+			},
+			users: [
+				{
+					"authProvider": "gc-sso",
+					"authSubject": "subject-123",
+					"departmentAbbreviation": "AAFC",
+					email: "jane@example.com",
+					name: "Jane Doe",
+					"profileImageUrl": "https://example.com/jane.png",
+					"departmentUuid": "department-uuid-1",
+					"roleUuids": ["role-uuid-3"],
+					"tierUuid": "tier-uuid-3",
+					uuid: "user-uuid-7",
+				},
+			],
+			updateUser: vi.fn((): Promise<void> => Promise.resolve()),
+		});
+		vi.mocked(useRoles).mockReturnValue({
+			error: null,
+			isLoading: false,
+			itemsPerPage: 10,
+			page: 1,
+			refetch: vi.fn((): Promise<unknown> => Promise.resolve()),
+			response: {
+				data: [
+					{ created_at: "2026-03-17T00:00:00Z", description: "Administrator role", name: "admin", uuid: "role-uuid-3" },
+					{ created_at: "2026-03-17T00:00:00Z", description: "Editor role", name: "editor", uuid: "role-uuid-4" },
+				],
+				"has_more": false,
+				"items_per_page": 10,
+				page: 1,
+				"total_count": 2,
+			},
+			roles: [
+				{ created_at: "2026-03-17T00:00:00Z", description: "Administrator role", name: "admin", uuid: "role-uuid-3" },
+				{ created_at: "2026-03-17T00:00:00Z", description: "Editor role", name: "editor", uuid: "role-uuid-4" },
+			],
+		});
+		vi.mocked(useDepartments).mockReturnValue({
+			error: null,
+			isLoading: false,
+			itemsPerPage: 200,
+			page: 1,
+			refetch: vi.fn((): Promise<unknown> => Promise.resolve()),
+			response: { data: [], has_more: false, items_per_page: 200, page: 1, total_count: 0 },
+			departments: [],
+		});
+		vi.mocked(useUserDepartment).mockReturnValue({
+			department: null,
+			error: null,
+			isLoading: false,
+			isUpdating: false,
+			updateUserDepartment: vi.fn((): Promise<void> => Promise.resolve()),
+		});
+		vi.mocked(useUserRole).mockReturnValue({
+			addRole,
+			error: null,
+			isAdding: false,
+			isLoading: false,
+			isRemoving: false,
+			removeRole,
+			roles: [],
+		});
+
+		render(
+			<ToastProvider>
+				<UsersPage />
+			</ToastProvider>,
+		);
+
+		fireEvent.click(screen.getByRole("button", { name: /manage roles/i }));
+		fireEvent.input(screen.getByLabelText(/^role$/i), {
+			target: { value: "role-uuid-4" },
+		});
+		fireEvent.click(screen.getByRole("button", { name: /^add role$/i }));
+
+		await waitFor(() => {
+			expect(addRole).toHaveBeenCalledWith("user-uuid-7", "role-uuid-4");
+		});
+
+		fireEvent.click(screen.getByRole("button", { name: /manage roles/i }));
+		fireEvent.click(screen.getAllByRole("button", { name: /^remove role$/i })[0]!);
+
+		const dialog = screen.getByRole("dialog", { name: /remove role\?/i });
+		fireEvent.click(within(dialog).getByRole("button", { name: /^remove role$/i }));
+
+		await waitFor(() => {
+			expect(removeRole).toHaveBeenCalledWith("user-uuid-7", "role-uuid-3");
+		});
 	});
 
 	it("does not render a generic error notice for unauthorized hook errors", () => {

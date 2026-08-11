@@ -8,7 +8,6 @@ from src.app.api.dependencies import get_current_user, get_rp_application_servic
 from src.app.core.access_control import CASBIN_MODEL_PATH, database_enforcer_provider
 from src.app.core.db.database import async_get_db
 from src.app.core.exceptions.http_exceptions import (
-    ForbiddenException,
     NotFoundException,
     RPApplicationDepartmentRequiredException,
 )
@@ -105,10 +104,10 @@ class TestDepartmentPreflightEndpoint:
         assert response.status_code == 200
         assert response.json()["departmentId"] is None
 
-    def test_non_owner_preflight_returns_403(self) -> None:
+    def test_non_owner_preflight_returns_404(self) -> None:
         service = Mock()
         service.get_current_user_rp_application_department_preflight = AsyncMock(
-            side_effect=ForbiddenException("Only RP application owners can access this resource")
+            side_effect=NotFoundException("RP application not found")
         )
 
         app.dependency_overrides[get_current_user] = lambda: {
@@ -127,8 +126,8 @@ class TestDepartmentPreflightEndpoint:
         finally:
             app.dependency_overrides.clear()
 
-        assert response.status_code == 403
-        assert response.json()["error"]["code"] == "forbidden"
+        assert response.status_code == 404
+        assert response.json()["error"]["code"] == "not_found"
 
     def test_missing_application_returns_404(self) -> None:
         service = Mock()
@@ -235,6 +234,53 @@ class TestDepartmentAssignmentEndpoint:
 class TestMissingDepartmentConflictRoutes:
     """8.3 – Owner child routes return 409 + rp_application_department_required when department missing."""
 
+    def test_current_user_application_list_grant_backed_user_without_platform_role_reaches_service(self) -> None:
+        from src.app.api.dependencies import get_ibm_sv_user_service
+
+        service = Mock()
+        service.list_current_user_rp_applications = AsyncMock(
+            return_value=[
+                {
+                    "id": 10,
+                    "uuid": _APP_UUID,
+                    "dnr_app_name": "Benefits Portal",
+                    "department_id": 7,
+                    "ibm_sv_application_id": "ibm-app-333",
+                    "application_owner": {
+                        "owners": [{"email": "owner@example.gc.ca"}]
+                    },
+                }
+            ]
+        )
+        current_user = {
+            "email": "invitee@example.gc.ca",
+            "id": 77,
+            "username": "invitee@example.gc.ca",
+            "is_superuser": False,
+            "role_ids": [],
+        }
+        db = Mock()
+        ibm_user_service = Mock()
+
+        app.dependency_overrides[get_current_user] = lambda: current_user
+        app.dependency_overrides[get_rp_application_service] = lambda: service
+        app.dependency_overrides[get_ibm_sv_user_service] = lambda: ibm_user_service
+        app.dependency_overrides[async_get_db] = lambda: db
+
+        try:
+            with TestClient(app) as client:
+                response = client.get("/api/v1/rp-applications/mine")
+        finally:
+            app.dependency_overrides.clear()
+
+        assert response.status_code == 200
+        assert response.json()[0]["dnrAppName"] == "Benefits Portal"
+        service.list_current_user_rp_applications.assert_awaited_once_with(
+            db=db,
+            current_user=current_user,
+            ibm_user_service=ibm_user_service,
+        )
+
     def test_oauth_setup_missing_department_returns_409_with_code(self) -> None:
         service = Mock()
         service.get_current_user_rp_application_oauth_setup = AsyncMock(
@@ -294,6 +340,62 @@ class TestMissingDepartmentConflictRoutes:
 
         assert response.status_code == 409
         assert response.json()["error"]["code"] == "rp_application_department_required"
+
+    def test_mau_report_grant_backed_user_without_platform_role_reaches_service(self) -> None:
+        import uuid as uuid_pkg
+
+        from src.app.api.dependencies import (
+            get_ibm_sv_user_service,
+            get_mau_service,
+        )
+
+        service = Mock()
+        service.get_current_user_rp_application_by_uuid = AsyncMock(
+            return_value={
+                "id": 10,
+                "uuid": _APP_UUID,
+                "dnr_app_name": "Benefits Portal",
+                "department_id": None,
+            }
+        )
+        service._require_rp_application_department = AsyncMock(return_value=None)
+
+        mau_service = Mock()
+        mau_service.get_mau_by_application = AsyncMock(return_value=[])
+
+        current_user = {
+            "email": "invitee@example.gc.ca",
+            "id": 77,
+            "username": "invitee@example.gc.ca",
+            "is_superuser": False,
+            "role_ids": [],
+        }
+        db = Mock()
+        ibm_user_service = Mock()
+
+        app.dependency_overrides[get_current_user] = lambda: current_user
+        app.dependency_overrides[get_rp_application_service] = lambda: service
+        app.dependency_overrides[get_ibm_sv_user_service] = lambda: ibm_user_service
+        app.dependency_overrides[get_mau_service] = lambda: mau_service
+        app.dependency_overrides[async_get_db] = lambda: db
+
+        try:
+            with TestClient(app) as client:
+                response = client.get(
+                    f"/api/v1/rp-applications/mine/{_APP_UUID}/mau-report"
+                )
+        finally:
+            app.dependency_overrides.clear()
+
+        assert response.status_code == 200
+        assert response.json()["application_name"] == "Benefits Portal"
+        service.get_current_user_rp_application_by_uuid.assert_awaited_once_with(
+            db=db,
+            current_user=current_user,
+            rp_application_uuid=uuid_pkg.UUID(_APP_UUID),
+            ibm_user_service=ibm_user_service,
+        )
+        mau_service.get_mau_by_application.assert_awaited_once()
 
 
 class TestOAuthSetupDepartmentFields:
@@ -406,9 +508,45 @@ class TestDepartmentPreflightServiceMethod:
         assert result["departmentId"] is None
 
     @pytest.mark.asyncio
-    async def test_preflight_raises_forbidden_for_non_owner(self) -> None:
+    async def test_preflight_returns_summary_read_for_grant_user(self) -> None:
         import src.app.services.rp_application_service as rp_module
-        from src.app.core.exceptions.http_exceptions import ForbiddenException
+
+        service = RPApplicationService()
+        db = Mock()
+
+        app_record = {
+            "id": 10,
+            "uuid": "018f6f83-0000-0000-0000-000000000333",
+            "workspace_id": 23,
+            "dnr_app_name": "Benefits Portal",
+            "department_id": None,
+            "is_deleted": False,
+            "application_owner": {"owners": [{"email": "owner@example.gc.ca"}]},
+        }
+
+        original_get = rp_module.crud_rp_applications.get
+        original_grant_get = rp_module.crud_rp_application_access_grants.get
+        rp_module.crud_rp_applications.get = AsyncMock(return_value=app_record)
+        rp_module.crud_rp_application_access_grants.get = AsyncMock(
+            return_value={"workspace_id": 23, "user_id": 77, "role": "Read Only", "status": "active"}
+        )
+        try:
+            result = await service.get_current_user_rp_application_department_preflight(
+                db=db,
+                rp_application_uuid="018f6f83-0000-0000-0000-000000000333",
+                current_user={"id": 77},
+            )
+        finally:
+            rp_module.crud_rp_applications.get = original_get
+            rp_module.crud_rp_application_access_grants.get = original_grant_get
+
+        assert result["dnrAppName"] == "Benefits Portal"
+        assert result["departmentId"] is None
+
+    @pytest.mark.asyncio
+    async def test_preflight_raises_not_found_for_non_owner(self) -> None:
+        import src.app.services.rp_application_service as rp_module
+        from src.app.core.exceptions.http_exceptions import NotFoundException
 
         service = RPApplicationService()
         db = Mock()
@@ -425,7 +563,7 @@ class TestDepartmentPreflightServiceMethod:
         original_get = rp_module.crud_rp_applications.get
         rp_module.crud_rp_applications.get = AsyncMock(return_value=app_record)
         try:
-            with pytest.raises(ForbiddenException):
+            with pytest.raises(NotFoundException):
                 await service.get_current_user_rp_application_department_preflight(
                     db=db,
                     rp_application_uuid="018f6f83-0000-0000-0000-000000000333",
@@ -436,10 +574,11 @@ class TestDepartmentPreflightServiceMethod:
 
     @pytest.mark.asyncio
     async def test_assignment_raises_not_found_for_unknown_department(self) -> None:
+        import uuid as uuid_pkg
+
         import src.app.services.rp_application_service as rp_module
         from src.app.core.exceptions.http_exceptions import NotFoundException
         from src.app.schemas.rp_application import CurrentUserRPApplicationDepartmentAssignRequest
-        import uuid as uuid_pkg
 
         service = RPApplicationService()
         db = Mock()
@@ -470,6 +609,47 @@ class TestDepartmentPreflightServiceMethod:
         finally:
             rp_module.crud_rp_applications.get = original_app_get
             rp_module.crud_departments.get = original_dept_get
+
+    @pytest.mark.asyncio
+    async def test_assignment_raises_not_found_for_grant_user(self) -> None:
+        import uuid as uuid_pkg
+
+        import src.app.services.rp_application_service as rp_module
+        from src.app.core.exceptions.http_exceptions import NotFoundException
+        from src.app.schemas.rp_application import CurrentUserRPApplicationDepartmentAssignRequest
+
+        service = RPApplicationService()
+        db = Mock()
+
+        app_record = {
+            "id": 10,
+            "uuid": "018f6f83-0000-0000-0000-000000000333",
+            "workspace_id": 23,
+            "dnr_app_name": "Benefits Portal",
+            "department_id": None,
+            "is_deleted": False,
+            "application_owner": {"owners": [{"email": "owner@example.gc.ca"}]},
+        }
+
+        original_app_get = rp_module.crud_rp_applications.get
+        original_grant_get = rp_module.crud_rp_application_access_grants.get
+        rp_module.crud_rp_applications.get = AsyncMock(return_value=app_record)
+        rp_module.crud_rp_application_access_grants.get = AsyncMock(
+            return_value={"workspace_id": 23, "user_id": 77, "role": "RP User (Edit)", "status": "active"}
+        )
+        try:
+            with pytest.raises(NotFoundException):
+                await service.assign_current_user_rp_application_department(
+                    db=db,
+                    rp_application_uuid="018f6f83-0000-0000-0000-000000000333",
+                    current_user={"id": 77},
+                    payload=CurrentUserRPApplicationDepartmentAssignRequest(
+                        department_uuid=uuid_pkg.UUID("018f6f83-0000-0000-0000-000000000999")
+                    ),
+                )
+        finally:
+            rp_module.crud_rp_applications.get = original_app_get
+            rp_module.crud_rp_application_access_grants.get = original_grant_get
 
     @pytest.mark.asyncio
     async def test_require_department_raises_conflict_when_null(self) -> None:

@@ -41,6 +41,7 @@ class UserRead(UserBase):
     username: EmailStr
     department_abbreviation: str | None = None
     department_uuid: uuid_pkg.UUID | None = None
+    has_partner_access_grant: bool = False
     is_superuser: bool = False
     role_uuids: list[uuid_pkg.UUID] | None = None
     tier_uuid: uuid_pkg.UUID | None = None

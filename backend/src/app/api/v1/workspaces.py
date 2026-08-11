@@ -4,7 +4,12 @@ from typing import Annotated, Any
 from fastapi import APIRouter, Depends, Request
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from ...api.dependencies import get_current_user, get_ibm_sv_admin_service, get_workspace_service
+from ...api.dependencies import (
+    get_current_user,
+    get_ibm_sv_admin_service,
+    get_rp_application_developer_invitation_service,
+    get_workspace_service,
+)
 from ...core.access_control import casbin_guard
 from ...core.db.database import async_get_db
 from ...core.exceptions.openapi import error_responses
@@ -23,12 +28,19 @@ from ...schemas.rp_application import (
     WorkspaceRPApplicationRegistrationCreate,
     WorkspaceRPApplicationRegistrationUpdate,
 )
+from ...schemas.rp_application_developer_invitation import (
+    RPApplicationDeveloperInvitationCreate,
+    RPApplicationDeveloperInvitationRead,
+    RPApplicationDeveloperInvitationReissue,
+    RPApplicationDeveloperInvitationWriteResponse,
+)
+from ...schemas.workspace import WorkspaceCreate, WorkspaceRead, WorkspaceUpdate
 from ...schemas.workspace_member import (
     WorkspaceMemberCreate,
     WorkspaceMemberRead,
     WorkspaceMemberUpdate,
 )
-from ...schemas.workspace import WorkspaceCreate, WorkspaceRead, WorkspaceUpdate
+from ...services.rp_application_developer_invitation_service import RPApplicationDeveloperInvitationService
 from ...services.workspace_service import WorkspaceService
 
 router = APIRouter(tags=["workspaces"])
@@ -53,7 +65,6 @@ async def read_workspaces(
     response_model=list[WorkspaceRead],
     responses=error_responses(401, 403, 500),
 )
-@casbin_guard.require_permission("workspace", "read")
 async def read_current_user_workspaces(
     request: Request,
     db: Annotated[AsyncSession, Depends(async_get_db)],
@@ -92,14 +103,18 @@ async def write_workspace(
     response_model=WorkspaceRead,
     responses=error_responses(401, 403, 404, 422, 500),
 )
-@casbin_guard.require_permission("workspace", "read")
 async def read_workspace(
     request: Request,
     workspace_uuid: uuid_pkg.UUID,
     db: Annotated[AsyncSession, Depends(async_get_db)],
     service: Annotated[WorkspaceService, Depends(get_workspace_service)],
+    current_user: Annotated[dict[str, Any], Depends(get_current_user)],
 ) -> dict[str, Any]:
-    return await service.get_workspace_by_uuid(db=db, workspace_uuid=workspace_uuid)
+    return await service.get_workspace_by_uuid(
+        db=db,
+        workspace_uuid=workspace_uuid,
+        current_user=current_user,
+    )
 
 
 @router.get(
@@ -401,6 +416,115 @@ async def erase_workspace_rp_application(
         workspace_uuid=workspace_uuid,
         rp_application_uuid=rp_application_uuid,
         current_user=current_user,
+    )
+
+
+@router.get(
+    "/workspaces/{workspace_uuid}/applications/{rp_application_uuid}/developer-invitations",
+    response_model=list[RPApplicationDeveloperInvitationRead],
+    responses=error_responses(401, 403, 404, 422, 500),
+)
+async def read_workspace_rp_application_developer_invitations(
+    request: Request,
+    workspace_uuid: uuid_pkg.UUID,
+    rp_application_uuid: uuid_pkg.UUID,
+    db: Annotated[AsyncSession, Depends(async_get_db)],
+    service: Annotated[
+        RPApplicationDeveloperInvitationService,
+        Depends(get_rp_application_developer_invitation_service),
+    ],
+    current_user: Annotated[dict[str, Any], Depends(get_current_user)],
+) -> list[dict[str, Any]]:
+    return await service.list_developer_invitations(
+        db=db,
+        workspace_uuid=workspace_uuid,
+        rp_application_uuid=rp_application_uuid,
+        current_user=current_user,
+    )
+
+
+@router.post(
+    "/workspaces/{workspace_uuid}/applications/{rp_application_uuid}/developer-invitations",
+    response_model=RPApplicationDeveloperInvitationWriteResponse,
+    status_code=201,
+    responses=error_responses(400, 401, 403, 404, 409, 422, 500),
+)
+async def write_workspace_rp_application_developer_invitation(
+    request: Request,
+    workspace_uuid: uuid_pkg.UUID,
+    rp_application_uuid: uuid_pkg.UUID,
+    payload: RPApplicationDeveloperInvitationCreate,
+    db: Annotated[AsyncSession, Depends(async_get_db)],
+    service: Annotated[
+        RPApplicationDeveloperInvitationService,
+        Depends(get_rp_application_developer_invitation_service),
+    ],
+    current_user: Annotated[dict[str, Any], Depends(get_current_user)],
+) -> dict[str, Any]:
+    return await service.create_developer_invitation(
+        db=db,
+        workspace_uuid=workspace_uuid,
+        rp_application_uuid=rp_application_uuid,
+        current_user=current_user,
+        invited_email=payload.invited_email,
+        role=payload.role,
+        invite_expires_at=payload.invite_expires_at,
+        gc_notify_notification_id=payload.gc_notify_notification_id,
+    )
+
+
+@router.post(
+    "/workspaces/{workspace_uuid}/applications/{rp_application_uuid}/developer-invitations/{invitation_uuid}/revoke",
+    response_model=RPApplicationDeveloperInvitationRead,
+    responses=error_responses(400, 401, 403, 404, 422, 500),
+)
+async def revoke_workspace_rp_application_developer_invitation(
+    request: Request,
+    workspace_uuid: uuid_pkg.UUID,
+    rp_application_uuid: uuid_pkg.UUID,
+    invitation_uuid: uuid_pkg.UUID,
+    db: Annotated[AsyncSession, Depends(async_get_db)],
+    service: Annotated[
+        RPApplicationDeveloperInvitationService,
+        Depends(get_rp_application_developer_invitation_service),
+    ],
+    current_user: Annotated[dict[str, Any], Depends(get_current_user)],
+) -> dict[str, Any]:
+    return await service.revoke_developer_invitation(
+        db=db,
+        workspace_uuid=workspace_uuid,
+        rp_application_uuid=rp_application_uuid,
+        invitation_uuid=invitation_uuid,
+        current_user=current_user,
+    )
+
+
+@router.post(
+    "/workspaces/{workspace_uuid}/applications/{rp_application_uuid}/developer-invitations/{invitation_uuid}/reissue",
+    response_model=RPApplicationDeveloperInvitationWriteResponse,
+    responses=error_responses(400, 401, 403, 404, 422, 500),
+)
+async def reissue_workspace_rp_application_developer_invitation(
+    request: Request,
+    workspace_uuid: uuid_pkg.UUID,
+    rp_application_uuid: uuid_pkg.UUID,
+    invitation_uuid: uuid_pkg.UUID,
+    payload: RPApplicationDeveloperInvitationReissue,
+    db: Annotated[AsyncSession, Depends(async_get_db)],
+    service: Annotated[
+        RPApplicationDeveloperInvitationService,
+        Depends(get_rp_application_developer_invitation_service),
+    ],
+    current_user: Annotated[dict[str, Any], Depends(get_current_user)],
+) -> dict[str, Any]:
+    return await service.reissue_developer_invitation(
+        db=db,
+        workspace_uuid=workspace_uuid,
+        rp_application_uuid=rp_application_uuid,
+        invitation_uuid=invitation_uuid,
+        current_user=current_user,
+        invite_expires_at=payload.invite_expires_at,
+        gc_notify_notification_id=payload.gc_notify_notification_id,
     )
 
 

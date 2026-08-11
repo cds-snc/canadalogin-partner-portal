@@ -13,10 +13,14 @@ export const getPostLoginPath = (): string =>
 		defaultPostLoginPath
 	);
 
-export { sanitizeAppPath } from "./login-search";
+const redirectToOidcLogin = (targetPath: string): never => {
+	window.location.assign(getOidcLoginUrl(undefined, targetPath));
+	throw new Error("Redirecting to OIDC login");
+};
 
-export const requireAuthenticatedUser = async (
-	redirectTo: string
+const requireAuthenticatedUserInternal = async (
+	redirectTo: string,
+	options?: { skipDepartmentSelection?: boolean }
 ): Promise<UserRead> => {
 	let currentUser: UserRead | null;
 
@@ -26,13 +30,13 @@ export const requireAuthenticatedUser = async (
 		currentUser = null;
 	}
 
+	const targetPath = sanitizeAppPath(redirectTo, getPostLoginPath());
+
 	if (!currentUser) {
-		window.location.assign(getOidcLoginUrl());
-		throw new Error("Redirecting to OIDC login");
+		return redirectToOidcLogin(targetPath);
 	}
 
 	// Enforce terms acceptance before allowing access to any authenticated page.
-	const targetPath = sanitizeAppPath(redirectTo, getPostLoginPath());
 	const isOnboardingPath =
 		targetPath.startsWith("/accept-terms") || targetPath.startsWith("/profile");
 
@@ -44,20 +48,33 @@ export const requireAuthenticatedUser = async (
 		}) as unknown as Error;
 	}
 
-	// Enforce department selection for all first-time users.
-	// Redirect to /profile/setup when department is not set (except when already on onboarding pages).
+	// Enforce department selection for authenticated application routes unless a
+	// page intentionally needs to bypass that flow, such as invitation acceptance.
 	if (
+		!options?.skipDepartmentSelection &&
 		!isOnboardingPath &&
+		currentUser.hasPartnerAccessGrant !== true &&
 		(currentUser.departmentAbbreviation == null ||
 			currentUser.departmentAbbreviation === "")
 	) {
-		// Redirect to the dedicated profile setup page so first-time users
-		// select their department from a focused flow.
 		throw redirect({ replace: true, to: "/profile/setup" }) as unknown as Error;
 	}
 
 	return currentUser;
 };
+
+export { sanitizeAppPath } from "./login-search";
+
+export const requireAuthenticatedUser = async (
+	redirectTo: string
+): Promise<UserRead> => requireAuthenticatedUserInternal(redirectTo);
+
+export const requireAuthenticatedUserWithoutDepartmentSelection = async (
+	redirectTo: string
+): Promise<UserRead> =>
+	requireAuthenticatedUserInternal(redirectTo, {
+		skipDepartmentSelection: true,
+	});
 
 export const requireSuperuser = async (
 	redirectTo: string
@@ -96,7 +113,7 @@ export const completeLoginRedirect = async (
 
 	if (!currentUser) {
 		const { language } = appPreferencesStore.getState();
-		window.location.assign(getOidcLoginUrl(language));
+		window.location.assign(getOidcLoginUrl(language, targetPath));
 		throw new Error("Redirecting to OIDC login");
 	}
 

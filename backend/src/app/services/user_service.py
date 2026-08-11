@@ -13,6 +13,7 @@ from ..repositories.crud_audit_log import crud_audit_log
 from ..repositories.crud_departments import crud_departments
 from ..repositories.crud_rate_limit import crud_rate_limits
 from ..repositories.crud_roles import crud_roles
+from ..repositories.crud_rp_application_access_grants import crud_rp_application_access_grants
 from ..repositories.crud_tier import crud_tiers
 from ..repositories.crud_users import crud_users
 from ..repositories.crud_workspace_members import crud_workspace_members
@@ -20,6 +21,7 @@ from ..schemas.audit_log import AuditLogCreateInternal
 from ..schemas.department import DepartmentRead
 from ..schemas.rate_limit import RateLimitRead
 from ..schemas.role import RoleRead
+from ..schemas.rp_application_access_grant import RPApplicationAccessGrantRead
 from ..schemas.tier import TierRead
 from ..schemas.user import (
     UserAddRole,
@@ -335,6 +337,7 @@ class UserService:
             "department_abbreviation": None,
             "department_uuid": None,
             "email": user["email"],
+            "has_partner_access_grant": False,
             "is_superuser": user.get("is_superuser", False),
             "name": user["name"],
             "profile_image_url": user["profile_image_url"],
@@ -344,8 +347,19 @@ class UserService:
             "username": user["username"],
         }
         department_id = user.get("department_id")
+        user_id = user.get("id")
         role_ids = user.get("role_ids")
         tier_id = user.get("tier_id")
+
+        if isinstance(user_id, int):
+            access_grant = await crud_rp_application_access_grants.get(
+                db=db,
+                user_id=user_id,
+                status="active",
+                is_deleted=False,
+                schema_to_select=RPApplicationAccessGrantRead,
+            )
+            public_user["has_partner_access_grant"] = access_grant is not None
 
         if department_id is None:
             public_user["department_abbreviation"] = None

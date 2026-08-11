@@ -195,15 +195,29 @@
 		"workspaces": "Workspaces"
 	},
 	"yourApplications": {
+		"applicationsSectionTitle": "RP applications",
+		"emailLabel": "Email",
 		"errorBody": "Your applications could not be loaded for this session.",
 		"errorTitle": "Unable to load your applications",
 		"loadingBody": "Loading your applications.",
 		"loadingTitle": "Loading your applications",
+		"nameLabel": "Name",
 		"noDepartment": "No department assigned",
+		"noRoles": "No roles assigned.",
+		"noWorkspaces": "No accessible workspaces found.",
 		"noRPApplications": "No RP applications found.",
-		"summary": "Select an application to manage.",
+		"profileSectionTitle": "Profile summary",
+		"roleContextUnavailable": "Your role labels are unavailable right now.",
+		"rolesLoading": "Loading your role context.",
+		"summary": "Review your profile, accessible workspaces, and RP applications.",
 		"title": "Your applications",
-		"unknownApplication": "Unknown application"
+		"unknownApplication": "Unknown application",
+		"viewAllWorkspaces": "Review all workspaces",
+		"workspacesErrorBody": "Your workspaces could not be loaded for this session.",
+		"workspacesErrorTitle": "Unable to load your workspaces",
+		"workspacesLoadingBody": "Loading your workspaces.",
+		"workspacesLoadingTitle": "Loading your workspaces",
+		"workspacesSectionTitle": "Accessible workspaces"
 	},
 	"mauReport": {
 		"dailyListTitle": "Usage report metrics",

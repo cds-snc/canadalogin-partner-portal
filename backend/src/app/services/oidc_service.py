@@ -1,4 +1,5 @@
 from typing import Optional
+from urllib.parse import urlencode
 
 from fastapi.responses import RedirectResponse
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -15,10 +16,12 @@ class OidcService:
     def __init__(self, logout_service: OidcLogoutService | None = None) -> None:
         self.logout_service = logout_service or OidcLogoutService()
 
-    async def login(self, request: Request, ui_locales: Optional[str] = None):
+    async def login(self, request: Request, ui_locales: Optional[str] = None, redirect: Optional[str] = None):
         client = get_oidc_client()
         await load_oidc_server_metadata(client)
         redirect_uri = build_oidc_redirect_uri(request)
+        if redirect:
+            request.session["post_login_redirect"] = redirect
         if ui_locales:
             request.session["ui_locales"] = ui_locales
             return await client.authorize_redirect(request, redirect_uri, ui_locales=ui_locales)
@@ -47,9 +50,15 @@ class OidcService:
             "id_token": token.get("id_token"),
         }
         ui_locales = request.session.pop("ui_locales", None)
+        redirect = request.session.pop("post_login_redirect", None)
         post_login_url = settings.OIDC_POST_LOGIN_REDIRECT
+        query_params: dict[str, str] = {}
         if ui_locales:
-            post_login_url = f"{post_login_url}?ui_locales={ui_locales}"
+            query_params["ui_locales"] = ui_locales
+        if redirect:
+            query_params["redirect"] = redirect
+        if query_params:
+            post_login_url = f"{post_login_url}?{urlencode(query_params)}"
         return RedirectResponse(url=post_login_url)
 
     async def backchannel_logout(self, logout_token: str) -> dict[str, str]:

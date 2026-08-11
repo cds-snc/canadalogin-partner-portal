@@ -2,6 +2,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
 	completeLoginRedirect,
 	requireAuthenticatedUser,
+	requireAuthenticatedUserWithoutDepartmentSelection,
 	redirectAuthenticatedUser,
 	sanitizeAppPath,
 } from "@/features/auth/auth-routing";
@@ -12,7 +13,19 @@ vi.mock("@/features/auth/session-queries", () => ({
 }));
 
 vi.mock("@/fetch/auth", () => ({
-	getOidcLoginUrl: vi.fn(() => "http://localhost:8000/api/v1/auth/oidc/login"),
+	getOidcLoginUrl: vi.fn((language?: string, redirect?: string) => {
+		const searchParameters = new URLSearchParams();
+		if (language) {
+			searchParameters.set("ui_locales", language);
+		}
+		if (redirect) {
+			searchParameters.set("redirect", redirect);
+		}
+		const query = searchParameters.toString();
+		return query.length > 0
+			? `http://localhost:8000/api/v1/auth/oidc/login?${query}`
+			: "http://localhost:8000/api/v1/auth/oidc/login";
+	}),
 }));
 
 const sampleUser = {
@@ -58,7 +71,9 @@ describe("auth-routing", () => {
 		vi.mocked(revalidateCurrentUser).mockResolvedValue(null);
 
 		await expect(requireAuthenticatedUser("/users")).rejects.toThrow("Redirecting to OIDC login");
-		expect(assignMock).toHaveBeenCalledWith("http://localhost:8000/api/v1/auth/oidc/login");
+		expect(assignMock).toHaveBeenCalledWith(
+			"http://localhost:8000/api/v1/auth/oidc/login?redirect=%2Fusers"
+		);
 		expect(revalidateCurrentUser).toHaveBeenCalledTimes(1);
 	});
 
@@ -66,7 +81,9 @@ describe("auth-routing", () => {
 		vi.mocked(revalidateCurrentUser).mockRejectedValue(new TypeError("Failed to fetch"));
 
 		await expect(requireAuthenticatedUser("/your-applications")).rejects.toThrow("Redirecting to OIDC login");
-		expect(assignMock).toHaveBeenCalledWith("http://localhost:8000/api/v1/auth/oidc/login");
+		expect(assignMock).toHaveBeenCalledWith(
+			"http://localhost:8000/api/v1/auth/oidc/login?redirect=%2Fyour-applications"
+		);
 	});
 
 	it("redirects authenticated users away from the login page", async () => {
@@ -95,7 +112,9 @@ describe("auth-routing", () => {
 		vi.mocked(revalidateCurrentUser).mockResolvedValue(null);
 
 		await expect(completeLoginRedirect("/profile")).rejects.toThrow("Redirecting to OIDC login");
-		expect(assignMock).toHaveBeenCalledWith("http://localhost:8000/api/v1/auth/oidc/login");
+		expect(assignMock).toHaveBeenCalledWith(
+			"http://localhost:8000/api/v1/auth/oidc/login?ui_locales=en&redirect=%2Fprofile"
+		);
 	});
 
 	it("redirects to accept-terms when terms have not been accepted", async () => {
@@ -128,6 +147,22 @@ describe("auth-routing", () => {
 		await expect(requireAuthenticatedUser("/accept-terms")).resolves.toEqual({
 			...sampleUser,
 			acceptedTermsAt: null,
+		});
+	});
+
+	it("allows invitation routes to bypass the department-setup redirect", async () => {
+		vi.mocked(revalidateCurrentUser).mockResolvedValue({
+			...sampleUser,
+			departmentAbbreviation: null,
+		});
+
+		await expect(
+			requireAuthenticatedUserWithoutDepartmentSelection(
+				"/invitations/rp-applications/token-123"
+			)
+		).resolves.toEqual({
+			...sampleUser,
+			departmentAbbreviation: null,
 		});
 	});
 });

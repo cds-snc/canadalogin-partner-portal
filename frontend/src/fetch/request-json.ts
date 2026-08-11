@@ -15,6 +15,7 @@ const unauthorizedPaths = new Set(["/auth-complete", "/login"]);
 const forbiddenPaths = new Set(["/access-denied"]);
 
 type RequestJsonOptions = {
+	redirectOnForbidden?: boolean;
 	redirectOnUnauthorized?: boolean;
 };
 
@@ -197,7 +198,9 @@ export const requestJson = async <ResponseType>(
 		}
 
 		if (requestError instanceof ForbiddenRequestError) {
-			redirectToAccessDenied();
+			if (options.redirectOnForbidden !== false) {
+				redirectToAccessDenied();
+			}
 		}
 
 		throw requestError;

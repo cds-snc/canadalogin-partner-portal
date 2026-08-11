@@ -15,8 +15,12 @@ async def oidc_login(
     request: Request,
     service: Annotated[OidcService, Depends(get_oidc_service)],
     ui_locales: Optional[str] = Query(None, pattern="^(en|fr)$"),
+    redirect: Optional[str] = None,
 ):
-    return await service.login(request, ui_locales=ui_locales)
+    if redirect is None:
+        return await service.login(request, ui_locales=ui_locales)
+
+    return await service.login(request, ui_locales=ui_locales, redirect=redirect)
 
 
 @router.get("/callback")

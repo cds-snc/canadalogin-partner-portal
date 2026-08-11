@@ -1,13 +1,11 @@
-from datetime import datetime, timezone
-
 import uuid as uuid_pkg
+from datetime import UTC, datetime
 from unittest.mock import AsyncMock, Mock, patch
 
 import pytest
 from fastcrud import PaginatedListResponse
 
 from src.app.api.v1.audit_logs import read_audit_logs
-from src.app.schemas.audit_log import AuditLogRead
 from src.app.services.audit_service import AuditService
 
 
@@ -43,8 +41,8 @@ class TestAuditLogRoutes:
 
         user_uuid = "018f6f83-0f2b-7b0f-b2fb-96c4d8a4b301"
         target_uuid = "018f6f83-0f2b-7b0f-b2fb-96c4d8a4b302"
-        created_at_gte = datetime(2026, 6, 1, tzinfo=timezone.utc)
-        created_at_lte = datetime(2026, 6, 11, tzinfo=timezone.utc)
+        created_at_gte = datetime(2026, 6, 1, tzinfo=UTC)
+        created_at_lte = datetime(2026, 6, 11, tzinfo=UTC)
         result = await unwrap_endpoint(read_audit_logs)(
             Mock(), mock_db, mock_service, current_user_dict,
             page=1, items_per_page=10,
@@ -123,8 +121,8 @@ class TestAuditService:
     @pytest.mark.asyncio
     async def test_list_audit_logs_passes_date_filters(self, mock_db):
         service = AuditService()
-        created_at_gte = datetime(2026, 6, 1, tzinfo=timezone.utc)
-        created_at_lte = datetime(2026, 6, 11, tzinfo=timezone.utc)
+        created_at_gte = datetime(2026, 6, 1, tzinfo=UTC)
+        created_at_lte = datetime(2026, 6, 11, tzinfo=UTC)
 
         with (
             patch("src.app.services.audit_service.crud_audit_log.get_multi") as mock_get_multi,

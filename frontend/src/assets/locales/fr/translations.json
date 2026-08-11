@@ -195,15 +195,29 @@
 		"workspaces": "Espaces de travail"
 	},
 	"yourApplications": {
+		"applicationsSectionTitle": "Applications RP",
+		"emailLabel": "Courriel",
 		"errorBody": "Vos applications n'ont pas pu être chargées pour cette session.",
 		"errorTitle": "Impossible de charger vos applications",
 		"loadingBody": "Chargement de vos applications.",
 		"loadingTitle": "Chargement de vos applications",
+		"nameLabel": "Nom",
 		"noDepartment": "Aucun département attribué",
+		"noRoles": "Aucun rôle attribué.",
+		"noWorkspaces": "Aucun espace de travail accessible trouvé.",
 		"noRPApplications": "Aucune application RP trouvée.",
-		"summary": "Sélectionnez une application à gérer.",
+		"profileSectionTitle": "Résumé du profil",
+		"roleContextUnavailable": "Les libellés de vos rôles sont indisponibles pour le moment.",
+		"rolesLoading": "Chargement du contexte de vos rôles.",
+		"summary": "Examinez votre profil, les espaces de travail accessibles et les applications RP.",
 		"title": "Vos applications",
-		"unknownApplication": "Application inconnue"
+		"unknownApplication": "Application inconnue",
+		"viewAllWorkspaces": "Voir tous les espaces de travail",
+		"workspacesErrorBody": "Vos espaces de travail n'ont pas pu être chargés pour cette session.",
+		"workspacesErrorTitle": "Impossible de charger vos espaces de travail",
+		"workspacesLoadingBody": "Chargement de vos espaces de travail.",
+		"workspacesLoadingTitle": "Chargement de vos espaces de travail",
+		"workspacesSectionTitle": "Espaces de travail accessibles"
 	},
 	"mauReport": {
 		"dailyListTitle": "Mesures du rapport d'utilisation",

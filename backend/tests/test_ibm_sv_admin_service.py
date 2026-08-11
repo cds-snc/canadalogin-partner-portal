@@ -1,7 +1,7 @@
 from unittest.mock import AsyncMock, Mock
 
 import pytest
-from ibm_verify_community_sdk.applications.models import ApplicationOwner, GetApplicationResponse
+from ibm_verify_community_sdk.applications.models import GetApplicationResponse
 
 from src.app.core.exceptions.http_exceptions import BadRequestException
 from src.app.services.ibm_sv_admin_service import IBMVerifyAdminService

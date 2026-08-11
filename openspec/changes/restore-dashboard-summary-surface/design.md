@@ -11,6 +11,8 @@ At the same time, the repository already has most of the raw surfaces needed for
 - `/api/v1/workspaces/mine` already lists workspaces visible in current-user scope
 - `/your-applications` already lists RP applications visible in current-user scope
 
+The current implementation has one important caveat: `WorkspaceService.list_current_user_workspaces(...)` ignores `current_user` and currently delegates to `list_workspaces(...)`, so `/api/v1/workspaces/mine` is named like a current-user contract but is not yet safe to treat as an access-scoped dashboard summary source.
+
 This change defines the smallest useful MVP dashboard that builds on those surfaces without turning the landing page into a mixed administration console.
 
 Relevant standards and patterns for planning:
@@ -59,11 +61,11 @@ Relevant standards and patterns for planning:
 - Rationale: the user explicitly wants a super-basic MVP, and deeper tasks already have dedicated routes.
 - Trade-off: the dashboard will not surface inline create, edit, invite, queue, or reporting actions in this slice.
 
-### Decision 5: Reuse existing current-user data sources by default
+### Decision 5: Reuse existing current-user data sources, with a minimal workspace-scope repair
 
-- Choice: compose the dashboard from the existing current-user session, roles catalog or department lookup already used by the shared shell, `/workspaces/mine`, and current-user RP application fetches before considering any new backend summary endpoint.
-- Rationale: the current repo already has the minimal read surfaces needed for an MVP summary page.
-- Trade-off: if implementation discovers an avoidable client-side join or missing field, the preferred fix is a small dedicated dashboard API or DTO expansion rather than overloading unrelated endpoints with dashboard-only responsibilities.
+- Choice: compose the dashboard from the existing current-user session, roles catalog or department lookup already used by the shared shell, and current-user RP application fetches. For workspaces, prefer a minimal repair that scopes `/workspaces/mine` to actual current-user visibility before using it on the dashboard, rather than introducing a new dashboard summary endpoint.
+- Rationale: `/api/v1/user/me/` already carries the signed-in user identity, department UUID or abbreviation, and role UUIDs, and `/api/v1/rp-applications/mine` already provides the RP application links the MVP needs. The only discovered contract gap is that `/api/v1/workspaces/mine` is not yet actually current-user scoped in the backend service layer.
+- Trade-off: the MVP avoids a dashboard-only aggregate API, but it does require a small backend repair to keep workspace summaries within the existing authorization boundary.
 
 ### Decision 6: Keep the workspace section informative, not administrative
 
@@ -149,13 +151,13 @@ standards_impact:
 
 ## Implementation readiness
 
-- Ready after: the team confirms whether the MVP page can be built purely from existing fetch contracts or whether a small dedicated dashboard API or DTO expansion is the cleaner implementation path.
+- Ready after: the implementation scopes `/workspaces/mine` to actual current-user visibility or provides an equivalent minimal current-user workspace summary contract.
 - Recommended implementation order:
-	1. confirm the page composition contract
+	1. repair the current-user workspace summary contract so it does not expose the unfiltered workspace list
 	2. implement the read-only summary blocks on `/your-applications`
 	3. add frontend tests for loading, empty, error, and populated states
 - Current blocker:
-	- implementation has not yet confirmed whether the existing session, roles catalog, workspace list, and RP application list are sufficient without a small dedicated dashboard contract change
+	- `WorkspaceService.list_current_user_workspaces(...)` currently ignores `current_user` and returns the generic workspace list, so the dashboard cannot safely rely on `/workspaces/mine` until that access boundary is repaired
 
 ## Open Questions
 

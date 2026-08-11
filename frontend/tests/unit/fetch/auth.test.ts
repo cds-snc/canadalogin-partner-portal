@@ -121,4 +121,12 @@ describe("fetch auth", () => {
 	it("builds the backend OIDC login URL from the configured origin", () => {
 		expect(getOidcLoginUrl()).toBe("http://localhost:8000/api/v1/auth/oidc/login");
 	});
+
+	it("adds locale and redirect parameters to the backend OIDC login URL when provided", () => {
+		expect(
+			getOidcLoginUrl("fr", "/invitations/rp-applications/token-123")
+		).toBe(
+			"http://localhost:8000/api/v1/auth/oidc/login?ui_locales=fr&redirect=%2Finvitations%2Frp-applications%2Ftoken-123"
+		);
+	});
 });

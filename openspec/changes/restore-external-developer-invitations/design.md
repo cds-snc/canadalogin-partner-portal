@@ -46,6 +46,14 @@ Relevant standards and patterns for planning:
 - Rationale: the current delta already implies accepted, expired, and revoked outcomes, and implementation needs a compact state vocabulary for management views and acceptance rules.
 - Trade-off: reissue or reactivation behavior can keep using the same state vocabulary without inventing extra long-lived states.
 
+First-release lifecycle action rules:
+
+- create stores a new `pending` invitation with a token hash and expiry timestamp
+- accept is allowed only for a `pending` invitation whose token is valid, whose invited email matches the signed-in CanadaLogin account, and whose expiry has not passed
+- revoke makes an issued invitation unavailable for future acceptance while preserving history for invitation-management views
+- expire is reached when a `pending` invitation passes `invite_expires_at` before acceptance; expired invitations remain visible in history but are not acceptable
+- reissue produces a fresh `pending` invitation with a new token and expiry while making the previous issued invitation unavailable for future acceptance
+
 ### Decision 3: Manage bootstrap invitations as a platform-admin action anchored to an existing partner context
 
 - Choice: define bootstrap invitation-management behavior as a platform-admin action anchored to one existing workspace that represents the partner context. The first-release management entry point may still be one workspace-scoped RP application, but the granted access scope is the containing workspace rather than the department.
@@ -84,11 +92,27 @@ Relevant standards and patterns for planning:
 - Rationale: today `sync_oidc_user` denies access when the user is in neither configured upstream group. Invitation-backed users need a local eligibility path before that denial.
 - Trade-off: the OIDC login flow becomes aware of local invitation state and must avoid duplicate role assignment on repeated logins.
 
+First-release login and eligibility path:
+
+1. OIDC sign-in still establishes identity from the CanadaLogin subject and normalized email before any invitation-specific authorization decision.
+2. If the resolved local user already has a portal-authorizing platform role or superuser access, the existing local-role authorization path remains in effect.
+3. If the user does not have portal-authorizing platform access, the portal checks for an active pending invitation whose invited email matches the signed-in CanadaLogin email before applying the upstream-group denial path.
+4. If no matching pending invitation or existing active partner-scoped access grant exists, the portal denies access through the normal local access-denied path.
+5. Invitation acceptance and resulting partner-scoped access grants become the local source of truth for later current-user RP application access; repeated sign-in must not create duplicate grants.
+
 ### Decision 9: Accepted invitation roles are assigned as partner-scoped local access grants
 
 - Choice: once a valid pending invitation is confirmed on first login, the portal creates or updates the local user record and records the invitation's role assignment against the invitation's partner workspace context.
 - Rationale: invitation-backed access needs durable local authorization state after the first accepted login.
 - Trade-off: the implementation must define how partner-scoped role assignments coexist with existing platform roles without treating them as ordinary reusable platform roles, and how those assignments become the source of truth for current-user RP application access instead of the current owner-email snapshot path.
+
+First accepted-login sequence for this slice:
+
+1. Validate the invitation token and invited email against the signed-in CanadaLogin account.
+2. Create or update the local user record for that identity without forcing a separate `/profile/setup` department flow.
+3. Create or update the active `rp_application_access_grant` for the invitation's partner workspace and role.
+4. Mark the invitation accepted so the token cannot be used to create duplicate local access later.
+5. Use the resulting partner-scoped access grant, not workspace membership and not owner-email snapshots alone, as the invited user's durable current-user RP application access record.
 
 Recommended data model for this slice:
 
@@ -146,6 +170,7 @@ Implication for implementation:
 - when a partner-scoped invited-role grant exists for workspace `W`, `/api/v1/rp-applications/mine` should return every RP application in workspace `W` that is still active
 - per-RP inclusion lists are out of scope for the first release
 - if future product needs require limiting a partner user to only selected RP applications inside a workspace, that should be added as a later change instead of being implied now
+- implementation may use coexistence mode while rollout is incomplete: owner-email checks can remain as fallback for pre-existing owner access, but invitation-backed users must gain access from partner-scoped local grants rather than from owner-email snapshots alone
 
 ## Standards impact
 

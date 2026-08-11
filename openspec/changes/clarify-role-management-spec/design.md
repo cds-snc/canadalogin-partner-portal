@@ -28,6 +28,8 @@ Implementation decisions confirmed in this slice:
 - MVP2 authorization must stop using upstream `application owners` group membership as the source of portal access and must stop overwriting locally managed role assignments on sign-in
 - MVP2 cutover should not auto-grant partner access from legacy state. A small initial `CL Admin` set is seeded operationally, and partner access is then created through the built-in role-assignment and invitation flows.
 
+The replacement direction for current `/api/v1/rp-applications/mine/**` owner-email checks is now explicit. This change should reuse the partner-scoped access-grant model defined in `restore-external-developer-invitations`: a durable local grant that links the user, the workspace used as the first-release partner scope, the granted invited role, and the grant lifecycle state. Role-management follow-on implementation should not invent a second app-scoped or platform-role-only substitute for that access path.
+
 Recommended first follow-on implementation slice:
 
 - preserve the list-based user-role read contract and multi-subject Casbin evaluation that already match the multi-role data model
@@ -106,7 +108,7 @@ Recommended first slice:
 Possible later slices:
 
 - Remove role deletion from the admin UI and backend contract so the role catalog matches the durable-record rule.
-- Replace RP-application owner-email permission checks with a durable app-scoped access model that can be governed through role-management and assignment flows.
+- Replace RP-application owner-email permission checks with the partner-scoped access-grant model defined in `restore-external-developer-invitations`, using workspace as the first-release partner scope for current-user RP application access.
 - Add or update frontend and backend tests for role CRUD, duplicate handling, assignment, unassignment, and permission evaluation flows.
 
 ## Security, privacy, accessibility, and operations notes
@@ -121,4 +123,5 @@ Possible later slices:
 
 ## Open questions that block non-local work
 
-- What durable app-scoped assignment model should replace RP-application owner-email snapshots when current-user RP-application permissions move under role-management?
+- No additional local design question is blocking this change package after the current invitation-planning refinements.
+- Cross-change dependency: `restore-external-developer-invitations` owns the partner-scoped access-grant model that should replace current owner-email snapshots on `/api/v1/rp-applications/mine/**`, so implementation should reuse that model rather than inventing a separate app-scoped assignment path here.

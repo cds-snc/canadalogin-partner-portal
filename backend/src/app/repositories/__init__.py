@@ -3,6 +3,7 @@ from .crud_audit_log import crud_audit_log
 from .crud_departments import crud_departments
 from .crud_rate_limit import crud_rate_limits
 from .crud_roles import crud_roles
+from .crud_rp_application_developer_invitations import crud_rp_application_developer_invitations
 from .crud_rp_applications import crud_rp_applications
 from .crud_tier import crud_tiers
 from .crud_users import crud_users
@@ -21,6 +22,7 @@ __all__ = [
     "crud_rate_limits",
     "crud_roles",
     "crud_rp_applications",
+    "crud_rp_application_developer_invitations",
     "crud_tiers",
     "crud_users",
     "crud_workspace_members",

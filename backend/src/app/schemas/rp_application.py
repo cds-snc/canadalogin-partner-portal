@@ -7,7 +7,6 @@ from pydantic.alias_generators import to_camel
 
 from ..core.schemas import PersistentDeletion, UUIDSchema
 
-
 CanadaLoginEnvironment = Literal["test", "staging", "production"]
 LogoutMode = Literal["back_channel", "front_channel"]
 ClientType = Literal["confidential", "public"]

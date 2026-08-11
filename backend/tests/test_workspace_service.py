@@ -16,8 +16,8 @@ from src.app.schemas.rp_application import (
     WorkspaceRPApplicationRegistrationCreate,
     WorkspaceRPApplicationRegistrationUpdate,
 )
-from src.app.schemas.workspace_member import WorkspaceMemberCreate, WorkspaceMemberUpdate
 from src.app.schemas.workspace import WorkspaceCreate, WorkspaceUpdate
+from src.app.schemas.workspace_member import WorkspaceMemberCreate, WorkspaceMemberUpdate
 from src.app.services.workspace_service import WorkspaceService
 
 
@@ -137,6 +137,82 @@ class TestWorkspaceService:
         )
 
     @pytest.mark.asyncio
+    async def test_list_current_user_workspaces_filters_to_active_memberships(self, mock_db) -> None:
+        service = WorkspaceService()
+
+        with (
+            patch("src.app.services.workspace_service.crud_workspace_members") as mock_workspace_members,
+            patch("src.app.services.workspace_service.crud_workspaces") as mock_workspaces,
+        ):
+            mock_workspace_members.get_multi = AsyncMock(
+                return_value={
+                    "data": [
+                        {"workspace_id": 9},
+                        {"workspace_id": 11},
+                        {"workspace_id": 9},
+                    ]
+                }
+            )
+            mock_workspaces.get = AsyncMock(
+                side_effect=[
+                    {
+                        "id": 9,
+                        "uuid": "018f6f83-0000-0000-0000-000000000201",
+                        "name": "Benefits Workspace",
+                        "slug": "benefits-workspace",
+                        "department_id": 7,
+                        "description": "Primary workspace",
+                        "created_by": 42,
+                        "created_at": "2026-07-30T12:00:00",
+                        "updated_at": None,
+                        "deleted_at": None,
+                        "is_deleted": False,
+                    },
+                    {
+                        "id": 11,
+                        "uuid": "018f6f83-0000-0000-0000-000000000202",
+                        "name": "Claims Workspace",
+                        "slug": "claims-workspace",
+                        "department_id": 8,
+                        "description": "Claims workspace",
+                        "created_by": 42,
+                        "created_at": "2026-07-30T13:00:00",
+                        "updated_at": None,
+                        "deleted_at": None,
+                        "is_deleted": False,
+                    },
+                ]
+            )
+
+            result = await service.list_current_user_workspaces(
+                db=mock_db,
+                current_user={"id": 42, "is_superuser": False},
+            )
+
+        assert [workspace["id"] for workspace in result] == [9, 11]
+        mock_workspace_members.get_multi.assert_awaited_once_with(
+            db=mock_db,
+            user_id=42,
+            is_deleted=False,
+            schema_to_select=service.list_current_user_workspaces.__globals__["WorkspaceMemberRead"],
+        )
+        assert mock_workspaces.get.await_count == 2
+
+    @pytest.mark.asyncio
+    async def test_list_current_user_workspaces_delegates_to_all_for_superuser(self, mock_db) -> None:
+        service = WorkspaceService()
+        all_workspaces = [{"id": 9, "uuid": "018f6f83-0000-0000-0000-000000000201"}]
+
+        with patch.object(service, "list_workspaces", AsyncMock(return_value=all_workspaces)) as mock_list_workspaces:
+            result = await service.list_current_user_workspaces(
+                db=mock_db,
+                current_user={"id": 42, "is_superuser": True},
+            )
+
+        assert result == all_workspaces
+        mock_list_workspaces.assert_awaited_once_with(db=mock_db)
+
+    @pytest.mark.asyncio
     async def test_get_workspace_by_uuid_raises_when_missing(self, mock_db) -> None:
         service = WorkspaceService()
 
@@ -154,6 +230,45 @@ class TestWorkspaceService:
             uuid="018f6f83-0000-0000-0000-000000000201",
             is_deleted=False,
             schema_to_select=service.get_workspace_by_uuid.__globals__["WorkspaceRead"],
+        )
+
+    @pytest.mark.asyncio
+    async def test_get_workspace_by_uuid_hides_workspace_when_current_user_is_not_a_member(self, mock_db) -> None:
+        service = WorkspaceService()
+
+        with (
+            patch("src.app.services.workspace_service.crud_workspaces") as mock_workspaces,
+            patch("src.app.services.workspace_service.crud_workspace_members") as mock_workspace_members,
+        ):
+            mock_workspaces.get = AsyncMock(
+                return_value={
+                    "id": 9,
+                    "uuid": "018f6f83-0000-0000-0000-000000000201",
+                    "name": "Benefits Workspace",
+                    "slug": "benefits-workspace",
+                    "department_id": 7,
+                    "description": "Primary workspace",
+                    "created_by": 42,
+                    "created_at": "2026-07-30T12:00:00",
+                    "updated_at": None,
+                    "deleted_at": None,
+                    "is_deleted": False,
+                }
+            )
+            mock_workspace_members.get = AsyncMock(return_value=None)
+
+            with pytest.raises(NotFoundException, match="Workspace not found"):
+                await service.get_workspace_by_uuid(
+                    db=mock_db,
+                    workspace_uuid="018f6f83-0000-0000-0000-000000000201",
+                    current_user={"id": 55, "is_superuser": False},
+                )
+
+        mock_workspace_members.get.assert_awaited_once_with(
+            db=mock_db,
+            workspace_id=9,
+            user_id=55,
+            is_deleted=False,
         )
 
     @pytest.mark.asyncio

@@ -18,6 +18,7 @@ import { Route as SupportRouteImport } from './routes/support'
 import { Route as RolesRouteImport } from './routes/roles'
 import { Route as PoliciesRouteImport } from './routes/policies'
 import { Route as LogoutRouteImport } from './routes/logout'
+import { Route as InvitationsRouteImport } from './routes/invitations'
 import { Route as ErrorRouteImport } from './routes/error'
 import { Route as DepartmentsRouteImport } from './routes/departments'
 import { Route as AuthCompleteRouteImport } from './routes/auth-complete'
@@ -31,8 +32,10 @@ import { Route as YourApplicationsRpApplicationUuidRouteImport } from './routes/
 import { Route as WorkspacesNewRouteImport } from './routes/workspaces/new'
 import { Route as WorkspacesWorkspaceUuidRouteImport } from './routes/workspaces/$workspaceUuid'
 import { Route as ProfileSetupRouteImport } from './routes/profile/setup'
+import { Route as InvitationsRpApplicationsRouteImport } from './routes/invitations/rp-applications'
 import { Route as YourApplicationsRpApplicationUuidIndexRouteImport } from './routes/your-applications/$rpApplicationUuid/index'
 import { Route as WorkspacesWorkspaceUuidIndexRouteImport } from './routes/workspaces/$workspaceUuid/index'
+import { Route as InvitationsRpApplicationsIndexRouteImport } from './routes/invitations/rp-applications/index'
 import { Route as YourApplicationsRpApplicationUuidMauReportRouteImport } from './routes/your-applications/$rpApplicationUuid/mau-report'
 import { Route as YourApplicationsRpApplicationUuidManageCredentialsRouteImport } from './routes/your-applications/$rpApplicationUuid/manage-credentials'
 import { Route as YourApplicationsRpApplicationUuidDepartmentSetupRouteImport } from './routes/your-applications/$rpApplicationUuid/department-setup'
@@ -40,6 +43,7 @@ import { Route as WorkspacesWorkspaceUuidSettingsRouteImport } from './routes/wo
 import { Route as WorkspacesWorkspaceUuidMembersRouteImport } from './routes/workspaces/$workspaceUuid/members'
 import { Route as WorkspacesWorkspaceUuidApplicationsRouteImport } from './routes/workspaces/$workspaceUuid/applications'
 import { Route as WorkspacesWorkspaceUuidApplicationInformationRouteImport } from './routes/workspaces/$workspaceUuid/application-information'
+import { Route as InvitationsRpApplicationsTokenRouteImport } from './routes/invitations/rp-applications/$token'
 import { Route as WorkspacesWorkspaceUuidApplicationsIndexRouteImport } from './routes/workspaces/$workspaceUuid/applications/index'
 import { Route as WorkspacesWorkspaceUuidApplicationInformationIndexRouteImport } from './routes/workspaces/$workspaceUuid/application-information/index'
 import { Route as WorkspacesWorkspaceUuidApplicationsNewRouteImport } from './routes/workspaces/$workspaceUuid/applications/new'
@@ -96,6 +100,11 @@ const PoliciesRoute = PoliciesRouteImport.update({
 const LogoutRoute = LogoutRouteImport.update({
   id: '/logout',
   path: '/logout',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const InvitationsRoute = InvitationsRouteImport.update({
+  id: '/invitations',
+  path: '/invitations',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ErrorRoute = ErrorRouteImport.update({
@@ -164,6 +173,12 @@ const ProfileSetupRoute = ProfileSetupRouteImport.update({
   path: '/profile/setup',
   getParentRoute: () => rootRouteImport,
 } as any)
+const InvitationsRpApplicationsRoute =
+  InvitationsRpApplicationsRouteImport.update({
+    id: '/rp-applications',
+    path: '/rp-applications',
+    getParentRoute: () => InvitationsRoute,
+  } as any)
 const YourApplicationsRpApplicationUuidIndexRoute =
   YourApplicationsRpApplicationUuidIndexRouteImport.update({
     id: '/',
@@ -175,6 +190,12 @@ const WorkspacesWorkspaceUuidIndexRoute =
     id: '/',
     path: '/',
     getParentRoute: () => WorkspacesWorkspaceUuidRoute,
+  } as any)
+const InvitationsRpApplicationsIndexRoute =
+  InvitationsRpApplicationsIndexRouteImport.update({
+    id: '/',
+    path: '/',
+    getParentRoute: () => InvitationsRpApplicationsRoute,
   } as any)
 const YourApplicationsRpApplicationUuidMauReportRoute =
   YourApplicationsRpApplicationUuidMauReportRouteImport.update({
@@ -217,6 +238,12 @@ const WorkspacesWorkspaceUuidApplicationInformationRoute =
     id: '/application-information',
     path: '/application-information',
     getParentRoute: () => WorkspacesWorkspaceUuidRoute,
+  } as any)
+const InvitationsRpApplicationsTokenRoute =
+  InvitationsRpApplicationsTokenRouteImport.update({
+    id: '/$token',
+    path: '/$token',
+    getParentRoute: () => InvitationsRpApplicationsRoute,
   } as any)
 const WorkspacesWorkspaceUuidApplicationsIndexRoute =
   WorkspacesWorkspaceUuidApplicationsIndexRouteImport.update({
@@ -311,6 +338,7 @@ export interface FileRoutesByFullPath {
   '/auth-complete': typeof AuthCompleteRoute
   '/departments': typeof DepartmentsRoute
   '/error': typeof ErrorRoute
+  '/invitations': typeof InvitationsRouteWithChildren
   '/logout': typeof LogoutRoute
   '/policies': typeof PoliciesRoute
   '/roles': typeof RolesRoute
@@ -320,12 +348,14 @@ export interface FileRoutesByFullPath {
   '/users': typeof UsersRoute
   '/workspaces': typeof WorkspacesRouteWithChildren
   '/your-applications': typeof YourApplicationsRouteWithChildren
+  '/invitations/rp-applications': typeof InvitationsRpApplicationsRouteWithChildren
   '/profile/setup': typeof ProfileSetupRoute
   '/workspaces/$workspaceUuid': typeof WorkspacesWorkspaceUuidRouteWithChildren
   '/workspaces/new': typeof WorkspacesNewRoute
   '/your-applications/$rpApplicationUuid': typeof YourApplicationsRpApplicationUuidRouteWithChildren
   '/workspaces/': typeof WorkspacesIndexRoute
   '/your-applications/': typeof YourApplicationsIndexRoute
+  '/invitations/rp-applications/$token': typeof InvitationsRpApplicationsTokenRoute
   '/workspaces/$workspaceUuid/application-information': typeof WorkspacesWorkspaceUuidApplicationInformationRouteWithChildren
   '/workspaces/$workspaceUuid/applications': typeof WorkspacesWorkspaceUuidApplicationsRouteWithChildren
   '/workspaces/$workspaceUuid/members': typeof WorkspacesWorkspaceUuidMembersRoute
@@ -333,6 +363,7 @@ export interface FileRoutesByFullPath {
   '/your-applications/$rpApplicationUuid/department-setup': typeof YourApplicationsRpApplicationUuidDepartmentSetupRoute
   '/your-applications/$rpApplicationUuid/manage-credentials': typeof YourApplicationsRpApplicationUuidManageCredentialsRoute
   '/your-applications/$rpApplicationUuid/mau-report': typeof YourApplicationsRpApplicationUuidMauReportRoute
+  '/invitations/rp-applications/': typeof InvitationsRpApplicationsIndexRoute
   '/workspaces/$workspaceUuid/': typeof WorkspacesWorkspaceUuidIndexRoute
   '/your-applications/$rpApplicationUuid/': typeof YourApplicationsRpApplicationUuidIndexRoute
   '/workspaces/$workspaceUuid/application-information/$applicationInformationUuid': typeof WorkspacesWorkspaceUuidApplicationInformationApplicationInformationUuidRouteWithChildren
@@ -356,6 +387,7 @@ export interface FileRoutesByTo {
   '/auth-complete': typeof AuthCompleteRoute
   '/departments': typeof DepartmentsRoute
   '/error': typeof ErrorRoute
+  '/invitations': typeof InvitationsRouteWithChildren
   '/logout': typeof LogoutRoute
   '/policies': typeof PoliciesRoute
   '/roles': typeof RolesRoute
@@ -367,11 +399,13 @@ export interface FileRoutesByTo {
   '/workspaces/new': typeof WorkspacesNewRoute
   '/workspaces': typeof WorkspacesIndexRoute
   '/your-applications': typeof YourApplicationsIndexRoute
+  '/invitations/rp-applications/$token': typeof InvitationsRpApplicationsTokenRoute
   '/workspaces/$workspaceUuid/members': typeof WorkspacesWorkspaceUuidMembersRoute
   '/workspaces/$workspaceUuid/settings': typeof WorkspacesWorkspaceUuidSettingsRoute
   '/your-applications/$rpApplicationUuid/department-setup': typeof YourApplicationsRpApplicationUuidDepartmentSetupRoute
   '/your-applications/$rpApplicationUuid/manage-credentials': typeof YourApplicationsRpApplicationUuidManageCredentialsRoute
   '/your-applications/$rpApplicationUuid/mau-report': typeof YourApplicationsRpApplicationUuidMauReportRoute
+  '/invitations/rp-applications': typeof InvitationsRpApplicationsIndexRoute
   '/workspaces/$workspaceUuid': typeof WorkspacesWorkspaceUuidIndexRoute
   '/your-applications/$rpApplicationUuid': typeof YourApplicationsRpApplicationUuidIndexRoute
   '/workspaces/$workspaceUuid/application-information/new': typeof WorkspacesWorkspaceUuidApplicationInformationNewRoute
@@ -394,6 +428,7 @@ export interface FileRoutesById {
   '/auth-complete': typeof AuthCompleteRoute
   '/departments': typeof DepartmentsRoute
   '/error': typeof ErrorRoute
+  '/invitations': typeof InvitationsRouteWithChildren
   '/logout': typeof LogoutRoute
   '/policies': typeof PoliciesRoute
   '/roles': typeof RolesRoute
@@ -403,12 +438,14 @@ export interface FileRoutesById {
   '/users': typeof UsersRoute
   '/workspaces': typeof WorkspacesRouteWithChildren
   '/your-applications': typeof YourApplicationsRouteWithChildren
+  '/invitations/rp-applications': typeof InvitationsRpApplicationsRouteWithChildren
   '/profile/setup': typeof ProfileSetupRoute
   '/workspaces/$workspaceUuid': typeof WorkspacesWorkspaceUuidRouteWithChildren
   '/workspaces/new': typeof WorkspacesNewRoute
   '/your-applications/$rpApplicationUuid': typeof YourApplicationsRpApplicationUuidRouteWithChildren
   '/workspaces/': typeof WorkspacesIndexRoute
   '/your-applications/': typeof YourApplicationsIndexRoute
+  '/invitations/rp-applications/$token': typeof InvitationsRpApplicationsTokenRoute
   '/workspaces/$workspaceUuid/application-information': typeof WorkspacesWorkspaceUuidApplicationInformationRouteWithChildren
   '/workspaces/$workspaceUuid/applications': typeof WorkspacesWorkspaceUuidApplicationsRouteWithChildren
   '/workspaces/$workspaceUuid/members': typeof WorkspacesWorkspaceUuidMembersRoute
@@ -416,6 +453,7 @@ export interface FileRoutesById {
   '/your-applications/$rpApplicationUuid/department-setup': typeof YourApplicationsRpApplicationUuidDepartmentSetupRoute
   '/your-applications/$rpApplicationUuid/manage-credentials': typeof YourApplicationsRpApplicationUuidManageCredentialsRoute
   '/your-applications/$rpApplicationUuid/mau-report': typeof YourApplicationsRpApplicationUuidMauReportRoute
+  '/invitations/rp-applications/': typeof InvitationsRpApplicationsIndexRoute
   '/workspaces/$workspaceUuid/': typeof WorkspacesWorkspaceUuidIndexRoute
   '/your-applications/$rpApplicationUuid/': typeof YourApplicationsRpApplicationUuidIndexRoute
   '/workspaces/$workspaceUuid/application-information/$applicationInformationUuid': typeof WorkspacesWorkspaceUuidApplicationInformationApplicationInformationUuidRouteWithChildren
@@ -441,6 +479,7 @@ export interface FileRouteTypes {
     | '/auth-complete'
     | '/departments'
     | '/error'
+    | '/invitations'
     | '/logout'
     | '/policies'
     | '/roles'
@@ -450,12 +489,14 @@ export interface FileRouteTypes {
     | '/users'
     | '/workspaces'
     | '/your-applications'
+    | '/invitations/rp-applications'
     | '/profile/setup'
     | '/workspaces/$workspaceUuid'
     | '/workspaces/new'
     | '/your-applications/$rpApplicationUuid'
     | '/workspaces/'
     | '/your-applications/'
+    | '/invitations/rp-applications/$token'
     | '/workspaces/$workspaceUuid/application-information'
     | '/workspaces/$workspaceUuid/applications'
     | '/workspaces/$workspaceUuid/members'
@@ -463,6 +504,7 @@ export interface FileRouteTypes {
     | '/your-applications/$rpApplicationUuid/department-setup'
     | '/your-applications/$rpApplicationUuid/manage-credentials'
     | '/your-applications/$rpApplicationUuid/mau-report'
+    | '/invitations/rp-applications/'
     | '/workspaces/$workspaceUuid/'
     | '/your-applications/$rpApplicationUuid/'
     | '/workspaces/$workspaceUuid/application-information/$applicationInformationUuid'
@@ -486,6 +528,7 @@ export interface FileRouteTypes {
     | '/auth-complete'
     | '/departments'
     | '/error'
+    | '/invitations'
     | '/logout'
     | '/policies'
     | '/roles'
@@ -497,11 +540,13 @@ export interface FileRouteTypes {
     | '/workspaces/new'
     | '/workspaces'
     | '/your-applications'
+    | '/invitations/rp-applications/$token'
     | '/workspaces/$workspaceUuid/members'
     | '/workspaces/$workspaceUuid/settings'
     | '/your-applications/$rpApplicationUuid/department-setup'
     | '/your-applications/$rpApplicationUuid/manage-credentials'
     | '/your-applications/$rpApplicationUuid/mau-report'
+    | '/invitations/rp-applications'
     | '/workspaces/$workspaceUuid'
     | '/your-applications/$rpApplicationUuid'
     | '/workspaces/$workspaceUuid/application-information/new'
@@ -523,6 +568,7 @@ export interface FileRouteTypes {
     | '/auth-complete'
     | '/departments'
     | '/error'
+    | '/invitations'
     | '/logout'
     | '/policies'
     | '/roles'
@@ -532,12 +578,14 @@ export interface FileRouteTypes {
     | '/users'
     | '/workspaces'
     | '/your-applications'
+    | '/invitations/rp-applications'
     | '/profile/setup'
     | '/workspaces/$workspaceUuid'
     | '/workspaces/new'
     | '/your-applications/$rpApplicationUuid'
     | '/workspaces/'
     | '/your-applications/'
+    | '/invitations/rp-applications/$token'
     | '/workspaces/$workspaceUuid/application-information'
     | '/workspaces/$workspaceUuid/applications'
     | '/workspaces/$workspaceUuid/members'
@@ -545,6 +593,7 @@ export interface FileRouteTypes {
     | '/your-applications/$rpApplicationUuid/department-setup'
     | '/your-applications/$rpApplicationUuid/manage-credentials'
     | '/your-applications/$rpApplicationUuid/mau-report'
+    | '/invitations/rp-applications/'
     | '/workspaces/$workspaceUuid/'
     | '/your-applications/$rpApplicationUuid/'
     | '/workspaces/$workspaceUuid/application-information/$applicationInformationUuid'
@@ -569,6 +618,7 @@ export interface RootRouteChildren {
   AuthCompleteRoute: typeof AuthCompleteRoute
   DepartmentsRoute: typeof DepartmentsRoute
   ErrorRoute: typeof ErrorRoute
+  InvitationsRoute: typeof InvitationsRouteWithChildren
   LogoutRoute: typeof LogoutRoute
   PoliciesRoute: typeof PoliciesRoute
   RolesRoute: typeof RolesRoute
@@ -644,6 +694,13 @@ declare module '@tanstack/react-router' {
       path: '/logout'
       fullPath: '/logout'
       preLoaderRoute: typeof LogoutRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/invitations': {
+      id: '/invitations'
+      path: '/invitations'
+      fullPath: '/invitations'
+      preLoaderRoute: typeof InvitationsRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/error': {
@@ -737,6 +794,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ProfileSetupRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/invitations/rp-applications': {
+      id: '/invitations/rp-applications'
+      path: '/rp-applications'
+      fullPath: '/invitations/rp-applications'
+      preLoaderRoute: typeof InvitationsRpApplicationsRouteImport
+      parentRoute: typeof InvitationsRoute
+    }
     '/your-applications/$rpApplicationUuid/': {
       id: '/your-applications/$rpApplicationUuid/'
       path: '/'
@@ -750,6 +814,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/workspaces/$workspaceUuid/'
       preLoaderRoute: typeof WorkspacesWorkspaceUuidIndexRouteImport
       parentRoute: typeof WorkspacesWorkspaceUuidRoute
+    }
+    '/invitations/rp-applications/': {
+      id: '/invitations/rp-applications/'
+      path: '/'
+      fullPath: '/invitations/rp-applications/'
+      preLoaderRoute: typeof InvitationsRpApplicationsIndexRouteImport
+      parentRoute: typeof InvitationsRpApplicationsRoute
     }
     '/your-applications/$rpApplicationUuid/mau-report': {
       id: '/your-applications/$rpApplicationUuid/mau-report'
@@ -799,6 +870,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/workspaces/$workspaceUuid/application-information'
       preLoaderRoute: typeof WorkspacesWorkspaceUuidApplicationInformationRouteImport
       parentRoute: typeof WorkspacesWorkspaceUuidRoute
+    }
+    '/invitations/rp-applications/$token': {
+      id: '/invitations/rp-applications/$token'
+      path: '/$token'
+      fullPath: '/invitations/rp-applications/$token'
+      preLoaderRoute: typeof InvitationsRpApplicationsTokenRouteImport
+      parentRoute: typeof InvitationsRpApplicationsRoute
     }
     '/workspaces/$workspaceUuid/applications/': {
       id: '/workspaces/$workspaceUuid/applications/'
@@ -886,6 +964,34 @@ declare module '@tanstack/react-router' {
     }
   }
 }
+
+interface InvitationsRpApplicationsRouteChildren {
+  InvitationsRpApplicationsTokenRoute: typeof InvitationsRpApplicationsTokenRoute
+  InvitationsRpApplicationsIndexRoute: typeof InvitationsRpApplicationsIndexRoute
+}
+
+const InvitationsRpApplicationsRouteChildren: InvitationsRpApplicationsRouteChildren =
+  {
+    InvitationsRpApplicationsTokenRoute: InvitationsRpApplicationsTokenRoute,
+    InvitationsRpApplicationsIndexRoute: InvitationsRpApplicationsIndexRoute,
+  }
+
+const InvitationsRpApplicationsRouteWithChildren =
+  InvitationsRpApplicationsRoute._addFileChildren(
+    InvitationsRpApplicationsRouteChildren,
+  )
+
+interface InvitationsRouteChildren {
+  InvitationsRpApplicationsRoute: typeof InvitationsRpApplicationsRouteWithChildren
+}
+
+const InvitationsRouteChildren: InvitationsRouteChildren = {
+  InvitationsRpApplicationsRoute: InvitationsRpApplicationsRouteWithChildren,
+}
+
+const InvitationsRouteWithChildren = InvitationsRoute._addFileChildren(
+  InvitationsRouteChildren,
+)
 
 interface WorkspacesWorkspaceUuidApplicationInformationApplicationInformationUuidRouteChildren {
   WorkspacesWorkspaceUuidApplicationInformationApplicationInformationUuidEditRoute: typeof WorkspacesWorkspaceUuidApplicationInformationApplicationInformationUuidEditRoute
@@ -1057,6 +1163,7 @@ const rootRouteChildren: RootRouteChildren = {
   AuthCompleteRoute: AuthCompleteRoute,
   DepartmentsRoute: DepartmentsRoute,
   ErrorRoute: ErrorRoute,
+  InvitationsRoute: InvitationsRouteWithChildren,
   LogoutRoute: LogoutRoute,
   PoliciesRoute: PoliciesRoute,
   RolesRoute: RolesRoute,

@@ -2,8 +2,8 @@ from datetime import datetime
 from typing import Any, cast
 from unittest.mock import AsyncMock, Mock, patch
 
-import pytest
 import httpx
+import pytest
 from ibm_verify_community_sdk.applications.models import (
     GetApplicationResponse,
     ListApplicationsResponse,

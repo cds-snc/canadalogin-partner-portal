@@ -1,15 +1,14 @@
 import hashlib
 import logging
-import importlib
 from unittest.mock import MagicMock
 
 import pytest
 
+from src.app.core import logger as app_logger
 from src.app.core.exceptions.standardized_logger import (
     QUERY_STRING_BLACKLIST,
     StandardizedLogger,
 )
-from src.app.core import logger as app_logger
 
 
 @pytest.fixture()
@@ -33,13 +32,13 @@ def mock_request() -> MagicMock:
 def test_hash_blacklisted_params_hashes_sensitive_values(logger_instance: StandardizedLogger) -> None:
     params = {"token": "my-secret-token", "safe_param": "safe-value"}
     result = logger_instance._hash_blacklisted_params(params)
-    expected_hash = hashlib.sha256("my-secret-token".encode()).hexdigest()
+    expected_hash = hashlib.sha256(b"my-secret-token").hexdigest()
     assert f"token={expected_hash}" in result
     assert "safe-value" in result
 
 
 def test_hash_blacklisted_params_covers_all_blacklisted_keys(logger_instance: StandardizedLogger) -> None:
-    params = {key: "sensitive" for key in QUERY_STRING_BLACKLIST}
+    params = dict.fromkeys(QUERY_STRING_BLACKLIST, "sensitive")
     result = logger_instance._hash_blacklisted_params(params)
     plain = "sensitive"
     assert plain not in result
@@ -64,7 +63,7 @@ def test_build_user_returns_hashed_id_when_session_has_user(
 ) -> None:
     mock_request.session.get.return_value = "test-uuid-123"
     result = logger_instance._build_user(mock_request)
-    expected_hash = hashlib.sha256("test-uuid-123".encode()).hexdigest()
+    expected_hash = hashlib.sha256(b"test-uuid-123").hexdigest()
     assert result == {"id": expected_hash}
 
 

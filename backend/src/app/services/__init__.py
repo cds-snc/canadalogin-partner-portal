@@ -10,6 +10,7 @@ from .oidc_service import OidcService
 from .policy_service import PolicyService
 from .rate_limit_service import RateLimitService
 from .role_service import RoleService
+from .rp_application_developer_invitation_service import RPApplicationDeveloperInvitationService
 from .rp_application_service import RPApplicationService
 from .task_service import TaskService
 from .tier_service import TierService
@@ -27,6 +28,7 @@ __all__ = [
     "OidcLogoutService",
     "PolicyService",
     "RateLimitService",
+    "RPApplicationDeveloperInvitationService",
     "RoleService",
     "RPApplicationService",
     "TaskService",

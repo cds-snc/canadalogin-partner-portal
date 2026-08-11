@@ -10,6 +10,7 @@ export type UserRead = {
 	departmentAbbreviation?: string | null;
 	departmentUuid?: string | null;
 	email: string;
+	hasPartnerAccessGrant?: boolean;
 	isSuperuser?: boolean;
 	name: string;
 	profileImageUrl: string | null;
@@ -37,12 +38,20 @@ export const getCurrentUser = async (): Promise<UserRead | null> => {
 	}
 };
 
-export const getOidcLoginUrl = (language?: string): string => {
+export const getOidcLoginUrl = (
+	language?: string,
+	redirect?: string
+): string => {
 	const url = buildApiUrl("/api/v1/auth/oidc/login");
+	const searchParameters = new URLSearchParams();
 	if (language === "en" || language === "fr") {
-		return `${url}?ui_locales=${language}`;
+		searchParameters.set("ui_locales", language);
 	}
-	return url;
+	if (typeof redirect === "string" && redirect.startsWith("/")) {
+		searchParameters.set("redirect", redirect);
+	}
+	const query = searchParameters.toString();
+	return query.length > 0 ? `${url}?${query}` : url;
 };
 
 export const getBackendOrigin = (): string => getApiBaseUrl();

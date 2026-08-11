@@ -8,7 +8,7 @@ import src.app.services.rp_application_service as rp_application_module
 from src.app.api.dependencies import get_current_user, get_rp_application_service
 from src.app.core.access_control import CASBIN_MODEL_PATH, database_enforcer_provider
 from src.app.core.db.database import async_get_db
-from src.app.core.exceptions.http_exceptions import ForbiddenException, NotFoundException
+from src.app.core.exceptions.http_exceptions import NotFoundException
 from src.app.main import app
 from src.app.repositories.dependencies import get_ibm_sv_admin_client
 from src.app.services.rp_application_service import RPApplicationService
@@ -31,6 +31,48 @@ def override_rp_application_authorization() -> None:
 
 
 class TestCurrentUserRPOAuthSetupAPI:
+    def test_oauth_setup_grant_backed_user_without_platform_role_reaches_service(self) -> None:
+        service = Mock()
+        service.get_current_user_rp_application_oauth_setup = AsyncMock(
+            return_value={
+                "rpApplicationName": "Benefits Portal",
+                "status": "active",
+                "applicationUrl": "https://benefits.example.gc.ca",
+                "discoveryEndpoint": "https://cds-gcsignin-dev.verify.ibm.com/oauth2/.well-known/openid-configuration",
+                "departmentName": "Benefits",
+                "departmentNameFr": "Prestations",
+                "pkceEnabled": True,
+                "redirectUris": ["https://benefits.example.gc.ca/callback"],
+                "logoutUri": "https://benefits.example.gc.ca/backchannel-logout",
+                "logoutRedirectUris": ["https://benefits.example.gc.ca/logout-complete"],
+            }
+        )
+
+        current_user = {
+            "email": "invitee@example.gc.ca",
+            "id": 77,
+            "username": "invitee@example.gc.ca",
+            "is_superuser": False,
+            "role_ids": [],
+        }
+        app.dependency_overrides[get_current_user] = lambda: current_user
+        app.dependency_overrides[get_rp_application_service] = lambda: service
+        app.dependency_overrides[get_ibm_sv_admin_client] = lambda: Mock()
+        app.dependency_overrides[async_get_db] = lambda: Mock()
+
+        try:
+            with TestClient(app) as client:
+                response = client.get(
+                    "/api/v1/rp-applications/mine/"
+                    "018f6f83-0000-0000-0000-000000000333/oauth-setup"
+                )
+        finally:
+            app.dependency_overrides.clear()
+
+        assert response.status_code == 200
+        assert response.json()["rpApplicationName"] == "Benefits Portal"
+        service.get_current_user_rp_application_oauth_setup.assert_awaited_once()
+
     def test_oauth_setup_owner_success_response_contract(self) -> None:
         service = Mock()
         service.get_current_user_rp_application_oauth_setup = AsyncMock(
@@ -88,6 +130,45 @@ class TestCurrentUserRPOAuthSetupAPI:
                 "https://benefits.example.gc.ca/logout-complete"
             ],
         }
+
+    def test_client_credentials_grant_backed_user_without_platform_role_reaches_service(self) -> None:
+        service = Mock()
+        service.get_current_user_rp_application_client_credentials = AsyncMock(
+            return_value={
+                "clientId": "client-id-123",
+                "clientSecret": "secret-value-123",
+                "clientSecretId": "secret-id-123",
+            }
+        )
+
+        current_user = {
+            "email": "invitee@example.gc.ca",
+            "id": 77,
+            "username": "invitee@example.gc.ca",
+            "is_superuser": False,
+            "role_ids": [],
+        }
+        app.dependency_overrides[get_current_user] = lambda: current_user
+        app.dependency_overrides[get_rp_application_service] = lambda: service
+        app.dependency_overrides[get_ibm_sv_admin_client] = lambda: Mock()
+        app.dependency_overrides[async_get_db] = lambda: Mock()
+
+        try:
+            with TestClient(app) as client:
+                response = client.get(
+                    "/api/v1/rp-applications/mine/"
+                    "018f6f83-0000-0000-0000-000000000333/client"
+                )
+        finally:
+            app.dependency_overrides.clear()
+
+        assert response.status_code == 200
+        assert response.json() == {
+            "clientId": "client-id-123",
+            "clientSecret": "secret-value-123",
+            "clientSecretId": "secret-id-123",
+        }
+        service.get_current_user_rp_application_client_credentials.assert_awaited_once()
 
     def test_client_credentials_owner_success_response_contract(self) -> None:
         service = Mock()
@@ -258,9 +339,7 @@ class TestCurrentUserRPOAuthSetupAPI:
     def test_oauth_setup_non_owner_returns_403(self) -> None:
         service = Mock()
         service.get_current_user_rp_application_oauth_setup = AsyncMock(
-            side_effect=ForbiddenException(
-                "Only RP application owners can view OAuth setup"
-            )
+            side_effect=NotFoundException("RP application not found")
         )
 
         app.dependency_overrides[get_current_user] = lambda: {
@@ -284,8 +363,8 @@ class TestCurrentUserRPOAuthSetupAPI:
         finally:
             app.dependency_overrides.clear()
 
-        assert response.status_code == 403
-        assert response.json()["error"]["code"] == "forbidden"
+        assert response.status_code == 404
+        assert response.json()["error"]["code"] == "not_found"
 
     def test_oauth_setup_missing_resource_returns_404(self) -> None:
         service = Mock()
@@ -339,7 +418,7 @@ class TestCurrentUserRPOAuthSetupService:
         )
 
         try:
-            with pytest.raises(ForbiddenException):
+            with pytest.raises(NotFoundException):
                 await service.get_current_user_rp_application_oauth_setup(
                     db=db,
                     rp_application_uuid="018f6f83-0000-0000-0000-000000000336",
@@ -350,6 +429,162 @@ class TestCurrentUserRPOAuthSetupService:
             rp_application_module.crud_rp_applications.get = original_get
 
         ibm_admin_client.get_application_detail.assert_not_awaited()
+
+    @pytest.mark.asyncio
+    async def test_oauth_setup_allows_read_only_grant_user(self) -> None:
+        service = RPApplicationService()
+        db = Mock()
+        ibm_admin_client = Mock()
+        ibm_admin_client.get_application_detail = AsyncMock(
+            return_value={
+                "applicationState": True,
+                "providers": {
+                    "oidc": {
+                        "applicationUrl": "https://benefits.example.gc.ca",
+                        "requirePkceVerification": "true",
+                        "properties": {
+                            "clientId": "client-id-336",
+                            "redirectUris": [
+                                "https://benefits.example.gc.ca/callback"
+                            ],
+                            "additionalConfig": {},
+                        },
+                    }
+                },
+            }
+        )
+
+        original_get = rp_application_module.crud_rp_applications.get
+        original_grant_get = rp_application_module.crud_rp_application_access_grants.get
+        original_department_get = rp_application_module.crud_departments.get
+        rp_application_module.crud_rp_applications.get = AsyncMock(
+            return_value={
+                "uuid": "018f6f83-0000-0000-0000-000000000336",
+                "workspace_id": 23,
+                "department_id": 7,
+                "dnr_app_name": "Benefits Portal",
+                "ibm_sv_application_id": "ibm-app-336",
+                "application_owner": {
+                    "owners": [{"email": "owner@example.gc.ca"}],
+                },
+            }
+        )
+        rp_application_module.crud_rp_application_access_grants.get = AsyncMock(
+            return_value={"workspace_id": 23, "user_id": 77, "role": "Read Only", "status": "active"}
+        )
+        rp_application_module.crud_departments.get = AsyncMock(
+            return_value={"id": 7, "name": "Benefits", "name_fr": "Prestations"}
+        )
+
+        try:
+            result = await service.get_current_user_rp_application_oauth_setup(
+                db=db,
+                rp_application_uuid="018f6f83-0000-0000-0000-000000000336",
+                current_user={"id": 77},
+                ibm_admin_client=ibm_admin_client,
+            )
+        finally:
+            rp_application_module.crud_rp_applications.get = original_get
+            rp_application_module.crud_rp_application_access_grants.get = original_grant_get
+            rp_application_module.crud_departments.get = original_department_get
+
+        assert result["rpApplicationName"] == "Benefits Portal"
+        assert result["departmentName"] == "Benefits"
+
+    @pytest.mark.asyncio
+    async def test_client_credentials_rejects_read_only_grant_user(self) -> None:
+        service = RPApplicationService()
+        db = Mock()
+        ibm_admin_client = Mock()
+        ibm_admin_client.get_application_detail = AsyncMock()
+
+        original_get = rp_application_module.crud_rp_applications.get
+        original_grant_get = rp_application_module.crud_rp_application_access_grants.get
+        rp_application_module.crud_rp_applications.get = AsyncMock(
+            return_value={
+                "uuid": "018f6f83-0000-0000-0000-000000000337",
+                "workspace_id": 23,
+                "dnr_app_name": "Benefits Portal",
+                "ibm_sv_application_id": "ibm-app-337",
+                "application_owner": {
+                    "owners": [{"email": "owner@example.gc.ca"}],
+                },
+            }
+        )
+        rp_application_module.crud_rp_application_access_grants.get = AsyncMock(
+            return_value={"workspace_id": 23, "user_id": 77, "role": "Read Only", "status": "active"}
+        )
+
+        try:
+            with pytest.raises(NotFoundException):
+                await service.get_current_user_rp_application_client_credentials(
+                    db=db,
+                    rp_application_uuid="018f6f83-0000-0000-0000-000000000337",
+                    current_user={"id": 77},
+                    ibm_admin_client=ibm_admin_client,
+                )
+        finally:
+            rp_application_module.crud_rp_applications.get = original_get
+            rp_application_module.crud_rp_application_access_grants.get = original_grant_get
+
+        ibm_admin_client.get_application_detail.assert_not_awaited()
+
+    @pytest.mark.asyncio
+    async def test_client_credentials_allows_rp_user_edit_grant_user(self) -> None:
+        service = RPApplicationService()
+        db = Mock()
+        ibm_admin_client = Mock()
+        ibm_admin_client.get_application_detail = AsyncMock(
+            return_value={
+                "providers": {
+                    "oidc": {
+                        "properties": {
+                            "clientId": "client-id-338",
+                        }
+                    }
+                }
+            }
+        )
+        ibm_admin_client.get_client_secret = AsyncMock(
+            return_value={"clientSecret": "secret-value-338", "clientSecretId": "secret-id-338"}
+        )
+
+        original_get = rp_application_module.crud_rp_applications.get
+        original_grant_get = rp_application_module.crud_rp_application_access_grants.get
+        original_log_action = rp_application_module.AuditService.log_action
+        rp_application_module.crud_rp_applications.get = AsyncMock(
+            return_value={
+                "uuid": "018f6f83-0000-0000-0000-000000000338",
+                "workspace_id": 23,
+                "dnr_app_name": "Benefits Portal",
+                "ibm_sv_application_id": "ibm-app-338",
+                "application_owner": {
+                    "owners": [{"email": "owner@example.gc.ca"}],
+                },
+            }
+        )
+        rp_application_module.crud_rp_application_access_grants.get = AsyncMock(
+            return_value={"workspace_id": 23, "user_id": 77, "role": "RP User (Edit)", "status": "active"}
+        )
+        rp_application_module.AuditService.log_action = AsyncMock()
+
+        try:
+            result = await service.get_current_user_rp_application_client_credentials(
+                db=db,
+                rp_application_uuid="018f6f83-0000-0000-0000-000000000338",
+                current_user={"id": 77},
+                ibm_admin_client=ibm_admin_client,
+            )
+        finally:
+            rp_application_module.crud_rp_applications.get = original_get
+            rp_application_module.crud_rp_application_access_grants.get = original_grant_get
+            rp_application_module.AuditService.log_action = original_log_action
+
+        assert result == {
+            "clientId": "client-id-338",
+            "clientSecret": "secret-value-338",
+            "clientSecretId": "secret-id-338",
+        }
 
     @pytest.mark.asyncio
     async def test_client_credentials_raises_unexpected_error_when_secret_missing(self) -> None:

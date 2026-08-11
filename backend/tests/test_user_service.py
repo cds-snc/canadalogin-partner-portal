@@ -8,6 +8,7 @@ from src.app.schemas.user import (
     UserCreate,
     UserDepartmentUpdate,
     UserReadInternal,
+    UserRemoveRole,
     UserTierUpdate,
     UserUpdate,
 )
@@ -72,6 +73,7 @@ class TestUserService:
         }
         expected_user = {
             **sample_user_read.model_dump(),
+            "has_partner_access_grant": False,
             "role_uuids": ["role-uuid-3"],
             "tier_uuid": "tier-uuid-2",
         }
@@ -96,6 +98,27 @@ class TestUserService:
             schema_to_select=UserReadInternal,
             is_deleted=False,
         )
+
+    @pytest.mark.asyncio
+    async def test_get_user_by_uuid_marks_partner_access_when_active_grant_exists(self, mock_db, sample_user_read) -> None:
+        service = UserService()
+        user_uuid = str(sample_user_read.uuid)
+        db_user = {
+            **sample_user_read.model_dump(),
+            "id": 51,
+            "role_ids": [],
+            "tier_id": None,
+        }
+
+        with patch("src.app.services.user_service.crud_users") as mock_users:
+            mock_users.get = AsyncMock(return_value=db_user)
+
+            with patch("src.app.services.user_service.crud_rp_application_access_grants") as mock_grants:
+                mock_grants.get = AsyncMock(return_value={"uuid": "grant-uuid"})
+
+                result = await service.get_user_by_uuid(db=mock_db, user_uuid=user_uuid)
+
+        assert result["has_partner_access_grant"] is True
 
     @pytest.mark.asyncio
     async def test_delete_user_blacklists_token_after_delete(self, mock_db, sample_user_read) -> None:
@@ -174,6 +197,54 @@ class TestUserService:
                         user_uuid=user_uuid,
                         values=UserAddRole(role_uuid=role_uuid),
                     )
+
+    @pytest.mark.asyncio
+    async def test_add_role_to_user_rejects_duplicate_role_assignment(self, mock_db, sample_user_read) -> None:
+        service = UserService()
+        user_uuid = str(sample_user_read.uuid)
+        role_uuid = "018f6f83-0f2b-7b0f-b2fb-96c4d8a4b301"
+        db_user = sample_user_read.model_dump()
+        db_user["role_ids"] = [9]
+
+        with patch("src.app.services.user_service.crud_users") as mock_users:
+            mock_users.get = AsyncMock(return_value=db_user)
+            mock_users.update = AsyncMock(return_value=None)
+
+            with patch("src.app.services.user_service.crud_roles") as mock_roles:
+                mock_roles.get = AsyncMock(return_value={"id": 9, "uuid": role_uuid, "name": "editor"})
+
+                with pytest.raises(DuplicateValueException, match="User already has this role"):
+                    await service.add_role_to_user(
+                        db=mock_db,
+                        user_uuid=user_uuid,
+                        values=UserAddRole(role_uuid=role_uuid),
+                    )
+
+        mock_users.update.assert_not_awaited()
+
+    @pytest.mark.asyncio
+    async def test_remove_role_from_user_rejects_unassigned_role(self, mock_db, sample_user_read) -> None:
+        service = UserService()
+        user_uuid = str(sample_user_read.uuid)
+        role_uuid = "018f6f83-0f2b-7b0f-b2fb-96c4d8a4b301"
+        db_user = sample_user_read.model_dump()
+        db_user["role_ids"] = [7]
+
+        with patch("src.app.services.user_service.crud_users") as mock_users:
+            mock_users.get = AsyncMock(return_value=db_user)
+            mock_users.update = AsyncMock(return_value=None)
+
+            with patch("src.app.services.user_service.crud_roles") as mock_roles:
+                mock_roles.get = AsyncMock(return_value={"id": 9, "uuid": role_uuid, "name": "editor"})
+
+                with pytest.raises(NotFoundException, match="User does not have this role"):
+                    await service.remove_role_from_user(
+                        db=mock_db,
+                        user_uuid=user_uuid,
+                        values=UserRemoveRole(role_uuid=role_uuid),
+                    )
+
+        mock_users.update.assert_not_awaited()
 
     @pytest.mark.asyncio
     async def test_update_user_tier_rejects_missing_tier(self, mock_db, sample_user_read) -> None:

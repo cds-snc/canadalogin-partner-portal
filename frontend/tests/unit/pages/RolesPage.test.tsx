@@ -1,5 +1,5 @@
 import type { PropsWithChildren, ReactElement } from "react";
-import { fireEvent, render, screen } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 import { RolesPage } from "@/features/roles/pages/RolesPage";
 import { useRoleManagement } from "@/hooks";
@@ -8,12 +8,19 @@ vi.mock("react-i18next", () => ({
 	useTranslation: (): { t: (key: string, options?: Record<string, string>) => string } => ({
 		t: (key: string, options?: Record<string, string>): string => {
 			const translations: Record<string, string> = {
+				"roles.cancelAction": "Cancel",
+				"roles.confirmDeleteAction": "Confirm delete role",
 				"roles.createAction": "Create role",
 				"roles.createTitle": "Create role",
+				"roles.deleteAction": "Delete role",
+				"roles.deleteConfirmTitle": "Delete role?",
 				"roles.description": `Description: ${options?.["value"] ?? ""}`,
+				"roles.descriptionLabel": "Description",
 				"roles.editTitle": "Edit role",
 				"roles.manageAction": "Manage role",
+				"roles.nameLabel": "Name",
 				"roles.resultsSummary": `Showing ${options?.["count"] ?? "0"} roles on page ${options?.["page"] ?? "1"}`,
+				"roles.saveAction": "Save role",
 				"roles.summary": "Manage backend roles.",
 				"roles.title": "Roles",
 			};
@@ -48,7 +55,13 @@ vi.mock("@/components/ui", () => ({
 			{children}
 		</button>
 	),
-	ConfirmDialog: ({ isOpen, title }: { isOpen: boolean; title: string }): ReactElement | null => (isOpen ? <section><h2>{title}</h2></section> : null),
+	ConfirmDialog: ({ confirmLabel, isOpen, onConfirm, title }: { confirmLabel?: string; isOpen: boolean; onConfirm?: () => void; title: string }): ReactElement | null =>
+		isOpen ? (
+			<section aria-label={title} role="dialog">
+				<h2>{title}</h2>
+				<button type="button" onClick={onConfirm}>{confirmLabel ?? "Confirm"}</button>
+			</section>
+		) : null,
 	DataTable: ({ action, pageNumber, primaryAction, title, rows, summary }: { action?: { buttonLabel: string; onAction: (row: { description: string; name: string; uuid: string }) => void }; pageNumber?: number; primaryAction?: { buttonLabel: string; onAction: () => void }; rows?: Array<{ description: string; name: string; uuid: string }>; title?: string; summary?: string }): ReactElement => (
 		<section>
 			{title ? <h2>{title}</h2> : null}
@@ -65,7 +78,7 @@ vi.mock("@/components/ui", () => ({
 		</label>
 	),
 	Heading: ({ children }: PropsWithChildren): ReactElement => <h1>{children}</h1>,
-	Modal: ({ children, isOpen, title }: PropsWithChildren<{ isOpen: boolean; title: string }>): ReactElement | null => (isOpen ? <section><h2>{title}</h2>{children}</section> : null),
+	Modal: ({ children, footer, isOpen, title }: PropsWithChildren<{ footer?: ReactElement; isOpen: boolean; title: string }>): ReactElement | null => (isOpen ? <section><h2>{title}</h2>{children}{footer}</section> : null),
 	Notice: ({ children, noticeTitle }: PropsWithChildren<{ noticeTitle?: string }>): ReactElement => <section>{noticeTitle ? <h2>{noticeTitle}</h2> : null}{children}</section>,
 	Text: ({ children }: PropsWithChildren): ReactElement => <p>{children}</p>,
 }));
@@ -115,5 +128,43 @@ describe("RolesPage", () => {
 
 		fireEvent.click(screen.getByRole("button", { name: /manage role/i }));
 		expect(screen.getByRole("heading", { name: /edit role/i })).toBeTruthy();
+	});
+
+	it("deletes a role through the edit dialog", async () => {
+		const deleteRole = vi.fn((): Promise<void> => Promise.resolve());
+
+		vi.mocked(useRoleManagement).mockReturnValue({
+			createRole: vi.fn((): Promise<void> => Promise.resolve()),
+			deleteRole,
+			error: null,
+			isCreating: false,
+			isDeleting: false,
+			isLoading: false,
+			isUpdating: false,
+			itemsPerPage: 10,
+			page: 1,
+			refetch: vi.fn((): Promise<unknown> => Promise.resolve()),
+			response: {
+				data: [{ created_at: "2026-03-17T00:00:00Z", description: "Administrator role", name: "admin", uuid: "role-uuid-3" }],
+				"has_more": false,
+				"items_per_page": 10,
+				page: 1,
+				"total_count": 1,
+			},
+			roles: [{ created_at: "2026-03-17T00:00:00Z", description: "Administrator role", name: "admin", uuid: "role-uuid-3" }],
+			updateRole: vi.fn((): Promise<void> => Promise.resolve()),
+		});
+
+		render(<RolesPage />);
+
+		fireEvent.click(screen.getByRole("button", { name: /manage role/i }));
+		fireEvent.click(screen.getByRole("button", { name: /^delete role$/i }));
+
+		const dialog = screen.getByRole("dialog", { name: /delete role\?/i });
+		fireEvent.click(within(dialog).getByRole("button", { name: /confirm delete role/i }));
+
+		await waitFor(() => {
+			expect(deleteRole).toHaveBeenCalledWith("role-uuid-3");
+		});
 	});
 });

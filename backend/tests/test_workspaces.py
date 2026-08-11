@@ -3,10 +3,15 @@ from datetime import UTC, datetime
 from unittest.mock import AsyncMock, Mock
 
 import casbin
-from fastcrud.exceptions.http_exceptions import CustomException
 from fastapi.testclient import TestClient
+from fastcrud.exceptions.http_exceptions import CustomException
 
-from src.app.api.dependencies import get_current_user, get_ibm_sv_admin_service, get_workspace_service
+from src.app.api.dependencies import (
+    get_current_user,
+    get_ibm_sv_admin_service,
+    get_rp_application_developer_invitation_service,
+    get_workspace_service,
+)
 from src.app.core.access_control import CASBIN_MODEL_PATH, database_enforcer_provider
 from src.app.core.db.database import async_get_db
 from src.app.core.exceptions.http_exceptions import ForbiddenException, NotFoundException
@@ -99,6 +104,36 @@ def sample_rp_application_payload(*, dnr_app_name: str = "Benefits Portal") -> d
     }
 
 
+def sample_developer_invitation_payload(
+    *,
+    role: str = "Read Only",
+    status: str = "pending",
+    with_acceptance_url: bool = False,
+) -> dict[str, object]:
+    payload: dict[str, object] = {
+        "id": 121,
+        "uuid": "018f6f83-0000-0000-0000-000000000801",
+        "workspace_id": 9,
+        "rp_application_id": 33,
+        "invited_email": "invitee@example.gc.ca",
+        "invite_expires_at": datetime(2026, 8, 20, 12, 0, tzinfo=UTC).isoformat(),
+        "invited_by": 42,
+        "role": role,
+        "status": status,
+        "accepted_at": None,
+        "revoked_at": None,
+        "gc_notify_notification_id": None,
+        "delegated_by_grant_uuid": None,
+        "created_at": datetime(2026, 8, 10, 12, 0, tzinfo=UTC).isoformat(),
+        "updated_at": None,
+        "deleted_at": None,
+        "is_deleted": False,
+    }
+    if with_acceptance_url:
+        payload["acceptance_url"] = "http://localhost:3000/invitations/rp-applications/raw-token"
+    return payload
+
+
 class TestWorkspaceRoutes:
     def test_workspaces_list_allows_user_with_workspace_read_policy(self) -> None:
         service = Mock()
@@ -137,7 +172,7 @@ class TestWorkspaceRoutes:
             }
         ]
 
-    def test_current_user_workspaces_list_delegates_to_current_user_service(self) -> None:
+    def test_current_user_workspaces_list_uses_authenticated_current_user_scope(self) -> None:
         service = Mock()
         service.list_current_user_workspaces = AsyncMock(
             return_value=[sample_workspace_payload()]
@@ -150,9 +185,6 @@ class TestWorkspaceRoutes:
         db = Mock()
 
         app.dependency_overrides[get_current_user] = lambda: current_user
-        app.dependency_overrides[database_enforcer_provider] = lambda: make_enforcer(
-            ("member@example.gc.ca", "workspace", "read")
-        )
         app.dependency_overrides[get_workspace_service] = lambda: service
         app.dependency_overrides[async_get_db] = lambda: db
 
@@ -219,20 +251,19 @@ class TestWorkspaceRoutes:
         assert response.status_code == 404
         assert response.json()["error"]["code"] == "not_found"
 
-    def test_workspace_detail_allows_user_with_workspace_read_policy(self) -> None:
+    def test_workspace_detail_uses_authenticated_current_user_scope(self) -> None:
         service = Mock()
         service.get_workspace_by_uuid = AsyncMock(return_value=sample_workspace_payload())
-
-        app.dependency_overrides[get_current_user] = lambda: {
+        current_user = {
             "id": 42,
             "username": "member@example.gc.ca",
             "is_superuser": False,
         }
-        app.dependency_overrides[database_enforcer_provider] = lambda: make_enforcer(
-            ("member@example.gc.ca", "workspace", "read")
-        )
+        db = Mock()
+
+        app.dependency_overrides[get_current_user] = lambda: current_user
         app.dependency_overrides[get_workspace_service] = lambda: service
-        app.dependency_overrides[async_get_db] = lambda: Mock()
+        app.dependency_overrides[async_get_db] = lambda: db
 
         try:
             with TestClient(app) as client:
@@ -244,6 +275,11 @@ class TestWorkspaceRoutes:
 
         assert response.status_code == 200
         assert response.json()["uuid"] == "018f6f83-0000-0000-0000-000000000201"
+        service.get_workspace_by_uuid.assert_awaited_once_with(
+            db=db,
+            workspace_uuid=uuid_pkg.UUID("018f6f83-0000-0000-0000-000000000201"),
+            current_user=current_user,
+        )
 
     def test_workspace_crud_mutations_delegate_to_service_for_admin(self) -> None:
         service = Mock()
@@ -693,6 +729,126 @@ class TestWorkspaceRoutes:
             with TestClient(app) as client:
                 response = client.get(
                     "/api/v1/workspaces/018f6f83-0000-0000-0000-000000000201/applications"
+                )
+        finally:
+            app.dependency_overrides.clear()
+
+        assert response.status_code == 403
+        assert response.json()["error"]["code"] == "forbidden"
+
+    def test_workspace_rp_application_developer_invitation_routes_delegate_to_service(self) -> None:
+        invitation_service = Mock()
+        invitation_service.list_developer_invitations = AsyncMock(
+            return_value=[sample_developer_invitation_payload()]
+        )
+        invitation_service.create_developer_invitation = AsyncMock(
+            return_value=sample_developer_invitation_payload(with_acceptance_url=True)
+        )
+        invitation_service.revoke_developer_invitation = AsyncMock(
+            return_value=sample_developer_invitation_payload(status="revoked")
+        )
+        invitation_service.reissue_developer_invitation = AsyncMock(
+            return_value=sample_developer_invitation_payload(with_acceptance_url=True)
+        )
+        current_user = {
+            "id": 42,
+            "username": "workspace-admin@example.gc.ca",
+            "email": "workspace-admin@example.gc.ca",
+            "is_superuser": True,
+        }
+        db = Mock()
+
+        app.dependency_overrides[get_current_user] = lambda: current_user
+        app.dependency_overrides[get_rp_application_developer_invitation_service] = lambda: invitation_service
+        app.dependency_overrides[async_get_db] = lambda: db
+
+        try:
+            with TestClient(app) as client:
+                list_response = client.get(
+                    "/api/v1/workspaces/018f6f83-0000-0000-0000-000000000201/applications/018f6f83-0000-0000-0000-000000000701/developer-invitations"
+                )
+                create_response = client.post(
+                    "/api/v1/workspaces/018f6f83-0000-0000-0000-000000000201/applications/018f6f83-0000-0000-0000-000000000701/developer-invitations",
+                    json={
+                        "invitedEmail": "invitee@example.gc.ca",
+                        "role": "Read Only",
+                        "inviteExpiresAt": "2026-08-20T12:00:00Z",
+                    },
+                )
+                revoke_response = client.post(
+                    "/api/v1/workspaces/018f6f83-0000-0000-0000-000000000201/applications/018f6f83-0000-0000-0000-000000000701/developer-invitations/018f6f83-0000-0000-0000-000000000801/revoke"
+                )
+                reissue_response = client.post(
+                    "/api/v1/workspaces/018f6f83-0000-0000-0000-000000000201/applications/018f6f83-0000-0000-0000-000000000701/developer-invitations/018f6f83-0000-0000-0000-000000000801/reissue",
+                    json={
+                        "inviteExpiresAt": "2026-08-27T12:00:00Z",
+                    },
+                )
+        finally:
+            app.dependency_overrides.clear()
+
+        assert list_response.status_code == 200
+        assert list_response.json()[0]["invitedEmail"] == "invitee@example.gc.ca"
+        assert create_response.status_code == 201
+        assert create_response.json()["acceptanceUrl"].endswith("/raw-token")
+        assert revoke_response.status_code == 200
+        assert revoke_response.json()["status"] == "revoked"
+        assert reissue_response.status_code == 200
+        assert reissue_response.json()["acceptanceUrl"].endswith("/raw-token")
+
+        invitation_service.list_developer_invitations.assert_awaited_once_with(
+            db=db,
+            workspace_uuid=uuid_pkg.UUID("018f6f83-0000-0000-0000-000000000201"),
+            rp_application_uuid=uuid_pkg.UUID("018f6f83-0000-0000-0000-000000000701"),
+            current_user=current_user,
+        )
+        create_kwargs = invitation_service.create_developer_invitation.await_args.kwargs
+        assert create_kwargs["db"] is db
+        assert create_kwargs["workspace_uuid"] == uuid_pkg.UUID("018f6f83-0000-0000-0000-000000000201")
+        assert create_kwargs["rp_application_uuid"] == uuid_pkg.UUID("018f6f83-0000-0000-0000-000000000701")
+        assert create_kwargs["current_user"] == current_user
+        assert create_kwargs["invited_email"] == "invitee@example.gc.ca"
+        assert create_kwargs["role"] == "Read Only"
+        assert create_kwargs["invite_expires_at"] == datetime(2026, 8, 20, 12, 0, tzinfo=UTC)
+        invitation_service.revoke_developer_invitation.assert_awaited_once_with(
+            db=db,
+            workspace_uuid=uuid_pkg.UUID("018f6f83-0000-0000-0000-000000000201"),
+            rp_application_uuid=uuid_pkg.UUID("018f6f83-0000-0000-0000-000000000701"),
+            invitation_uuid=uuid_pkg.UUID("018f6f83-0000-0000-0000-000000000801"),
+            current_user=current_user,
+        )
+        reissue_kwargs = invitation_service.reissue_developer_invitation.await_args.kwargs
+        assert reissue_kwargs["db"] is db
+        assert reissue_kwargs["workspace_uuid"] == uuid_pkg.UUID("018f6f83-0000-0000-0000-000000000201")
+        assert reissue_kwargs["rp_application_uuid"] == uuid_pkg.UUID("018f6f83-0000-0000-0000-000000000701")
+        assert reissue_kwargs["invitation_uuid"] == uuid_pkg.UUID("018f6f83-0000-0000-0000-000000000801")
+        assert reissue_kwargs["current_user"] == current_user
+        assert reissue_kwargs["invite_expires_at"] == datetime(2026, 8, 27, 12, 0, tzinfo=UTC)
+
+    def test_workspace_rp_application_developer_invitation_create_surfaces_forbidden(self) -> None:
+        invitation_service = Mock()
+        invitation_service.create_developer_invitation = AsyncMock(
+            side_effect=ForbiddenException("Only CL Admin can assign the RP Admin role")
+        )
+
+        app.dependency_overrides[get_current_user] = lambda: {
+            "id": 55,
+            "username": "rp-admin@example.gc.ca",
+            "email": "rp-admin@example.gc.ca",
+            "is_superuser": False,
+        }
+        app.dependency_overrides[get_rp_application_developer_invitation_service] = lambda: invitation_service
+        app.dependency_overrides[async_get_db] = lambda: Mock()
+
+        try:
+            with TestClient(app) as client:
+                response = client.post(
+                    "/api/v1/workspaces/018f6f83-0000-0000-0000-000000000201/applications/018f6f83-0000-0000-0000-000000000701/developer-invitations",
+                    json={
+                        "invitedEmail": "invitee@example.gc.ca",
+                        "role": "RP Admin",
+                        "inviteExpiresAt": "2026-08-20T12:00:00Z",
+                    },
                 )
         finally:
             app.dependency_overrides.clear()

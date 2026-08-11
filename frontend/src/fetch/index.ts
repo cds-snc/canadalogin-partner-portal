@@ -3,6 +3,12 @@ export type { ApiMessageResponse } from "./api-types";
 export { getBackendOrigin, getCurrentUser, getOidcLoginUrl } from "./auth";
 export type { UserRead } from "./auth";
 export { getRequestErrorNotice } from "./error-notice";
+export { acceptRPApplicationDeveloperInvitation } from "./rp-application-developer-invitations";
+export type {
+	RPApplicationAccessGrantRead,
+	RPApplicationDeveloperInvitationAcceptResponse,
+	RPApplicationDeveloperInvitationRead,
+} from "./rp-application-developer-invitations";
 export {
 	BadRequestError,
 	ConflictRequestError,

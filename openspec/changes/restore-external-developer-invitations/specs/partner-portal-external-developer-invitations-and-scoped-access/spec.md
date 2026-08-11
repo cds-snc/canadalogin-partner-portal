@@ -20,6 +20,12 @@ Authorized CanadaLogin portal admins SHALL be able to invite an email address in
 - **WHEN** an authorized CanadaLogin portal admin opens the invitation-management surface from a workspace-scoped RP application in one partner workspace context
 - **THEN** the portal lists invitations for that partner context with enough status information to distinguish pending, accepted, expired, and revoked invitations
 
+#### Scenario: Platform admin reissues an unavailable invitation
+- **WHEN** an authorized CanadaLogin portal admin reissues a pending, expired, or revoked invitation for one partner workspace context
+- **THEN** the system produces a fresh tokenized acceptance link with a new expiry window
+- **AND** the previously issued invitation is no longer acceptable for future access
+- **AND** invitation-management history still distinguishes the prior issued invitation from the new pending invitation
+
 #### Scenario: Platform admin creates an invitation without automatic email delivery
 - **WHEN** an authorized CanadaLogin portal admin creates an invitation for one partner workspace context
 - **THEN** the system stores the invitation and generates or records the tokenized acceptance link for that invitation
@@ -47,7 +53,7 @@ Authorized CanadaLogin portal admins SHALL be able to invite an email address in
 - **AND** the invitation remains visible as revoked in invitation-management history
 
 ### Requirement: Invitation acceptance validates token and signed-in identity
-The system SHALL validate RP-application invitation acceptance using a tokenized route and SHALL accept an invitation only when the signed-in CanadaLogin user matches the invited email identity for an active invitation.
+The system SHALL validate RP-application invitation acceptance using the tokenized route `/invitations/rp-applications/$token` and SHALL accept an invitation only when the signed-in CanadaLogin user matches the invited email identity for an active invitation.
 
 #### Scenario: Invitee accepts a valid invitation
 - **WHEN** an invited user signs in with the invited email address and opens a valid RP-application invitation link
@@ -69,6 +75,11 @@ The system SHALL validate RP-application invitation acceptance using a tokenized
 - **WHEN** an invited user accepts a valid RP-application invitation for the first time
 - **THEN** the portal creates or updates the local user record for that CanadaLogin account
 - **AND** the portal records the invitation's partner-scoped role assignment for that partner context before granting invited access
+
+#### Scenario: Repeated sign-in does not duplicate accepted invitation access
+- **WHEN** a user who already accepted an RP-application invitation signs in again or reopens the invitation link
+- **THEN** the portal does not create a duplicate partner-scoped grant or duplicate local invitation assignment for that same partner context
+- **AND** the existing accepted local access remains the source of truth for the user's invitation-backed access
 
 #### Scenario: Missing or invalid token does not accept the invitation
 - **WHEN** a user opens an invitation route without a complete token or with an invalid token

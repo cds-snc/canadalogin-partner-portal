@@ -119,6 +119,31 @@ describe("requestJson", () => {
 		expect(window.location.replace).toHaveBeenCalledWith("/access-denied");
 	});
 
+	it("keeps the caller on the current page when forbidden redirect is disabled", async () => {
+		globalThis.fetch = vi.fn().mockResolvedValue({
+			headers: new Headers({ "content-type": "application/json" }),
+			json: () =>
+				Promise.resolve({
+					error: {
+						code: "forbidden",
+						message: "Signed-in email does not match this invitation",
+						requestId: "request-403-local",
+					},
+				}),
+			ok: false,
+			status: 403,
+		} as Response);
+
+		await expect(
+			requestJson(
+				"/api/v1/rp-application-developer-invitations/accept",
+				{ method: "POST" },
+				{ redirectOnForbidden: false }
+			)
+		).rejects.toBeInstanceOf(ForbiddenRequestError);
+		expect(window.location.replace).not.toHaveBeenCalled();
+	});
+
 	it("throws a ServerRequestError for 5xx responses", async () => {
 		globalThis.fetch = vi.fn().mockResolvedValue({
 			headers: new Headers({ "content-type": "application/json" }),

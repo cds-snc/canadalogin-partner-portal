@@ -76,7 +76,6 @@ async def read_rp_applications(
 
 
 @router.get("/rp-applications/mine", response_model=list[RPApplicationCurrentUserRead])
-@casbin_guard.require_permission("rp_applications", "read")
 async def read_current_user_rp_applications(
     request: Request,
     db: Annotated[AsyncSession, Depends(async_get_db)],
@@ -97,7 +96,6 @@ async def read_current_user_rp_applications(
     response_model=CurrentUserRPApplicationSummaryRead,
     responses=error_responses(403, 404, 500),
 )
-@casbin_guard.require_permission("rp_applications", "read")
 async def read_current_user_rp_application_department(
     request: Request,
     rp_application_uuid: uuid_pkg.UUID,
@@ -118,7 +116,6 @@ async def read_current_user_rp_application_department(
     response_model=CurrentUserRPApplicationSummaryRead,
     responses=error_responses(403, 404, 409, 500),
 )
-@casbin_guard.require_permission("rp_applications", "write")
 async def assign_current_user_rp_application_department(
     request: Request,
     rp_application_uuid: uuid_pkg.UUID,
@@ -141,7 +138,6 @@ async def assign_current_user_rp_application_department(
     response_model=RPApplicationCurrentUserOAuthSetupRead,
     responses=error_responses(403, 404, 409, 500),
 )
-@casbin_guard.require_permission("rp_applications", "read")
 async def read_current_user_rp_application_oauth_setup(
     request: Request,
     rp_application_uuid: uuid_pkg.UUID,
@@ -166,7 +162,6 @@ async def read_current_user_rp_application_oauth_setup(
     response_model=RPApplicationClientCredentialsRead,
     responses=error_responses(403, 404, 500),
 )
-@casbin_guard.require_permission("rp_client_secret", "read")
 async def read_current_user_rp_application_client_credentials(
     request: Request,
     rp_application_uuid: uuid_pkg.UUID,
@@ -192,7 +187,6 @@ async def read_current_user_rp_application_client_credentials(
     response_model=list[RPApplicationClientRotatedSecretRead],
     responses=error_responses(403, 404, 500),
 )
-@casbin_guard.require_permission("rp_client_secret", "read")
 async def read_current_user_rp_application_rotated_secrets(
     request: Request,
     rp_application_uuid: uuid_pkg.UUID,
@@ -220,7 +214,6 @@ async def read_current_user_rp_application_rotated_secrets(
     response_model=RPApplicationClientCredentialsRead,
     responses=error_responses(400, 403, 404, 500),
 )
-@casbin_guard.require_permission("rp_client_secret", "write")
 async def rotate_current_user_rp_application_client_secret(
     request: Request,
     rp_application_uuid: uuid_pkg.UUID,
@@ -247,7 +240,6 @@ async def rotate_current_user_rp_application_client_secret(
     response_model=list[RPApplicationClientRotatedSecretRead],
     responses=error_responses(400, 403, 404, 500),
 )
-@casbin_guard.require_permission("rp_client_secret", "write")
 async def create_current_user_rp_application_rotated_secret(
     request: Request,
     rp_application_uuid: uuid_pkg.UUID,
@@ -276,7 +268,6 @@ async def create_current_user_rp_application_rotated_secret(
     "/rp-applications/mine/{rp_application_uuid}/client/rotated-secrets/{value}",
     responses=error_responses(403, 404, 500),
 )
-@casbin_guard.require_permission("rp_client_secret", "write")
 async def delete_current_user_rp_application_rotated_secret(
     request: Request,
     rp_application_uuid: uuid_pkg.UUID,
@@ -303,7 +294,6 @@ async def delete_current_user_rp_application_rotated_secret(
     response_model=MAUReportResponse,
     responses=error_responses(400, 403, 404, 409, 500),
 )
-@casbin_guard.require_permission("mau_report", "read")
 async def read_current_user_rp_application_mau_report(
     request: Request,
     rp_application_uuid: uuid_pkg.UUID,

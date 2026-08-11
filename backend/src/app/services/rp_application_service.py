@@ -10,8 +10,9 @@ from ibm_verify_community_sdk.applications.models import ListApplicationsRespons
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from ..core.config import settings
-from ..core.exceptions.http_exceptions import ForbiddenException, NotFoundException, RPApplicationDepartmentRequiredException
+from ..core.exceptions.http_exceptions import NotFoundException, RPApplicationDepartmentRequiredException
 from ..repositories.crud_departments import crud_departments
+from ..repositories.crud_rp_application_access_grants import crud_rp_application_access_grants
 from ..repositories.crud_rp_applications import crud_rp_applications
 from ..repositories.ibm_sv_admin import IBMVerifyAdminClient
 from ..schemas.rp_application import (
@@ -30,11 +31,14 @@ from ..schemas.rp_application import (
     RPApplicationRead,
     RPApplicationUpdate,
 )
+from ..schemas.rp_application_access_grant import RPApplicationAccessGrantRead
 from .audit_service import AuditService
 from .ibm_sv_user_service import IBMVerifyUserService
 
 logger = logging.getLogger(__name__)
 APPLICATION_ID_PATTERN = re.compile(r"/applications/([^/?#]+)")
+SUMMARY_ACCESS_GRANT_ROLES = frozenset({"rp admin", "rp user (edit)", "read only"})
+SECRET_ACCESS_GRANT_ROLES = frozenset({"rp admin", "rp user (edit)"})
 
 
 class RPApplicationService:
@@ -357,6 +361,30 @@ class RPApplicationService:
                 return normalized
         return None
 
+    def _extract_current_user_id(self, current_user: dict[str, Any]) -> int | None:
+        raw_user_id = current_user.get("id")
+        if raw_user_id is None or isinstance(raw_user_id, bool):
+            return None
+
+        if isinstance(raw_user_id, int):
+            return raw_user_id
+
+        normalized = str(raw_user_id).strip()
+        if not normalized:
+            return None
+
+        try:
+            return int(normalized)
+        except ValueError:
+            return None
+
+    def _normalize_access_grant_role(self, role: Any) -> str | None:
+        if role is None:
+            return None
+
+        normalized = str(role).strip().lower()
+        return normalized or None
+
     def _is_owner_email_match(self, application_owner: Any, current_user_email: str) -> bool:
         owner_snapshot = self._build_application_owner_snapshot(application_owner)
         if owner_snapshot is None:
@@ -364,6 +392,153 @@ class RPApplicationService:
 
         normalized_email = current_user_email.strip().lower()
         return any(owner.email.strip().lower() == normalized_email for owner in owner_snapshot.owners)
+
+    async def _list_current_user_granted_workspace_roles(
+        self,
+        db: AsyncSession,
+        current_user: dict[str, Any],
+    ) -> dict[int, str]:
+        user_id = self._extract_current_user_id(current_user)
+        if user_id is None:
+            return {}
+
+        grants_data = await crud_rp_application_access_grants.get_multi(
+            db=db,
+            user_id=user_id,
+            status="active",
+            is_deleted=False,
+            schema_to_select=RPApplicationAccessGrantRead,
+        )
+        grants = grants_data.get("data", []) if isinstance(grants_data, dict) else grants_data
+
+        workspace_roles: dict[int, str] = {}
+        for grant in grants:
+            grant_data = grant if isinstance(grant, dict) else dict(grant)
+            workspace_id = grant_data.get("workspace_id")
+            normalized_role = self._normalize_access_grant_role(grant_data.get("role"))
+            if normalized_role is None or workspace_id is None:
+                continue
+
+            try:
+                workspace_roles[int(str(workspace_id).strip())] = normalized_role
+            except ValueError:
+                continue
+
+        return workspace_roles
+
+    async def _get_current_user_workspace_grant(
+        self,
+        db: AsyncSession,
+        current_user: dict[str, Any],
+        workspace_id: int | None,
+    ) -> dict[str, Any] | None:
+        if workspace_id is None:
+            return None
+
+        user_id = self._extract_current_user_id(current_user)
+        if user_id is None:
+            return None
+
+        return await crud_rp_application_access_grants.get(
+            db=db,
+            user_id=user_id,
+            workspace_id=workspace_id,
+            status="active",
+            is_deleted=False,
+            schema_to_select=RPApplicationAccessGrantRead,
+        )
+
+    async def _resolve_current_user_rp_application_access(
+        self,
+        db: AsyncSession,
+        rp_application_uuid: uuid_pkg.UUID | str,
+        current_user: dict[str, Any],
+        *,
+        allowed_grant_roles: frozenset[str] | None,
+        forbidden_message: str,
+    ) -> tuple[dict[str, Any], str | None]:
+        rp_application = await crud_rp_applications.get(
+            db=db,
+            uuid=rp_application_uuid,
+            is_deleted=False,
+            schema_to_select=RPApplicationRead,
+        )
+        if rp_application is None:
+            raise NotFoundException("RP application not found")
+
+        rp_application_data = self._as_dict(rp_application)
+        current_user_email = self._extract_current_user_email(current_user)
+        if current_user_email is not None and self._is_owner_email_match(
+            rp_application_data.get("application_owner"),
+            current_user_email,
+        ):
+            return rp_application_data, None
+
+        if allowed_grant_roles is None:
+            raise NotFoundException("RP application not found")
+
+        workspace_id_raw = rp_application_data.get("workspace_id")
+        workspace_id = workspace_id_raw if isinstance(workspace_id_raw, int) else self._extract_current_user_id({"id": workspace_id_raw})
+        grant = await self._get_current_user_workspace_grant(
+            db=db,
+            current_user=current_user,
+            workspace_id=workspace_id,
+        )
+        if grant is None:
+            raise NotFoundException("RP application not found")
+
+        grant_role = self._normalize_access_grant_role(self._as_dict(grant).get("role"))
+        if grant_role is None or grant_role not in allowed_grant_roles:
+            raise NotFoundException("RP application not found")
+
+        return rp_application_data, grant_role
+
+    async def _get_current_user_application_detail_context(
+        self,
+        db: AsyncSession,
+        rp_application_uuid: uuid_pkg.UUID | str,
+        current_user: dict[str, Any],
+        ibm_admin_client: IBMVerifyAdminClient,
+        *,
+        allowed_grant_roles: frozenset[str] | None,
+        forbidden_message: str,
+    ) -> tuple[dict[str, Any], dict[str, Any], str]:
+        rp_application_data, _ = await self._resolve_current_user_rp_application_access(
+            db=db,
+            rp_application_uuid=rp_application_uuid,
+            current_user=current_user,
+            allowed_grant_roles=allowed_grant_roles,
+            forbidden_message=forbidden_message,
+        )
+
+        ibm_application_id = self._first_string_value(
+            rp_application_data,
+            ("ibm_sv_application_id", "ibmSvApplicationId"),
+        )
+        if ibm_application_id is None:
+            raise NotFoundException("IBM Verify application not found for RP application")
+
+        ibm_application_detail = await ibm_admin_client.get_application_detail(
+            ibm_application_id
+        )
+        detail_data = self._as_dict(ibm_application_detail)
+        providers = self._as_dict(detail_data.get("providers"))
+        oidc_provider = self._as_dict(providers.get("oidc"))
+        oidc_properties = self._as_dict(oidc_provider.get("properties"))
+
+        client_id = self._first_string_value(
+            oidc_properties,
+            ("clientId", "client_id"),
+        )
+        if client_id is None:
+            client_id = self._first_string_value(
+                detail_data,
+                ("clientId", "client_id"),
+            )
+        if client_id is None:
+            raise RuntimeError("IBM Verify application detail missing client ID")
+
+        return rp_application_data, detail_data, client_id
 
     def _build_application_owner_snapshot(self, owners: Any) -> RPApplicationOwnerSnapshotRead | None:
         if owners is None:
@@ -446,7 +621,11 @@ class RPApplicationService:
     ) -> list[dict[str, Any]]:
         _ = ibm_user_service
         current_user_email = self._extract_current_user_email(current_user)
-        if current_user_email is None:
+        granted_workspace_roles = await self._list_current_user_granted_workspace_roles(
+            db=db,
+            current_user=current_user,
+        )
+        if current_user_email is None and len(granted_workspace_roles) == 0:
             return []
 
         local_applications_data = await crud_rp_applications.get_multi(
@@ -460,13 +639,23 @@ class RPApplicationService:
             else local_applications_data
         )
 
-        matched_applications: list[dict[str, Any]] = []
+        matched_applications: dict[str, dict[str, Any]] = {}
         for application in local_applications:
             application_data = application if isinstance(application, dict) else dict(application)
-            if self._is_owner_email_match(application_data.get("application_owner"), current_user_email):
-                matched_applications.append(RPApplicationCurrentUserRead.model_validate(application_data).model_dump())
+            workspace_id = application_data.get("workspace_id")
+            normalized_grant_role = granted_workspace_roles.get(workspace_id) if isinstance(workspace_id, int) else None
+            has_workspace_grant = normalized_grant_role in SUMMARY_ACCESS_GRANT_ROLES
+            has_owner_email_match = current_user_email is not None and self._is_owner_email_match(
+                application_data.get("application_owner"),
+                current_user_email,
+            )
+            if not has_workspace_grant and not has_owner_email_match:
+                continue
 
-        return matched_applications
+            application_read = RPApplicationCurrentUserRead.model_validate(application_data).model_dump()
+            matched_applications[str(application_read["uuid"])] = application_read
+
+        return list(matched_applications.values())
 
     async def get_current_user_rp_application_by_uuid(
         self,
@@ -496,25 +685,13 @@ class RPApplicationService:
     ) -> dict[str, Any]:
         """Return a lightweight department preflight record from local DB only.
         Does NOT call IBM Verify SDK. Raises 403 for non-owners, 404 for unknown."""
-        current_user_email = self._extract_current_user_email(current_user)
-        if current_user_email is None:
-            raise ForbiddenException("Only RP application owners can access this resource")
-
-        rp_application = await crud_rp_applications.get(
+        rp_application_data, _ = await self._resolve_current_user_rp_application_access(
             db=db,
-            uuid=rp_application_uuid,
-            is_deleted=False,
-            schema_to_select=RPApplicationRead,
+            rp_application_uuid=rp_application_uuid,
+            current_user=current_user,
+            allowed_grant_roles=SUMMARY_ACCESS_GRANT_ROLES,
+            forbidden_message="Only RP application owners can access this resource",
         )
-        if rp_application is None:
-            raise NotFoundException("RP application not found")
-
-        rp_application_data = self._as_dict(rp_application)
-        if not self._is_owner_email_match(
-            rp_application_data.get("application_owner"),
-            current_user_email,
-        ):
-            raise ForbiddenException("Only RP application owners can access this resource")
 
         response = CurrentUserRPApplicationSummaryRead(
             id=rp_application_data["id"],
@@ -533,25 +710,13 @@ class RPApplicationService:
     ) -> dict[str, Any]:
         """Assign a department to an RP application for the first time (one-time).
         Raises 409 conflict if department already assigned, 404 for unknown department."""
-        current_user_email = self._extract_current_user_email(current_user)
-        if current_user_email is None:
-            raise ForbiddenException("Only RP application owners can access this resource")
-
-        rp_application = await crud_rp_applications.get(
+        rp_application_data, _ = await self._resolve_current_user_rp_application_access(
             db=db,
-            uuid=rp_application_uuid,
-            is_deleted=False,
-            schema_to_select=RPApplicationRead,
+            rp_application_uuid=rp_application_uuid,
+            current_user=current_user,
+            allowed_grant_roles=None,
+            forbidden_message="Only RP application owners can access this resource",
         )
-        if rp_application is None:
-            raise NotFoundException("RP application not found")
-
-        rp_application_data = self._as_dict(rp_application)
-        if not self._is_owner_email_match(
-            rp_application_data.get("application_owner"),
-            current_user_email,
-        ):
-            raise ForbiddenException("Only RP application owners can access this resource")
 
         if rp_application_data.get("department_id") is not None:
             from fastcrud.exceptions.http_exceptions import CustomException
@@ -624,11 +789,13 @@ class RPApplicationService:
         current_user: dict[str, Any],
         ibm_admin_client: IBMVerifyAdminClient,
     ) -> dict[str, Any]:
-        rp_application_data, detail_data, _ = await self._get_current_user_secret_context(
+        rp_application_data, detail_data, _ = await self._get_current_user_application_detail_context(
             db=db,
             rp_application_uuid=rp_application_uuid,
             current_user=current_user,
             ibm_admin_client=ibm_admin_client,
+            allowed_grant_roles=SUMMARY_ACCESS_GRANT_ROLES,
+            forbidden_message="Only RP application owners can view OAuth setup",
         )
 
         await self._require_rp_application_department(rp_application_data)
@@ -706,54 +873,14 @@ class RPApplicationService:
         current_user: dict[str, Any],
         ibm_admin_client: IBMVerifyAdminClient,
     ) -> tuple[dict[str, Any], dict[str, Any], str]:
-        current_user_email = self._extract_current_user_email(current_user)
-        if current_user_email is None:
-            raise ForbiddenException("Only RP application owners can view client information")
-
-        rp_application = await crud_rp_applications.get(
+        return await self._get_current_user_application_detail_context(
             db=db,
-            uuid=rp_application_uuid,
-            is_deleted=False,
-            schema_to_select=RPApplicationRead,
+            rp_application_uuid=rp_application_uuid,
+            current_user=current_user,
+            ibm_admin_client=ibm_admin_client,
+            allowed_grant_roles=SECRET_ACCESS_GRANT_ROLES,
+            forbidden_message="Only RP application owners can view client information",
         )
-        if rp_application is None:
-            raise NotFoundException("RP application not found")
-
-        rp_application_data = self._as_dict(rp_application)
-        if not self._is_owner_email_match(
-            rp_application_data.get("application_owner"),
-            current_user_email,
-        ):
-            raise ForbiddenException("Only RP application owners can view client information")
-
-        ibm_application_id = self._first_string_value(
-            rp_application_data,
-            ("ibm_sv_application_id", "ibmSvApplicationId"),
-        )
-        if ibm_application_id is None:
-            raise NotFoundException("IBM Verify application not found for RP application")
-
-        ibm_application_detail = await ibm_admin_client.get_application_detail(
-            ibm_application_id
-        )
-        detail_data = self._as_dict(ibm_application_detail)
-        providers = self._as_dict(detail_data.get("providers"))
-        oidc_provider = self._as_dict(providers.get("oidc"))
-        oidc_properties = self._as_dict(oidc_provider.get("properties"))
-
-        client_id = self._first_string_value(
-            oidc_properties,
-            ("clientId", "client_id"),
-        )
-        if client_id is None:
-            client_id = self._first_string_value(
-                detail_data,
-                ("clientId", "client_id"),
-            )
-        if client_id is None:
-            raise RuntimeError("IBM Verify application detail missing client ID")
-
-        return rp_application_data, detail_data, client_id
 
     async def get_current_user_rp_application_client_credentials(
         self,

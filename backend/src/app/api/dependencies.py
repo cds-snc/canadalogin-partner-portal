@@ -27,6 +27,7 @@ from ..services import (
     PolicyService,
     RateLimitService,
     RoleService,
+    RPApplicationDeveloperInvitationService,
     RPApplicationService,
     TaskService,
     TierService,
@@ -86,6 +87,10 @@ def get_ibm_sv_user_service(request: Request) -> IBMVerifyUserService:
 
 def get_rp_application_service() -> RPApplicationService:
     return RPApplicationService()
+
+
+def get_rp_application_developer_invitation_service() -> RPApplicationDeveloperInvitationService:
+    return RPApplicationDeveloperInvitationService()
 
 
 def get_auth_service() -> AuthService:

@@ -1,5 +1,5 @@
-from unittest.mock import AsyncMock, Mock, patch
 from json import JSONDecodeError
+from unittest.mock import AsyncMock, Mock, patch
 
 import pytest
 

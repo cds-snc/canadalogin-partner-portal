@@ -51,18 +51,22 @@ class TestRPApplicationServiceCurrentUserSync:
         ibm_user_service = Mock()
         ibm_user_service.get_applications = AsyncMock(return_value=[{"applicationId": "app-1", "name": "App One"}])
 
-        with patch("src.app.services.rp_application_service.crud_rp_applications") as mock_crud:
-            mock_crud.get_multi = AsyncMock(return_value={"data": []})
-            mock_crud.update = AsyncMock(return_value=None)
-            mock_crud.create = AsyncMock(return_value=None)
+        with patch("src.app.services.rp_application_service.crud_rp_application_access_grants") as mock_grants:
+            mock_grants.get_multi = AsyncMock(return_value={"data": []})
 
-            result = await service.list_current_user_rp_applications(
-                db=mock_db,
-                current_user=current_user,
-                ibm_user_service=ibm_user_service,
-            )
+            with patch("src.app.services.rp_application_service.crud_rp_applications") as mock_crud:
+                mock_crud.get_multi = AsyncMock(return_value={"data": []})
+                mock_crud.update = AsyncMock(return_value=None)
+                mock_crud.create = AsyncMock(return_value=None)
+
+                result = await service.list_current_user_rp_applications(
+                    db=mock_db,
+                    current_user=current_user,
+                    ibm_user_service=ibm_user_service,
+                )
 
         assert result == []
+        mock_grants.get_multi.assert_awaited_once()
         mock_crud.update.assert_not_awaited()
         mock_crud.create.assert_not_awaited()
         mock_crud.get_multi.assert_not_awaited()
@@ -103,18 +107,84 @@ class TestRPApplicationServiceCurrentUserSync:
             },
         }
 
-        with patch("src.app.services.rp_application_service.crud_rp_applications") as mock_crud:
-            mock_crud.get_multi = AsyncMock(return_value={"data": [owner_matched_row, non_matched_row]})
-            mock_crud.update = AsyncMock(return_value=None)
-            mock_crud.create = AsyncMock(return_value=None)
+        with patch("src.app.services.rp_application_service.crud_rp_application_access_grants") as mock_grants:
+            mock_grants.get_multi = AsyncMock(return_value={"data": []})
 
-            result = await service.list_current_user_rp_applications(
-                db=mock_db,
-                current_user=current_user,
-                ibm_user_service=ibm_user_service,
-            )
+            with patch("src.app.services.rp_application_service.crud_rp_applications") as mock_crud:
+                mock_crud.get_multi = AsyncMock(return_value={"data": [owner_matched_row, non_matched_row]})
+                mock_crud.update = AsyncMock(return_value=None)
+                mock_crud.create = AsyncMock(return_value=None)
+
+                result = await service.list_current_user_rp_applications(
+                    db=mock_db,
+                    current_user=current_user,
+                    ibm_user_service=ibm_user_service,
+                )
 
         assert len(result) == 1
         assert result[0]["ibm_sv_application_id"] == "app-owner-match"
         mock_crud.create.assert_not_awaited()
+        ibm_user_service.get_applications.assert_not_awaited()
+
+    @pytest.mark.asyncio
+    async def test_list_current_user_rp_applications_includes_granted_workspace_applications_without_owner_email(self, mock_db) -> None:
+        service = RPApplicationService()
+        current_user = {"id": 11}
+        ibm_user_service = Mock()
+        ibm_user_service.get_applications = AsyncMock(return_value=[])
+
+        workspace_granted_row = {
+            "id": 5,
+            "uuid": "018f6f83-0000-0000-0000-000000000105",
+            "workspace_id": 23,
+            "department_id": 7,
+            "dnr_app_name": "Workspace Granted App",
+            "created_by": 2,
+            "ibm_sv_application_id": "app-workspace-grant",
+            "application_owner": {
+                "owners": [
+                    {"email": "someone.else@cds-snc.ca"},
+                ]
+            },
+        }
+        unrelated_row = {
+            "id": 6,
+            "uuid": "018f6f83-0000-0000-0000-000000000106",
+            "workspace_id": 24,
+            "department_id": 7,
+            "dnr_app_name": "Other Workspace App",
+            "created_by": 2,
+            "ibm_sv_application_id": "app-other-workspace",
+            "application_owner": {
+                "owners": [
+                    {"email": "someone.else@cds-snc.ca"},
+                ]
+            },
+        }
+
+        with patch("src.app.services.rp_application_service.crud_rp_application_access_grants") as mock_grants:
+            mock_grants.get_multi = AsyncMock(
+                return_value={
+                    "data": [
+                        {
+                            "workspace_id": 23,
+                            "user_id": 11,
+                            "role": "RP User (Edit)",
+                            "status": "active",
+                        }
+                    ]
+                }
+            )
+
+            with patch("src.app.services.rp_application_service.crud_rp_applications") as mock_crud:
+                mock_crud.get_multi = AsyncMock(return_value={"data": [workspace_granted_row, unrelated_row]})
+
+                result = await service.list_current_user_rp_applications(
+                    db=mock_db,
+                    current_user=current_user,
+                    ibm_user_service=ibm_user_service,
+                )
+
+        assert len(result) == 1
+        assert result[0]["ibm_sv_application_id"] == "app-workspace-grant"
         ibm_user_service.get_applications.assert_not_awaited()

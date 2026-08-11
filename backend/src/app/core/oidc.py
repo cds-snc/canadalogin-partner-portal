@@ -8,13 +8,14 @@ import httpx
 from authlib.integrations.starlette_client import OAuth
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from ..repositories.crud_roles import crud_roles
+from ..repositories.crud_rp_application_access_grants import crud_rp_application_access_grants
+from ..repositories.crud_rp_application_developer_invitations import crud_rp_application_developer_invitations
 from ..repositories.crud_users import crud_users
-from ..schemas.role import RoleRead
+from ..schemas.rp_application_access_grant import RPApplicationAccessGrantRead
+from ..schemas.rp_application_developer_invitation import RPApplicationDeveloperInvitationRead
 from ..schemas.user import UserCreateInternal, UserReadInternal
 from .config import settings
-from .exceptions.http_exceptions import CustomException
-from .exceptions.http_exceptions import ForbiddenException, UnauthorizedException
+from .exceptions.http_exceptions import CustomException, ForbiddenException, UnauthorizedException
 
 oauth = OAuth()
 _client_registered = False
@@ -118,70 +119,88 @@ def normalize_username_candidate(value: str) -> str:
     return normalized[:20] or "user"
 
 
-def _normalize_claim_values(value: Any) -> set[str]:
-    if value is None:
-        return set()
+def _has_local_portal_access(user: dict[str, Any]) -> bool:
+    if user.get("is_superuser"):
+        return True
 
-    if isinstance(value, str):
-        raw_values = value.split(",") if "," in value else [value]
-    elif isinstance(value, list | tuple | set):
-        raw_values = [str(item) for item in value]
-    else:
-        raw_values = [str(value)]
-
-    normalized = {
-        item.strip().lower()
-        for item in raw_values
-        if isinstance(item, str) and item.strip()
-    }
-    return normalized
+    return bool(user.get("role_ids"))
 
 
-def _resolve_group_membership(claims: dict[str, Any]) -> tuple[bool, bool]:
-    group_claim_key = settings.OIDC_GROUP_CLAIM_KEY
-    claim_values = _normalize_claim_values(claims.get(group_claim_key))
+def _extract_current_user_id(user: dict[str, Any]) -> int | None:
+    raw_user_id = user.get("id")
+    if raw_user_id is None or isinstance(raw_user_id, bool):
+        return None
 
-    admin_group = settings.OIDC_ADMIN_GROUP_NAME.strip().lower()
-    application_owners_group = settings.OIDC_APPLICATION_OWNERS_GROUP_NAME.strip().lower()
+    if isinstance(raw_user_id, int):
+        return raw_user_id
 
-    is_admin_member = admin_group in claim_values
-    is_application_owners_member = application_owners_group in claim_values
+    normalized = str(raw_user_id).strip()
+    if not normalized:
+        return None
 
-    return is_admin_member, is_application_owners_member
+    try:
+        return int(normalized)
+    except ValueError:
+        return None
 
 
-async def _resolve_role_ids_from_membership(
+def _is_future_datetime(value: Any) -> bool:
+    if not isinstance(value, datetime):
+        return False
+
+    normalized = value.replace(tzinfo=UTC) if value.tzinfo is None else value.astimezone(UTC)
+    return normalized > datetime.now(UTC)
+
+
+async def _has_active_partner_access_grant(db: AsyncSession, user: dict[str, Any]) -> bool:
+    user_id = _extract_current_user_id(user)
+    if user_id is None:
+        return False
+
+    grant = await crud_rp_application_access_grants.get(
+        db=db,
+        user_id=user_id,
+        status="active",
+        is_deleted=False,
+        schema_to_select=RPApplicationAccessGrantRead,
+    )
+    return grant is not None
+
+
+async def _has_pending_invitation_for_email(db: AsyncSession, normalized_email: str) -> bool:
+    invitations_data = await crud_rp_application_developer_invitations.get_multi(
+        db=db,
+        invited_email=normalized_email,
+        status="pending",
+        is_deleted=False,
+        schema_to_select=RPApplicationDeveloperInvitationRead,
+    )
+    invitations = (
+        invitations_data.get("data", [])
+        if isinstance(invitations_data, dict)
+        else invitations_data
+    )
+
+    for invitation in invitations:
+        invitation_data = invitation if isinstance(invitation, dict) else dict(invitation)
+        if _is_future_datetime(invitation_data.get("invite_expires_at")):
+            return True
+
+    return False
+
+
+async def _has_local_portal_access_or_pending_invitation(
     db: AsyncSession,
-    *,
-    is_admin_member: bool,
-    is_application_owners_member: bool,
-) -> list[int]:
-    role_ids: list[int] = []
+    user: dict[str, Any],
+    normalized_email: str,
+) -> bool:
+    if _has_local_portal_access(user):
+        return True
 
-    if is_admin_member:
-        admin_role = await crud_roles.get(
-            db=db,
-            name=settings.CLPP_ADMIN_ROLE_NAME,
-            is_deleted=False,
-            schema_to_select=RoleRead,
-        )
-        if admin_role is None:
-            raise ForbiddenException("User is not allowed to access this site")
-        role_ids.append(admin_role["id"])
+    if await _has_active_partner_access_grant(db=db, user=user):
+        return True
 
-    if is_application_owners_member:
-        application_owners_role = await crud_roles.get(
-            db=db,
-            name=settings.CLPP_APPLICATION_OWNERS_ROLE_NAME,
-            is_deleted=False,
-            schema_to_select=RoleRead,
-        )
-        if application_owners_role is None:
-            raise ForbiddenException("User is not allowed to access this site")
-        if application_owners_role["id"] not in role_ids:
-            role_ids.append(application_owners_role["id"])
-
-    return role_ids
+    return await _has_pending_invitation_for_email(db=db, normalized_email=normalized_email)
 
 
 async def generate_unique_username(db: AsyncSession, claims: dict[str, Any]) -> str:
@@ -214,16 +233,6 @@ async def sync_oidc_user(db: AsyncSession, claims: dict[str, Any]) -> dict[str, 
     if not email:
         raise ForbiddenException("User is not allowed to access this site")
 
-    is_admin_member, is_application_owners_member = _resolve_group_membership(claims)
-    if not is_admin_member and not is_application_owners_member:
-        raise ForbiddenException("User is not allowed to access this site")
-
-    mapped_role_ids = await _resolve_role_ids_from_membership(
-        db,
-        is_admin_member=is_admin_member,
-        is_application_owners_member=is_application_owners_member,
-    )
-
     normalized_email = str(email).strip().lower()
     provider = settings.OIDC_PROVIDER_NAME
 
@@ -235,14 +244,20 @@ async def sync_oidc_user(db: AsyncSession, claims: dict[str, Any]) -> dict[str, 
         schema_to_select=UserReadInternal,
     )
     if existing_user is not None:
+        update_object: dict[str, Any] = {
+            "email": normalized_email,
+            "username": normalized_email,
+        }
+        if await _has_local_portal_access_or_pending_invitation(
+            db=db,
+            user=existing_user,
+            normalized_email=normalized_email,
+        ):
+            update_object["last_login_at"] = datetime.now(UTC)
+
         await crud_users.update(
             db=db,
-            object={
-                "last_login_at": datetime.now(UTC),
-                "email": normalized_email,
-                "username": normalized_email,
-                "role_ids": mapped_role_ids,
-            },
+            object=update_object,
             uuid=existing_user["uuid"],
         )
         refreshed = await crud_users.get(
@@ -253,21 +268,33 @@ async def sync_oidc_user(db: AsyncSession, claims: dict[str, Any]) -> dict[str, 
         )
         if refreshed is None:
             raise UnauthorizedException("Failed to refresh existing user")
+        if not await _has_local_portal_access_or_pending_invitation(
+            db=db,
+            user=refreshed,
+            normalized_email=normalized_email,
+        ):
+            raise ForbiddenException("User is not allowed to access this site")
         return refreshed
 
     if email:
         email_user = await crud_users.get(db=db, email=normalized_email, is_deleted=False, schema_to_select=UserReadInternal)
         if email_user is not None:
+            update_object = {
+                "auth_provider": provider,
+                "auth_subject": subject,
+                "username": normalized_email,
+                "email": normalized_email,
+            }
+            if await _has_local_portal_access_or_pending_invitation(
+                db=db,
+                user=email_user,
+                normalized_email=normalized_email,
+            ):
+                update_object["last_login_at"] = datetime.now(UTC)
+
             await crud_users.update(
                 db=db,
-                object={
-                    "auth_provider": provider,
-                    "auth_subject": subject,
-                    "last_login_at": datetime.now(UTC),
-                    "username": normalized_email,
-                    "email": normalized_email,
-                    "role_ids": mapped_role_ids,
-                },
+                object=update_object,
                 uuid=email_user["uuid"],
             )
             refreshed = await crud_users.get(
@@ -278,7 +305,16 @@ async def sync_oidc_user(db: AsyncSession, claims: dict[str, Any]) -> dict[str, 
             )
             if refreshed is None:
                 raise UnauthorizedException("Failed to refresh email-linked user")
+            if not await _has_local_portal_access_or_pending_invitation(
+                db=db,
+                user=refreshed,
+                normalized_email=normalized_email,
+            ):
+                raise ForbiddenException("User is not allowed to access this site")
             return refreshed
+
+    if not await _has_pending_invitation_for_email(db=db, normalized_email=normalized_email):
+        raise ForbiddenException("User is not allowed to access this site")
 
     created_user = await crud_users.create(
         db=db,
@@ -294,11 +330,17 @@ async def sync_oidc_user(db: AsyncSession, claims: dict[str, Any]) -> dict[str, 
     if created_user is None:
         raise UnauthorizedException("Failed to create OIDC user")
 
+    if not await _has_local_portal_access_or_pending_invitation(
+        db=db,
+        user=created_user,
+        normalized_email=normalized_email,
+    ):
+        raise ForbiddenException("User is not allowed to access this site")
+
     await crud_users.update(
         db=db,
         object={
             "last_login_at": datetime.now(UTC),
-            "role_ids": mapped_role_ids,
         },
         uuid=created_user["uuid"],
     )

@@ -17,7 +17,8 @@
 	Progress note (2026-08-10): `restore-dashboard-summary-surface/dashboard-page-pattern-decision.yaml` records the PAT-021 and PAT-017 decision and primary task paths.
 - [x] 2.3 Create or queue a dedicated follow-on change for backend and frontend implementation of missing dashboard summary data.
 	Progress note (2026-08-10): created `restore-dashboard-summary-surface` as the dedicated MVP dashboard follow-on package.
-- [ ] 2.4 Add tests in that follow-on change to prove the dashboard summary behavior.
+- [x] 2.4 Add tests in that follow-on change to prove the dashboard summary behavior.
+	Progress note (2026-08-10): `restore-dashboard-summary-surface` now covers the dashboard slice with focused frontend page-state tests in `frontend/tests/unit/pages/YourApplicationsPage.test.tsx` and backend current-user workspace access tests in `backend/tests/test_workspace_service.py` plus `backend/tests/test_workspaces.py`.
 
 ## 3. Invitation And Scoped Access Handoff
 
@@ -27,5 +28,6 @@
 ## 4. Verification And Readiness
 
 - [x] 4.1 Run `make validate-openspec-change CHANGE_ID=reconcile-prd-current-spec-gaps`.
-- [ ] 4.2 Run targeted backend and frontend tests only in the relevant follow-on implementation change or after PRD corrections exist.
+- [x] 4.2 Run targeted backend and frontend tests only in the relevant follow-on implementation change or after PRD corrections exist.
+	Progress note (2026-08-10): the relevant dashboard follow-on change now ran targeted backend verification with `uv run pytest backend/tests/test_workspace_service.py backend/tests/test_workspaces.py` and targeted frontend verification with `cd frontend && corepack pnpm vitest run tests/unit/pages/YourApplicationsPage.test.tsx`.
 - [ ] 4.3 Archive this change only after the PRD is corrected or the required follow-on implementation changes have been created and current specs remain accurate.
