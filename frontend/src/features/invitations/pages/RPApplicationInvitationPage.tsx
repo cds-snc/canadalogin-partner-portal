@@ -17,10 +17,12 @@ export const RPApplicationInvitationPage = ({
 }: RPApplicationInvitationPageProps): FunctionComponent => {
 	const { t } = useTranslation();
 	const navigate = useNavigate();
-	const [requestStatus, setRequestStatus] = useState<InvitationRequestStatus>(null);
+	const [requestStatus, setRequestStatus] =
+		useState<InvitationRequestStatus>(null);
+	const [workspaceUuid, setWorkspaceUuid] = useState<string | null>(null);
 	const status: InvitationPageStatus = !token
 		? "missing-token"
-		: requestStatus ?? "loading";
+		: (requestStatus ?? "loading");
 
 	useEffect((): (() => void) | void => {
 		if (!token) {
@@ -31,14 +33,27 @@ export const RPApplicationInvitationPage = ({
 		let redirectTimeout: number | undefined;
 
 		void acceptRPApplicationDeveloperInvitation(token)
-			.then((): void => {
+			.then((response): void => {
 				if (!isActive) {
 					return;
 				}
 
+				const destinationMatch = /^\/workspaces\/([0-9a-f-]+)$/iu.exec(
+					response.nextDestination
+				);
+				const destinationWorkspaceUuid = destinationMatch?.[1] ?? null;
+				setWorkspaceUuid(destinationWorkspaceUuid);
 				setRequestStatus("success");
 				redirectTimeout = globalThis.setTimeout((): void => {
-					void navigate({ replace: true, to: "/your-applications" });
+					if (destinationWorkspaceUuid) {
+						void navigate({
+							params: { workspaceUuid: destinationWorkspaceUuid },
+							replace: true,
+							to: "/workspaces/$workspaceUuid",
+						});
+						return;
+					}
+					void navigate({ replace: true, to: "/workspaces" });
 				}, 1500);
 			})
 			.catch((): void => {
@@ -111,7 +126,15 @@ export const RPApplicationInvitationPage = ({
 			{renderNotice()}
 			{status === "success" || status === "error" ? (
 				<div>
-					<Button buttonRole="primary" href="/your-applications" type="link">
+					<Button
+						buttonRole="primary"
+						type="link"
+						href={
+							workspaceUuid
+								? `/workspaces/${encodeURIComponent(workspaceUuid)}`
+								: "/workspaces"
+						}
+					>
 						{t("invitations.rpApplication.dashboardAction")}
 					</Button>
 				</div>

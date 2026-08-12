@@ -9,17 +9,70 @@ export type LoginRedirectSearch = {
 	uiLocales?: string;
 };
 
-const defaultPostLoginPath = "/your-applications";
+const defaultPostLoginPath = "/";
+
+const SAFE_APP_PATH_PREFIXES = [
+	"/accept-terms",
+	"/administration",
+	"/audit-logs",
+	"/departments",
+	"/invitations/rp-applications",
+	"/onboarding-oversight",
+	"/profile/setup",
+	"/roles",
+	"/support",
+	"/terms-and-conditions",
+	"/tiers",
+	"/users",
+	"/workspaces",
+	"/your-applications",
+] as const;
+
+const isSafeAppPathname = (pathname: string): boolean =>
+	pathname === "/" ||
+	SAFE_APP_PATH_PREFIXES.some(
+		(prefix) => pathname === prefix || pathname.startsWith(`${prefix}/`)
+	);
+
+const hasControlCharacter = (value: string): boolean =>
+	Array.from(value).some((character) => {
+		const codePoint = character.codePointAt(0);
+		return codePoint !== undefined && (codePoint <= 31 || codePoint === 127);
+	});
 
 export const sanitizeAppPath = (
 	path: string | null | undefined,
 	fallback = defaultPostLoginPath
 ): string => {
-	if (!path) {
+	if (
+		!path ||
+		!path.startsWith("/") ||
+		path.startsWith("//") ||
+		path.includes("\\") ||
+		hasControlCharacter(path)
+	) {
 		return fallback;
 	}
 
-	return path.startsWith("/") ? path : fallback;
+	let parsed: URL;
+	try {
+		parsed = new URL(path, "https://partner-portal.invalid");
+	} catch {
+		return fallback;
+	}
+
+	if (
+		parsed.origin !== "https://partner-portal.invalid" ||
+		!isSafeAppPathname(parsed.pathname)
+	) {
+		return fallback;
+	}
+
+	// Intended-destination state carries only route identity and safe path
+	// parameters. Query strings and fragments may contain filters, copied
+	// personal information, tokens, or client-authored authority, so they are
+	// deliberately dropped and re-established by the destination page.
+	return parsed.pathname;
 };
 
 export const parseLoginReason = (
@@ -44,13 +97,13 @@ export const parseLoginMessage = (
 
 export const buildLoginLocation = (
 	search: LoginRedirectSearch
-): { search: LoginRedirectSearch; to: "/login" } => ({
+): { search: LoginRedirectSearch; to: "/" } => ({
 	search: {
 		message: parseLoginMessage(search.message),
 		reason: parseLoginReason(search.reason),
 		redirect: sanitizeAppPath(search.redirect, defaultPostLoginPath),
 	},
-	to: "/login" as const,
+	to: "/" as const,
 });
 
 export const toLoginHref = (search: LoginRedirectSearch): string => {

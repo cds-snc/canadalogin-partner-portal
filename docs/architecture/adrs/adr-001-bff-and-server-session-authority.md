@@ -73,9 +73,11 @@ The FastAPI backend is the BFF and authentication authority for browser users.
   does not authorize route entry or backend actions.
 - Backend authentication, permission, and ownership checks remain authoritative
   for every protected API operation.
-- This decision applies to the browser portal. Existing bearer-token fallback
-  support in backend dependencies is outside the browser session authority
-  path.
+- This API does not accept locally signed bearer tokens. Its supported
+  authentication scheme is the opaque server-side session cookie established
+  by the OIDC authorization-code flow. Any future machine-to-machine bearer
+  contract requires a separate decision covering issuer, audience, scopes,
+  credential lifecycle, and an accurate OpenAPI security scheme.
 
 This decision does not require a frontend `/login` route. The current protected
 route helper redirects directly to the backend OIDC login endpoint.

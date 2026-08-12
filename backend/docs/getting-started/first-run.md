@@ -91,20 +91,22 @@ docker compose exec redis redis-cli ping
 
 ## Initial Setup
 
-Before testing features, you need to create the first superuser and tier.
+Before testing administrative features, create the initial CL Admin assignment
+and the first tier.
 
-### Creating the First Superuser
+### Creating the Initial CL Admin
 
 !!! warning "Prerequisites"
-    Make sure the database and tables are created before running create_superuser. The database should be running and the API should have started at least once.
+    Make sure migrations are current before running the bootstrap. Set
+    `INITIAL_CL_ADMIN_EMAIL` only for the explicit bootstrap invocation.
 
 #### Using Docker Compose
 
 If using Docker Compose, uncomment this section in your `docker-compose.yml`:
 
 ```yaml
-#-------- uncomment to create first superuser --------
-create_superuser:
+#-------- uncomment to create the initial CL Admin assignment --------
+create_initial_cl_admin:
   build:
     context: .
     dockerfile: Dockerfile
@@ -112,7 +114,7 @@ create_superuser:
     - ./src/.env
   depends_on:
     - db
-  command: python -m src.scripts.create_first_superuser
+  command: python -m src.scripts.create_initial_cl_admin
   volumes:
     - ./src:/code/src
 ```
@@ -120,14 +122,14 @@ create_superuser:
 Then run:
 
 ```bash
-# Start services and run create_superuser automatically
+# Start services and run the configured bootstrap
 docker compose up -d
 
 # Or run it manually
-docker compose run --rm create_superuser
+docker compose run --rm create_initial_cl_admin
 
-# Stop the create_superuser service when done
-docker compose stop create_superuser
+# Stop the bootstrap service when done
+docker compose stop create_initial_cl_admin
 ```
 
 #### From Scratch
@@ -136,7 +138,7 @@ If running manually, use:
 
 ```bash
 # Make sure you're in the root folder
-uv run python -m src.scripts.create_first_superuser
+INITIAL_CL_ADMIN_EMAIL=admin@example.test uv run python -m src.scripts.create_initial_cl_admin
 ```
 
 ### Creating the First Tier
@@ -168,17 +170,7 @@ Let's test the main features of your API.
 Users authenticate through the OIDC browser flow at `/api/v1/auth/oidc/login`.
 There is no local credential login path in this OIDC-only setup.
 
-#### 1a. Seed default Casbin policies
-
-Before testing the admin-heavy routes, seed the default `admin` policies:
-
-```bash
-uv run python -m src.scripts.seed_access_policies
-```
-
-This creates policies for `tiers`, `rate_limits`, and `users_admin` resources.
-
-#### 1b. Start the OIDC flow
+#### 1a. Start the OIDC flow
 
 If OIDC is enabled, start the browser login flow with:
 
@@ -188,13 +180,14 @@ open http://localhost:8000/api/v1/auth/oidc/login
 
 After a successful callback, the backend stores the authenticated user in the server-side session cookie.
 
-Before this works locally, make sure your test user is in one of the configured OIDC groups. The callback only creates a session when the claim named by `OIDC_GROUP_CLAIM_KEY` contains either `OIDC_ADMIN_GROUP_NAME` or `OIDC_APPLICATION_OWNERS_GROUP_NAME`.
+OIDC establishes identity only. Before this works, make sure the enabled test
+user has a current canonical assignment or an eligible pending invitation.
 
 Common local fixes:
 
-- Set `OIDC_GROUP_CLAIM_KEY` to the actual claim your IdP sends, such as `groups`
-- Change `OIDC_ADMIN_GROUP_NAME` or `OIDC_APPLICATION_OWNERS_GROUP_NAME` to match your test account's group names
-- Confirm the mapped local roles named by `CLPP_ADMIN_ROLE_NAME` and `CLPP_APPLICATION_OWNERS_ROLE_NAME` exist in the database
+- bootstrap the first CL Admin with `INITIAL_CL_ADMIN_EMAIL` for that invocation;
+- use the authorized role-assignment API for subsequent assignments; or
+- use the exact local-only persona gate when testing without an identity provider.
 
 #### 2. Test a Protected Endpoint
 

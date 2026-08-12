@@ -5,6 +5,7 @@ import { Button, Checkboxes, Text } from "@/components/ui";
 import { useSession } from "@/hooks";
 import { acceptTerms } from "@/fetch/user-terms";
 import { useToast } from "@/components/ui/Toast";
+import { getAuthorizedPostLoginPath } from "@/features/auth/auth-routing";
 import TermsAndConditionsContent from "./TermsAndConditionsContent";
 
 const AcceptTermsPage = (): ReactElement => {
@@ -33,10 +34,12 @@ const AcceptTermsPage = (): ReactElement => {
 			setIsSubmitting(true);
 			await acceptTerms();
 			toast.success(t("termsAndConditions.success"));
-			await refreshSession();
+			const refreshedUser = await refreshSession();
 			await navigate({
 				replace: true,
-				to: search.redirect ?? "/your-applications",
+				to: refreshedUser
+					? getAuthorizedPostLoginPath(refreshedUser, search.redirect)
+					: "/access-denied",
 			});
 		} catch (err) {
 			console.error(err);

@@ -1,22 +1,20 @@
 import { buildApiUrl, getApiBaseUrl } from "./base-url";
 import { UnauthorizedRequestError } from "./errors";
 import { requestJson } from "./request-json";
+import type { AuthorizationContext } from "@/features/auth/authorization";
 
 export type UserRead = {
-	acceptedTermsAt?: string | null;
-	termsVersion?: string | null;
-	authProvider: string | null;
-	authSubject: string | null;
-	departmentAbbreviation?: string | null;
-	departmentUuid?: string | null;
+	acceptedTermsAt: string | null;
+	authorizationContext: AuthorizationContext;
+	departmentAbbreviation: string | null;
+	departmentUuid: string | null;
 	email: string;
-	hasPartnerAccessGrant?: boolean;
-	isSuperuser?: boolean;
 	name: string;
-	profileImageUrl: string | null;
-	roleUuids: Array<string> | null;
+	profileImageUrl: string;
+	termsVersion: string | null;
 	tierUuid: string | null;
 	uuid: string;
+	username: string;
 };
 
 export const getCurrentUser = async (): Promise<UserRead | null> => {

@@ -8,13 +8,17 @@ import { useWorkspaceApplicationInformationList } from "@/features/workspaces/ho
 const navigateMock = vi.fn(() => Promise.resolve());
 
 vi.mock("react-i18next", () => ({
-	useTranslation: (): { t: (key: string, options?: Record<string, unknown>) => string } => ({
+	useTranslation: (): {
+		t: (key: string, options?: Record<string, unknown>) => string;
+	} => ({
 		t: (key: string, options?: Record<string, unknown>): string => {
 			const translations: Record<string, string> = {
 				"common.notAvailable": "Not available",
 				"workspaces.appInfoCreateButton": "Create application information",
-				"workspaces.appInfoDeletedSuccess": "Application information deleted successfully",
-				"workspaces.appInfoListSummary": "Create, review, and update canonical bilingual application details for this workspace.",
+				"workspaces.appInfoDeletedSuccess":
+					"Application information deleted successfully",
+				"workspaces.appInfoListSummary":
+					"Create, review, and update canonical bilingual application details for this workspace.",
 				"workspaces.appInfoSectionTitle": "Application Information",
 				"workspaces.appInfoServiceNameEnLabel": "Service name (English)",
 				"workspaces.appInfoServiceNameFrLabel": "Service name (French)",
@@ -34,12 +38,36 @@ vi.mock("react-i18next", () => ({
 
 vi.mock("@tanstack/react-router", () => ({
 	useNavigate: (): typeof navigateMock => navigateMock,
-	useParams: (): { workspaceUuid: string } => ({ workspaceUuid: "workspace-uuid-1" }),
+	useParams: (): { workspaceUuid: string } => ({
+		workspaceUuid: "workspace-uuid-1",
+	}),
 	useSearch: (): { deleted?: "1" } => ({ deleted: "1" }),
 }));
 
+vi.mock("@/hooks", () => ({
+	useSession: () => ({
+		currentUser: {
+			authorizationContext: {
+				globalRole: null,
+				partnerAccess: [
+					{ role: "rp_admin", workspaceUuid: "workspace-uuid-1" },
+				],
+			},
+		},
+	}),
+}));
+
 vi.mock("@/components/ui", () => ({
-	Button: ({ children, href, onGcdsClick, type }: PropsWithChildren<{ href?: string; onGcdsClick?: () => void; type: string }>): ReactElement =>
+	Button: ({
+		children,
+		href,
+		onGcdsClick,
+		type,
+	}: PropsWithChildren<{
+		href?: string;
+		onGcdsClick?: () => void;
+		type: string;
+	}>): ReactElement =>
 		type === "link" ? (
 			<a href={href}>{children}</a>
 		) : (
@@ -47,7 +75,28 @@ vi.mock("@/components/ui", () => ({
 				{children}
 			</button>
 		),
-	DataTable: ({ action, primaryAction, rows }: { action: { buttonLabel: string; onAction: (row: { onboardingState: string; serviceNameEn: string; serviceNameFr: string; uuid: string }) => void }; primaryAction: { buttonLabel: string; onAction: () => void }; rows: Array<{ onboardingState: string; serviceNameEn: string; serviceNameFr: string; uuid: string }> }): ReactElement => (
+	DataTable: ({
+		action,
+		primaryAction,
+		rows,
+	}: {
+		action: {
+			buttonLabel: string;
+			onAction: (row: {
+				onboardingState: string;
+				serviceNameEn: string;
+				serviceNameFr: string;
+				uuid: string;
+			}) => void;
+		};
+		primaryAction: { buttonLabel: string; onAction: () => void };
+		rows: Array<{
+			onboardingState: string;
+			serviceNameEn: string;
+			serviceNameFr: string;
+			uuid: string;
+		}>;
+	}): ReactElement => (
 		<section>
 			<button onClick={primaryAction.onAction} type="button">
 				{primaryAction.buttonLabel}
@@ -63,8 +112,13 @@ vi.mock("@/components/ui", () => ({
 			))}
 		</section>
 	),
-	Heading: ({ children }: PropsWithChildren): ReactElement => <h1>{children}</h1>,
-	Notice: ({ children, noticeTitle }: PropsWithChildren<{ noticeTitle: string }>): ReactElement => (
+	Heading: ({ children }: PropsWithChildren): ReactElement => (
+		<h1>{children}</h1>
+	),
+	Notice: ({
+		children,
+		noticeTitle,
+	}: PropsWithChildren<{ noticeTitle: string }>): ReactElement => (
 		<section>
 			<h2>{noticeTitle}</h2>
 			{children}
@@ -77,9 +131,12 @@ vi.mock("@/features/workspaces/hooks/use-workspace", () => ({
 	useWorkspace: vi.fn(),
 }));
 
-vi.mock("@/features/workspaces/hooks/use-workspace-application-information", () => ({
-	useWorkspaceApplicationInformationList: vi.fn(),
-}));
+vi.mock(
+	"@/features/workspaces/hooks/use-workspace-application-information",
+	() => ({
+		useWorkspaceApplicationInformationList: vi.fn(),
+	})
+);
 
 describe("ApplicationInformationListPage", () => {
 	it("renders the delete success notice and navigates to detail and create routes", () => {

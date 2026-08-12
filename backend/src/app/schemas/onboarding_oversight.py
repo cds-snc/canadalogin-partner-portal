@@ -61,6 +61,7 @@ class OnboardingOversightReportAppliedFiltersRead(BaseModel):
     start_date: date
     end_date: date
     group_by: OnboardingOversightReportGroupBy | None = None
+    workspace_uuid: uuid_pkg.UUID | None = None
     policy_window_days: int | None = Field(default=None, ge=1)
 
 

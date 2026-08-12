@@ -1,116 +1,132 @@
-from unittest.mock import AsyncMock, Mock
+from types import SimpleNamespace
+from unittest.mock import AsyncMock, Mock, patch
 
 import pytest
 
 from src.app.api.v1.users import search_users
-from src.app.core.exceptions.http_exceptions import ForbiddenException
+from src.app.core.authorization import CanonicalRoleCode
+from src.app.core.exceptions.http_exceptions import BadRequestException, ForbiddenException
+from src.app.services.authorization_service import (
+    AUTHORIZATION_STATE_KEY,
+    ResolvedAuthorizationState,
+)
 from src.app.services.user_service import UserService
 
 
 def unwrap_endpoint(endpoint):
-	current = endpoint
-	while hasattr(current, "__wrapped__"):
-		current = current.__wrapped__
-	return current
+    current = endpoint
+    while hasattr(current, "__wrapped__"):
+        current = current.__wrapped__
+    return current
 
 
 class TestSearchUsersRoute:
-	@pytest.mark.asyncio
-	async def test_workspace_scoped_search_requires_workspace_admin_and_passes_workspace_id(self, mock_db) -> None:
-		user_service = Mock()
-		user_service.search_users = AsyncMock(return_value=[{"uuid": "user-uuid-2"}])
-		workspace_service = Mock()
-		workspace_service.require_workspace_admin_access = AsyncMock(
-			return_value={"id": 9, "uuid": "018f6f83-0000-0000-0000-000000000201"}
-		)
+    @pytest.mark.asyncio
+    async def test_search_is_cl_admin_only_and_ignores_legacy_superuser(self, mock_db) -> None:
+        service = Mock()
+        service.search_users = AsyncMock()
 
-		result = await unwrap_endpoint(search_users)(
-			Mock(),
-			"member",
-			mock_db,
-			user_service,
-			{"id": 42, "is_superuser": False},
-			workspace_service,
-			"018f6f83-0000-0000-0000-000000000201",
-		)
+        with pytest.raises(ForbiddenException, match="You do not have enough privileges"):
+            await unwrap_endpoint(search_users)(
+                Mock(),
+                "member",
+                mock_db,
+                service,
+                {"id": 42, "is_superuser": True},
+            )
 
-		assert result == [{"uuid": "user-uuid-2"}]
-		workspace_service.require_workspace_admin_access.assert_awaited_once_with(
-			db=mock_db,
-			workspace_uuid="018f6f83-0000-0000-0000-000000000201",
-			current_user={"id": 42, "is_superuser": False},
-		)
-		user_service.search_users.assert_awaited_once_with(
-			db=mock_db,
-			query="member",
-			workspace_id=9,
-		)
+        service.search_users.assert_not_awaited()
 
-	@pytest.mark.asyncio
-	async def test_global_search_rejects_non_superuser(self, mock_db) -> None:
-		with pytest.raises(ForbiddenException, match="You do not have enough privileges"):
-			await unwrap_endpoint(search_users)(
-				Mock(),
-				"member",
-				mock_db,
-				Mock(),
-				{"id": 42, "is_superuser": False},
-				Mock(),
-				None,
-			)
+    @pytest.mark.asyncio
+    async def test_cl_admin_search_has_no_partner_workspace_directory_branch(
+        self,
+        mock_db,
+    ) -> None:
+        service = Mock()
+        service.search_users = AsyncMock(return_value=[{"uuid": "user-uuid-2"}])
+        current_user = {
+            "id": 1,
+            AUTHORIZATION_STATE_KEY: ResolvedAuthorizationState(global_role=CanonicalRoleCode.CL_ADMIN),
+        }
+
+        result = await unwrap_endpoint(search_users)(
+            Mock(),
+            "member",
+            mock_db,
+            service,
+            current_user,
+        )
+
+        assert result == [{"uuid": "user-uuid-2"}]
+        service.search_users.assert_awaited_once_with(db=mock_db, query="member")
 
 
 class TestUserSearchService:
-	@pytest.mark.asyncio
-	async def test_workspace_scoped_search_excludes_existing_members(self, mock_db) -> None:
-		service = UserService()
+    @pytest.mark.asyncio
+    async def test_search_filters_disabled_deleted_users_without_membership_authority(
+        self,
+        mock_db,
+    ) -> None:
+        service = UserService()
+        users = [
+            SimpleNamespace(
+                id=99,
+                uuid="user-uuid-1",
+                name="Member User",
+                email="member@example.gc.ca",
+                username="member@example.gc.ca",
+            ),
+            SimpleNamespace(
+                id=100,
+                uuid="user-uuid-2",
+                name="Candidate User",
+                email="candidate@example.gc.ca",
+                username="candidate@example.gc.ca",
+            ),
+        ]
+        scalar_result = Mock()
+        scalar_result.all.return_value = users
+        execute_result = Mock()
+        execute_result.scalars.return_value = scalar_result
+        mock_db.execute = AsyncMock(return_value=execute_result)
 
-		users = [
-			{
-				"id": 99,
-				"uuid": "user-uuid-1",
-				"name": "Member User",
-				"email": "member@example.gc.ca",
-				"username": "member@example.gc.ca",
-			},
-			{
-				"id": 100,
-				"uuid": "user-uuid-2",
-				"name": "Candidate User",
-				"email": "candidate@example.gc.ca",
-				"username": "candidate@example.gc.ca",
-			},
-		]
+        with (
+            patch.object(
+                service,
+                "_build_user_access_directory_entries",
+                new=AsyncMock(side_effect=lambda db, users: users),
+            ),
+        ):
+            result = await service.search_users(db=mock_db, query="user")
 
-		with (
-			pytest.MonkeyPatch.context() as mp,
-		):
-			mp.setattr(
-				"src.app.services.user_service.crud_users",
-				Mock(get_multi=AsyncMock(return_value={"data": users})),
-			)
-			mp.setattr(
-				"src.app.services.user_service.crud_workspace_members",
-				Mock(
-					get_multi=AsyncMock(
-						return_value={
-							"data": [
-								{"user_id": 99, "workspace_id": 9, "role": "workspace_member"}
-							]
-						}
-					)
-				),
-			)
-			mp.setattr(
-				service,
-				"_build_public_user",
-				AsyncMock(side_effect=lambda db, user: user),
-			)
+        assert [user["uuid"] for user in result] == ["user-uuid-1", "user-uuid-2"]
+        statement = mock_db.execute.await_args.args[0]
+        statement_text = str(statement)
+        assert statement._limit_clause.value == 20
+        assert '"user".enabled IS true' in statement_text
+        assert '"user".is_deleted IS false' in statement_text
 
-			result = await service.search_users(
-				db=mock_db,
-				query="user",
-				workspace_id=9,
-			)
+    @pytest.mark.parametrize("query", ["", " ", "x", "x" * 101])
+    @pytest.mark.asyncio
+    async def test_search_rejects_queries_outside_the_bounded_contract(
+        self,
+        mock_db,
+        query: str,
+    ) -> None:
+        with pytest.raises(BadRequestException, match="between 2 and 100"):
+            await UserService().search_users(db=mock_db, query=query)
 
-		assert [user["uuid"] for user in result] == ["user-uuid-2"]
+        mock_db.execute.assert_not_awaited()
+
+    @pytest.mark.asyncio
+    async def test_search_escapes_sql_wildcards(self, mock_db) -> None:
+        scalar_result = Mock()
+        scalar_result.all.return_value = []
+        execute_result = Mock()
+        execute_result.scalars.return_value = scalar_result
+        mock_db.execute = AsyncMock(return_value=execute_result)
+
+        await UserService().search_users(db=mock_db, query="target%_")
+
+        statement = mock_db.execute.await_args.args[0]
+        assert "%target\\%\\_%" in statement.compile().params.values()

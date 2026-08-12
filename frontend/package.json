@@ -77,7 +77,6 @@
 		"@storybook/react-vite": "^10.3.5",
 		"@tailwindcss/vite": "^4.2.2",
 		"@tanstack/react-query-devtools": "^5.96.2",
-		"@tanstack/react-router-devtools": "1.166.11",
 		"@tanstack/react-table-devtools": "^8.21.3",
 		"@tanstack/router-plugin": "^1.167.12",
 		"@testing-library/jest-dom": "^6.9.1",

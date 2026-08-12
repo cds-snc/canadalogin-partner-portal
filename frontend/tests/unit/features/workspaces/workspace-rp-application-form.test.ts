@@ -1,13 +1,43 @@
 import { describe, expect, it } from "vitest";
 import {
 	createEmptyWorkspaceRPApplicationForm,
-	toRPApplicationCreatePayload,
+	getWorkspaceRPApplicationStepFieldErrorKeys,
+	toWorkspaceRPApplicationDraftFormState,
 	toWorkspaceRPApplicationFormState,
+	toWorkspaceRPApplicationRegistrationAnswers,
 	validateWorkspaceRPApplicationForm,
+	validateWorkspaceRPApplicationStep,
 } from "@/features/workspaces/workspace-rp-application-form";
+import endpointsCompleteStepContract from "../../../../../tests/contracts/workspace-rp-registration-endpoints-complete-step.json";
 
 describe("workspace-rp-application-form", () => {
-	it("maps a populated create form into the backend questionnaire payload", () => {
+	it("serializes the Endpoints step into the cross-stack camelCase contract", () => {
+		const form = {
+			...createEmptyWorkspaceRPApplicationForm(),
+			applicationEnvironmentUrlEn: "https://benefits.canada.ca",
+			applicationEnvironmentUrlFr: "https://prestations.canada.ca",
+			canadaLoginEnvironment: "test",
+			logoutMode: "front_channel",
+			logoutUri: "https://benefits.canada.ca/logout",
+			postLogoutRedirectUris: "https://benefits.canada.ca/signed-out",
+			redirectUris:
+				"https://benefits.canada.ca/callback\nhttps://prestations.canada.ca/rappel",
+			serviceNameEn: "Benefits Portal",
+			serviceNameFr: "Portail des prestations",
+		};
+
+		expect({
+			expectedDraftVersion: 2,
+			registrationAnswers: toWorkspaceRPApplicationRegistrationAnswers(
+				form,
+				"endpoints"
+			),
+			saveMode: "completeStep",
+			stepId: "endpoints",
+		}).toEqual(endpointsCompleteStepContract);
+	});
+
+	it("maps a populated form into the canonical registration answers", () => {
 		const form: ReturnType<typeof createEmptyWorkspaceRPApplicationForm> = {
 			...createEmptyWorkspaceRPApplicationForm(),
 			applicationEnvironmentUrlEn: "https://benefits.canada.ca",
@@ -46,59 +76,59 @@ describe("workspace-rp-application-form", () => {
 			supportsAuthorizationCodeFlow: "yes",
 		};
 
-		const payload = toRPApplicationCreatePayload(form);
+		const payload = toWorkspaceRPApplicationRegistrationAnswers(form);
 
 		expect(payload).toMatchObject({
-			application_environment_url_en: "https://benefits.canada.ca",
-			application_environment_url_fr: "https://prestations.canada.ca",
-			application_information_uuid: "application-information-uuid-1",
-			canada_login_environment: "staging",
-			client_auth_method: "private_key_jwt",
-			client_type: "confidential",
-			jwks_uri: "https://benefits.canada.ca/.well-known/jwks.json",
-			logout_mode: "front_channel",
-			logout_uri: "https://benefits.canada.ca/logout",
-			message_decryption_content_algorithms: ["A256GCM"],
-			message_decryption_key_management_algorithms: ["RSA-OAEP-256"],
-			message_decryption_supported: true,
-			message_decryption_targets: ["id_token", "userinfo"],
-			migration_sector_identifier_url: "https://benefits.canada.ca/sector.json",
-			pkce_algorithms: ["S256"],
-			pkce_supported: true,
-			post_logout_redirect_uris: [
+			applicationEnvironmentUrlEn: "https://benefits.canada.ca",
+			applicationEnvironmentUrlFr: "https://prestations.canada.ca",
+			applicationInformationUuid: "application-information-uuid-1",
+			canadaLoginEnvironment: "staging",
+			clientAuthMethod: "private_key_jwt",
+			clientType: "confidential",
+			jwksUri: "https://benefits.canada.ca/.well-known/jwks.json",
+			logoutMode: "front_channel",
+			logoutUri: "https://benefits.canada.ca/logout",
+			messageDecryptionContentAlgorithms: ["A256GCM"],
+			messageDecryptionKeyManagementAlgorithms: ["RSA-OAEP-256"],
+			messageDecryptionSupported: true,
+			messageDecryptionTargets: ["id_token", "userinfo"],
+			migrationSectorIdentifierUrl: "https://benefits.canada.ca/sector.json",
+			pkceAlgorithms: ["S256"],
+			pkceSupported: true,
+			postLogoutRedirectUris: [
 				"https://benefits.canada.ca/logout-complete",
 				"https://benefits.canada.ca/logout-fallback",
 			],
-			private_key_distribution_method: "jwks_uri",
-			redirect_uris: ["https://benefits.canada.ca/callback"],
-			request_encryption_roadmap: false,
-			request_encryption_supported: false,
-			request_signing_revisit_on: "2027-03",
-			request_signing_roadmap: true,
-			request_signing_supported: false,
-			requested_scopes: ["openid", "profile", "email"],
-			sector_identifier: "https://benefits.canada.ca",
-			service_name_en: "Benefits Portal",
-			service_name_fr: "Portail des prestations",
-			shares_pairwise_identifiers: false,
-			signature_validation_algorithms: ["RS256"],
-			signature_validation_supported: true,
-			signature_validation_targets: ["id_token"],
-			supports_authorization_code_flow: true,
+			privateKeyDistributionMethod: "jwks_uri",
+			redirectUris: ["https://benefits.canada.ca/callback"],
+			requestEncryptionRoadmap: false,
+			requestEncryptionSupported: false,
+			requestSigningRevisitOn: "2027-03",
+			requestSigningRoadmap: true,
+			requestSigningSupported: false,
+			requestedScopes: ["openid", "profile", "email"],
+			sectorIdentifier: "https://benefits.canada.ca",
+			serviceNameEn: "Benefits Portal",
+			serviceNameFr: "Portail des prestations",
+			sharesPairwiseIdentifiers: false,
+			signatureValidationAlgorithms: ["RS256"],
+			signatureValidationSupported: true,
+			signatureValidationTargets: ["id_token"],
+			supportsAuthorizationCodeFlow: true,
 		});
 	});
 
 	it("hydrates edit form state from the workspace RP application read model", () => {
 		const form = toWorkspaceRPApplicationFormState(
 			{
-				application_information_id: 14,
-				canada_login_environment: "production",
-				created_at: "2026-07-31T10:05:00Z",
-				created_by: 7,
-				dnr_app_name: "Benefits Portal",
+				applicationInformationId: 14,
+				canadaLoginEnvironment: "production",
+				createdAt: "2026-07-31T10:05:00Z",
+				createdBy: 7,
+				dnrAppName: "Benefits Portal",
 				id: 21,
-				is_deleted: false,
-				oidc_registration_payload: {
+				isDeleted: false,
+				oidcRegistrationPayload: {
 					application_environment_url_en: "https://benefits.canada.ca",
 					application_environment_url_fr: "https://prestations.canada.ca",
 					client_auth_method: "client_secret_basic",
@@ -116,12 +146,14 @@ describe("workspace-rp-application-form", () => {
 				},
 				status: "active",
 				uuid: "rp-application-uuid-1",
-				workspace_id: 9,
+				workspaceId: 9,
 			},
 			"application-information-uuid-1"
 		);
 
-		expect(form.applicationInformationUuid).toBe("application-information-uuid-1");
+		expect(form.applicationInformationUuid).toBe(
+			"application-information-uuid-1"
+		);
 		expect(form.canadaLoginEnvironment).toBe("production");
 		expect(form.redirectUris).toBe("https://benefits.canada.ca/callback");
 		expect(form.requestedScopes).toEqual(["openid", "profile"]);
@@ -165,5 +197,79 @@ describe("workspace-rp-application-form", () => {
 				"workspaces.applicationsValidationPublicClientPkceRequired",
 			])
 		);
+	});
+
+	it("maps step validation messages to the affected form controls", () => {
+		const form = createEmptyWorkspaceRPApplicationForm();
+		form.logoutMode = "front_channel";
+		const messageKeys = validateWorkspaceRPApplicationStep(form, "endpoints");
+
+		expect(
+			getWorkspaceRPApplicationStepFieldErrorKeys(
+				form,
+				"endpoints",
+				messageKeys
+			)
+		).toMatchObject({
+			applicationEnvironmentUrlEn:
+				"workspaces.applicationsValidationRequiredAnswers",
+			applicationEnvironmentUrlFr:
+				"workspaces.applicationsValidationRequiredAnswers",
+			logoutUri: "workspaces.applicationsValidationRequiredAnswers",
+			redirectUris: "workspaces.applicationsValidationRequiredAnswers",
+		});
+	});
+
+	it("validates only the active step before continuing", () => {
+		const form = {
+			...createEmptyWorkspaceRPApplicationForm(),
+			canadaLoginEnvironment: "test",
+			serviceNameEn: "Benefits Portal",
+			serviceNameFr: "Portail des prestations",
+		};
+
+		expect(validateWorkspaceRPApplicationStep(form, "basics")).toEqual([]);
+		expect(validateWorkspaceRPApplicationStep(form, "endpoints")).toContain(
+			"workspaces.applicationsValidationRequiredAnswers"
+		);
+	});
+
+	it("clears dependent key answers when the controlling choice changes", () => {
+		const form = {
+			...createEmptyWorkspaceRPApplicationForm(),
+			clientAuthMethod: "client_secret_basic",
+			jwksUri: "https://benefits.canada.ca/.well-known/jwks.json",
+			offlineJwkOrCertificate: "public certificate",
+			privateKeyDistributionMethod: "offline_exchange",
+		};
+
+		const answers = toWorkspaceRPApplicationRegistrationAnswers(
+			form,
+			"client-and-access"
+		) as Record<string, unknown>;
+
+		expect(answers["privateKeyDistributionMethod"]).toBeNull();
+		expect(answers["jwksUri"]).toBeNull();
+		expect(answers["offlineJwkOrCertificate"]).toBeNull();
+	});
+
+	it("hydrates the fixed camelCase draft response without raw JSON assumptions", () => {
+		const form = toWorkspaceRPApplicationDraftFormState({
+			onboardingState: "draft",
+			registrationAnswers: {
+				canadaLoginEnvironment: "staging",
+				redirectUris: ["https://benefits.canada.ca/callback"],
+				serviceNameEn: "Benefits Portal",
+				serviceNameFr: "Portail des prestations",
+			},
+			registrationDraftVersion: 2,
+			registrationLastCompletedStep: "endpoints",
+			rpApplicationUuid: "rp-application-uuid-1",
+			workspaceUuid: "workspace-uuid-1",
+		});
+
+		expect(form.canadaLoginEnvironment).toBe("staging");
+		expect(form.redirectUris).toBe("https://benefits.canada.ca/callback");
+		expect(form.serviceNameEn).toBe("Benefits Portal");
 	});
 });

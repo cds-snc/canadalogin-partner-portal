@@ -2,15 +2,21 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { ServerRequestError, getApiBaseUrl } from "@/fetch";
 import { getCurrentUser, getOidcLoginUrl } from "@/fetch/auth";
 
-const createUserFixture = (): Record<string, string | number> => ({
+const createUserFixture = (): Record<string, unknown> => ({
+	acceptedTermsAt: null,
+	authorizationContext: {
+		globalRole: "cl_admin",
+		partnerAccess: [],
+	},
+	departmentAbbreviation: null,
+	departmentUuid: null,
 	uuid: "018f6f83-0f2b-7b0f-b2fb-96c4d8a4b102",
 	name: "Jane Doe",
 	email: "jane@example.com",
-	"profileImageUrl": "https://example.com/avatar.png",
-	"authProvider": "gc-sso",
-	"authSubject": "subject-123",
-	"roleUuid": "role-uuid-1",
-	"tierUuid": "tier-uuid-2",
+	profileImageUrl: "https://example.com/avatar.png",
+	termsVersion: "v1",
+	tierUuid: "tier-uuid-2",
+	username: "jane@example.com",
 });
 
 describe("fetch auth", () => {
@@ -43,7 +49,7 @@ describe("fetch auth", () => {
 				cache: "no-store",
 				credentials: "include",
 				method: "GET",
-			}),
+			})
 		);
 	});
 
@@ -70,7 +76,7 @@ describe("fetch auth", () => {
 				cache: "no-store",
 				credentials: "include",
 				method: "GET",
-			}),
+			})
 		);
 	});
 
@@ -119,7 +125,9 @@ describe("fetch auth", () => {
 	});
 
 	it("builds the backend OIDC login URL from the configured origin", () => {
-		expect(getOidcLoginUrl()).toBe("http://localhost:8000/api/v1/auth/oidc/login");
+		expect(getOidcLoginUrl()).toBe(
+			"http://localhost:8000/api/v1/auth/oidc/login"
+		);
 	});
 
 	it("adds locale and redirect parameters to the backend OIDC login URL when provided", () => {

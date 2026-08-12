@@ -77,79 +77,120 @@ const saveReviewChecklistMock = vi.fn(() =>
 		reviewedByUserUuid: "user-uuid-1",
 		updatedAt: "2026-08-11T12:45:00Z",
 		uuid: "review-checklist-uuid-1",
-	})
+	} as const)
 );
 const navigateMock = vi.fn(() => Promise.resolve());
 let searchState: { created?: "1"; updated?: "1" } = { created: "1" };
 
 vi.mock("react-i18next", () => ({
-	useTranslation: (): { t: (key: string, options?: Record<string, unknown>) => string } => ({
+	useTranslation: (): {
+		t: (key: string, options?: Record<string, unknown>) => string;
+	} => ({
 		t: (key: string, options?: Record<string, unknown>): string => {
 			const translations: Record<string, string> = {
 				"workspaces.approvedAtLabel": "Approved",
-					"workspaces.appInfoInternalReviewApplicationInformationLabel": "Application information sections",
-					"workspaces.appInfoInternalReviewChecklistSaveAction": "Save checklist outcome",
-					"workspaces.appInfoInternalReviewChecklistSavedSuccess": "Internal review checklist updated successfully",
-					"workspaces.appInfoInternalReviewChecklistSavingAction": "Saving checklist outcome...",
-					"workspaces.appInfoInternalReviewChecklistTitle": "Checklist outcome",
-					"workspaces.appInfoInternalReviewDispositionChangesRequested": "Changes requested",
-					"workspaces.appInfoInternalReviewDispositionLabel": "Review disposition",
-					"workspaces.appInfoInternalReviewDispositionPending": "Pending review",
-					"workspaces.appInfoInternalReviewDispositionReadyForNextStep": "Ready for next workflow step",
-					"workspaces.appInfoInternalReviewEnvironmentRegistrationLabel": "Environment registration coverage",
-					"workspaces.appInfoInternalReviewErrorBody": "Internal review details could not be loaded for this record.",
-					"workspaces.appInfoInternalReviewErrorTitle": "Unable to load internal review details",
-					"workspaces.appInfoInternalReviewEvidenceReferenceLabel": "External evidence reference status",
-					"workspaces.appInfoInternalReviewLoadingBody": "Loading internal review notes and checklist outcomes.",
-					"workspaces.appInfoInternalReviewLoadingTitle": "Loading internal review",
-					"workspaces.appInfoInternalReviewNoChecklistBody": "No checklist outcome has been recorded yet for this application information record.",
-					"workspaces.appInfoInternalReviewNoChecklistTitle": "No checklist outcome yet",
-					"workspaces.appInfoInternalReviewNoNotesBody": "No internal review note has been recorded yet.",
-					"workspaces.appInfoInternalReviewNoNotesTitle": "No review notes yet",
-					"workspaces.appInfoInternalReviewNoteLabel": "Internal review note",
-					"workspaces.appInfoInternalReviewNoteSaveAction": "Save review note",
-					"workspaces.appInfoInternalReviewNoteSavedSuccess": "Internal review note saved successfully",
-					"workspaces.appInfoInternalReviewNoteSavingAction": "Saving review note...",
-					"workspaces.appInfoInternalReviewNotesTitle": "Review notes",
-					"workspaces.appInfoInternalReviewProcessLinksLabel": "External process-link readiness",
-					"workspaces.appInfoInternalReviewPromotionMetadataLabel": "Production promotion metadata",
-					"workspaces.appInfoInternalReviewRationaleLabel": "Reviewer rationale",
-					"workspaces.appInfoInternalReviewReadOnlyBody": "Checklist outcomes and notes can only be updated while this record is submitted or under review.",
-					"workspaces.appInfoInternalReviewReadOnlyTitle": "Internal review is read-only for this lifecycle state",
-					"workspaces.appInfoInternalReviewReviewedByLabel": "Reviewed by",
-					"workspaces.appInfoInternalReviewSummary": "Record internal checklist outcomes and notes for platform-admin review on submitted and under-review records.",
-					"workspaces.appInfoInternalReviewTitle": "Internal review",
-					"workspaces.appInfoInternalReviewUpdatedAtLabel": "Last updated",
+				"workspaces.appInfoInternalReviewApplicationInformationLabel":
+					"Application information sections",
+				"workspaces.appInfoInternalReviewChecklistSaveAction":
+					"Save checklist outcome",
+				"workspaces.appInfoInternalReviewChecklistSavedSuccess":
+					"Internal review checklist updated successfully",
+				"workspaces.appInfoInternalReviewChecklistSavingAction":
+					"Saving checklist outcome...",
+				"workspaces.appInfoInternalReviewChecklistTitle": "Checklist outcome",
+				"workspaces.appInfoInternalReviewDispositionChangesRequested":
+					"Changes requested",
+				"workspaces.appInfoInternalReviewDispositionLabel":
+					"Review disposition",
+				"workspaces.appInfoInternalReviewDispositionPending": "Pending review",
+				"workspaces.appInfoInternalReviewDispositionReadyForNextStep":
+					"Ready for next workflow step",
+				"workspaces.appInfoInternalReviewEnvironmentRegistrationLabel":
+					"Environment registration coverage",
+				"workspaces.appInfoInternalReviewErrorBody":
+					"Internal review details could not be loaded for this record.",
+				"workspaces.appInfoInternalReviewErrorTitle":
+					"Unable to load internal review details",
+				"workspaces.appInfoInternalReviewEvidenceReferenceLabel":
+					"External evidence reference status",
+				"workspaces.appInfoInternalReviewLoadingBody":
+					"Loading internal review notes and checklist outcomes.",
+				"workspaces.appInfoInternalReviewLoadingTitle":
+					"Loading internal review",
+				"workspaces.appInfoInternalReviewNoChecklistBody":
+					"No checklist outcome has been recorded yet for this application information record.",
+				"workspaces.appInfoInternalReviewNoChecklistTitle":
+					"No checklist outcome yet",
+				"workspaces.appInfoInternalReviewNoNotesBody":
+					"No internal review note has been recorded yet.",
+				"workspaces.appInfoInternalReviewNoNotesTitle": "No review notes yet",
+				"workspaces.appInfoInternalReviewNoteLabel": "Internal review note",
+				"workspaces.appInfoInternalReviewNoteSaveAction": "Save review note",
+				"workspaces.appInfoInternalReviewNoteSavedSuccess":
+					"Internal review note saved successfully",
+				"workspaces.appInfoInternalReviewNoteSavingAction":
+					"Saving review note...",
+				"workspaces.appInfoInternalReviewNotesTitle": "Review notes",
+				"workspaces.appInfoInternalReviewProcessLinksLabel":
+					"External process-link readiness",
+				"workspaces.appInfoInternalReviewPromotionMetadataLabel":
+					"Production promotion metadata",
+				"workspaces.appInfoInternalReviewRationaleLabel": "Reviewer rationale",
+				"workspaces.appInfoInternalReviewReadOnlyBody":
+					"Checklist outcomes and notes can only be updated while this record is submitted or under review.",
+				"workspaces.appInfoInternalReviewReadOnlyTitle":
+					"Internal review is read-only for this lifecycle state",
+				"workspaces.appInfoInternalReviewReviewedByLabel": "Reviewed by",
+				"workspaces.appInfoInternalReviewSummary":
+					"Record internal checklist outcomes and notes for platform-admin review on submitted and under-review records.",
+				"workspaces.appInfoInternalReviewTitle": "Internal review",
+				"workspaces.appInfoInternalReviewUpdatedAtLabel": "Last updated",
 				"workspaces.appInfoReadinessAttentionRequired": "Attention required",
-				"workspaces.appInfoReadinessBusinessContextLabel": "Business and user context",
-				"workspaces.appInfoReadinessBusinessContextNextStep": "Complete the overview and usage sections.",
+				"workspaces.appInfoReadinessBusinessContextLabel":
+					"Business and user context",
+				"workspaces.appInfoReadinessBusinessContextNextStep":
+					"Complete the overview and usage sections.",
 				"workspaces.appInfoReadinessContactsLabel": "Contacts",
-				"workspaces.appInfoReadinessContactsNextStep": "Add at least one complete bilingual contact record.",
-				"workspaces.appInfoReadinessExternalInfoBody": "Checklist, evidence, and review-path tracking remain advisory and are completed outside Partner Portal for MVP2.",
-				"workspaces.appInfoReadinessExternalInfoTitle": "External production checks stay outside Partner Portal",
-				"workspaces.appInfoReadinessMigrationPlanningLabel": "Migration or transition planning",
-				"workspaces.appInfoReadinessMigrationPlanningNextStep": "Add the migration or transition plan.",
+				"workspaces.appInfoReadinessContactsNextStep":
+					"Add at least one complete bilingual contact record.",
+				"workspaces.appInfoReadinessExternalInfoBody":
+					"Checklist, evidence, and review-path tracking remain advisory and are completed outside Partner Portal for MVP2.",
+				"workspaces.appInfoReadinessExternalInfoTitle":
+					"External production checks stay outside Partner Portal",
+				"workspaces.appInfoReadinessMigrationPlanningLabel":
+					"Migration or transition planning",
+				"workspaces.appInfoReadinessMigrationPlanningNextStep":
+					"Add the migration or transition plan.",
 				"workspaces.appInfoReadinessReady": "Ready",
 				"workspaces.appInfoReadinessSecurityPostureLabel": "Security posture",
-				"workspaces.appInfoReadinessSecurityPostureNextStep": "Add the security and privacy summary.",
+				"workspaces.appInfoReadinessSecurityPostureNextStep":
+					"Add the security and privacy summary.",
 				"workspaces.appInfoReadinessServiceIdentityLabel": "Service identity",
-				"workspaces.appInfoReadinessServiceIdentityNextStep": "Add both English and French service names.",
+				"workspaces.appInfoReadinessServiceIdentityNextStep":
+					"Add both English and French service names.",
 				"workspaces.appInfoReadinessStatusComplete": "Complete",
 				"workspaces.appInfoReadinessStatusIncomplete": "Incomplete",
 				"workspaces.appInfoReadinessStatusNotStarted": "Not started",
 				"workspaces.appInfoReadinessSummaryLabel": "Submission readiness",
-				"workspaces.appInfoReadinessTechnicalIntegrationLabel": "Technical integration details",
-				"workspaces.appInfoReadinessTechnicalIntegrationNextStep": "Add the technology and protocol summary.",
+				"workspaces.appInfoReadinessTechnicalIntegrationLabel":
+					"Technical integration details",
+				"workspaces.appInfoReadinessTechnicalIntegrationNextStep":
+					"Add the technology and protocol summary.",
 				"workspaces.appInfoReadinessTitle": "Readiness summary",
-				"workspaces.appInfoReadinessWarningBody": "This record can still be saved or submitted, but the section summaries below still need attention.",
-				"workspaces.appInfoReadinessWarningTitle": "Submission readiness still needs attention",
+				"workspaces.appInfoReadinessWarningBody":
+					"This record can still be saved or submitted, but the section summaries below still need attention.",
+				"workspaces.appInfoReadinessWarningTitle":
+					"Submission readiness still needs attention",
 				"common.notAvailable": "Not available",
-				"errors.conflictBody": "The action could not be completed because related records still need attention.",
+				"errors.conflictBody":
+					"The action could not be completed because related records still need attention.",
 				"errors.conflictTitle": "Resolve the conflict",
 				"workspaces.appInfoBackToList": "Back to application information",
 				"workspaces.appInfoContactDelete": "Delete contact",
-				"workspaces.appInfoContactDeleteConfirmTitle": "Delete application contact",
-				"workspaces.appInfoContactCreatedSuccess": "Application contact created successfully",
+				"workspaces.appInfoContactDeleteConfirmTitle":
+					"Delete application contact",
+				"workspaces.appInfoContactCreatedSuccess":
+					"Application contact created successfully",
 				"workspaces.appInfoContactEdit": "Edit contact",
 				"workspaces.appInfoContactEmailLabel": "Email",
 				"workspaces.appInfoContactModalTitle": "Add application contact",
@@ -157,23 +198,32 @@ vi.mock("react-i18next", () => ({
 				"workspaces.appInfoContactNameFrLabel": "Contact name (French)",
 				"workspaces.appInfoContactNameLabel": "Contact name",
 				"workspaces.appInfoContactPhoneNumberLabel": "Phone number",
-				"workspaces.appInfoContactResponsibilityEnLabel": "Responsibility (English)",
-				"workspaces.appInfoContactResponsibilityFrLabel": "Responsibility (French)",
+				"workspaces.appInfoContactResponsibilityEnLabel":
+					"Responsibility (English)",
+				"workspaces.appInfoContactResponsibilityFrLabel":
+					"Responsibility (French)",
 				"workspaces.appInfoContactResponsibilityLabel": "Responsibility",
 				"workspaces.appInfoContactSaveAction": "Save contact",
-				"workspaces.appInfoContactUpdatedSuccess": "Application contact updated successfully",
-				"workspaces.appInfoContactDeletedSuccess": "Application contact deleted successfully",
+				"workspaces.appInfoContactUpdatedSuccess":
+					"Application contact updated successfully",
+				"workspaces.appInfoContactDeletedSuccess":
+					"Application contact deleted successfully",
 				"workspaces.appInfoContacts": "Application contacts",
-				"workspaces.appInfoContactsSummary": "Add, update, and remove contacts for this application information record.",
+				"workspaces.appInfoContactsSummary":
+					"Add, update, and remove contacts for this application information record.",
 				"workspaces.appInfoCreateContact": "Create contact",
-				"workspaces.appInfoCreatedSuccess": "Application information created successfully",
+				"workspaces.appInfoCreatedSuccess":
+					"Application information created successfully",
 				"workspaces.appInfoDelete": "Delete application information",
-				"workspaces.appInfoDeleteConfirmTitle": "Delete application information",
-				"workspaces.appInfoDetailSummary": "Review canonical bilingual application details and manage related contacts.",
+				"workspaces.appInfoDeleteConfirmTitle":
+					"Delete application information",
+				"workspaces.appInfoDetailSummary":
+					"Review canonical bilingual application details and manage related contacts.",
 				"workspaces.appInfoEdit": "Edit application information",
 				"workspaces.appInfoEditContactModalTitle": "Edit application contact",
 				"workspaces.launchedAtLabel": "Launched",
-				"workspaces.appInfoMigrationOrTransitionPlanLabel": "Migration or transition plan",
+				"workspaces.appInfoMigrationOrTransitionPlanLabel":
+					"Migration or transition plan",
 				"workspaces.onboardingStateLabel": "Onboarding status",
 				"workspaces.onboardingStateUnderReview": "Under review",
 				"workspaces.appInfoOverviewLabel": "Overview",
@@ -182,7 +232,8 @@ vi.mock("react-i18next", () => ({
 				"workspaces.appInfoSectionTitle": "Application Information",
 				"workspaces.appInfoServiceNameEnLabel": "Service name (English)",
 				"workspaces.appInfoServiceNameFrLabel": "Service name (French)",
-				"workspaces.appInfoTechnologyAndProtocolLabel": "Technology and protocol",
+				"workspaces.appInfoTechnologyAndProtocolLabel":
+					"Technology and protocol",
 				"workspaces.appInfoUsageLabel": "Usage",
 				"workspaces.cancelAction": "Cancel",
 				"workspaces.submittedAtLabel": "Submitted",
@@ -208,7 +259,10 @@ vi.mock("react-i18next", () => ({
 
 vi.mock("@tanstack/react-router", () => ({
 	useNavigate: (): typeof navigateMock => navigateMock,
-	useParams: (): { applicationInformationUuid: string; workspaceUuid: string } => ({
+	useParams: (): {
+		applicationInformationUuid: string;
+		workspaceUuid: string;
+	} => ({
 		applicationInformationUuid: "application-information-uuid-1",
 		workspaceUuid: "workspace-uuid-1",
 	}),
@@ -216,7 +270,18 @@ vi.mock("@tanstack/react-router", () => ({
 }));
 
 vi.mock("@/components/ui", () => ({
-	Button: ({ children, disabled, href, onGcdsClick, type }: PropsWithChildren<{ disabled?: boolean; href?: string; onGcdsClick?: () => void; type: string }>): ReactElement =>
+	Button: ({
+		children,
+		disabled,
+		href,
+		onGcdsClick,
+		type,
+	}: PropsWithChildren<{
+		disabled?: boolean;
+		href?: string;
+		onGcdsClick?: () => void;
+		type: string;
+	}>): ReactElement =>
 		type === "link" ? (
 			<a href={href}>{children}</a>
 		) : (
@@ -224,7 +289,21 @@ vi.mock("@/components/ui", () => ({
 				{children}
 			</button>
 		),
-	ConfirmDialog: ({ confirmLabel, description, isOpen, onClose, onConfirm, title }: { confirmLabel: string; description: string; isOpen: boolean; onClose: () => void; onConfirm: () => void; title: string }): ReactElement | null =>
+	ConfirmDialog: ({
+		confirmLabel,
+		description,
+		isOpen,
+		onClose,
+		onConfirm,
+		title,
+	}: {
+		confirmLabel: string;
+		description: string;
+		isOpen: boolean;
+		onClose: () => void;
+		onConfirm: () => void;
+		title: string;
+	}): ReactElement | null =>
 		isOpen ? (
 			<section>
 				<h2>{title}</h2>
@@ -237,13 +316,38 @@ vi.mock("@/components/ui", () => ({
 				</button>
 			</section>
 		) : null,
-	DataTable: ({ action, rows }: { action: Array<{ buttonLabel: string; onAction: (row: { email: string; name: string; phoneNumber: string; responsibility: string; uuid: string }) => void }>; rows: Array<{ email: string; name: string; phoneNumber: string; responsibility: string; uuid: string }> }): ReactElement => (
+	DataTable: ({
+		action,
+		rows,
+	}: {
+		action: Array<{
+			buttonLabel: string;
+			onAction: (row: {
+				email: string;
+				name: string;
+				phoneNumber: string;
+				responsibility: string;
+				uuid: string;
+			}) => void;
+		}>;
+		rows: Array<{
+			email: string;
+			name: string;
+			phoneNumber: string;
+			responsibility: string;
+			uuid: string;
+		}>;
+	}): ReactElement => (
 		<section>
 			{rows.map((row) => (
 				<div key={row.uuid}>
 					<span>{row.name}</span>
 					{action.map((item) => (
-						<button key={`${row.uuid}-${item.buttonLabel}`} onClick={() => item.onAction(row)} type="button">
+						<button
+							key={`${row.uuid}-${item.buttonLabel}`}
+							onClick={() => item.onAction(row)}
+							type="button"
+						>
 							{item.buttonLabel}
 						</button>
 					))}
@@ -251,34 +355,71 @@ vi.mock("@/components/ui", () => ({
 			))}
 		</section>
 	),
-	Heading: ({ children, tag }: PropsWithChildren<{ tag?: string }>): ReactElement =>
-		tag === "h2" ? <h2>{children}</h2> : tag === "h3" ? <h3>{children}</h3> : <h1>{children}</h1>,
-	Input: ({ inputId, label, onInput, value }: { inputId: string; label: string; onInput?: (event: { target: { value: string } }) => void; value?: string }): ReactElement => (
+	Heading: ({
+		children,
+		tag,
+	}: PropsWithChildren<{ tag?: string }>): ReactElement =>
+		tag === "h2" ? (
+			<h2>{children}</h2>
+		) : tag === "h3" ? (
+			<h3>{children}</h3>
+		) : (
+			<h1>{children}</h1>
+		),
+	Input: ({
+		inputId,
+		label,
+		onInput,
+		value,
+	}: {
+		inputId: string;
+		label: string;
+		onInput?: (event: { target: { value: string } }) => void;
+		value?: string;
+	}): ReactElement => (
 		<label htmlFor={inputId}>
 			<span>{label}</span>
 			<input
 				id={inputId}
 				value={value}
 				onInput={(event): void => {
-					onInput?.({ target: { value: (event.target as HTMLInputElement).value } });
+					onInput?.({
+						target: { value: (event.target as HTMLInputElement).value },
+					});
 				}}
 			/>
 		</label>
 	),
-	Notice: ({ children, noticeTitle }: PropsWithChildren<{ noticeTitle: string }>): ReactElement => (
+	Notice: ({
+		children,
+		noticeTitle,
+	}: PropsWithChildren<{ noticeTitle: string }>): ReactElement => (
 		<section>
 			<h2>{noticeTitle}</h2>
 			{children}
 		</section>
 	),
-	Select: ({ children, label, onInput, selectId, value }: PropsWithChildren<{ label: string; onInput?: (event: { target: { value: string } }) => void; selectId: string; value?: string }>): ReactElement => (
+	Select: ({
+		children,
+		label,
+		onInput,
+		selectId,
+		value,
+	}: PropsWithChildren<{
+		label: string;
+		onInput?: (event: { target: { value: string } }) => void;
+		selectId: string;
+		value?: string;
+	}>): ReactElement => (
 		<label htmlFor={selectId}>
 			<span>{label}</span>
 			<select
 				id={selectId}
 				value={value}
 				onChange={(event): void => {
-					onInput?.({ target: { value: (event.target as HTMLSelectElement).value } });
+					onInput?.({
+						target: { value: (event.target as HTMLSelectElement).value },
+					});
 				}}
 			>
 				{children}
@@ -286,14 +427,26 @@ vi.mock("@/components/ui", () => ({
 		</label>
 	),
 	Text: ({ children }: PropsWithChildren): ReactElement => <p>{children}</p>,
-	Textarea: ({ label, onInput, textareaId, value }: { label: string; onInput?: (event: { target: { value: string } }) => void; textareaId: string; value?: string }): ReactElement => (
+	Textarea: ({
+		label,
+		onInput,
+		textareaId,
+		value,
+	}: {
+		label: string;
+		onInput?: (event: { target: { value: string } }) => void;
+		textareaId: string;
+		value?: string;
+	}): ReactElement => (
 		<label htmlFor={textareaId}>
 			<span>{label}</span>
 			<textarea
 				id={textareaId}
 				value={value}
 				onInput={(event): void => {
-					onInput?.({ target: { value: (event.target as HTMLTextAreaElement).value } });
+					onInput?.({
+						target: { value: (event.target as HTMLTextAreaElement).value },
+					});
 				}}
 			/>
 		</label>
@@ -304,21 +457,33 @@ vi.mock("@/hooks", () => ({
 	useSession: vi.fn(),
 }));
 
-vi.mock("@/features/workspaces/hooks/use-workspace-application-information", () => ({
-	useWorkspaceApplicationInformation: vi.fn(),
-}));
+vi.mock(
+	"@/features/workspaces/hooks/use-workspace-application-information",
+	() => ({
+		useWorkspaceApplicationInformation: vi.fn(),
+	})
+);
 
-vi.mock("@/features/workspaces/hooks/use-application-information-contacts", () => ({
-	useApplicationInformationContacts: vi.fn(),
-}));
+vi.mock(
+	"@/features/workspaces/hooks/use-application-information-contacts",
+	() => ({
+		useApplicationInformationContacts: vi.fn(),
+	})
+);
 
-vi.mock("@/features/workspaces/hooks/use-application-information-management", () => ({
-	useApplicationInformationManagement: vi.fn(),
-}));
+vi.mock(
+	"@/features/workspaces/hooks/use-application-information-management",
+	() => ({
+		useApplicationInformationManagement: vi.fn(),
+	})
+);
 
-vi.mock("@/features/workspaces/hooks/use-application-information-review", () => ({
-	useApplicationInformationReview: vi.fn(),
-}));
+vi.mock(
+	"@/features/workspaces/hooks/use-application-information-review",
+	() => ({
+		useApplicationInformationReview: vi.fn(),
+	})
+);
 
 describe("ApplicationInformationDetailPage", () => {
 	beforeEach(() => {
@@ -326,8 +491,13 @@ describe("ApplicationInformationDetailPage", () => {
 		searchState = {};
 		vi.mocked(useSession).mockReturnValue({
 			currentUser: {
+				authorizationContext: {
+					globalRole: null,
+					partnerAccess: [
+						{ role: "rp_admin", workspaceUuid: "workspace-uuid-1" },
+					],
+				},
 				email: "workspace-admin@example.gc.ca",
-				isSuperuser: false,
 				name: "Workspace Admin",
 				uuid: "user-uuid-2",
 			} as never,
@@ -431,7 +601,9 @@ describe("ApplicationInformationDetailPage", () => {
 		).toBeNull();
 
 		expect(
-			screen.getByRole("heading", { name: /application information created successfully/i })
+			screen.getByRole("heading", {
+				name: /application information created successfully/i,
+			})
 		).toBeTruthy();
 
 		fireEvent.click(screen.getByRole("button", { name: /create contact/i }));
@@ -487,7 +659,9 @@ describe("ApplicationInformationDetailPage", () => {
 		});
 
 		fireEvent.click(screen.getByRole("button", { name: /delete contact/i }));
-		fireEvent.click(screen.getAllByRole("button", { name: /delete contact/i })[1]!);
+		fireEvent.click(
+			screen.getAllByRole("button", { name: /delete contact/i })[1]!
+		);
 
 		await waitFor(() => {
 			expect(removeContactMock).toHaveBeenCalledWith("contact-uuid-1");
@@ -497,7 +671,9 @@ describe("ApplicationInformationDetailPage", () => {
 			screen.getByRole("button", { name: /delete application information/i })
 		);
 		fireEvent.click(
-			screen.getAllByRole("button", { name: /delete application information/i })[1]!
+			screen.getAllByRole("button", {
+				name: /delete application information/i,
+			})[1]!
 		);
 
 		await waitFor(() => {
@@ -575,7 +751,9 @@ describe("ApplicationInformationDetailPage", () => {
 			screen.getByRole("button", { name: /delete application information/i })
 		);
 		fireEvent.click(
-			screen.getAllByRole("button", { name: /delete application information/i })[1]!
+			screen.getAllByRole("button", {
+				name: /delete application information/i,
+			})[1]!
 		);
 
 		await waitFor(() => {
@@ -653,24 +831,28 @@ describe("ApplicationInformationDetailPage", () => {
 			})
 		).toBeTruthy();
 		expect(
-			screen.getByText((_, element) =>
-				element?.tagName.toLowerCase() === "p" &&
-				(element.textContent?.includes("Service identity: Incomplete") ??
-					false)
+			screen.getByText(
+				(_, element) =>
+					element?.tagName.toLowerCase() === "p" &&
+					(element.textContent?.includes("Service identity: Incomplete") ??
+						false)
 			)
 		).toBeTruthy();
 		expect(
-			screen.getByText((_, element) =>
-				element?.tagName.toLowerCase() === "p" &&
-				(element.textContent?.includes(
-					"Business and user context: Incomplete"
-				) ?? false)
+			screen.getByText(
+				(_, element) =>
+					element?.tagName.toLowerCase() === "p" &&
+					(element.textContent?.includes(
+						"Business and user context: Incomplete"
+					) ??
+						false)
 			)
 		).toBeTruthy();
 		expect(
-			screen.getByText((_, element) =>
-				element?.tagName.toLowerCase() === "p" &&
-				(element.textContent?.includes("Contacts: Not started") ?? false)
+			screen.getByText(
+				(_, element) =>
+					element?.tagName.toLowerCase() === "p" &&
+					(element.textContent?.includes("Contacts: Not started") ?? false)
 			)
 		).toBeTruthy();
 	});
@@ -678,8 +860,11 @@ describe("ApplicationInformationDetailPage", () => {
 	it("shows the internal review panel for superusers and saves notes and checklist outcomes", async () => {
 		vi.mocked(useSession).mockReturnValue({
 			currentUser: {
+				authorizationContext: {
+					globalRole: "cl_admin",
+					partnerAccess: [],
+				},
 				email: "admin@example.gc.ca",
-				isSuperuser: true,
 				name: "CL Admin",
 				uuid: "user-uuid-1",
 			} as never,
@@ -784,9 +969,7 @@ describe("ApplicationInformationDetailPage", () => {
 		expect(
 			screen.getByText(/review disposition: changes requested/i)
 		).toBeTruthy();
-		expect(
-			screen.getByText(/cl admin - 2026-08-11t12:35:00z/i)
-		).toBeTruthy();
+		expect(screen.getByText(/cl admin - 2026-08-11t12:35:00z/i)).toBeTruthy();
 
 		fireEvent.change(screen.getByLabelText(/review disposition/i), {
 			target: { value: "ready_for_next_step" },
@@ -794,9 +977,12 @@ describe("ApplicationInformationDetailPage", () => {
 		fireEvent.change(screen.getByLabelText(/contacts/i), {
 			target: { value: "complete" },
 		});
-		fireEvent.change(screen.getByLabelText(/external evidence reference status/i), {
-			target: { value: "incomplete" },
-		});
+		fireEvent.change(
+			screen.getByLabelText(/external evidence reference status/i),
+			{
+				target: { value: "incomplete" },
+			}
+		);
 		fireEvent.input(screen.getByLabelText(/reviewer rationale/i), {
 			target: { value: "Ready for external review once evidence is linked" },
 		});

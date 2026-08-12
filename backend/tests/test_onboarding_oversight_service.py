@@ -2,8 +2,18 @@ from unittest.mock import AsyncMock, patch
 
 import pytest
 
+from src.app.core.authorization import CanonicalRoleCode
 from src.app.core.exceptions.http_exceptions import OnboardingReportRequestException
+from src.app.services.authorization_service import (
+    AUTHORIZATION_STATE_KEY,
+    ResolvedAuthorizationState,
+)
 from src.app.services.onboarding_oversight_service import OnboardingOversightService
+
+CL_ADMIN = {
+    "id": 1,
+    AUTHORIZATION_STATE_KEY: ResolvedAuthorizationState(global_role=CanonicalRoleCode.CL_ADMIN),
+}
 
 
 class TestOnboardingOversightService:
@@ -12,21 +22,11 @@ class TestOnboardingOversightService:
         service = OnboardingOversightService()
 
         with (
-            patch(
-                "src.app.services.onboarding_oversight_service.crud_departments"
-            ) as mock_departments,
-            patch(
-                "src.app.services.onboarding_oversight_service.crud_workspaces"
-            ) as mock_workspaces,
-            patch(
-                "src.app.services.onboarding_oversight_service.crud_application_information"
-            ) as mock_application_information,
-            patch(
-                "src.app.services.onboarding_oversight_service.crud_rp_applications"
-            ) as mock_rp_applications,
-            patch(
-                "src.app.services.onboarding_oversight_service.crud_rp_application_promotion_requests"
-            ) as mock_promotion_requests,
+            patch("src.app.services.onboarding_oversight_service.crud_departments") as mock_departments,
+            patch("src.app.services.onboarding_oversight_service.crud_workspaces") as mock_workspaces,
+            patch("src.app.services.onboarding_oversight_service.crud_application_information") as mock_application_information,
+            patch("src.app.services.onboarding_oversight_service.crud_rp_applications") as mock_rp_applications,
+            patch("src.app.services.onboarding_oversight_service.crud_rp_application_promotion_requests") as mock_promotion_requests,
         ):
             mock_departments.get_multi = AsyncMock(
                 return_value={
@@ -156,27 +156,67 @@ class TestOnboardingOversightService:
         assert all(row["primary_record_label"] != "Draft Workspace" for row in result)
 
         with (
-            patch(
-                "src.app.services.onboarding_oversight_service.crud_departments"
-            ) as mock_departments,
-            patch(
-                "src.app.services.onboarding_oversight_service.crud_workspaces"
-            ) as mock_workspaces,
-            patch(
-                "src.app.services.onboarding_oversight_service.crud_application_information"
-            ) as mock_application_information,
-            patch(
-                "src.app.services.onboarding_oversight_service.crud_rp_applications"
-            ) as mock_rp_applications,
-            patch(
-                "src.app.services.onboarding_oversight_service.crud_rp_application_promotion_requests"
-            ) as mock_promotion_requests,
+            patch("src.app.services.onboarding_oversight_service.crud_departments") as mock_departments,
+            patch("src.app.services.onboarding_oversight_service.crud_workspaces") as mock_workspaces,
+            patch("src.app.services.onboarding_oversight_service.crud_application_information") as mock_application_information,
+            patch("src.app.services.onboarding_oversight_service.crud_rp_applications") as mock_rp_applications,
+            patch("src.app.services.onboarding_oversight_service.crud_rp_application_promotion_requests") as mock_promotion_requests,
         ):
-            mock_departments.get_multi = AsyncMock(return_value={"data": [{"id": 7, "uuid": "018f6f83-0000-0000-0000-000000000111", "name": "Employment and Social Development Canada"}]})
-            mock_workspaces.get_multi = AsyncMock(return_value={"data": [{"id": 9, "uuid": "018f6f83-0000-0000-0000-000000000201", "name": "Benefits Workspace", "department_id": 7, "onboarding_state": "submitted", "submitted_at": "2026-08-10T09:00:00+00:00", "under_review_at": None, "approved_at": None, "launched_at": None, "updated_at": None, "created_at": "2026-08-01T09:00:00+00:00"}]})
+            mock_departments.get_multi = AsyncMock(
+                return_value={"data": [{"id": 7, "uuid": "018f6f83-0000-0000-0000-000000000111", "name": "Employment and Social Development Canada"}]}
+            )
+            mock_workspaces.get_multi = AsyncMock(
+                return_value={
+                    "data": [
+                        {
+                            "id": 9,
+                            "uuid": "018f6f83-0000-0000-0000-000000000201",
+                            "name": "Benefits Workspace",
+                            "department_id": 7,
+                            "onboarding_state": "submitted",
+                            "submitted_at": "2026-08-10T09:00:00+00:00",
+                            "under_review_at": None,
+                            "approved_at": None,
+                            "launched_at": None,
+                            "updated_at": None,
+                            "created_at": "2026-08-01T09:00:00+00:00",
+                        }
+                    ]
+                }
+            )
             mock_application_information.get_multi = AsyncMock(return_value={"data": []})
-            mock_rp_applications.get_multi = AsyncMock(return_value={"data": [{"id": 34, "uuid": "018f6f83-0000-0000-0000-000000000402", "workspace_id": 9, "dnr_app_name": "Benefits production registration", "canada_login_environment": "production", "onboarding_state": "under_review", "submitted_at": "2026-08-10T11:00:00+00:00", "under_review_at": "2026-08-11T09:00:00+00:00", "approved_at": None, "launched_at": None, "updated_at": None, "created_at": "2026-08-01T11:00:00+00:00"}]})
-            mock_promotion_requests.get = AsyncMock(return_value={"rp_application_id": 34, "target_environment": "production", "status": "review_tracked", "external_reference": "CAB-123", "requested_at": "2026-08-11T12:30:00+00:00", "reviewed_at": None, "updated_at": None, "created_at": "2026-08-11T12:30:00+00:00"})
+            mock_rp_applications.get_multi = AsyncMock(
+                return_value={
+                    "data": [
+                        {
+                            "id": 34,
+                            "uuid": "018f6f83-0000-0000-0000-000000000402",
+                            "workspace_id": 9,
+                            "dnr_app_name": "Benefits production registration",
+                            "canada_login_environment": "production",
+                            "onboarding_state": "under_review",
+                            "submitted_at": "2026-08-10T11:00:00+00:00",
+                            "under_review_at": "2026-08-11T09:00:00+00:00",
+                            "approved_at": None,
+                            "launched_at": None,
+                            "updated_at": None,
+                            "created_at": "2026-08-01T11:00:00+00:00",
+                        }
+                    ]
+                }
+            )
+            mock_promotion_requests.get = AsyncMock(
+                return_value={
+                    "rp_application_id": 34,
+                    "target_environment": "production",
+                    "status": "review_tracked",
+                    "external_reference": "CAB-123",
+                    "requested_at": "2026-08-11T12:30:00+00:00",
+                    "reviewed_at": None,
+                    "updated_at": None,
+                    "created_at": "2026-08-11T12:30:00+00:00",
+                }
+            )
 
             filtered = await service.list_queue(
                 db=mock_db,
@@ -197,15 +237,9 @@ class TestOnboardingOversightService:
         service = OnboardingOversightService()
 
         with (
-            patch(
-                "src.app.services.onboarding_oversight_service.crud_workspaces"
-            ) as mock_workspaces,
-            patch(
-                "src.app.services.onboarding_oversight_service.crud_application_information"
-            ) as mock_application_information,
-            patch(
-                "src.app.services.onboarding_oversight_service.crud_rp_applications"
-            ) as mock_rp_applications,
+            patch("src.app.services.onboarding_oversight_service.crud_workspaces") as mock_workspaces,
+            patch("src.app.services.onboarding_oversight_service.crud_application_information") as mock_application_information,
+            patch("src.app.services.onboarding_oversight_service.crud_rp_applications") as mock_rp_applications,
         ):
             mock_workspaces.get_multi = AsyncMock(
                 return_value={
@@ -247,6 +281,7 @@ class TestOnboardingOversightService:
                 start_date="2026-08-01",
                 end_date="2026-08-31",
                 group_by="week",
+                current_user=CL_ADMIN,
             )
 
         assert result["metric"] == "onboarding_throughput"
@@ -262,9 +297,7 @@ class TestOnboardingOversightService:
     async def test_get_report_builds_invitation_conversion_report(self, mock_db) -> None:
         service = OnboardingOversightService()
 
-        with patch(
-            "src.app.services.onboarding_oversight_service.crud_rp_application_developer_invitations"
-        ) as mock_invitations:
+        with patch("src.app.services.onboarding_oversight_service.crud_rp_application_developer_invitations") as mock_invitations:
             mock_invitations.get_multi = AsyncMock(
                 return_value={
                     "data": [
@@ -290,6 +323,7 @@ class TestOnboardingOversightService:
                 start_date="2026-08-01",
                 end_date="2026-08-31",
                 group_by="month",
+                current_user=CL_ADMIN,
             )
 
         assert result["metric"] == "invitation_conversion"
@@ -306,12 +340,8 @@ class TestOnboardingOversightService:
         service = OnboardingOversightService()
 
         with (
-            patch(
-                "src.app.services.onboarding_oversight_service.crud_rp_applications"
-            ) as mock_rp_applications,
-            patch(
-                "src.app.services.onboarding_oversight_service.crud_audit_log"
-            ) as mock_audit_log,
+            patch("src.app.services.onboarding_oversight_service.crud_rp_applications") as mock_rp_applications,
+            patch("src.app.services.onboarding_oversight_service.crud_audit_log") as mock_audit_log,
         ):
             mock_rp_applications.get_multi = AsyncMock(
                 return_value={
@@ -345,6 +375,7 @@ class TestOnboardingOversightService:
                 metric="secret_rotation_hygiene",
                 start_date="2026-08-01",
                 end_date="2026-08-31",
+                current_user=CL_ADMIN,
             )
 
         assert result["metric"] == "secret_rotation_hygiene"
@@ -368,6 +399,7 @@ class TestOnboardingOversightService:
                 start_date="2026-08-01",
                 end_date="2026-08-31",
                 group_by="week",
+                current_user=CL_ADMIN,
             )
 
         assert exc_info.value.code == "onboarding_report_invalid_filter_combination"

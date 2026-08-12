@@ -196,14 +196,10 @@ export const TiersPage = (): FunctionComponent => {
 				<div className="grid gap-300">
 					<DataTable
 						columns={tierColumns}
-						exportFileName="tiers.csv"
-						getRowId={(row) => row.uuid}
-						itemLabel="tiers"
-						pageNumber={response?.page ?? page}
+						itemLabel={t("tiers.itemLabel")}
 						pagination={false}
 						rows={tierRows}
-						searchLabel="Search tiers"
-						searchPlaceholder="Filter by tier name or creation date"
+						searchLabel={t("tiers.searchLabel")}
 						searchQuery={searchDraft}
 						title={t("tiers.title")}
 						action={{
@@ -223,7 +219,7 @@ export const TiersPage = (): FunctionComponent => {
 					/>
 					<Pagination
 						currentPage={page}
-						label="Tiers pagination"
+						label={t("tiers.paginationLabel")}
 						totalPages={totalPages}
 						onPageChange={setPage}
 					/>

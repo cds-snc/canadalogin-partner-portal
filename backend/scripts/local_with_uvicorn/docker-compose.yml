@@ -10,9 +10,15 @@ services:
     # command: gunicorn app.main:app -w 4 -k uvicorn.workers.UvicornWorker -b 0.0.0.0:8000
     env_file:
       - ./src/.env
+    environment:
+      ENVIRONMENT: local
+      AUTH_MODE: local_dev
+      ENABLE_DEV_ROLE_SELECTOR: "true"
+      OIDC_ENABLED: "false"
+      DEV_SESSION_ALLOWED_ORIGINS: '["http://127.0.0.1:3000","http://localhost:3000"]'
     # -------- replace with expose if you are using nginx --------
     ports:
-       - "8000:8000"
+       - "127.0.0.1:8000:8000"
     # expose:
     #    - "8000"
     depends_on:
@@ -56,14 +62,14 @@ services:
   # nginx:
   #   image: nginx:latest
   #   ports:
-  #     - "80:80"
+  #     - "127.0.0.1:80:80"
   #   volumes:
   #     - ./default.conf:/etc/nginx/conf.d/default.conf
   #   depends_on:
   #     - web
 
-  #-------- uncomment to create first superuser --------
-  create_superuser:
+  #-------- create the initial CL Admin assignment --------
+  create_initial_cl_admin:
     build: 
       context: .
       dockerfile: Dockerfile
@@ -72,7 +78,7 @@ services:
     depends_on:
       - db
       - web
-    command: python -m src.scripts.create_first_superuser
+    command: python -m src.scripts.create_initial_cl_admin
     volumes:
       - ./src:/code/src
 
@@ -85,7 +91,7 @@ services:
       - ./src/.env
     depends_on:
       - db
-      - create_superuser
+      - create_initial_cl_admin
       - redis
     command: python -m pytest ./tests
     volumes:
@@ -99,7 +105,7 @@ services:
   #   env_file:
   #     - ./src/.env
   #   depends_on:
-  #     - create_superuser
+  #     - create_initial_cl_admin
   #     - db
   #     - web
   #   command: python -m src.scripts.create_first_tier

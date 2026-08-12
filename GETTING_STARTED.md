@@ -3,6 +3,10 @@
 Use this guide after cloning or creating the CanadaLogin Partner Portal from
 the Delorean template.
 
+If the repository is already set up and you only need the commands to start,
+update, stop, or reset it, use the
+[Local Development command sheet](LOCAL_DEVELOPMENT.md).
+
 ## Quick Start
 
 Assume local developer work unless a target environment is named: localhost
@@ -75,9 +79,9 @@ conditional checks, and valid skipped-check reasons.
 
 This repository materializes both Delorean agent targets:
 
-- Codex reads project instructions from `AGENTS.md`, portable skills from
-  `.agents/skills/`, role adapters from `.codex/agents/`, and prompt adapters
-  from `.codex/prompts/`.
+- Codex reads project instructions from `AGENTS.md`, portable and workflow
+  skills from `.agents/skills/`, and project custom agents from
+  `.codex/agents/`.
 - VS Code and GitHub Copilot use `.github/copilot-instructions.md`,
   `.github/skills/`, `.github/agents/`, and `.github/prompts/`.
 
@@ -103,12 +107,13 @@ change:
 make new-openspec-change CHANGE_ID=my-change CAPABILITY=my-capability TITLE="My Change"
 ```
 
-For a rough brief or PRD, start with the generated
-`dl-requirements-start` prompt. For an existing active change, use
-`dl-dev-continue` to ask for the next safe local task.
+For a rough brief or PRD, start with `$dl-requirements-start`. For an existing
+active change, use `$dl-dev-continue` to ask for the next safe local task.
 
 ## Useful Next Reads
 
+- [Local Development command sheet](LOCAL_DEVELOPMENT.md): concise commands
+  for the everyday local application lifecycle.
 - [README.md](README.md): application architecture, setup, and common
   commands.
 - [Advanced getting started](docs/reference/advanced-getting-started.md):

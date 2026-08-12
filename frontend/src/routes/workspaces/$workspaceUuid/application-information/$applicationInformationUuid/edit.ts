@@ -2,13 +2,11 @@ import { createFileRoute } from "@tanstack/react-router";
 import { lazy } from "react";
 import i18n from "@/common/i18n";
 import type { RouteBackLinkContext } from "@/types/route-breadcrumbs";
-import { requireAuthenticatedUser } from "../../../../../features/auth/auth-routing";
+import { requireCapability } from "../../../../../features/auth/auth-routing";
 
 const ApplicationInformationEditPage = lazy(async () => ({
 	default: (
-		await import(
-			"../../../../../features/workspaces/pages/ApplicationInformationEditPage"
-		)
+		await import("../../../../../features/workspaces/pages/ApplicationInformationEditPage")
 	).ApplicationInformationEditPage,
 }));
 
@@ -16,8 +14,10 @@ export const Route = createFileRoute(
 	"/workspaces/$workspaceUuid/application-information/$applicationInformationUuid/edit"
 )({
 	beforeLoad: async ({ params }) => {
-		await requireAuthenticatedUser(
-			`/workspaces/${params.workspaceUuid}/application-information/${params.applicationInformationUuid}/edit`
+		await requireCapability(
+			`/workspaces/${params.workspaceUuid}/application-information/${params.applicationInformationUuid}/edit`,
+			"application_information_write",
+			params.workspaceUuid
 		);
 
 		return {

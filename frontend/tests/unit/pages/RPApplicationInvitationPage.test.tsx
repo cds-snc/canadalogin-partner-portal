@@ -17,13 +17,18 @@ vi.mock("react-i18next", () => ({
 		t: (key: string): string => {
 			const translations: Record<string, string> = {
 				"invitations.rpApplication.dashboardAction": "Go to dashboard",
-				"invitations.rpApplication.errorBody": "We could not accept this RP application invitation. The link may be invalid or expired.",
+				"invitations.rpApplication.errorBody":
+					"We could not accept this RP application invitation. The link may be invalid or expired.",
 				"invitations.rpApplication.errorTitle": "Invitation unavailable",
-				"invitations.rpApplication.loadingBody": "Checking your access and connecting you to the invited RP application.",
+				"invitations.rpApplication.loadingBody":
+					"Checking your access and connecting you to the invited RP application.",
 				"invitations.rpApplication.loadingTitle": "Accepting invitation",
-				"invitations.rpApplication.missingTokenBody": "This invitation link is incomplete. Use the full link from your email invitation.",
-				"invitations.rpApplication.missingTokenTitle": "Invitation link incomplete",
-				"invitations.rpApplication.successBody": "Your access has been confirmed. If you are not redirected automatically, continue to your dashboard.",
+				"invitations.rpApplication.missingTokenBody":
+					"This invitation link is incomplete. Use the full link from your email invitation.",
+				"invitations.rpApplication.missingTokenTitle":
+					"Invitation link incomplete",
+				"invitations.rpApplication.successBody":
+					"Your access has been confirmed. If you are not redirected automatically, continue to your dashboard.",
 				"invitations.rpApplication.successTitle": "Invitation accepted",
 				"invitations.rpApplication.title": "RP application invitation",
 			};
@@ -40,7 +45,9 @@ vi.mock("@/components/ui", () => ({
 	}: PropsWithChildren<{ href?: string }>): ReactElement => (
 		<a href={href}>{children}</a>
 	),
-	Heading: ({ children }: PropsWithChildren): ReactElement => <h1>{children}</h1>,
+	Heading: ({ children }: PropsWithChildren): ReactElement => (
+		<h1>{children}</h1>
+	),
 	Notice: ({
 		children,
 		noticeTitle,
@@ -107,36 +114,28 @@ describe("RPApplicationInvitationPage", () => {
 		vi.mocked(acceptRPApplicationDeveloperInvitation).mockResolvedValue({
 			accessGrant: {
 				createdAt: "2026-08-10T12:15:00Z",
-				deletedAt: null,
-				id: 77,
-				isDeleted: false,
-				role: "Read Only",
+				role: "read_only",
+				revokedAt: null,
 				sourceInvitationUuid: "018f6f83-0000-0000-0000-000000000801",
 				status: "active",
 				updatedAt: null,
-				userId: 42,
 				uuid: "018f6f83-0000-0000-0000-000000000901",
-				workspaceId: 9,
 			},
 			invitation: {
 				acceptedAt: "2026-08-10T12:15:00Z",
 				createdAt: "2026-08-10T12:00:00Z",
 				delegatedByGrantUuid: null,
-				deletedAt: null,
-				gcNotifyNotificationId: null,
-				id: 121,
-				invitedBy: 42,
 				invitedEmail: "invitee@example.gc.ca",
 				inviteExpiresAt: "2026-08-20T12:00:00Z",
-				isDeleted: false,
-				rpApplicationId: 33,
-				role: "Read Only",
+				replacedByInvitationUuid: null,
+				revocationReason: null,
+				role: "read_only",
 				revokedAt: null,
 				status: "accepted",
 				updatedAt: "2026-08-10T12:15:00Z",
 				uuid: "018f6f83-0000-0000-0000-000000000801",
-				workspaceId: 9,
 			},
+			nextDestination: "/workspaces/018f6f83-0000-0000-0000-000000000201",
 		});
 
 		render(<RPApplicationInvitationPage token="token-123" />);
@@ -147,20 +146,19 @@ describe("RPApplicationInvitationPage", () => {
 		expect(
 			screen.getByRole("heading", { name: /invitation accepted/i })
 		).toBeTruthy();
-		expect(
-			screen.getByText(/your access has been confirmed/i)
-		).toBeTruthy();
-		expect(
-			screen.getByRole("link", { name: /go to dashboard/i })
-		).toBeTruthy();
+		expect(screen.getByText(/your access has been confirmed/i)).toBeTruthy();
+		expect(screen.getByRole("link", { name: /go to dashboard/i })).toBeTruthy();
 
 		await act(async () => {
 			vi.advanceTimersByTime(1500);
 		});
 
 		expect(navigate).toHaveBeenCalledWith({
+			params: {
+				workspaceUuid: "018f6f83-0000-0000-0000-000000000201",
+			},
 			replace: true,
-			to: "/your-applications",
+			to: "/workspaces/$workspaceUuid",
 		});
 	});
 
@@ -183,7 +181,9 @@ describe("RPApplicationInvitationPage", () => {
 
 	it("keeps access-restricted invitation failures on the invitation page", async () => {
 		vi.mocked(acceptRPApplicationDeveloperInvitation).mockRejectedValue(
-			new ForbiddenRequestError({ detail: "Signed-in email does not match this invitation" })
+			new ForbiddenRequestError({
+				detail: "Signed-in email does not match this invitation",
+			})
 		);
 
 		render(<RPApplicationInvitationPage token="token-123" />);

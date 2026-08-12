@@ -24,6 +24,32 @@ BACKEND_IMAGE ?= delorean-template-backend:local
 BACKEND_CONTAINER ?= delorean-template-backend
 BACKEND_PORT ?= 8000
 DATABASE_COMPOSE_FILE ?= $(BACKEND_DIR)/docker-compose.yml
+LOCAL_PERSONA_ENV := \
+	ENVIRONMENT=local \
+	AUTH_MODE=local_dev \
+	ENABLE_DEV_ROLE_SELECTOR=true \
+	OIDC_ENABLED=false \
+	SECRET_KEY=local-persona-only-000000000000000000000000000000000000000000000000 \
+	SESSION_COOKIE_DOMAIN= \
+	SESSION_COOKIE_SECURE=false \
+	SESSION_COOKIE_SAMESITE=lax \
+	OIDC_SERVER_METADATA_URL= \
+	OIDC_CLIENT_ID= \
+	OIDC_CLIENT_SECRET= \
+	OIDC_REDIRECT_URI= \
+	OIDC_POST_LOGIN_REDIRECT=http://$(FRONTEND_HOST):$(FRONTEND_PORT)/auth-complete \
+	OIDC_ACCESS_DENIED_REDIRECT=http://$(FRONTEND_HOST):$(FRONTEND_PORT)/access-denied \
+	OIDC_POST_LOGOUT_REDIRECT_URI=http://$(FRONTEND_HOST):$(FRONTEND_PORT)/ \
+	IBM_SV_ADMIN_BASE_URL= \
+	IBM_SV_ADMIN_CLIENT_ID= \
+	IBM_SV_ADMIN_CLIENT_SECRET= \
+	GC_NOTIFY_API_KEY= \
+	AWS_ACCESS_KEY_ID= \
+	AWS_SECRET_ACCESS_KEY= \
+	AWS_SESSION_TOKEN= \
+	CORS_ORIGINS='["http://127.0.0.1:3000","http://localhost:3000"]' \
+	CORS_METHODS='["GET","POST","PUT","PATCH","DELETE","OPTIONS"]' \
+	CORS_HEADERS='["Accept","Authorization","Content-Type","Idempotency-Key","Origin","X-Requested-With","X-Request-ID"]'
 POSTGRES_USER ?= postgres
 POSTGRES_DB ?= postgres
 DB_MIGRATION_MESSAGE ?= change
@@ -67,7 +93,7 @@ LOAD_NVM = nvm_dir="$${NVM_DIR:-$$HOME/.nvm}"; \
 		nvm use "$(NODE_VERSION)" >/dev/null 2>&1 || nvm use default >/dev/null 2>&1 || true; \
 	fi
 
-.PHONY: help help-all doctor setup setup-delorean setup-local-env install-node check-node setup-python-venv install test lint format typecheck install-python install-dev-python install-frontend-deps install-backend-deps install-openspec-cli check-openspec-cli validate-openspec-change pick-openspec-change validate-active-openspec-change check-delorean-setup start start-dev dev backend-dev worker start-frontend start-backend frontend-install frontend-build frontend-dev frontend-test frontend-lint frontend-format frontend-preview all-install all-build all-test all-lint all-format bk-install bk-test bk-lint bk-format bk-typecheck bk-dev bk-worker bk-migration ft-install ft-build ft-dev ft-test ft-lint ft-format ft-preview backend-image frontend-image bk-image ft-image db-up db-wait db-down db-logs db-upgrade db-downgrade db-revision db-reset-local ensure-local-db-ready migration update-from-template update-from-template-dry-run update-existing-solution update-existing-solution-dry-run update-architecture-docs update-architecture-docs-dry-run update-agent-configs update-agent-configs-dry-run sync-codex-adapters check-codex-adapters collect-agent-run new-openspec-change fix autofix format-fix fmt-python fmt-ci-python format-python check-python-format lint-python run-pytest pytest export-openapi check-openapi container-checks build-backend-container run-backend-container stop-backend-container test-backend-container scan-backend-container setup-hooks uninstall-hooks
+.PHONY: help help-all doctor setup setup-delorean setup-local-env install-node check-node setup-python-venv install test lint format typecheck install-python install-dev-python install-frontend-deps install-backend-deps install-openspec-cli check-openspec-cli validate-openspec-change pick-openspec-change validate-active-openspec-change check-delorean-setup start start-dev start-local-personas seed-local-personas reset-local-personas dev backend-dev worker start-frontend start-backend frontend-install frontend-build frontend-dev frontend-test frontend-lint frontend-format frontend-preview all-install all-build all-test all-lint all-format bk-install bk-test bk-lint bk-format bk-typecheck bk-dev bk-worker bk-migration ft-install ft-build ft-dev ft-test ft-lint ft-format ft-preview backend-image frontend-image bk-image ft-image db-up db-wait db-down db-logs db-upgrade db-downgrade db-revision db-reset-local ensure-local-db-ready migration update-from-template update-from-template-dry-run update-existing-solution update-existing-solution-dry-run update-architecture-docs update-architecture-docs-dry-run update-agent-configs update-agent-configs-dry-run check-codex-assets collect-agent-run new-openspec-change fix autofix format-fix fmt-python fmt-ci-python format-python check-python-format lint-python run-pytest pytest export-openapi check-openapi container-checks build-backend-container run-backend-container stop-backend-container test-backend-container scan-backend-container setup-hooks uninstall-hooks
 
 help:
 	@echo "Starter commands (Delorean Level $(HELP_LEVEL); override with LEVEL=2|3|4; use make help-all for the full list):"
@@ -86,6 +112,9 @@ help:
 	@echo ""
 	@echo "Local app:"
 	@echo "  make start-dev"
+	@echo "  make start-local-personas"
+	@echo "  make seed-local-personas"
+	@echo "  make reset-local-personas"
 	@echo "  make dev"
 	@echo "  make bk-dev"
 	@echo "  make frontend-dev"
@@ -136,8 +165,7 @@ help:
 	@echo "  make update-agent-configs"
 	@echo "  make update-agent-configs AGENT_TOOL=codex"
 	@echo "  make update-agent-configs LEVEL2_PROMPT_SET=full"
-	@echo "  make sync-codex-adapters"
-	@echo "  make check-codex-adapters"
+	@echo "  make check-codex-assets"
 	@if [ "$(HELP_LEVEL)" -ge 3 ]; then \
 		echo ""; \
 		echo "OpenSpec validation and guided delivery:"; \
@@ -588,10 +616,19 @@ db-reset-local:
 	docker compose -f $(DATABASE_COMPOSE_FILE) up -d db redis
 	@$(MAKE) --no-print-directory db-wait
 	$(ALEMBIC_CMD) upgrade head
-	$(BACKEND_CMD) python -m src.scripts.create_first_superuser
-	$(BACKEND_CMD) python -m src.scripts.seed_access_policies
+	$(BACKEND_CMD) python -m src.scripts.create_initial_cl_admin
 	@echo "Local database reset complete."
 	@echo "Next step: make start-dev"
+
+
+seed-local-personas:
+	env $(LOCAL_PERSONA_ENV) $(MAKE) --no-print-directory ensure-local-db-ready
+	cd $(BACKEND_DIR) && env $(LOCAL_PERSONA_ENV) UV_CACHE_DIR="$(UV_CACHE_DIR)" UV_PROJECT_ENVIRONMENT="$(UV_PROJECT_ENVIRONMENT)" $(UV) run python -m src.scripts.seed_local_personas
+
+reset-local-personas:
+	env $(LOCAL_PERSONA_ENV) $(MAKE) --no-print-directory ensure-local-db-ready
+	cd $(BACKEND_DIR) && env $(LOCAL_PERSONA_ENV) UV_CACHE_DIR="$(UV_CACHE_DIR)" UV_PROJECT_ENVIRONMENT="$(UV_PROJECT_ENVIRONMENT)" $(UV) run python -m src.scripts.seed_local_personas --cleanup --confirm-cleanup
+	cd $(BACKEND_DIR) && env $(LOCAL_PERSONA_ENV) UV_CACHE_DIR="$(UV_CACHE_DIR)" UV_PROJECT_ENVIRONMENT="$(UV_PROJECT_ENVIRONMENT)" $(UV) run python -m src.scripts.seed_local_personas
 
 db-upgrade:
 	$(ALEMBIC_CMD) upgrade head
@@ -639,6 +676,9 @@ start-dev:
 	fi; \
 	exit "$$exit_code"
 
+start-local-personas: seed-local-personas
+	env $(LOCAL_PERSONA_ENV) $(MAKE) --no-print-directory start-dev
+
 update-from-template-dry-run:
 	LEVEL2_PROMPT_SET="$(LEVEL2_PROMPT_SET)" scripts/delorean/update-from-template.sh --repo "$(TEMPLATE_REPO)" --ref "$(TEMPLATE_REF)" --dry-run
 
@@ -663,11 +703,8 @@ update-agent-configs-dry-run:
 update-agent-configs:
 	LEVEL2_PROMPT_SET="$(LEVEL2_PROMPT_SET)" scripts/delorean/update-from-template.sh --repo "$(TEMPLATE_REPO)" --ref "$(TEMPLATE_REF)" --agent-config-only --agent-tool "$(AGENT_TOOL)"
 
-sync-codex-adapters:
-	scripts/delorean/sync-codex-adapters.sh --write
-
-check-codex-adapters:
-	scripts/delorean/sync-codex-adapters.sh --check
+check-codex-assets:
+	scripts/delorean/check-codex-assets.sh
 
 collect-agent-run:
 	scripts/delorean/collect-agent-run.sh $(COLLECT_AGENT_RUN_ARGS)

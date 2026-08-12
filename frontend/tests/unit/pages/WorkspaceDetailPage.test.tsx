@@ -5,34 +5,45 @@ import { WorkspaceDetailPage } from "@/features/workspaces/pages/WorkspaceDetail
 import { useWorkspace } from "@/features/workspaces/hooks/use-workspace";
 
 vi.mock("react-i18next", () => ({
-	useTranslation: (): { t: (key: string, options?: Record<string, unknown>) => string } => ({
+	useTranslation: (): {
+		t: (key: string, options?: Record<string, unknown>) => string;
+	} => ({
 		t: (key: string, options?: Record<string, unknown>): string => {
 			const translations: Record<string, string> = {
+				"authorization.activeWorkspaceNameContext": `Active role: ${String(options?.["role"] ?? "")} for ${String(options?.["workspaceName"] ?? "")}.`,
+				"authorization.roles.rpAdmin": "RP Admin",
 				"common.notAvailable": "Not available",
-				"workspaces.approvedAtLabel": "Approved",
 				"nav.workspaces": "Workspaces",
-				"workspaces.createdAtLabel": "Created",
 				"workspaces.createdSuccess": "Workspace created successfully",
+				"workspaces.chooseAnother": "Choose another workspace",
 				"workspaces.descriptionLabel": "Description",
-				"workspaces.detailSummary": "Review the current workspace metadata.",
-				"workspaces.launchedAtLabel": "Launched",
-				"workspaces.manageApplications": "Manage RP applications",
-				"workspaces.metadataTitle": "Workspace details",
-				"workspaces.nameLabel": "Name",
+				"workspaces.detailSummary": "Choose a task for this workspace.",
+				"workspaces.navigation.access": "Access",
+				"workspaces.navigation.applicationInformation":
+					"Application information",
+				"workspaces.navigation.reports": "Reports",
+				"workspaces.navigation.rpApplications": "RP applications",
+				"workspaces.navigation.settings": "Settings",
 				"workspaces.noDescriptionText": "Not provided",
 				"workspaces.onboardingStateLabel": "Onboarding status",
 				"workspaces.onboardingStateSubmitted": "Submitted",
-				"workspaces.settingsAction": "Workspace settings",
-				"workspaces.slugLabel": "Slug",
-				"workspaces.submittedAtLabel": "Submitted",
-				"workspaces.underReviewAtLabel": "Under review",
-				"workspaces.updatedAtLabel": "Last updated",
+				"workspaces.statusTitle": "Workspace status",
+				"workspaces.taskGroups.access": "Access",
+				"workspaces.taskGroups.insights": "Insights",
+				"workspaces.taskGroups.setupAndApplications": "Setup and applications",
+				"workspaces.taskGroups.workspaceManagement": "Workspace management",
+				"workspaces.taskDescriptions.access":
+					"Manage workspace role assignments and invitations.",
+				"workspaces.taskDescriptions.applicationInformation":
+					"Maintain reusable application information.",
+				"workspaces.taskDescriptions.reports":
+					"Review aggregate workspace reports.",
+				"workspaces.taskDescriptions.rpApplications":
+					"Register and manage RP applications.",
+				"workspaces.taskDescriptions.settings": "Update workspace settings.",
+				"workspaces.tasksTitle": "Workspace tasks",
 				"workspaces.workspaceLabel": "Workspace",
 			};
-
-			if (key === "workspaces.workspaceTitle") {
-				return `Workspace - ${String(options?.["name"] ?? "")}`;
-			}
 
 			return translations[key] ?? key;
 		},
@@ -40,16 +51,66 @@ vi.mock("react-i18next", () => ({
 }));
 
 vi.mock("@tanstack/react-router", () => ({
-	useParams: (): { workspaceUuid: string } => ({ workspaceUuid: "workspace-uuid-1" }),
+	useParams: (): { workspaceUuid: string } => ({
+		workspaceUuid: "workspace-uuid-1",
+	}),
 	useSearch: (): { created?: "1"; updated?: "1" } => ({ created: "1" }),
 }));
 
+vi.mock("@/hooks", () => ({
+	useSession: () => ({
+		currentUser: {
+			authorizationContext: {
+				globalRole: null,
+				partnerAccess: [
+					{ role: "rp_admin", workspaceUuid: "workspace-uuid-1" },
+				],
+			},
+		},
+	}),
+}));
+
 vi.mock("@/components/ui", () => ({
-	Button: ({ children, href, type }: PropsWithChildren<{ href?: string; type: string }>): ReactElement =>
-		type === "link" ? <a href={href}>{children}</a> : <button type="button">{children}</button>,
-	Heading: ({ children, tag }: PropsWithChildren<{ tag?: string }>): ReactElement =>
-		tag === "h2" ? <h2>{children}</h2> : <h1>{children}</h1>,
-	Notice: ({ children, noticeTitle }: PropsWithChildren<{ noticeTitle: string }>): ReactElement => (
+	Card: ({
+		cardTitle,
+		description,
+		href,
+	}: {
+		cardTitle: string;
+		description: string;
+		href: string;
+	}): ReactElement => (
+		<article>
+			<h3>
+				<a href={href}>{cardTitle}</a>
+			</h3>
+			<p>{description}</p>
+		</article>
+	),
+	Grid: ({ children }: PropsWithChildren): ReactElement => (
+		<div>{children}</div>
+	),
+	Heading: ({
+		children,
+		tag,
+	}: PropsWithChildren<{ tag?: string }>): ReactElement =>
+		tag === "h2" ? (
+			<h2>{children}</h2>
+		) : tag === "h3" ? (
+			<h3>{children}</h3>
+		) : (
+			<h1>{children}</h1>
+		),
+	Link: ({
+		children,
+		href,
+	}: PropsWithChildren<{ href: string }>): ReactElement => (
+		<a href={href}>{children}</a>
+	),
+	Notice: ({
+		children,
+		noticeTitle,
+	}: PropsWithChildren<{ noticeTitle: string }>): ReactElement => (
 		<section>
 			<h2>{noticeTitle}</h2>
 			{children}
@@ -63,7 +124,7 @@ vi.mock("@/features/workspaces/hooks/use-workspace", () => ({
 }));
 
 describe("WorkspaceDetailPage", () => {
-	it("renders the success notice and settings link for a loaded workspace", () => {
+	it("renders a task-oriented hub for the selected workspace", () => {
 		vi.mocked(useWorkspace).mockReturnValue({
 			error: null,
 			isLoading: false,
@@ -90,18 +151,43 @@ describe("WorkspaceDetailPage", () => {
 
 		render(<WorkspaceDetailPage />);
 
-		expect(screen.getByRole("heading", { name: /workspace created successfully/i })).toBeTruthy();
-		expect(screen.getByRole("heading", { name: /workspace - benefits workspace/i })).toBeTruthy();
+		expect(
+			screen.getByRole("heading", { name: /workspace created successfully/i })
+		).toBeTruthy();
+		expect(
+			screen.getByRole("heading", { name: "Benefits Workspace" })
+		).toBeTruthy();
+		expect(
+			screen.getByText(/active role: rp admin for benefits workspace/i)
+		).toBeTruthy();
 		expect(screen.getByText(/onboarding status: submitted/i)).toBeTruthy();
+		for (const groupName of [
+			"Setup and applications",
+			"Access",
+			"Insights",
+			"Workspace management",
+		]) {
+			expect(
+				screen.getByRole("heading", { name: groupName, level: 2 })
+			).toBeTruthy();
+		}
+		const expectedTasks = [
+			["Application information", "application-information"],
+			["RP applications", "applications"],
+			["Access", "access"],
+			["Reports", "reports"],
+			["Settings", "settings"],
+		];
+		for (const [name, suffix] of expectedTasks) {
+			expect(screen.getByRole("link", { name }).getAttribute("href")).toBe(
+				`/workspaces/workspace-uuid-1/${suffix}`
+			);
+		}
 		expect(
 			screen
-				.getByRole("link", { name: /workspace settings/i })
+				.getByRole("link", { name: "Choose another workspace" })
 				.getAttribute("href")
-		).toBe("/workspaces/workspace-uuid-1/settings");
-		expect(
-			screen
-				.getByRole("link", { name: /manage rp applications/i })
-				.getAttribute("href")
-		).toBe("/workspaces/workspace-uuid-1/applications");
+		).toBe("/workspaces");
+		expect(document.body.textContent).not.toContain("workspace-uuid-1");
 	});
 });

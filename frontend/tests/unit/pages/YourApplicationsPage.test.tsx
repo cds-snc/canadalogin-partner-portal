@@ -1,8 +1,13 @@
-import { createElement, type PropsWithChildren, type ReactElement } from "react";
-import { render, screen } from "@testing-library/react";
+import {
+	createElement,
+	type PropsWithChildren,
+	type ReactElement,
+} from "react";
+import { fireEvent, render, screen } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 import { YourApplicationsPage } from "@/features/your-applications/pages/YourApplicationsPage";
-import { useRoles, useSession } from "@/hooks";
+import { accessibleRPApplicationsQueryKey } from "@/features/your-applications/query-keys";
+import { useSession } from "@/hooks";
 import { useWorkspaces } from "@/features/workspaces/hooks/use-workspaces";
 
 const { mockedUseQuery } = vi.hoisted(() => ({
@@ -10,25 +15,26 @@ const { mockedUseQuery } = vi.hoisted(() => ({
 }));
 
 vi.mock("react-i18next", () => ({
-	useTranslation: (): { t: (key: string, options?: Record<string, unknown>) => string } => ({
-		t: (key: string, _options?: Record<string, unknown>): string => {
+	useTranslation: (): {
+		i18n: { language: string; resolvedLanguage: string };
+		t: (key: string, options?: Record<string, unknown>) => string;
+	} => ({
+		i18n: { language: "en", resolvedLanguage: "en" },
+		t: (key: string, options?: Record<string, unknown>): string => {
 			const translations: Record<string, string> = {
-				"nav.organization": "Organization",
-				"nav.roles": "Roles",
+				"authorization.roles.rpAdmin": "RP Admin",
 				"yourApplications.applicationsSectionTitle": "RP applications",
 				"yourApplications.environmentLabel": "Environment",
 				"yourApplications.environmentProduction": "Production",
 				"yourApplications.environmentStaging": "Staging",
 				"yourApplications.environmentTest": "Test",
-				"yourApplications.emailLabel": "Email",
-					"yourApplications.errorBody": "Your applications could not be loaded for this session.",
-					"yourApplications.errorTitle": "Unable to load your applications",
-				"yourApplications.lifecycleUnavailable": "Lifecycle status unavailable.",
+				"yourApplications.errorBody":
+					"Your applications could not be loaded for this session.",
+				"yourApplications.errorTitle": "Unable to load your applications",
+				"yourApplications.lifecycleUnavailable":
+					"Lifecycle status unavailable.",
 				"yourApplications.loadingBody": "Loading your applications.",
 				"yourApplications.loadingTitle": "Loading your applications",
-				"yourApplications.nameLabel": "Name",
-					"yourApplications.noDepartment": "No department assigned",
-				"yourApplications.noRoles": "No roles assigned.",
 				"yourApplications.noWorkspaces": "No accessible workspaces found.",
 				"yourApplications.noRPApplications": "No RP applications found.",
 				"yourApplications.onboardingStateApproved": "Approved",
@@ -37,24 +43,29 @@ vi.mock("react-i18next", () => ({
 				"yourApplications.onboardingStateLaunched": "Launched",
 				"yourApplications.onboardingStateSubmitted": "Submitted",
 				"yourApplications.onboardingStateUnderReview": "Under review",
-				"yourApplications.profileSectionTitle": "Profile summary",
 				"yourApplications.productionReviewLabel": "Production review",
 				"yourApplications.promotionStatusApproved": "Approved",
 				"yourApplications.promotionStatusChangesRequested": "Changes requested",
 				"yourApplications.promotionStatusLaunched": "Launched",
 				"yourApplications.promotionStatusReviewTracked": "Review tracked",
-				"yourApplications.roleContextUnavailable": "Your role labels are unavailable right now.",
-				"yourApplications.rolesLoading": "Loading your role context.",
-				"yourApplications.summary": "Review your profile, accessible workspaces, and RP applications.",
+				"yourApplications.retryApplications": "Retry applications",
+				"yourApplications.retryWorkspaces": "Retry workspaces",
+				"yourApplications.summary":
+					"Review your accessible RP applications and workspaces, then resume the work you need to complete.",
 				"yourApplications.title": "Your applications",
 				"yourApplications.unknownApplication": "Unknown application",
 				"yourApplications.viewAllWorkspaces": "Review all workspaces",
-				"yourApplications.workspacesErrorBody": "Your workspaces could not be loaded for this session.",
-				"yourApplications.workspacesErrorTitle": "Unable to load your workspaces",
+				"yourApplications.workspacesErrorBody":
+					"Your workspaces could not be loaded for this session.",
+				"yourApplications.workspacesErrorTitle":
+					"Unable to load your workspaces",
 				"yourApplications.workspacesLoadingBody": "Loading your workspaces.",
 				"yourApplications.workspacesLoadingTitle": "Loading your workspaces",
 				"yourApplications.workspacesSectionTitle": "Accessible workspaces",
 			};
+			if (key === "authorization.workspaceRoleNameContext") {
+				return `${String(options?.["role"])} — ${String(options?.["workspaceName"])}`;
+			}
 
 			return translations[key] ?? key;
 		},
@@ -70,6 +81,14 @@ vi.mock("@/components/layout", () => ({
 }));
 
 vi.mock("@/components/ui", () => ({
+	Button: ({
+		children,
+		onGcdsClick,
+	}: PropsWithChildren<{ onGcdsClick?: () => void }>): ReactElement => (
+		<button onClick={onGcdsClick} type="button">
+			{children}
+		</button>
+	),
 	Card: ({
 		cardTitle,
 		href,
@@ -78,7 +97,7 @@ vi.mock("@/components/ui", () => ({
 		cardTitle?: string;
 		description?: string;
 		href?: string;
-	}): ReactElement => (
+	}): ReactElement =>
 		href ? (
 			<a href={href}>
 				<span>{cardTitle}</span>
@@ -86,18 +105,25 @@ vi.mock("@/components/ui", () => ({
 			</a>
 		) : (
 			<div>{cardTitle}</div>
-		)
-	),
+		),
 	Container: ({ children }: PropsWithChildren): ReactElement => (
 		<section>{children}</section>
 	),
-	Grid: ({ children }: PropsWithChildren): ReactElement => <div>{children}</div>,
-	Heading: ({ children, tag = "h1" }: PropsWithChildren<{ tag?: string }>): ReactElement =>
+	Heading: ({
+		children,
+		tag = "h1",
+	}: PropsWithChildren<{ tag?: string }>): ReactElement =>
 		createElement(tag, undefined, children),
-	Link: ({ children, href }: PropsWithChildren<{ href: string }>): ReactElement => (
+	Link: ({
+		children,
+		href,
+	}: PropsWithChildren<{ href: string }>): ReactElement => (
 		<a href={href}>{children}</a>
 	),
-	Notice: ({ children, noticeTitle }: PropsWithChildren<{ noticeTitle: string }>): ReactElement => (
+	Notice: ({
+		children,
+		noticeTitle,
+	}: PropsWithChildren<{ noticeTitle: string }>): ReactElement => (
 		<section>
 			<h2>{noticeTitle}</h2>
 			{children}
@@ -108,7 +134,6 @@ vi.mock("@/components/ui", () => ({
 
 vi.mock("@/hooks", () => ({
 	useSession: vi.fn(),
-	useRoles: vi.fn(),
 }));
 
 vi.mock("@/features/workspaces/hooks/use-workspaces", () => ({
@@ -116,7 +141,6 @@ vi.mock("@/features/workspaces/hooks/use-workspaces", () => ({
 }));
 
 const mockedUseSession = vi.mocked(useSession);
-const mockedUseRoles = vi.mocked(useRoles);
 const mockedUseWorkspaces = vi.mocked(useWorkspaces);
 
 describe("YourApplicationsPage", () => {
@@ -125,15 +149,7 @@ describe("YourApplicationsPage", () => {
 			data: null,
 			error: null,
 			isLoading: false,
-		});
-		mockedUseRoles.mockReturnValue({
-			error: null,
-			isLoading: false,
-			itemsPerPage: 1000,
-			page: 1,
 			refetch: vi.fn(async () => null),
-			response: null,
-			roles: [],
 		});
 		mockedUseWorkspaces.mockReturnValue({
 			error: null,
@@ -151,55 +167,46 @@ describe("YourApplicationsPage", () => {
 		});
 
 		render(<YourApplicationsPage />);
+		expect(mockedUseQuery).toHaveBeenCalledWith(
+			expect.objectContaining({
+				queryKey: accessibleRPApplicationsQueryKey,
+			})
+		);
 
-		expect(screen.getByRole("heading", { name: /loading your applications/i })).toBeTruthy();
+		expect(
+			screen.getByRole("heading", { name: /loading your applications/i })
+		).toBeTruthy();
 		expect(screen.getByText(/loading your applications\./i)).toBeTruthy();
 	});
 
-	it("renders populated profile, workspace, and application sections", () => {
-		mockedUseQuery
-			.mockReturnValueOnce({
-				data: { name: "Employment and Social Development Canada" },
-				error: null,
-				isLoading: false,
-			})
-			.mockReturnValueOnce({
+	it("renders focused workspace and application sections without a profile summary", () => {
+		mockedUseQuery.mockReturnValue({
 			data: [
 				{
 					canadaLoginEnvironment: "production",
-					dnrAppName: "Benefits Portal",
 					onboardingState: "under_review",
 					promotionStatus: "review_tracked",
+					role: "rp_admin",
+					serviceNameEn: "Benefits Portal",
+					serviceNameFr: "Portail des prestations",
 					uuid: "application-uuid-1",
+					workspaceName: "Benefits Workspace",
+					workspaceUuid: "workspace-uuid-1",
 				},
 				{
 					canadaLoginEnvironment: "staging",
-					dnrAppName: "Claims Service",
 					onboardingState: "submitted",
+					role: "rp_admin",
+					serviceNameEn: "Claims Service",
+					serviceNameFr: "Service des réclamations",
 					uuid: "application-uuid-2",
+					workspaceName: "Benefits Workspace",
+					workspaceUuid: "workspace-uuid-1",
 				},
 			],
 			error: null,
 			isLoading: false,
-		});
-		mockedUseRoles.mockReturnValue({
-			error: null,
-			isLoading: false,
-			itemsPerPage: 1000,
-			page: 1,
 			refetch: vi.fn(async () => null),
-			response: {
-				data: [
-					{ created_at: "2026-08-10T00:00:00Z", name: "RP Admin", uuid: "role-uuid-1" },
-				],
-				has_more: false,
-				items_per_page: 1000,
-				page: 1,
-				total_count: 1,
-			},
-			roles: [
-				{ created_at: "2026-08-10T00:00:00Z", name: "RP Admin", uuid: "role-uuid-1" },
-			],
 		});
 		mockedUseWorkspaces.mockReturnValue({
 			error: null,
@@ -224,15 +231,22 @@ describe("YourApplicationsPage", () => {
 
 		mockedUseSession.mockReturnValue({
 			currentUser: {
-				authProvider: "gc-sso",
-				authSubject: "subject-123",
+				acceptedTermsAt: "2026-06-11T12:00:00Z",
+				authorizationContext: {
+					globalRole: null,
+					partnerAccess: [
+						{ role: "rp_admin", workspaceUuid: "workspace-uuid-1" },
+					],
+				},
+				departmentAbbreviation: "ESDC",
 				departmentUuid: "department-uuid-1",
 				email: "jane@example.com",
 				name: "Jane Doe",
-				profileImageUrl: null,
-				roleUuids: ["role-uuid-1"],
+				profileImageUrl: "",
+				termsVersion: "2026-01",
 				tierUuid: null,
 				uuid: "user-uuid-1",
+				username: "jane@example.com",
 			},
 			isAuthenticated: true,
 			isLoading: false,
@@ -243,186 +257,246 @@ describe("YourApplicationsPage", () => {
 
 		render(<YourApplicationsPage />);
 
-				expect(screen.getByRole("heading", { name: /profile summary/i })).toBeTruthy();
-				expect(screen.getByText(/name: jane doe/i)).toBeTruthy();
-				expect(screen.getByText(/email: jane@example.com/i)).toBeTruthy();
-				expect(screen.getByText(/organization: employment and social development canada/i)).toBeTruthy();
-				expect(screen.getByText(/^rp admin$/i)).toBeTruthy();
-				expect(screen.getByRole("link", { name: /review all workspaces/i })).toBeTruthy();
-				expect(screen.getByRole("link", { name: /benefits workspace/i })).toBeTruthy();
-				expect(screen.getByRole("link", { name: /benefits portal/i })).toBeTruthy();
-				expect(screen.getByRole("link", { name: /claims service/i })).toBeTruthy();
-				expect(
-					screen.getByRole("link", { name: /benefits workspace/i }).getAttribute("href")
-				).toBe("/workspaces/workspace-uuid-1");
-		expect(screen.getByRole("heading", { name: /your applications/i })).toBeTruthy();
+		expect(
+			screen.queryByRole("heading", { name: /profile summary/i })
+		).toBeNull();
+		expect(screen.queryByText(/jane@example.com/i)).toBeNull();
+		expect(
+			screen.getByRole("link", { name: /review all workspaces/i })
+		).toBeTruthy();
+		expect(
+			screen.getByRole("link", {
+				name: /^Benefits WorkspacePrimary workspace$/i,
+			})
+		).toBeTruthy();
+		expect(screen.getByRole("link", { name: /benefits portal/i })).toBeTruthy();
+		expect(screen.getByRole("link", { name: /claims service/i })).toBeTruthy();
+		expect(
+			screen
+				.getByRole("link", {
+					name: /^Benefits WorkspacePrimary workspace$/i,
+				})
+				.getAttribute("href")
+		).toBe("/workspaces/workspace-uuid-1");
+		expect(
+			screen.getByRole("heading", { name: /your applications/i })
+		).toBeTruthy();
 		expect(screen.getByRole("link", { name: /benefits portal/i })).toBeTruthy();
 		expect(screen.getByRole("link", { name: /claims service/i })).toBeTruthy();
 		expect(
 			screen.getByRole("link", {
-				name: /benefits portal.*Environment: Production\. Onboarding status: Under review\. Production review: Review tracked/i,
+				name: /benefits portal.*Environment: Production\. Onboarding status: Under review\. Production review: Review tracked.*RP Admin — Benefits Workspace/i,
 			})
 		).toBeTruthy();
 		expect(
 			screen.getByRole("link", {
-				name: /claims service.*Environment: Staging\. Onboarding status: Submitted/i,
+				name: /claims service.*Environment: Staging\. Onboarding status: Submitted.*RP Admin — Benefits Workspace/i,
 			})
 		).toBeTruthy();
-			});
+	});
 
-			it("renders empty workspace and application states", () => {
-				mockedUseQuery
-					.mockReturnValueOnce({
-						data: null,
-						error: null,
-						isLoading: false,
-					})
-					.mockReturnValueOnce({
-						data: [],
-						error: null,
-						isLoading: false,
-					});
-				mockedUseRoles.mockReturnValue({
-					error: null,
-					isLoading: false,
-					itemsPerPage: 1000,
-					page: 1,
-					refetch: vi.fn(async () => null),
-					response: { data: [], has_more: false, items_per_page: 1000, page: 1, total_count: 0 },
-					roles: [],
-				});
-				mockedUseWorkspaces.mockReturnValue({
-					error: null,
-					isLoading: false,
-					refetch: vi.fn(async () => null),
-					workspaces: [],
-				});
-				mockedUseSession.mockReturnValue({
-					currentUser: {
-						authProvider: "gc-sso",
-						authSubject: "subject-123",
-						departmentUuid: null,
-						email: "jane@example.com",
-						name: "Jane Doe",
-						profileImageUrl: null,
-						roleUuids: [],
-						tierUuid: null,
-						uuid: "user-uuid-1",
-					},
-					isAuthenticated: true,
-					isLoading: false,
-					login: vi.fn(),
-					logout: vi.fn(async () => undefined),
-					refreshSession: vi.fn(async () => null),
-				});
+	it("renders empty workspace and application states", () => {
+		mockedUseQuery.mockReturnValue({
+			data: [],
+			error: null,
+			isLoading: false,
+			refetch: vi.fn(async () => null),
+		});
+		mockedUseWorkspaces.mockReturnValue({
+			error: null,
+			isLoading: false,
+			refetch: vi.fn(async () => null),
+			workspaces: [],
+		});
+		mockedUseSession.mockReturnValue({
+			currentUser: {
+				acceptedTermsAt: "2026-06-11T12:00:00Z",
+				authorizationContext: { globalRole: null, partnerAccess: [] },
+				departmentAbbreviation: null,
+				departmentUuid: null,
+				email: "jane@example.com",
+				name: "Jane Doe",
+				profileImageUrl: "",
+				termsVersion: "2026-01",
+				tierUuid: null,
+				uuid: "user-uuid-1",
+				username: "jane@example.com",
+			},
+			isAuthenticated: true,
+			isLoading: false,
+			login: vi.fn(),
+			logout: vi.fn(async () => undefined),
+			refreshSession: vi.fn(async () => null),
+		});
 
-				render(<YourApplicationsPage />);
+		render(<YourApplicationsPage />);
 
-				expect(screen.getByText(/no roles assigned\./i)).toBeTruthy();
-				expect(screen.getByText(/no accessible workspaces found\./i)).toBeTruthy();
-				expect(screen.getByText(/no rp applications found\./i)).toBeTruthy();
-			});
+		expect(screen.getByText(/no accessible workspaces found\./i)).toBeTruthy();
+		expect(screen.getByText(/no rp applications found\./i)).toBeTruthy();
+	});
 
-			it("renders a neutral lifecycle placeholder when current-user application status is unavailable", () => {
-				mockedUseQuery
-					.mockReturnValueOnce({
-						data: null,
-						error: null,
-						isLoading: false,
-					})
-					.mockReturnValueOnce({
-						data: [{ dnrAppName: "Benefits Portal", uuid: "application-uuid-1" }],
-						error: null,
-						isLoading: false,
-					});
-				mockedUseRoles.mockReturnValue({
-					error: null,
-					isLoading: false,
-					itemsPerPage: 1000,
-					page: 1,
-					refetch: vi.fn(async () => null),
-					response: { data: [], has_more: false, items_per_page: 1000, page: 1, total_count: 0 },
-					roles: [],
-				});
-				mockedUseWorkspaces.mockReturnValue({
-					error: null,
-					isLoading: false,
-					refetch: vi.fn(async () => null),
-					workspaces: [],
-				});
-				mockedUseSession.mockReturnValue({
-					currentUser: {
-						authProvider: "gc-sso",
-						authSubject: "subject-123",
-						departmentUuid: null,
-						email: "jane@example.com",
-						name: "Jane Doe",
-						profileImageUrl: null,
-						roleUuids: [],
-						tierUuid: null,
-						uuid: "user-uuid-1",
-					},
-					isAuthenticated: true,
-					isLoading: false,
-					login: vi.fn(),
-					logout: vi.fn(async () => undefined),
-					refreshSession: vi.fn(async () => null),
-				});
+	it("keeps workspace and role context when lifecycle metadata is unavailable", () => {
+		mockedUseQuery.mockReturnValue({
+			data: [
+				{
+					role: "read_only",
+					serviceNameEn: "Benefits Portal",
+					serviceNameFr: "Portail des prestations",
+					uuid: "application-uuid-1",
+					workspaceName: "Benefits Workspace",
+					workspaceUuid: "workspace-uuid-1",
+				},
+			],
+			error: null,
+			isLoading: false,
+			refetch: vi.fn(async () => null),
+		});
+		mockedUseWorkspaces.mockReturnValue({
+			error: null,
+			isLoading: false,
+			refetch: vi.fn(async () => null),
+			workspaces: [],
+		});
+		mockedUseSession.mockReturnValue({
+			currentUser: {
+				acceptedTermsAt: "2026-06-11T12:00:00Z",
+				authorizationContext: { globalRole: null, partnerAccess: [] },
+				departmentAbbreviation: null,
+				departmentUuid: null,
+				email: "jane@example.com",
+				name: "Jane Doe",
+				profileImageUrl: "",
+				termsVersion: "2026-01",
+				tierUuid: null,
+				uuid: "user-uuid-1",
+				username: "jane@example.com",
+			},
+			isAuthenticated: true,
+			isLoading: false,
+			login: vi.fn(),
+			logout: vi.fn(async () => undefined),
+			refreshSession: vi.fn(async () => null),
+		});
 
-				render(<YourApplicationsPage />);
+		render(<YourApplicationsPage />);
 
-				expect(screen.getByText(/lifecycle status unavailable\./i)).toBeTruthy();
-			});
+		expect(
+			screen.getByRole("link", {
+				name: /benefits portal.*Benefits Workspace/i,
+			})
+		).toBeTruthy();
+	});
 
-			it("renders workspace and application error notices", () => {
-				mockedUseQuery
-					.mockReturnValueOnce({
-						data: null,
-						error: null,
-						isLoading: false,
-					})
-					.mockReturnValueOnce({
-						data: [],
-						error: new Error("Applications request failed"),
-						isLoading: false,
-					});
-				mockedUseRoles.mockReturnValue({
-					error: null,
-					isLoading: false,
-					itemsPerPage: 1000,
-					page: 1,
-					refetch: vi.fn(async () => null),
-					response: { data: [], has_more: false, items_per_page: 1000, page: 1, total_count: 0 },
-					roles: [],
-				});
-				mockedUseWorkspaces.mockReturnValue({
-					error: new Error("Workspaces request failed"),
-					isLoading: false,
-					refetch: vi.fn(async () => null),
-					workspaces: [],
-				});
-				mockedUseSession.mockReturnValue({
-					currentUser: {
-						authProvider: "gc-sso",
-						authSubject: "subject-123",
-						departmentUuid: null,
-						email: "jane@example.com",
-						name: "Jane Doe",
-						profileImageUrl: null,
-						roleUuids: [],
-						tierUuid: null,
-						uuid: "user-uuid-1",
-					},
-					isAuthenticated: true,
-					isLoading: false,
-					login: vi.fn(),
-					logout: vi.fn(async () => undefined),
-					refreshSession: vi.fn(async () => null),
-				});
+	it("renders independently retryable workspace and application errors", () => {
+		const refetchApplications = vi.fn(async () => null);
+		const refetchWorkspaces = vi.fn(async () => null);
+		mockedUseQuery.mockReturnValue({
+			data: [],
+			error: new Error("Applications request failed"),
+			isLoading: false,
+			refetch: refetchApplications,
+		});
+		mockedUseWorkspaces.mockReturnValue({
+			error: new Error("Workspaces request failed"),
+			isLoading: false,
+			refetch: refetchWorkspaces,
+			workspaces: [],
+		});
+		mockedUseSession.mockReturnValue({
+			currentUser: {
+				acceptedTermsAt: "2026-06-11T12:00:00Z",
+				authorizationContext: { globalRole: null, partnerAccess: [] },
+				departmentAbbreviation: null,
+				departmentUuid: null,
+				email: "jane@example.com",
+				name: "Jane Doe",
+				profileImageUrl: "",
+				termsVersion: "2026-01",
+				tierUuid: null,
+				uuid: "user-uuid-1",
+				username: "jane@example.com",
+			},
+			isAuthenticated: true,
+			isLoading: false,
+			login: vi.fn(),
+			logout: vi.fn(async () => undefined),
+			refreshSession: vi.fn(async () => null),
+		});
 
-				render(<YourApplicationsPage />);
+		render(<YourApplicationsPage />);
 
-				expect(screen.getByRole("heading", { name: /unable to load your workspaces/i })).toBeTruthy();
-				expect(screen.getByRole("heading", { name: /unable to load your applications/i })).toBeTruthy();
+		expect(
+			screen.getByRole("heading", { name: /unable to load your workspaces/i })
+		).toBeTruthy();
+		expect(
+			screen.getByRole("heading", { name: /unable to load your applications/i })
+		).toBeTruthy();
+
+		fireEvent.click(
+			screen.getByRole("button", { name: /retry applications/i })
+		);
+		fireEvent.click(screen.getByRole("button", { name: /retry workspaces/i }));
+		expect(refetchApplications).toHaveBeenCalledOnce();
+		expect(refetchWorkspaces).toHaveBeenCalledOnce();
+	});
+
+	it("keeps accessible application work visible when the workspace section fails", () => {
+		mockedUseQuery.mockReturnValue({
+			data: [
+				{
+					canadaLoginEnvironment: "test",
+					onboardingState: "draft",
+					role: "rp_user_edit",
+					serviceNameEn: "Invitation-backed service",
+					serviceNameFr: "Service sur invitation",
+					uuid: "application-uuid-invited",
+					workspaceName: "Benefits Workspace",
+					workspaceUuid: "workspace-uuid-1",
+				},
+			],
+			error: null,
+			isLoading: false,
+			refetch: vi.fn(async () => null),
+		});
+		mockedUseWorkspaces.mockReturnValue({
+			error: new Error("Workspaces request failed"),
+			isLoading: false,
+			refetch: vi.fn(async () => null),
+			workspaces: [],
+		});
+		mockedUseSession.mockReturnValue({
+			currentUser: {
+				acceptedTermsAt: "2026-06-11T12:00:00Z",
+				authorizationContext: {
+					globalRole: null,
+					partnerAccess: [
+						{ role: "rp_user_edit", workspaceUuid: "workspace-uuid-1" },
+					],
+				},
+				departmentAbbreviation: "TBS",
+				departmentUuid: "department-uuid-1",
+				email: "invited@example.com",
+				name: "Invited Editor",
+				profileImageUrl: "",
+				termsVersion: "2026-01",
+				tierUuid: null,
+				uuid: "user-uuid-invited",
+				username: "invited@example.com",
+			},
+			isAuthenticated: true,
+			isLoading: false,
+			login: vi.fn(),
+			logout: vi.fn(async () => undefined),
+			refreshSession: vi.fn(async () => null),
+		});
+
+		render(<YourApplicationsPage />);
+
+		expect(
+			screen.getByRole("link", { name: /invitation-backed service/i })
+		).toBeTruthy();
+		expect(
+			screen.getByRole("heading", { name: /unable to load your workspaces/i })
+		).toBeTruthy();
 	});
 });

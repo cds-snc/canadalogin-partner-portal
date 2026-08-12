@@ -267,14 +267,10 @@ export const DepartmentsPage = (): FunctionComponent => {
 				<div className="grid gap-300">
 					<DataTable
 						columns={departmentColumns}
-						exportFileName="departments.csv"
-						getRowId={(row) => row.uuid}
-						itemLabel="departments"
-						pageNumber={response?.page ?? page}
+						itemLabel={t("departments.itemLabel")}
 						pagination={false}
 						rows={departmentRows}
-						searchLabel="Search departments"
-						searchPlaceholder="Filter by abbreviation or department name"
+						searchLabel={t("departments.searchLabel")}
 						searchQuery={searchDraft}
 						title={t("departments.title")}
 						action={{
@@ -294,7 +290,7 @@ export const DepartmentsPage = (): FunctionComponent => {
 					/>
 					<Pagination
 						currentPage={page}
-						label="Departments pagination"
+						label={t("departments.paginationLabel")}
 						totalPages={totalPages}
 						onPageChange={setPage}
 					/>

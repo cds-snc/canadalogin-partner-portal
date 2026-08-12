@@ -5,6 +5,7 @@ import {
 } from "../report-filters";
 import {
 	getOnboardingOversightReport,
+	getWorkspaceReport,
 	type OnboardingOversightReportRead,
 } from "@/fetch/onboarding-oversight";
 
@@ -12,31 +13,42 @@ export type OnboardingOversightReportState = {
 	error: Error | null;
 	isLoading: boolean;
 	isRefetching: boolean;
+	refetch: () => Promise<unknown>;
 	report: OnboardingOversightReportRead | null;
 };
 
 export const onboardingOversightReportQueryKey = (
-	filters: OnboardingOversightReportFilters
+	filters: OnboardingOversightReportFilters,
+	workspaceUuid?: string
 ) =>
 	[
-		"onboarding-oversight",
+		workspaceUuid ? "workspace" : "onboarding-oversight",
+		...(workspaceUuid ? [workspaceUuid] : []),
 		"report",
 		normalizeOnboardingOversightReportFilters(filters),
 	] as const;
 
 export const useOnboardingOversightReport = (
-	filters: OnboardingOversightReportFilters
+	filters: OnboardingOversightReportFilters,
+	workspaceUuid?: string
 ): OnboardingOversightReportState => {
 	const normalizedFilters = normalizeOnboardingOversightReportFilters(filters);
 	const query = useQuery<OnboardingOversightReportRead | null, Error>({
-		queryFn: () => getOnboardingOversightReport(normalizedFilters),
-		queryKey: onboardingOversightReportQueryKey(normalizedFilters),
+		queryFn: () =>
+			workspaceUuid
+				? getWorkspaceReport(workspaceUuid, normalizedFilters)
+				: getOnboardingOversightReport(normalizedFilters),
+		queryKey: onboardingOversightReportQueryKey(
+			normalizedFilters,
+			workspaceUuid
+		),
 	});
 
 	return {
 		error: query.error ?? null,
 		isLoading: query.isLoading,
 		isRefetching: query.isRefetching,
+		refetch: () => query.refetch(),
 		report: query.data ?? null,
 	};
 };

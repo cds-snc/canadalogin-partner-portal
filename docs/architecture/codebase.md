@@ -2,7 +2,7 @@
 
 Type: Architecture Note
 Status: Active
-Last verified: 2026-07-28
+Last verified: 2026-08-11
 
 ## Context
 
@@ -155,11 +155,14 @@ entry revalidates the backend session; cached Zustand state is only a UI
 projection. This accepted boundary is recorded in
 [ADR-001](adrs/adr-001-bff-and-server-session-authority.md).
 
-Protected backend routes use Casbin resource/action guards backed by the
-`access_policy` table. Services still enforce object ownership and domain
-constraints. Multi-role subject resolution and the authoritative policy
-provisioning path require a deliberate decision before the model is treated as
-settled; see [ADR-003](adrs/adr-003-casbin-authorization-model.md).
+Protected backend routes use code-owned Casbin resource/action policy for
+coarse capability checks. Stable canonical role keys are the only policy
+subjects. Server-owned normalized assignments resolve one global CL Admin role
+or one partner role per workspace, and services still enforce workspace,
+object, lifecycle, and domain constraints before data access. The safe
+current-user projection exposes role and public workspace context without
+policy internals. This accepted boundary is recorded in
+[ADR-003](adrs/adr-003-casbin-authorization-model.md).
 
 ## Background Processing
 
@@ -182,16 +185,17 @@ the queue pool; it does not spawn a daemon worker thread.
   frontend baseline.
 - PostgreSQL is persistent state. Redis supports sessions, cache, queueing, and
   rate limiting through separately configured clients.
-- Migrations are the tracked path for database structure. Existing feature
-  policy grants also use data migrations, while ADR-003 will settle the
-  authoritative policy-provisioning path.
+- Migrations are the tracked path for database structure. Canonical capability
+  policy is immutable, code-owned configuration; normalized assignment and
+  grant lifecycle changes use reviewed migrations and services.
 
 ## Decisions And Open Questions
 
 - ADR-001 is accepted and describes the implemented browser-session boundary.
 - ADR-002 is proposed until JSON casing drift is inventoried and reconciled.
-- ADR-003 is proposed until deterministic multi-role semantics and policy seed
-  ownership are selected.
+- ADR-003 is accepted and defines the deterministic four-role authorization
+  model, stable policy subjects, normalized assignment sources, workspace
+  scope, and CL Admin secret boundary.
 - Some generic backend and frontend documentation predates the current portal
   architecture. The implementation, accepted ADRs, and this note take
   precedence when those documents conflict.

@@ -11,13 +11,11 @@ The active workflow is intentionally light and safe for a generic template. It d
 Generated VS Code repos also receive `.vscode/extensions.json` with conservative extension recommendations, `.vscode/launch.json` with starter app, pytest, Vitest, and browser debug configurations, `.vscode/settings.json` with terminal command auto-approval defaults, and `.vscode/tasks.json` with shortcuts for routine Delorean checks, active change picking, OpenSpec validation, and app starts. In the upstream template source, those files live under `agent-configs/vscode/vscode/extensions.json`, `agent-configs/vscode/vscode/launch.json`, `agent-configs/vscode/vscode/settings.json`, and `agent-configs/vscode/vscode/tasks.json`. Extension recommendations, debug configurations, command auto-approval, and VS Code task shortcuts are not part of local verification or default CI.
 
 Generated Codex repos receive root `AGENTS.md` from
-`agent-configs/codex/AGENTS.md`, shared skills under `.agents/skills/`, role
-adapters under `.codex/agents/`, and prompt adapters under `.codex/prompts/`.
-The structure check verifies that the upstream Codex instruction source exists,
-that the Codex adapters do not use VS Code frontmatter or tool syntax, that
-Codex adapters are regenerated from the VS Code source, and that a generated
-Codex repo does not accidentally receive the template-maintainer root
-`AGENTS.md`.
+`agent-configs/codex/AGENTS.md`, shared and workflow skills under
+`.agents/skills/`, and project custom-agent TOML under `.codex/agents/`.
+The structure check validates required skill frontmatter, custom-agent TOML,
+workflow links, and required files. It also rejects deprecated
+`.codex/prompts/` directories and Markdown custom-agent adapters.
 
 Use `make doctor` for a non-mutating setup diagnostic before installing dependencies or starting services. It reports missing local tools, dependency readiness, OpenSpec and change-state status, Docker reachability, and optional scanner availability without changing files.
 

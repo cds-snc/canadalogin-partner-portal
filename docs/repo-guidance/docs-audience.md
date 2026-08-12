@@ -24,6 +24,7 @@ These are the files a new developer or first tester should reasonably be asked t
 | File | Why |
 |---|---|
 | [README.md](../../README.md) | Entry point and repo purpose. |
+| [LOCAL_DEVELOPMENT.md](../../LOCAL_DEVELOPMENT.md) | Command-first local application start, update, stop, and reset guide. |
 | [GETTING_STARTED.md](../../GETTING_STARTED.md) | Short first setup path after creating a solution repo. |
 | [docs/README.md](../README.md) | Short docs index and audience routing. |
 | [docs/reference/local-verification.md](../reference/local-verification.md) | Local checks, hooks, and CI expectations. |
@@ -69,8 +70,8 @@ These files should primarily be consumed through agents, skills, prompts, or aut
 |---|---|
 | `AGENTS.md` | Upstream template maintainer instructions. Excluded from generated solution repos; Codex scaffold targets receive their own generated-solution instructions from `agent-configs/codex/AGENTS.md`. |
 | `agent-configs/codex/AGENTS.md` source; `AGENTS.md` generated Codex target | Codex project instructions for generated solution repos. |
-| `agent-configs/codex/agents/` source; `.codex/agents/` generated Codex target | Generated Codex role adapters for the six Delorean phase agents. |
-| `agent-configs/codex/prompts/` source; `.codex/prompts/` generated Codex target | Generated Codex prompt adapters aligned with the VS Code prompt catalog. |
+| `agent-configs/codex/agents/` source; `.codex/agents/*.toml` generated Codex target | Standalone Codex custom agents for the six Delorean phase roles. |
+| `agent-configs/codex/skills/` source; `.agents/skills/dl-*/SKILL.md` generated Codex target | Discoverable Codex workflow skills aligned with the cross-tool workflow catalog. |
 | `agent-configs/vscode/copilot-instructions.md` source; `.github/copilot-instructions.md` generated target | GitHub Copilot agent mode. |
 | `agent-configs/vscode/agents/` source; `.github/agents/` generated target | VS Code and GitHub Copilot agent definitions and routing contracts. |
 | `agent-configs/vscode/prompts/` source; `.github/prompts/` generated target | VS Code and GitHub Copilot prompt entrypoints. |
@@ -146,9 +147,9 @@ When moving or consolidating docs, update related links in:
 - `GETTING_STARTED.md`
 - `AGENTS.md` when maintaining the upstream template
 - `agent-configs/codex/AGENTS.md` when changing generated Codex instructions
-- `agent-configs/vscode/agents/`, `agent-configs/vscode/prompts/`, and the
-  Codex adapter sync script when changing generated Codex role or prompt
-  adapters
+- `agent-configs/vscode/agents/`, `agent-configs/vscode/prompts/`,
+  `agent-configs/codex/agents/`, `agent-configs/codex/skills/`, and the Codex
+  asset check when changing cross-tool roles or workflows
 - `agent-configs/vscode/agents/`
 - `agent-configs/shared/skills/`
 - `agent-configs/vscode/prompts/`

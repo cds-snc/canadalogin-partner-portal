@@ -6,14 +6,14 @@ from urllib.parse import urlsplit, urlunsplit
 
 import httpx
 from authlib.integrations.starlette_client import OAuth
+from sqlalchemy.exc import NoResultFound
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from ..repositories.crud_rp_application_access_grants import crud_rp_application_access_grants
 from ..repositories.crud_rp_application_developer_invitations import crud_rp_application_developer_invitations
 from ..repositories.crud_users import crud_users
-from ..schemas.rp_application_access_grant import RPApplicationAccessGrantRead
-from ..schemas.rp_application_developer_invitation import RPApplicationDeveloperInvitationRead
+from ..schemas.rp_application_developer_invitation import RPApplicationDeveloperInvitationReadInternal
 from ..schemas.user import UserCreateInternal, UserReadInternal
+from ..services.authorization_service import AuthorizationResolutionError, AuthorizationService
 from .config import settings
 from .exceptions.http_exceptions import CustomException, ForbiddenException, UnauthorizedException
 
@@ -119,13 +119,6 @@ def normalize_username_candidate(value: str) -> str:
     return normalized[:20] or "user"
 
 
-def _has_local_portal_access(user: dict[str, Any]) -> bool:
-    if user.get("is_superuser"):
-        return True
-
-    return bool(user.get("role_ids"))
-
-
 def _extract_current_user_id(user: dict[str, Any]) -> int | None:
     raw_user_id = user.get("id")
     if raw_user_id is None or isinstance(raw_user_id, bool):
@@ -152,19 +145,16 @@ def _is_future_datetime(value: Any) -> bool:
     return normalized > datetime.now(UTC)
 
 
-async def _has_active_partner_access_grant(db: AsyncSession, user: dict[str, Any]) -> bool:
+async def _has_active_canonical_assignment(db: AsyncSession, user: dict[str, Any]) -> bool:
     user_id = _extract_current_user_id(user)
     if user_id is None:
         return False
 
-    grant = await crud_rp_application_access_grants.get(
-        db=db,
-        user_id=user_id,
-        status="active",
-        is_deleted=False,
-        schema_to_select=RPApplicationAccessGrantRead,
-    )
-    return grant is not None
+    try:
+        state = await AuthorizationService().resolve_for_user(db, user_id=user_id)
+    except AuthorizationResolutionError:
+        return False
+    return state.global_role is not None or bool(state.partner_access)
 
 
 async def _has_pending_invitation_for_email(db: AsyncSession, normalized_email: str) -> bool:
@@ -173,13 +163,9 @@ async def _has_pending_invitation_for_email(db: AsyncSession, normalized_email: 
         invited_email=normalized_email,
         status="pending",
         is_deleted=False,
-        schema_to_select=RPApplicationDeveloperInvitationRead,
+        schema_to_select=RPApplicationDeveloperInvitationReadInternal,
     )
-    invitations = (
-        invitations_data.get("data", [])
-        if isinstance(invitations_data, dict)
-        else invitations_data
-    )
+    invitations = invitations_data.get("data", []) if isinstance(invitations_data, dict) else invitations_data
 
     for invitation in invitations:
         invitation_data = invitation if isinstance(invitation, dict) else dict(invitation)
@@ -193,14 +179,25 @@ async def _has_local_portal_access_or_pending_invitation(
     db: AsyncSession,
     user: dict[str, Any],
     normalized_email: str,
+    *,
+    email_is_verified: bool,
 ) -> bool:
-    if _has_local_portal_access(user):
+    if await _has_active_canonical_assignment(db=db, user=user):
         return True
 
-    if await _has_active_partner_access_grant(db=db, user=user):
-        return True
-
+    if not email_is_verified:
+        return False
     return await _has_pending_invitation_for_email(db=db, normalized_email=normalized_email)
+
+
+def _has_verified_email_claim(claims: dict[str, Any]) -> bool:
+    # OIDC defines email_verified as a JSON boolean. String-like values are not
+    # accepted because permissive coercion would weaken the identity boundary.
+    return claims.get("email_verified") is True
+
+
+def _is_unbound_local_identity(user: dict[str, Any]) -> bool:
+    return user.get("auth_provider") is None and user.get("auth_subject") is None
 
 
 async def generate_unique_username(db: AsyncSession, claims: dict[str, Any]) -> str:
@@ -235,6 +232,7 @@ async def sync_oidc_user(db: AsyncSession, claims: dict[str, Any]) -> dict[str, 
 
     normalized_email = str(email).strip().lower()
     provider = settings.OIDC_PROVIDER_NAME
+    email_is_verified = _has_verified_email_claim(claims)
 
     existing_user = await crud_users.get(
         db=db,
@@ -244,14 +242,20 @@ async def sync_oidc_user(db: AsyncSession, claims: dict[str, Any]) -> dict[str, 
         schema_to_select=UserReadInternal,
     )
     if existing_user is not None:
-        update_object: dict[str, Any] = {
-            "email": normalized_email,
-            "username": normalized_email,
-        }
+        update_object: dict[str, Any] = {}
+        if email_is_verified:
+            update_object.update(
+                {
+                    "email": normalized_email,
+                    "username": normalized_email,
+                }
+            )
+        access_email = normalized_email if email_is_verified else str(existing_user.get("email") or "").strip().lower()
         if await _has_local_portal_access_or_pending_invitation(
             db=db,
             user=existing_user,
-            normalized_email=normalized_email,
+            normalized_email=access_email,
+            email_is_verified=email_is_verified,
         ):
             update_object["last_login_at"] = datetime.now(UTC)
 
@@ -271,14 +275,25 @@ async def sync_oidc_user(db: AsyncSession, claims: dict[str, Any]) -> dict[str, 
         if not await _has_local_portal_access_or_pending_invitation(
             db=db,
             user=refreshed,
-            normalized_email=normalized_email,
+            normalized_email=access_email,
+            email_is_verified=email_is_verified,
         ):
             raise ForbiddenException("User is not allowed to access this site")
         return refreshed
 
+    if not email_is_verified:
+        raise ForbiddenException("User is not allowed to access this site")
+
     if email:
-        email_user = await crud_users.get(db=db, email=normalized_email, is_deleted=False, schema_to_select=UserReadInternal)
+        email_user = await crud_users.get(
+            db=db,
+            email=normalized_email,
+            is_deleted=False,
+            schema_to_select=UserReadInternal,
+        )
         if email_user is not None:
+            if not _is_unbound_local_identity(email_user):
+                raise ForbiddenException("User is not allowed to access this site")
             update_object = {
                 "auth_provider": provider,
                 "auth_subject": subject,
@@ -289,14 +304,26 @@ async def sync_oidc_user(db: AsyncSession, claims: dict[str, Any]) -> dict[str, 
                 db=db,
                 user=email_user,
                 normalized_email=normalized_email,
+                email_is_verified=email_is_verified,
             ):
                 update_object["last_login_at"] = datetime.now(UTC)
 
-            await crud_users.update(
-                db=db,
-                object=update_object,
-                uuid=email_user["uuid"],
-            )
+            try:
+                bound_user = await crud_users.update(
+                    db=db,
+                    object=update_object,
+                    uuid=email_user["uuid"],
+                    auth_provider=None,
+                    auth_subject=None,
+                    return_columns=["uuid"],
+                    one_or_none=True,
+                )
+            except NoResultFound:
+                bound_user = None
+            if bound_user is None:
+                # A concurrent request or stale read observed an identity that
+                # is no longer unbound. Never overwrite the winning binding.
+                raise ForbiddenException("User is not allowed to access this site")
             refreshed = await crud_users.get(
                 db=db,
                 uuid=email_user["uuid"],
@@ -309,6 +336,7 @@ async def sync_oidc_user(db: AsyncSession, claims: dict[str, Any]) -> dict[str, 
                 db=db,
                 user=refreshed,
                 normalized_email=normalized_email,
+                email_is_verified=email_is_verified,
             ):
                 raise ForbiddenException("User is not allowed to access this site")
             return refreshed
@@ -324,6 +352,10 @@ async def sync_oidc_user(db: AsyncSession, claims: dict[str, Any]) -> dict[str, 
             username=normalized_email,
             auth_provider=provider,
             auth_subject=subject,
+            # A matching live invitation is the explicit activation event for
+            # a newly created identity. Existing disabled accounts are never
+            # silently reactivated by this path.
+            enabled=True,
         ),
         schema_to_select=UserReadInternal,
     )
@@ -334,6 +366,7 @@ async def sync_oidc_user(db: AsyncSession, claims: dict[str, Any]) -> dict[str, 
         db=db,
         user=created_user,
         normalized_email=normalized_email,
+        email_is_verified=email_is_verified,
     ):
         raise ForbiddenException("User is not allowed to access this site")
 
@@ -355,4 +388,3 @@ async def sync_oidc_user(db: AsyncSession, claims: dict[str, Any]) -> dict[str, 
         raise UnauthorizedException("Failed to refresh created user")
 
     return refreshed
-

@@ -2,6 +2,7 @@
 
 import asyncio
 import logging
+from collections.abc import Awaitable, Callable
 from typing import Annotated
 
 from fastapi import Depends, Request
@@ -15,6 +16,8 @@ _ibm_sv_admin_client_loop_id: int | None = None
 logger = logging.getLogger(__name__)
 
 _IBM_SV_NOT_CONFIGURED_MESSAGE = "IBM Security Verify is not configured. Check IBM_SV_ADMIN_BASE_URL."
+
+IBMVerifyAdminClientFactory = Callable[[], Awaitable[IBMVerifyAdminClient]]
 
 
 def _build_ibm_sv_not_configured_error() -> CustomException:
@@ -57,6 +60,17 @@ async def get_ibm_sv_admin_client() -> IBMVerifyAdminClient:
 
     _ibm_sv_admin_client_loop_id = current_loop_id
     return _ibm_sv_admin_client
+
+
+def get_ibm_sv_admin_client_factory() -> IBMVerifyAdminClientFactory:
+    """Return a lazy admin-client factory without resolving provider credentials.
+
+    Protected resource services call the factory only after their canonical
+    role and object-scope checks succeed. Keeping this dependency lazy prevents
+    FastAPI from fetching an IBM Verify token for an unauthorized request.
+    """
+
+    return get_ibm_sv_admin_client
 
 
 def get_ibm_sv_user_client(request: Request) -> IBMVerifyUserClient:

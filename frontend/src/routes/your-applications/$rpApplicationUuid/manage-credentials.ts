@@ -1,31 +1,22 @@
-import { createFileRoute } from "@tanstack/react-router";
-import { lazy } from "react";
-import i18n from "@/common/i18n";
-import type { RouteBackLinkContext } from "@/types/route-breadcrumbs";
-import { requireAuthenticatedUser } from "../../../features/auth/auth-routing";
-
-const RPApplicationClientSecretsPage = lazy(async () => ({
-	default: (
-		await import("../../../features/your-applications/pages/ManageCredentialsPage")
-	).ManageCredentialsPage,
-}));
+import { createFileRoute, redirect } from "@tanstack/react-router";
+import { requireAccessibleRPApplicationCapability } from "../../../features/auth/auth-routing";
 
 export const Route = createFileRoute(
 	"/your-applications/$rpApplicationUuid/manage-credentials"
 )({
-	beforeLoad: async ({ params, context }) => {
-		await requireAuthenticatedUser(
-			`/your-applications/${params.rpApplicationUuid}/manage-credentials`
+	beforeLoad: async ({ params }) => {
+		const { application } = await requireAccessibleRPApplicationCapability(
+			`/your-applications/${params.rpApplicationUuid}/manage-credentials`,
+			params.rpApplicationUuid,
+			"partner_secret_lifecycle"
 		);
-
-		const appName =
-			(context as { rpApplicationName?: string | null }).rpApplicationName ??
-			i18n.t("nav.dashboard");
-		const appHref = `/your-applications/${params.rpApplicationUuid}`;
-
-		return {
-			backLink: { href: appHref, label: appName },
-		} satisfies RouteBackLinkContext;
+		throw redirect({
+			params: {
+				rpApplicationUuid: params.rpApplicationUuid,
+				workspaceUuid: application.workspaceUuid,
+			},
+			replace: true,
+			to: "/workspaces/$workspaceUuid/applications/$rpApplicationUuid/manage-credentials",
+		}) as unknown as Error;
 	},
-	component: RPApplicationClientSecretsPage,
 });

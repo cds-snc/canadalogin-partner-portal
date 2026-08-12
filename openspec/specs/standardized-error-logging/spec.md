@@ -1,4 +1,12 @@
-## ADDED Requirements
+# Standardized Error Logging Specification
+
+## Purpose
+
+Define the portal's current structured error-logging behavior so HTTP failures
+remain observable without exposing sensitive request or user data or preventing
+the intended error response from reaching the client.
+
+## Requirements
 
 ### Requirement: Error responses emit structured log entries
 

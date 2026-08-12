@@ -22,8 +22,8 @@ describe("requestJson", () => {
 		vi.stubEnv("VITE_API_BASE_URL", "http://localhost:8000");
 		vi.mocked(markBackendActivity).mockReset();
 		vi.stubGlobal("location", {
-			href: "http://localhost:3000/dashboard",
-			pathname: "/dashboard",
+			href: "http://localhost:3000/your-applications",
+			pathname: "/your-applications",
 			replace: vi.fn(),
 			search: "",
 		} satisfies Pick<Location, "href" | "pathname" | "replace" | "search">);
@@ -57,7 +57,7 @@ describe("requestJson", () => {
 		await expect(
 			requestJson("/api/v1/posts", {
 				method: "POST",
-			}),
+			})
 		).rejects.toMatchObject({
 			detail: "body.title: Field required",
 			message: "body.title: Field required",
@@ -66,7 +66,7 @@ describe("requestJson", () => {
 		await expect(
 			requestJson("/api/v1/posts", {
 				method: "POST",
-			}),
+			})
 		).rejects.toBeInstanceOf(BadRequestError);
 	});
 
@@ -88,11 +88,11 @@ describe("requestJson", () => {
 		await expect(
 			requestJson("/api/v1/posts", {
 				method: "GET",
-			}),
+			})
 		).rejects.toBeInstanceOf(UnauthorizedRequestError);
 
 		expect(window.location.replace).toHaveBeenCalledWith(
-			"/login?reason=unauthorized&message=session-expired&redirect=%2Fdashboard",
+			"/?reason=unauthorized&message=session-expired&redirect=%2Fyour-applications"
 		);
 	});
 
@@ -114,7 +114,7 @@ describe("requestJson", () => {
 		await expect(
 			requestJson("/api/v1/policies", {
 				method: "GET",
-			}),
+			})
 		).rejects.toBeInstanceOf(ForbiddenRequestError);
 		expect(window.location.replace).toHaveBeenCalledWith("/access-denied");
 	});
@@ -162,7 +162,7 @@ describe("requestJson", () => {
 		await expect(
 			requestJson("/api/v1/posts", {
 				method: "GET",
-			}),
+			})
 		).rejects.toMatchObject({
 			detail: "An unexpected error occurred.",
 			message: "An unexpected error occurred.",
@@ -171,7 +171,7 @@ describe("requestJson", () => {
 		await expect(
 			requestJson("/api/v1/posts", {
 				method: "GET",
-			}),
+			})
 		).rejects.toBeInstanceOf(ServerRequestError);
 	});
 
@@ -192,9 +192,12 @@ describe("requestJson", () => {
 		} as Response);
 
 		await expect(
-			requestJson("/api/v1/workspaces/example/application-information/example", {
-				method: "DELETE",
-			}),
+			requestJson(
+				"/api/v1/workspaces/example/application-information/example",
+				{
+					method: "DELETE",
+				}
+			)
 		).rejects.toMatchObject({
 			detail:
 				"Linked RP applications must be unlinked or removed before deleting application information",
@@ -203,9 +206,12 @@ describe("requestJson", () => {
 			status: 409,
 		});
 		await expect(
-			requestJson("/api/v1/workspaces/example/application-information/example", {
-				method: "DELETE",
-			}),
+			requestJson(
+				"/api/v1/workspaces/example/application-information/example",
+				{
+					method: "DELETE",
+				}
+			)
 		).rejects.toBeInstanceOf(ConflictRequestError);
 		expect(window.location.replace).not.toHaveBeenCalled();
 	});
@@ -221,7 +227,7 @@ describe("requestJson", () => {
 		await expect(
 			requestJson("/api/v1/posts", {
 				method: "POST",
-			}),
+			})
 		).rejects.toMatchObject({
 			detail: "Legacy error detail",
 			message: "Legacy error detail",
@@ -241,7 +247,7 @@ describe("requestJson", () => {
 		await expect(
 			requestJson<{ uuid: string }>("/api/v1/posts", {
 				method: "GET",
-			}),
+			})
 		).resolves.toEqual({ uuid: "item-1" });
 
 		expect(markBackendActivity).toHaveBeenCalledTimes(1);
@@ -257,7 +263,7 @@ describe("requestJson", () => {
 		await expect(
 			requestJson("/api/v1/posts", {
 				method: "DELETE",
-			}),
+			})
 		).resolves.toBeNull();
 
 		expect(markBackendActivity).toHaveBeenCalledTimes(1);

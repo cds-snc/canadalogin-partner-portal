@@ -1,4 +1,5 @@
 from unittest.mock import AsyncMock, Mock
+from uuid import UUID
 
 import casbin
 import pytest
@@ -6,6 +7,7 @@ from fastapi.testclient import TestClient
 
 from src.app.api.dependencies import get_current_user, get_rp_application_service
 from src.app.core.access_control import CASBIN_MODEL_PATH, database_enforcer_provider
+from src.app.core.authorization import CanonicalRoleCode
 from src.app.core.db.database import async_get_db
 from src.app.core.exceptions.http_exceptions import (
     NotFoundException,
@@ -13,15 +15,37 @@ from src.app.core.exceptions.http_exceptions import (
 )
 from src.app.main import app
 from src.app.repositories.dependencies import get_ibm_sv_admin_client
+from src.app.services.authorization_service import (
+    AUTHORIZATION_STATE_KEY,
+    ResolvedAuthorizationState,
+    ResolvedPartnerAccess,
+)
 from src.app.services.rp_application_service import RPApplicationService
 
-_OWNER_USER = {
-    "email": "owner@example.gc.ca",
-    "id": 42,
-    "username": "owner@example.gc.ca",
-    "is_superuser": True,
-    "uuid": "018f6f83-0000-0000-0000-000000000111",
-}
+_WORKSPACE_UUID = UUID("018f6f83-0000-0000-0000-000000000201")
+
+
+def _partner_user(
+    role: CanonicalRoleCode = CanonicalRoleCode.RP_ADMIN,
+) -> dict:
+    return {
+        "email": "partner@example.gc.ca",
+        "id": 77,
+        "username": "partner@example.gc.ca",
+        "uuid": "018f6f83-0000-0000-0000-000000000111",
+        AUTHORIZATION_STATE_KEY: ResolvedAuthorizationState(
+            partner_access=(
+                ResolvedPartnerAccess(
+                    workspace_id=23,
+                    workspace_uuid=_WORKSPACE_UUID,
+                    role=role,
+                ),
+            )
+        ),
+    }
+
+
+_OWNER_USER = _partner_user()
 
 _APP_UUID = "018f6f83-0000-0000-0000-000000000333"
 
@@ -36,7 +60,6 @@ def make_enforcer(*policies: tuple[str, str, str]) -> casbin.Enforcer:
 def override_rp_application_authorization() -> None:
     app.dependency_overrides[database_enforcer_provider] = lambda: make_enforcer(
         ("admin", "rp_applications", "read"),
-        ("admin", "rp_applications", "write"),
         ("admin", "rp_client_secret", "read"),
         ("admin", "rp_client_secret", "write"),
         ("admin", "mau_report", "read"),
@@ -44,11 +67,11 @@ def override_rp_application_authorization() -> None:
 
 
 class TestDepartmentPreflightEndpoint:
-    """8.1 – Owner department preflight GET endpoint."""
+    """8.1 – Grant-scoped department preflight GET endpoint."""
 
-    def test_owner_preflight_returns_200_with_department_id(self) -> None:
+    def test_granted_partner_preflight_returns_200_with_department_id(self) -> None:
         service = Mock()
-        service.get_current_user_rp_application_department_preflight = AsyncMock(
+        service.get_accessible_rp_application_department_preflight = AsyncMock(
             return_value={
                 "id": 10,
                 "uuid": _APP_UUID,
@@ -64,9 +87,7 @@ class TestDepartmentPreflightEndpoint:
 
         try:
             with TestClient(app) as client:
-                response = client.get(
-                    f"/api/v1/rp-applications/mine/{_APP_UUID}/department"
-                )
+                response = client.get(f"/api/v1/rp-applications/accessible/{_APP_UUID}/department")
         finally:
             app.dependency_overrides.clear()
 
@@ -77,9 +98,9 @@ class TestDepartmentPreflightEndpoint:
         assert body["dnrAppName"] == "Benefits Portal"
         assert body["departmentId"] == 5
 
-    def test_owner_preflight_returns_200_with_null_department_id(self) -> None:
+    def test_granted_partner_preflight_returns_200_with_null_department_id(self) -> None:
         service = Mock()
-        service.get_current_user_rp_application_department_preflight = AsyncMock(
+        service.get_accessible_rp_application_department_preflight = AsyncMock(
             return_value={
                 "id": 10,
                 "uuid": _APP_UUID,
@@ -95,20 +116,16 @@ class TestDepartmentPreflightEndpoint:
 
         try:
             with TestClient(app) as client:
-                response = client.get(
-                    f"/api/v1/rp-applications/mine/{_APP_UUID}/department"
-                )
+                response = client.get(f"/api/v1/rp-applications/accessible/{_APP_UUID}/department")
         finally:
             app.dependency_overrides.clear()
 
         assert response.status_code == 200
         assert response.json()["departmentId"] is None
 
-    def test_non_owner_preflight_returns_404(self) -> None:
+    def test_out_of_scope_preflight_returns_404(self) -> None:
         service = Mock()
-        service.get_current_user_rp_application_department_preflight = AsyncMock(
-            side_effect=NotFoundException("RP application not found")
-        )
+        service.get_accessible_rp_application_department_preflight = AsyncMock(side_effect=NotFoundException("RP application not found"))
 
         app.dependency_overrides[get_current_user] = lambda: {
             **_OWNER_USER,
@@ -120,9 +137,7 @@ class TestDepartmentPreflightEndpoint:
 
         try:
             with TestClient(app) as client:
-                response = client.get(
-                    f"/api/v1/rp-applications/mine/{_APP_UUID}/department"
-                )
+                response = client.get(f"/api/v1/rp-applications/accessible/{_APP_UUID}/department")
         finally:
             app.dependency_overrides.clear()
 
@@ -131,9 +146,7 @@ class TestDepartmentPreflightEndpoint:
 
     def test_missing_application_returns_404(self) -> None:
         service = Mock()
-        service.get_current_user_rp_application_department_preflight = AsyncMock(
-            side_effect=NotFoundException("RP application not found")
-        )
+        service.get_accessible_rp_application_department_preflight = AsyncMock(side_effect=NotFoundException("RP application not found"))
 
         app.dependency_overrides[get_current_user] = lambda: _OWNER_USER
         override_rp_application_authorization()
@@ -142,9 +155,7 @@ class TestDepartmentPreflightEndpoint:
 
         try:
             with TestClient(app) as client:
-                response = client.get(
-                    f"/api/v1/rp-applications/mine/{_APP_UUID}/department"
-                )
+                response = client.get(f"/api/v1/rp-applications/accessible/{_APP_UUID}/department")
         finally:
             app.dependency_overrides.clear()
 
@@ -153,11 +164,11 @@ class TestDepartmentPreflightEndpoint:
 
 
 class TestDepartmentAssignmentEndpoint:
-    """8.2 – Owner department assignment PATCH endpoint."""
+    """8.2 – Grant-scoped department assignment PATCH endpoint."""
 
-    def test_owner_assignment_success_returns_200_with_updated_dto(self) -> None:
+    def test_granted_partner_assignment_success_returns_200_with_updated_dto(self) -> None:
         service = Mock()
-        service.assign_current_user_rp_application_department = AsyncMock(
+        service.assign_accessible_rp_application_department = AsyncMock(
             return_value={
                 "id": 10,
                 "uuid": _APP_UUID,
@@ -174,7 +185,7 @@ class TestDepartmentAssignmentEndpoint:
         try:
             with TestClient(app) as client:
                 response = client.patch(
-                    f"/api/v1/rp-applications/mine/{_APP_UUID}/department",
+                    f"/api/v1/rp-applications/accessible/{_APP_UUID}/department",
                     json={"departmentUuid": "018f6f83-0000-0000-0000-000000000777"},
                 )
         finally:
@@ -186,9 +197,7 @@ class TestDepartmentAssignmentEndpoint:
 
     def test_assignment_unknown_department_returns_404(self) -> None:
         service = Mock()
-        service.assign_current_user_rp_application_department = AsyncMock(
-            side_effect=NotFoundException("Department not found")
-        )
+        service.assign_accessible_rp_application_department = AsyncMock(side_effect=NotFoundException("Department not found"))
 
         app.dependency_overrides[get_current_user] = lambda: _OWNER_USER
         override_rp_application_authorization()
@@ -198,7 +207,7 @@ class TestDepartmentAssignmentEndpoint:
         try:
             with TestClient(app) as client:
                 response = client.patch(
-                    f"/api/v1/rp-applications/mine/{_APP_UUID}/department",
+                    f"/api/v1/rp-applications/accessible/{_APP_UUID}/department",
                     json={"departmentUuid": "018f6f83-0000-0000-0000-000000000999"},
                 )
         finally:
@@ -210,7 +219,7 @@ class TestDepartmentAssignmentEndpoint:
         from fastcrud.exceptions.http_exceptions import CustomException
 
         service = Mock()
-        service.assign_current_user_rp_application_department = AsyncMock(
+        service.assign_accessible_rp_application_department = AsyncMock(
             side_effect=CustomException(status_code=409, detail="RP application already has a department assigned")
         )
 
@@ -222,7 +231,7 @@ class TestDepartmentAssignmentEndpoint:
         try:
             with TestClient(app) as client:
                 response = client.patch(
-                    f"/api/v1/rp-applications/mine/{_APP_UUID}/department",
+                    f"/api/v1/rp-applications/accessible/{_APP_UUID}/department",
                     json={"departmentUuid": "018f6f83-0000-0000-0000-000000000777"},
                 )
         finally:
@@ -232,66 +241,63 @@ class TestDepartmentAssignmentEndpoint:
 
 
 class TestMissingDepartmentConflictRoutes:
-    """8.3 – Owner child routes return 409 + rp_application_department_required when department missing."""
+    """8.3 – Grant-scoped child routes return 409 + rp_application_department_required when department missing."""
 
-    def test_current_user_application_list_grant_backed_user_without_platform_role_reaches_service(self) -> None:
-        from src.app.api.dependencies import get_ibm_sv_user_service
-
+    @pytest.mark.parametrize(
+        "role",
+        [
+            CanonicalRoleCode.RP_ADMIN,
+            CanonicalRoleCode.RP_USER_EDIT,
+            CanonicalRoleCode.READ_ONLY,
+        ],
+    )
+    def test_current_user_application_list_uses_canonical_grant_without_oidc_access_token(
+        self,
+        role: CanonicalRoleCode,
+    ) -> None:
         service = Mock()
-        service.list_current_user_rp_applications = AsyncMock(
+        service.list_accessible_rp_applications = AsyncMock(
             return_value=[
                 {
-                    "id": 10,
                     "uuid": _APP_UUID,
-                    "dnr_app_name": "Benefits Portal",
-                    "department_id": 7,
-                    "canada_login_environment": "production",
-                    "onboarding_state": "under_review",
-                    "promotion_status": "review_tracked",
-                    "ibm_sv_application_id": "ibm-app-333",
-                    "application_owner": {
-                        "owners": [{"email": "owner@example.gc.ca"}]
-                    },
+                    "workspaceUuid": str(_WORKSPACE_UUID),
+                    "workspaceName": "Benefits Workspace",
+                    "serviceNameEn": "Benefits Portal",
+                    "serviceNameFr": "Portail des prestations",
+                    "role": role,
+                    "canadaLoginEnvironment": "production",
+                    "onboardingState": "under_review",
+                    "promotionStatus": "review_tracked",
                 }
             ]
         )
-        current_user = {
-            "email": "invitee@example.gc.ca",
-            "id": 77,
-            "username": "invitee@example.gc.ca",
-            "is_superuser": False,
-            "role_ids": [],
-        }
+        current_user = _partner_user(role)
         db = Mock()
-        ibm_user_service = Mock()
 
         app.dependency_overrides[get_current_user] = lambda: current_user
         app.dependency_overrides[get_rp_application_service] = lambda: service
-        app.dependency_overrides[get_ibm_sv_user_service] = lambda: ibm_user_service
         app.dependency_overrides[async_get_db] = lambda: db
 
         try:
             with TestClient(app) as client:
-                response = client.get("/api/v1/rp-applications/mine")
+                response = client.get("/api/v1/rp-applications/accessible")
         finally:
             app.dependency_overrides.clear()
 
         assert response.status_code == 200
-        assert response.json()[0]["dnrAppName"] == "Benefits Portal"
+        assert response.json()[0]["serviceNameEn"] == "Benefits Portal"
+        assert response.json()[0]["workspaceName"] == "Benefits Workspace"
         assert response.json()[0]["canadaLoginEnvironment"] == "production"
         assert response.json()[0]["onboardingState"] == "under_review"
         assert response.json()[0]["promotionStatus"] == "review_tracked"
-        service.list_current_user_rp_applications.assert_awaited_once_with(
+        service.list_accessible_rp_applications.assert_awaited_once_with(
             db=db,
             current_user=current_user,
-            ibm_user_service=ibm_user_service,
         )
 
     def test_oauth_setup_missing_department_returns_409_with_code(self) -> None:
         service = Mock()
-        service.get_current_user_rp_application_oauth_setup = AsyncMock(
-            side_effect=RPApplicationDepartmentRequiredException()
-        )
+        service.get_accessible_rp_application_oauth_setup = AsyncMock(side_effect=RPApplicationDepartmentRequiredException())
 
         app.dependency_overrides[get_current_user] = lambda: _OWNER_USER
         override_rp_application_authorization()
@@ -301,9 +307,7 @@ class TestMissingDepartmentConflictRoutes:
 
         try:
             with TestClient(app) as client:
-                response = client.get(
-                    f"/api/v1/rp-applications/mine/{_APP_UUID}/oauth-setup"
-                )
+                response = client.get(f"/api/v1/rp-applications/accessible/{_APP_UUID}/oauth-setup")
         finally:
             app.dependency_overrides.clear()
 
@@ -311,13 +315,10 @@ class TestMissingDepartmentConflictRoutes:
         assert response.json()["error"]["code"] == "rp_application_department_required"
 
     def test_mau_report_missing_department_returns_409_with_code(self) -> None:
-        from src.app.api.dependencies import (
-            get_ibm_sv_user_service,
-            get_mau_service,
-        )
+        from src.app.api.dependencies import get_mau_service
 
         service = Mock()
-        service.get_current_user_rp_application_by_uuid = AsyncMock(
+        service.get_accessible_rp_application_department_preflight = AsyncMock(
             return_value={
                 "id": 10,
                 "uuid": _APP_UUID,
@@ -325,22 +326,17 @@ class TestMissingDepartmentConflictRoutes:
                 "department_id": None,
             }
         )
-        service._require_rp_application_department = AsyncMock(
-            side_effect=RPApplicationDepartmentRequiredException()
-        )
+        service._require_rp_application_department = AsyncMock(side_effect=RPApplicationDepartmentRequiredException())
 
         app.dependency_overrides[get_current_user] = lambda: _OWNER_USER
         override_rp_application_authorization()
         app.dependency_overrides[get_rp_application_service] = lambda: service
-        app.dependency_overrides[get_ibm_sv_user_service] = lambda: Mock()
         app.dependency_overrides[get_mau_service] = lambda: Mock()
         app.dependency_overrides[async_get_db] = lambda: Mock()
 
         try:
             with TestClient(app) as client:
-                response = client.get(
-                    f"/api/v1/rp-applications/mine/{_APP_UUID}/mau-report"
-                )
+                response = client.get(f"/api/v1/rp-applications/accessible/{_APP_UUID}/mau-report")
         finally:
             app.dependency_overrides.clear()
 
@@ -350,13 +346,10 @@ class TestMissingDepartmentConflictRoutes:
     def test_mau_report_grant_backed_user_without_platform_role_reaches_service(self) -> None:
         import uuid as uuid_pkg
 
-        from src.app.api.dependencies import (
-            get_ibm_sv_user_service,
-            get_mau_service,
-        )
+        from src.app.api.dependencies import get_mau_service
 
         service = Mock()
-        service.get_current_user_rp_application_by_uuid = AsyncMock(
+        service.get_accessible_rp_application_department_preflight = AsyncMock(
             return_value={
                 "id": 10,
                 "uuid": _APP_UUID,
@@ -377,29 +370,24 @@ class TestMissingDepartmentConflictRoutes:
             "role_ids": [],
         }
         db = Mock()
-        ibm_user_service = Mock()
 
         app.dependency_overrides[get_current_user] = lambda: current_user
         app.dependency_overrides[get_rp_application_service] = lambda: service
-        app.dependency_overrides[get_ibm_sv_user_service] = lambda: ibm_user_service
         app.dependency_overrides[get_mau_service] = lambda: mau_service
         app.dependency_overrides[async_get_db] = lambda: db
 
         try:
             with TestClient(app) as client:
-                response = client.get(
-                    f"/api/v1/rp-applications/mine/{_APP_UUID}/mau-report"
-                )
+                response = client.get(f"/api/v1/rp-applications/accessible/{_APP_UUID}/mau-report")
         finally:
             app.dependency_overrides.clear()
 
         assert response.status_code == 200
         assert response.json()["application_name"] == "Benefits Portal"
-        service.get_current_user_rp_application_by_uuid.assert_awaited_once_with(
+        service.get_accessible_rp_application_department_preflight.assert_awaited_once_with(
             db=db,
             current_user=current_user,
             rp_application_uuid=uuid_pkg.UUID(_APP_UUID),
-            ibm_user_service=ibm_user_service,
         )
         mau_service.get_mau_by_application.assert_awaited_once()
 
@@ -409,7 +397,7 @@ class TestOAuthSetupDepartmentFields:
 
     def test_oauth_setup_includes_department_name_fields(self) -> None:
         service = Mock()
-        service.get_current_user_rp_application_oauth_setup = AsyncMock(
+        service.get_accessible_rp_application_oauth_setup = AsyncMock(
             return_value={
                 "rpApplicationName": "Benefits Portal",
                 "status": "active",
@@ -432,9 +420,7 @@ class TestOAuthSetupDepartmentFields:
 
         try:
             with TestClient(app) as client:
-                response = client.get(
-                    f"/api/v1/rp-applications/mine/{_APP_UUID}/oauth-setup"
-                )
+                response = client.get(f"/api/v1/rp-applications/accessible/{_APP_UUID}/oauth-setup")
         finally:
             app.dependency_overrides.clear()
 
@@ -445,7 +431,7 @@ class TestOAuthSetupDepartmentFields:
 
     def test_oauth_setup_department_name_can_be_null(self) -> None:
         service = Mock()
-        service.get_current_user_rp_application_oauth_setup = AsyncMock(
+        service.get_accessible_rp_application_oauth_setup = AsyncMock(
             return_value={
                 "rpApplicationName": "Benefits Portal",
                 "status": "active",
@@ -468,9 +454,7 @@ class TestOAuthSetupDepartmentFields:
 
         try:
             with TestClient(app) as client:
-                response = client.get(
-                    f"/api/v1/rp-applications/mine/{_APP_UUID}/oauth-setup"
-                )
+                response = client.get(f"/api/v1/rp-applications/accessible/{_APP_UUID}/oauth-setup")
         finally:
             app.dependency_overrides.clear()
 
@@ -504,7 +488,7 @@ class TestDepartmentPreflightServiceMethod:
         rp_module.crud_rp_applications.get = AsyncMock(return_value=app_record)
         try:
             with pytest.raises(NotFoundException):
-                await service.get_current_user_rp_application_department_preflight(
+                await service.get_accessible_rp_application_department_preflight(
                     db=db,
                     rp_application_uuid="018f6f83-0000-0000-0000-000000000333",
                     current_user={"email": "owner@example.gc.ca"},
@@ -530,26 +514,21 @@ class TestDepartmentPreflightServiceMethod:
         }
 
         original_get = rp_module.crud_rp_applications.get
-        original_grant_get = rp_module.crud_rp_application_access_grants.get
         rp_module.crud_rp_applications.get = AsyncMock(return_value=app_record)
-        rp_module.crud_rp_application_access_grants.get = AsyncMock(
-            return_value={"workspace_id": 23, "user_id": 77, "role": "Read Only", "status": "active"}
-        )
         try:
-            result = await service.get_current_user_rp_application_department_preflight(
+            result = await service.get_accessible_rp_application_department_preflight(
                 db=db,
                 rp_application_uuid="018f6f83-0000-0000-0000-000000000333",
-                current_user={"id": 77},
+                current_user=_partner_user(CanonicalRoleCode.READ_ONLY),
             )
         finally:
             rp_module.crud_rp_applications.get = original_get
-            rp_module.crud_rp_application_access_grants.get = original_grant_get
 
         assert result["dnrAppName"] == "Benefits Portal"
         assert result["departmentId"] is None
 
     @pytest.mark.asyncio
-    async def test_preflight_raises_not_found_for_non_owner(self) -> None:
+    async def test_preflight_raises_not_found_for_out_of_scope_user(self) -> None:
         import src.app.services.rp_application_service as rp_module
         from src.app.core.exceptions.http_exceptions import NotFoundException
 
@@ -569,7 +548,7 @@ class TestDepartmentPreflightServiceMethod:
         rp_module.crud_rp_applications.get = AsyncMock(return_value=app_record)
         try:
             with pytest.raises(NotFoundException):
-                await service.get_current_user_rp_application_department_preflight(
+                await service.get_accessible_rp_application_department_preflight(
                     db=db,
                     rp_application_uuid="018f6f83-0000-0000-0000-000000000333",
                     current_user={"email": "notowner@example.gc.ca"},
@@ -583,7 +562,7 @@ class TestDepartmentPreflightServiceMethod:
 
         import src.app.services.rp_application_service as rp_module
         from src.app.core.exceptions.http_exceptions import NotFoundException
-        from src.app.schemas.rp_application import CurrentUserRPApplicationDepartmentAssignRequest
+        from src.app.schemas.rp_application import AccessibleRPApplicationDepartmentAssignRequest
 
         service = RPApplicationService()
         db = Mock()
@@ -603,13 +582,11 @@ class TestDepartmentPreflightServiceMethod:
         rp_module.crud_departments.get = AsyncMock(return_value=None)
         try:
             with pytest.raises(NotFoundException):
-                await service.assign_current_user_rp_application_department(
+                await service.assign_accessible_rp_application_department(
                     db=db,
                     rp_application_uuid="018f6f83-0000-0000-0000-000000000333",
                     current_user={"email": "owner@example.gc.ca"},
-                    payload=CurrentUserRPApplicationDepartmentAssignRequest(
-                        department_uuid=uuid_pkg.UUID("018f6f83-0000-0000-0000-000000000999")
-                    ),
+                    payload=AccessibleRPApplicationDepartmentAssignRequest(department_uuid=uuid_pkg.UUID("018f6f83-0000-0000-0000-000000000999")),
                 )
         finally:
             rp_module.crud_rp_applications.get = original_app_get
@@ -621,7 +598,7 @@ class TestDepartmentPreflightServiceMethod:
 
         import src.app.services.rp_application_service as rp_module
         from src.app.core.exceptions.http_exceptions import NotFoundException
-        from src.app.schemas.rp_application import CurrentUserRPApplicationDepartmentAssignRequest
+        from src.app.schemas.rp_application import AccessibleRPApplicationDepartmentAssignRequest
 
         service = RPApplicationService()
         db = Mock()
@@ -637,24 +614,20 @@ class TestDepartmentPreflightServiceMethod:
         }
 
         original_app_get = rp_module.crud_rp_applications.get
-        original_grant_get = rp_module.crud_rp_application_access_grants.get
+        original_dept_get = rp_module.crud_departments.get
         rp_module.crud_rp_applications.get = AsyncMock(return_value=app_record)
-        rp_module.crud_rp_application_access_grants.get = AsyncMock(
-            return_value={"workspace_id": 23, "user_id": 77, "role": "RP User (Edit)", "status": "active"}
-        )
+        rp_module.crud_departments.get = AsyncMock(return_value=None)
         try:
             with pytest.raises(NotFoundException):
-                await service.assign_current_user_rp_application_department(
+                await service.assign_accessible_rp_application_department(
                     db=db,
                     rp_application_uuid="018f6f83-0000-0000-0000-000000000333",
-                    current_user={"id": 77},
-                    payload=CurrentUserRPApplicationDepartmentAssignRequest(
-                        department_uuid=uuid_pkg.UUID("018f6f83-0000-0000-0000-000000000999")
-                    ),
+                    current_user=_partner_user(CanonicalRoleCode.RP_USER_EDIT),
+                    payload=AccessibleRPApplicationDepartmentAssignRequest(department_uuid=uuid_pkg.UUID("018f6f83-0000-0000-0000-000000000999")),
                 )
         finally:
             rp_module.crud_rp_applications.get = original_app_get
-            rp_module.crud_rp_application_access_grants.get = original_grant_get
+            rp_module.crud_departments.get = original_dept_get
 
     @pytest.mark.asyncio
     async def test_require_department_raises_conflict_when_null(self) -> None:

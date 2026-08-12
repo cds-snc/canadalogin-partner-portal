@@ -1,25 +1,141 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import {
-	createRPApplication,
-	createCurrentUserRPApplicationRotatedClientSecret,
-	deleteCurrentUserRPApplicationRotatedClientSecret,
+	assignAccessibleRPApplicationDepartment,
+	createAccessibleRPApplicationRotatedClientSecret,
+	deleteAccessibleRPApplicationRotatedClientSecret,
 	deleteRPApplication,
-	getCurrentUserRPOAuthSetup,
-	getCurrentUserRPApplication,
-	getCurrentUserRPApplicationClientCredentials,
-	getCurrentUserRPApplicationRotatedClientSecrets,
+	getAccessibleRPApplication,
+	getAccessibleRPApplicationClientCredentials,
+	getAccessibleRPApplicationDepartment,
+	getAccessibleRPApplicationRotatedClientSecrets,
+	getAccessibleRPApplications,
+	getRPApplicationAdoptionCandidatePreview,
+	getRPApplicationAdoptionCandidates,
 	getRPApplication,
 	getRPApplicationUsageAuditTrail,
 	getRPApplicationUsageAuditTrailSearchAfter,
 	getRPApplicationUsageSummary,
-	rotateCurrentUserRPApplicationClientSecret,
-	updateCurrentUserRPApplication,
+	linkRPApplicationToWorkspace,
+	rotateAccessibleRPApplicationClientSecret,
 	updateRPApplication,
 } from "@/fetch/rp-applications";
 
 describe("rp_application-api", () => {
 	afterEach(() => {
 		vi.restoreAllMocks();
+	});
+
+	it("lists local RP adoption candidates without a provider-specific request", async () => {
+		const fetchMock = vi.spyOn(globalThis, "fetch").mockResolvedValue({
+			headers: new Headers({ "content-type": "application/json" }),
+			json: () =>
+				Promise.resolve({
+					items: [
+						{
+							ibmApplicationId: "ibm-app-1",
+							metadataCompleteness: "incomplete",
+							missingFieldNames: ["redirectUris"],
+							name: "Benefits Portal",
+							rpApplicationUuid: "rp-application-1",
+							updatedAt: null,
+						},
+					],
+				}),
+			ok: true,
+			status: 200,
+		} as Response);
+
+		const response = await getRPApplicationAdoptionCandidates();
+
+		expect(fetchMock).toHaveBeenCalledWith(
+			"http://localhost:8000/api/v1/rp-applications/workspace-adoption-candidates",
+			expect.objectContaining({
+				cache: "no-store",
+				credentials: "include",
+				method: "GET",
+			})
+		);
+		expect(response.items[0]?.ibmApplicationId).toBe("ibm-app-1");
+	});
+
+	it("loads one safe adoption preview", async () => {
+		const applicationUuid = "rp-application-1";
+		const fetchMock = vi.spyOn(globalThis, "fetch").mockResolvedValue({
+			headers: new Headers({ "content-type": "application/json" }),
+			json: () =>
+				Promise.resolve({
+					candidate: {
+						ibmApplicationId: "ibm-app-1",
+						metadataCompleteness: "incomplete",
+						missingFieldNames: ["redirectUris"],
+						name: "Benefits Portal",
+						rpApplicationUuid: applicationUuid,
+						updatedAt: null,
+					},
+					canadaLoginEnvironment: null,
+					conflictingFieldNames: [],
+					fields: [],
+					fillableFieldNames: ["redirectUris"],
+					preservedLocalFieldNames: [],
+				}),
+			ok: true,
+			status: 200,
+		} as Response);
+
+		const response =
+			await getRPApplicationAdoptionCandidatePreview(applicationUuid);
+
+		expect(fetchMock).toHaveBeenCalledWith(
+			`http://localhost:8000/api/v1/rp-applications/workspace-adoption-candidates/${applicationUuid}`,
+			expect.objectContaining({
+				cache: "no-store",
+				credentials: "include",
+				method: "GET",
+			})
+		);
+		expect(response.candidate.name).toBe("Benefits Portal");
+	});
+
+	it("links a retained RP to one workspace through the portal API only", async () => {
+		const applicationUuid = "rp-application-1";
+		const workspaceUuid = "workspace-1";
+		const fetchMock = vi.spyOn(globalThis, "fetch").mockResolvedValue({
+			headers: new Headers({ "content-type": "application/json" }),
+			json: () =>
+				Promise.resolve({
+					applicationInformationUuid: null,
+					canadaLoginEnvironment: "production",
+					conflictingFieldNames: [],
+					departmentUuid: "department-1",
+					filledFieldNames: ["redirectUris"],
+					ibmApplicationId: "ibm-app-1",
+					idempotentReplay: false,
+					name: "Benefits Portal",
+					preservedLocalFieldNames: ["displayName"],
+					rpApplicationUuid: applicationUuid,
+					workspaceUuid,
+				}),
+			ok: true,
+			status: 200,
+		} as Response);
+
+		const response = await linkRPApplicationToWorkspace(applicationUuid, {
+			canadaLoginEnvironment: "production",
+			workspaceUuid,
+		});
+
+		expect(fetchMock).toHaveBeenCalledWith(
+			`http://localhost:8000/api/v1/rp-applications/${applicationUuid}/workspace-link`,
+			expect.objectContaining({
+				body: JSON.stringify({
+					canadaLoginEnvironment: "production",
+					workspaceUuid,
+				}),
+				credentials: "include",
+				method: "PUT",
+			})
+		);
+		expect(response.workspaceUuid).toBe(workspaceUuid);
 	});
 
 	it("updates an RP application through the backend API", async () => {
@@ -29,126 +145,48 @@ describe("rp_application-api", () => {
 			headers: new Headers({ "content-type": "application/json" }),
 			json: () =>
 				Promise.resolve({
-					application_information_id: 14,
-					canada_login_environment: "staging",
-					created_at: "2026-04-02T00:00:00Z",
-					created_by: 1,
-					dnr_app_name: "[DEPT] - Portal",
-					ibm_sv_application_id: "ibm-app-1",
+					applicationInformationId: 14,
+					canadaLoginEnvironment: "staging",
+					createdAt: "2026-04-02T00:00:00Z",
+					createdBy: 1,
+					dnrAppName: "[DEPT] - Portal",
+					ibmSvApplicationId: "ibm-app-1",
 					id: 1,
-					is_deleted: false,
+					isDeleted: false,
 					status: "active",
 					uuid: applicationUuid,
-					workspace_id: 10,
+					workspaceId: 10,
 				}),
 			ok: true,
 			status: 200,
 		} as Response);
 
 		const response = await updateRPApplication(workspaceUuid, applicationUuid, {
-			requested_scopes: ["openid", "profile", "email"],
-			service_name_en: "Portal Updated",
+			requestedScopes: ["openid", "profile", "email"],
+			serviceNameEn: "Portal Updated",
 		});
 
 		expect(fetchMock).toHaveBeenCalledWith(
 			`http://localhost:8000/api/v1/workspaces/${workspaceUuid}/applications/${applicationUuid}`,
 			expect.objectContaining({
 				body: JSON.stringify({
-					requested_scopes: ["openid", "profile", "email"],
-					service_name_en: "Portal Updated",
+					requestedScopes: ["openid", "profile", "email"],
+					serviceNameEn: "Portal Updated",
 				}),
 				credentials: "include",
 				method: "PATCH",
 			})
 		);
 		expect(response).toMatchObject({
-			application_information_id: 14,
-			canada_login_environment: "staging",
-			ibm_sv_application_id: "ibm-app-1",
-			dnr_app_name: "[DEPT] - Portal",
+			applicationInformationId: 14,
+			canadaLoginEnvironment: "staging",
+			ibmSvApplicationId: "ibm-app-1",
+			dnrAppName: "[DEPT] - Portal",
 			uuid: applicationUuid,
 		});
 	});
 
-	it("creates an RP application through the backend API", async () => {
-		const workspaceUuid = "workspace-uuid-1";
-		const fetchMock = vi.spyOn(globalThis, "fetch").mockResolvedValue({
-			headers: new Headers({ "content-type": "application/json" }),
-			json: () =>
-				Promise.resolve({
-					application_information_id: 14,
-					canada_login_environment: "staging",
-					created_at: "2026-04-02T00:00:00Z",
-					created_by: 1,
-					dnr_app_name: "Benefits Portal",
-					id: 1,
-					is_deleted: false,
-					status: null,
-					uuid: "application-uuid-1",
-					workspace_id: 10,
-				}),
-			ok: true,
-			status: 201,
-		} as Response);
-
-		const payload = {
-			application_environment_url_en: "https://benefits.canada.ca",
-			application_environment_url_fr: "https://prestations.canada.ca",
-			application_information_uuid: "application-information-uuid-1",
-			canada_login_environment: "staging" as const,
-			client_auth_method: "private_key_jwt" as const,
-			client_type: "confidential" as const,
-			jwks_uri: "https://benefits.canada.ca/.well-known/jwks.json",
-			logout_mode: "front_channel" as const,
-			logout_uri: "https://benefits.canada.ca/logout",
-			message_decryption_content_algorithms: ["A256GCM" as const],
-			message_decryption_key_management_algorithms: [
-				"RSA-OAEP-256" as const,
-			],
-			message_decryption_supported: true,
-			message_decryption_targets: ["id_token" as const],
-			migration_sector_identifier_url:
-				"https://benefits.canada.ca/sector.json",
-				pkce_algorithms: ["S256" as const],
-				pkce_supported: true,
-				post_logout_redirect_uris: [
-					"https://benefits.canada.ca/logout-complete",
-				],
-				private_key_distribution_method: "jwks_uri" as const,
-				redirect_uris: ["https://benefits.canada.ca/callback"],
-				request_encryption_roadmap: false,
-				request_encryption_supported: false,
-				request_signing_revisit_on: "2027-03",
-				request_signing_roadmap: true,
-				request_signing_supported: false,
-				requested_scopes: ["openid" as const, "profile" as const, "email" as const],
-				sector_identifier: "https://benefits.canada.ca",
-				service_name_en: "Benefits Portal",
-				service_name_fr: "Portail des prestations",
-				shares_pairwise_identifiers: false,
-				signature_validation_algorithms: ["RS256" as const],
-				signature_validation_supported: true,
-				signature_validation_targets: ["id_token" as const, "userinfo" as const],
-				supports_authorization_code_flow: true,
-		};
-
-		const response = await createRPApplication(workspaceUuid, payload);
-
-		expect(fetchMock).toHaveBeenCalledWith(
-			`http://localhost:8000/api/v1/workspaces/${workspaceUuid}/applications`,
-			expect.objectContaining({
-				body: JSON.stringify(payload),
-				credentials: "include",
-				method: "POST",
-			})
-		);
-		expect(response).toMatchObject({
-			dnr_app_name: "Benefits Portal",
-			uuid: "application-uuid-1",
-		});
-	});
-
-	it("gets a current-user RP application through the backend API", async () => {
+	it("gets an accessible RP application through the backend API", async () => {
 		const applicationUuid = "application-uuid-1";
 		const fetchMock = vi.spyOn(globalThis, "fetch").mockResolvedValue({
 			headers: new Headers({ "content-type": "application/json" }),
@@ -164,16 +202,45 @@ describe("rp_application-api", () => {
 			status: 200,
 		} as Response);
 
-		const response = await getCurrentUserRPApplication(applicationUuid);
+		const response = await getAccessibleRPApplication(applicationUuid);
 
 		expect(fetchMock).toHaveBeenCalledWith(
-			`http://localhost:8000/api/v1/rp-applications/mine/${applicationUuid}`,
+			`http://localhost:8000/api/v1/rp-applications/accessible/${applicationUuid}`,
 			expect.objectContaining({
 				credentials: "include",
 				method: "GET",
 			})
 		);
 		expect(response.uuid).toBe(applicationUuid);
+	});
+
+	it("lists accessible RP applications through the backend API", async () => {
+		const fetchMock = vi.spyOn(globalThis, "fetch").mockResolvedValue({
+			headers: new Headers({ "content-type": "application/json" }),
+			json: () =>
+				Promise.resolve([
+					{
+						dnrAppName: "Benefits Portal",
+						role: "rp_admin",
+						uuid: "application-uuid-1",
+						workspaceUuid: "workspace-uuid-1",
+					},
+				]),
+			ok: true,
+			status: 200,
+		} as Response);
+
+		const response = await getAccessibleRPApplications();
+
+		expect(fetchMock).toHaveBeenCalledWith(
+			"http://localhost:8000/api/v1/rp-applications/accessible",
+			expect.objectContaining({
+				cache: "no-store",
+				credentials: "include",
+				method: "GET",
+			})
+		);
+		expect(response).toHaveLength(1);
 	});
 
 	it("gets a workspace-scoped RP application through the backend API", async () => {
@@ -183,15 +250,15 @@ describe("rp_application-api", () => {
 			headers: new Headers({ "content-type": "application/json" }),
 			json: () =>
 				Promise.resolve({
-					created_at: "2026-04-02T00:00:00Z",
-					created_by: 1,
-					dnr_app_name: "Benefits Portal",
-					ibm_sv_application_id: "ibm-app-1",
+					createdAt: "2026-04-02T00:00:00Z",
+					createdBy: 1,
+					dnrAppName: "Benefits Portal",
+					ibmSvApplicationId: "ibm-app-1",
 					id: 1,
-					is_deleted: false,
+					isDeleted: false,
 					status: "active",
 					uuid: applicationUuid,
-					workspace_id: 10,
+					workspaceId: 10,
 				}),
 			ok: true,
 			status: 200,
@@ -208,85 +275,67 @@ describe("rp_application-api", () => {
 			})
 		);
 		expect(response).toMatchObject({
-			dnr_app_name: "Benefits Portal",
-			ibm_sv_application_id: "ibm-app-1",
+			dnrAppName: "Benefits Portal",
+			ibmSvApplicationId: "ibm-app-1",
 			uuid: applicationUuid,
 		});
 	});
 
-	it("updates a current-user RP application through the backend API", async () => {
+	it("gets an accessible RP application department through the backend API", async () => {
 		const applicationUuid = "application-uuid-1";
 		const fetchMock = vi.spyOn(globalThis, "fetch").mockResolvedValue({
 			headers: new Headers({ "content-type": "application/json" }),
 			json: () =>
 				Promise.resolve({
+					departmentId: null,
+					dnrAppName: "Benefits Portal",
 					id: 9,
-					name: "[DEPT] - Renamed App",
-					settings: { description: "Updated description" },
-					status: "active",
 					uuid: applicationUuid,
 				}),
 			ok: true,
 			status: 200,
 		} as Response);
 
-		const response = await updateCurrentUserRPApplication(applicationUuid, {
-			request_signing_supported: false,
-			service_name_en: "Renamed App",
-		});
+		await getAccessibleRPApplicationDepartment(applicationUuid);
 
 		expect(fetchMock).toHaveBeenCalledWith(
-			`http://localhost:8000/api/v1/rp-applications/mine/${applicationUuid}`,
-			expect.objectContaining({
-				body: JSON.stringify({
-					request_signing_supported: false,
-					service_name_en: "Renamed App",
-				}),
-				credentials: "include",
-				method: "PATCH",
-			})
-		);
-		expect(response.name).toBe("[DEPT] - Renamed App");
-	});
-
-	it("gets current-user RP OAuth setup through the backend API", async () => {
-		const applicationUuid = "application-uuid-1";
-		const fetchMock = vi.spyOn(globalThis, "fetch").mockResolvedValue({
-			headers: new Headers({ "content-type": "application/json" }),
-			json: () =>
-				Promise.resolve({
-					applicationUrl: "https://benefits.example.gc.ca",
-					canadaLoginEnvironment: "production",
-					discoveryEndpoint:
-						"https://cds-gcsignin-dev.verify.ibm.com/oauth2/.well-known/openid-configuration",
-					logoutRedirectUris: [
-						"https://benefits.example.gc.ca/logout-complete",
-					],
-					logoutUri: "https://benefits.example.gc.ca/backchannel-logout",
-					onboardingState: "under_review",
-					pkceEnabled: true,
-					promotionStatus: "review_tracked",
-					rpApplicationName: "Benefits Portal",
-					redirectUris: ["https://benefits.example.gc.ca/callback"],
-					status: "active",
-				}),
-			ok: true,
-			status: 200,
-		} as Response);
-
-		const response = await getCurrentUserRPOAuthSetup(applicationUuid);
-
-		expect(fetchMock).toHaveBeenCalledWith(
-			`http://localhost:8000/api/v1/rp-applications/mine/${applicationUuid}/oauth-setup`,
+			`http://localhost:8000/api/v1/rp-applications/accessible/${applicationUuid}/department`,
 			expect.objectContaining({
 				cache: "no-store",
 				credentials: "include",
 				method: "GET",
 			})
 		);
-		expect(response.rpApplicationName).toBe("Benefits Portal");
-		expect(response.onboardingState).toBe("under_review");
-		expect(response.promotionStatus).toBe("review_tracked");
+	});
+
+	it("assigns an accessible RP application department through the backend API", async () => {
+		const applicationUuid = "application-uuid-1";
+		const departmentUuid = "department-uuid-1";
+		const fetchMock = vi.spyOn(globalThis, "fetch").mockResolvedValue({
+			headers: new Headers({ "content-type": "application/json" }),
+			json: () =>
+				Promise.resolve({
+					departmentId: 3,
+					dnrAppName: "Benefits Portal",
+					id: 9,
+					uuid: applicationUuid,
+				}),
+			ok: true,
+			status: 200,
+		} as Response);
+
+		await assignAccessibleRPApplicationDepartment(applicationUuid, {
+			departmentUuid,
+		});
+
+		expect(fetchMock).toHaveBeenCalledWith(
+			`http://localhost:8000/api/v1/rp-applications/accessible/${applicationUuid}/department`,
+			expect.objectContaining({
+				body: JSON.stringify({ departmentUuid }),
+				credentials: "include",
+				method: "PATCH",
+			})
+		);
 	});
 
 	it("deletes an RP application through the backend API", async () => {
@@ -314,7 +363,7 @@ describe("rp_application-api", () => {
 		});
 	});
 
-	it("gets current-user RP application client credentials through the backend API", async () => {
+	it("gets accessible RP application client credentials through the backend API", async () => {
 		const applicationUuid = "application-uuid-1";
 		const fetchMock = vi.spyOn(globalThis, "fetch").mockResolvedValue({
 			headers: new Headers({ "content-type": "application/json" }),
@@ -328,12 +377,11 @@ describe("rp_application-api", () => {
 			status: 200,
 		} as Response);
 
-		const response = await getCurrentUserRPApplicationClientCredentials(
-			applicationUuid
-		);
+		const response =
+			await getAccessibleRPApplicationClientCredentials(applicationUuid);
 
 		expect(fetchMock).toHaveBeenCalledWith(
-			`http://localhost:8000/api/v1/rp-applications/mine/${applicationUuid}/client`,
+			`http://localhost:8000/api/v1/rp-applications/accessible/${applicationUuid}/client`,
 			expect.objectContaining({
 				cache: "no-store",
 				credentials: "include",
@@ -343,7 +391,7 @@ describe("rp_application-api", () => {
 		expect(response.clientId).toBe("client-id-123");
 	});
 
-	it("lists current-user rotated client secrets through the backend API", async () => {
+	it("lists accessible rotated client secrets through the backend API", async () => {
 		const applicationUuid = "application-uuid-1";
 		const fetchMock = vi.spyOn(globalThis, "fetch").mockResolvedValue({
 			headers: new Headers({ "content-type": "application/json" }),
@@ -362,12 +410,11 @@ describe("rp_application-api", () => {
 			status: 200,
 		} as Response);
 
-		const response = await getCurrentUserRPApplicationRotatedClientSecrets(
-			applicationUuid
-		);
+		const response =
+			await getAccessibleRPApplicationRotatedClientSecrets(applicationUuid);
 
 		expect(fetchMock).toHaveBeenCalledWith(
-			`http://localhost:8000/api/v1/rp-applications/mine/${applicationUuid}/client/rotated-secrets`,
+			`http://localhost:8000/api/v1/rp-applications/accessible/${applicationUuid}/client/rotated-secrets`,
 			expect.objectContaining({
 				cache: "no-store",
 				credentials: "include",
@@ -378,7 +425,7 @@ describe("rp_application-api", () => {
 		expect(response[0]?.path).toBe("/rotatedSecrets/0");
 	});
 
-	it("creates a current-user rotated client secret through the backend API", async () => {
+	it("creates an accessible rotated client secret through the backend API", async () => {
 		const applicationUuid = "application-uuid-1";
 		const fetchMock = vi.spyOn(globalThis, "fetch").mockResolvedValue({
 			headers: new Headers({ "content-type": "application/json" }),
@@ -387,13 +434,13 @@ describe("rp_application-api", () => {
 			status: 200,
 		} as Response);
 
-		await createCurrentUserRPApplicationRotatedClientSecret(applicationUuid, {
+		await createAccessibleRPApplicationRotatedClientSecret(applicationUuid, {
 			description: "April rotation",
 			rotatedSecretExpiredAt: 1775692800,
 		});
 
 		expect(fetchMock).toHaveBeenCalledWith(
-			`http://localhost:8000/api/v1/rp-applications/mine/${applicationUuid}/client/rotated-secrets`,
+			`http://localhost:8000/api/v1/rp-applications/accessible/${applicationUuid}/client/rotated-secrets`,
 			expect.objectContaining({
 				body: JSON.stringify({
 					description: "April rotation",
@@ -405,8 +452,10 @@ describe("rp_application-api", () => {
 		);
 	});
 
-	it("deletes a current-user rotated client secret through the backend API", async () => {
+	it("deletes an accessible rotated client secret through the backend API", async () => {
 		const applicationUuid = "application-uuid-1";
+		const secretId = "/rotatedSecrets/0";
+		const rawSecret = "super-secret-value-that-must-not-be-sent";
 		const fetchMock = vi.spyOn(globalThis, "fetch").mockResolvedValue({
 			headers: new Headers({ "content-type": "application/json" }),
 			json: () => Promise.resolve({ message: "Rotated client secret deleted" }),
@@ -414,22 +463,24 @@ describe("rp_application-api", () => {
 			status: 200,
 		} as Response);
 
-		const response = await deleteCurrentUserRPApplicationRotatedClientSecret(
+		const response = await deleteAccessibleRPApplicationRotatedClientSecret(
 			applicationUuid,
-			"{sha512}redacted"
+			secretId
 		);
 
 		expect(fetchMock).toHaveBeenCalledWith(
-			`http://localhost:8000/api/v1/rp-applications/mine/${applicationUuid}/client/rotated-secrets/%7Bsha512%7Dredacted`,
+			`http://localhost:8000/api/v1/rp-applications/accessible/${applicationUuid}/client/rotated-secrets`,
 			expect.objectContaining({
+				body: JSON.stringify({ secretId }),
 				credentials: "include",
 				method: "DELETE",
 			})
 		);
+		expect(JSON.stringify(fetchMock.mock.calls)).not.toContain(rawSecret);
 		expect(response["message"]).toBe("Rotated client secret deleted");
 	});
 
-	it("rotates the current-user RP application client secret through the backend API", async () => {
+	it("rotates the accessible RP application client secret through the backend API", async () => {
 		const applicationUuid = "application-uuid-1";
 		const fetchMock = vi.spyOn(globalThis, "fetch").mockResolvedValue({
 			headers: new Headers({ "content-type": "application/json" }),
@@ -443,12 +494,11 @@ describe("rp_application-api", () => {
 			status: 200,
 		} as Response);
 
-		const response = await rotateCurrentUserRPApplicationClientSecret(
-			applicationUuid
-		);
+		const response =
+			await rotateAccessibleRPApplicationClientSecret(applicationUuid);
 
 		expect(fetchMock).toHaveBeenCalledWith(
-			`http://localhost:8000/api/v1/rp-applications/mine/${applicationUuid}/client/rotate-secret`,
+			`http://localhost:8000/api/v1/rp-applications/accessible/${applicationUuid}/client/rotate-secret`,
 			expect.objectContaining({
 				credentials: "include",
 				body: JSON.stringify({
@@ -462,7 +512,7 @@ describe("rp_application-api", () => {
 		expect(response.clientSecret).toBe("rotated-secret-value");
 	});
 
-	it("sends a named rotation payload for current-user client secret rotation", async () => {
+	it("sends a named rotation payload for accessible client secret rotation", async () => {
 		const applicationUuid = "application-uuid-1";
 		const fetchMock = vi.spyOn(globalThis, "fetch").mockResolvedValue({
 			headers: new Headers({ "content-type": "application/json" }),
@@ -476,14 +526,14 @@ describe("rp_application-api", () => {
 			status: 200,
 		} as Response);
 
-		await rotateCurrentUserRPApplicationClientSecret(applicationUuid, {
+		await rotateAccessibleRPApplicationClientSecret(applicationUuid, {
 			deleteRotatedSecrets: true,
 			description: "April rotation",
 			rotatedSecretExpiredAt: 1775692800,
 		});
 
 		expect(fetchMock).toHaveBeenCalledWith(
-			`http://localhost:8000/api/v1/rp-applications/mine/${applicationUuid}/client/rotate-secret`,
+			`http://localhost:8000/api/v1/rp-applications/accessible/${applicationUuid}/client/rotate-secret`,
 			expect.objectContaining({
 				body: JSON.stringify({
 					deleteRotatedSecrets: true,
@@ -496,92 +546,92 @@ describe("rp_application-api", () => {
 		);
 	});
 
-		it("gets RP application usage summary through the backend API", async () => {
-			const workspaceUuid = "workspace-uuid-1";
-			const applicationUuid = "application-uuid-1";
-			const fetchMock = vi.spyOn(globalThis, "fetch").mockResolvedValue({
-				headers: new Headers({ "content-type": "application/json" }),
-				json: () =>
-					Promise.resolve({
-						failed: 2,
-						succeeded: 9,
-						total: 11,
-					}),
-				ok: true,
-				status: 200,
-			} as Response);
+	it("gets RP application usage summary through the backend API", async () => {
+		const workspaceUuid = "workspace-uuid-1";
+		const applicationUuid = "application-uuid-1";
+		const fetchMock = vi.spyOn(globalThis, "fetch").mockResolvedValue({
+			headers: new Headers({ "content-type": "application/json" }),
+			json: () =>
+				Promise.resolve({
+					failed: 2,
+					succeeded: 9,
+					total: 11,
+				}),
+			ok: true,
+			status: 200,
+		} as Response);
 
-			const response = await getRPApplicationUsageSummary(
-				workspaceUuid,
-				applicationUuid,
-				"2026-04-09"
-			);
+		const response = await getRPApplicationUsageSummary(
+			workspaceUuid,
+			applicationUuid,
+			"2026-04-09"
+		);
 
-			expect(fetchMock).toHaveBeenCalledWith(
-				`http://localhost:8000/api/v1/workspaces/${workspaceUuid}/applications/${applicationUuid}/usage/summary?selected_date=1775692800000`,
-				expect.objectContaining({
-					credentials: "include",
-					method: "GET",
-				})
-			);
-			expect(response.total).toBe(11);
+		expect(fetchMock).toHaveBeenCalledWith(
+			`http://localhost:8000/api/v1/workspaces/${workspaceUuid}/applications/${applicationUuid}/usage/summary?selected_date=1775692800000`,
+			expect.objectContaining({
+				credentials: "include",
+				method: "GET",
+			})
+		);
+		expect(response.total).toBe(11);
+	});
+
+	it("gets RP application usage audit trail through the backend API", async () => {
+		const workspaceUuid = "workspace-uuid-1";
+		const applicationUuid = "application-uuid-1";
+		const fetchMock = vi.spyOn(globalThis, "fetch").mockResolvedValue({
+			headers: new Headers({ "content-type": "application/json" }),
+			json: () =>
+				Promise.resolve({
+					events: [],
+					next: '1744200000000, "event-2"',
+					total: 20,
+				}),
+			ok: true,
+			status: 200,
+		} as Response);
+
+		await getRPApplicationUsageAuditTrail(workspaceUuid, applicationUuid, {
+			selectedDate: "2026-04-09",
+			size: 25,
 		});
 
-		it("gets RP application usage audit trail through the backend API", async () => {
-			const workspaceUuid = "workspace-uuid-1";
-			const applicationUuid = "application-uuid-1";
-			const fetchMock = vi.spyOn(globalThis, "fetch").mockResolvedValue({
-				headers: new Headers({ "content-type": "application/json" }),
-				json: () =>
-					Promise.resolve({
-						events: [],
-						next: '1744200000000, "event-2"',
-						total: 20,
-					}),
-				ok: true,
-				status: 200,
-			} as Response);
+		expect(fetchMock).toHaveBeenCalledWith(
+			`http://localhost:8000/api/v1/workspaces/${workspaceUuid}/applications/${applicationUuid}/audit-events?selected_date=1775692800000&size=25`,
+			expect.objectContaining({
+				credentials: "include",
+				method: "GET",
+			})
+		);
+	});
 
-			await getRPApplicationUsageAuditTrail(workspaceUuid, applicationUuid, {
+	it("gets RP application usage audit trail search-after page through the backend API", async () => {
+		const workspaceUuid = "workspace-uuid-1";
+		const applicationUuid = "application-uuid-1";
+		const fetchMock = vi.spyOn(globalThis, "fetch").mockResolvedValue({
+			headers: new Headers({ "content-type": "application/json" }),
+			json: () => Promise.resolve({ events: [], next: null, total: 20 }),
+			ok: true,
+			status: 200,
+		} as Response);
+
+		await getRPApplicationUsageAuditTrailSearchAfter(
+			workspaceUuid,
+			applicationUuid,
+			{
+				searchAfter: '"1744200000000", "event-2"',
 				selectedDate: "2026-04-09",
 				size: 25,
-			});
+			}
+		);
 
-			expect(fetchMock).toHaveBeenCalledWith(
-				`http://localhost:8000/api/v1/workspaces/${workspaceUuid}/applications/${applicationUuid}/audit-events?selected_date=1775692800000&size=25`,
-				expect.objectContaining({
-					credentials: "include",
-					method: "GET",
-				})
-			);
-		});
-
-		it("gets RP application usage audit trail search-after page through the backend API", async () => {
-			const workspaceUuid = "workspace-uuid-1";
-			const applicationUuid = "application-uuid-1";
-			const fetchMock = vi.spyOn(globalThis, "fetch").mockResolvedValue({
-				headers: new Headers({ "content-type": "application/json" }),
-				json: () => Promise.resolve({ events: [], next: null, total: 20 }),
-				ok: true,
-				status: 200,
-			} as Response);
-
-			await getRPApplicationUsageAuditTrailSearchAfter(
-				workspaceUuid,
-				applicationUuid,
-				{
-					searchAfter: '"1744200000000", "event-2"',
-					selectedDate: "2026-04-09",
-					size: 25,
-				}
-			);
-
-			expect(fetchMock).toHaveBeenCalledWith(
-				`http://localhost:8000/api/v1/workspaces/${workspaceUuid}/applications/${applicationUuid}/audit-events/search-after?selected_date=1775692800000&search_after=%221744200000000%22%2C+%22event-2%22&size=25`,
-				expect.objectContaining({
-					credentials: "include",
-					method: "GET",
-				})
-			);
-		});
+		expect(fetchMock).toHaveBeenCalledWith(
+			`http://localhost:8000/api/v1/workspaces/${workspaceUuid}/applications/${applicationUuid}/audit-events/search-after?selected_date=1775692800000&search_after=%221744200000000%22%2C+%22event-2%22&size=25`,
+			expect.objectContaining({
+				credentials: "include",
+				method: "GET",
+			})
+		);
+	});
 });

@@ -3,6 +3,7 @@ import { useNavigate, useParams, useSearch } from "@tanstack/react-router";
 import { useTranslation } from "react-i18next";
 import type { FunctionComponent } from "@/common/types";
 import { useSession } from "@/hooks";
+import { hasCapability } from "@/features/auth/authorization";
 import {
 	Button,
 	ConfirmDialog,
@@ -91,8 +92,7 @@ const toReviewChecklistForm = (
 	}
 
 	return {
-		applicationInformationStatus:
-			checklistSummary.applicationInformationStatus,
+		applicationInformationStatus: checklistSummary.applicationInformationStatus,
 		contactsStatus: checklistSummary.contactsStatus,
 		environmentRegistrationStatus:
 			checklistSummary.environmentRegistrationStatus,
@@ -166,9 +166,15 @@ const ReviewChecklistEditor = ({
 					);
 				}}
 			>
-				<option value="not_started">{t("workspaces.appInfoReadinessStatusNotStarted")}</option>
-				<option value="incomplete">{t("workspaces.appInfoReadinessStatusIncomplete")}</option>
-				<option value="complete">{t("workspaces.appInfoReadinessStatusComplete")}</option>
+				<option value="not_started">
+					{t("workspaces.appInfoReadinessStatusNotStarted")}
+				</option>
+				<option value="incomplete">
+					{t("workspaces.appInfoReadinessStatusIncomplete")}
+				</option>
+				<option value="complete">
+					{t("workspaces.appInfoReadinessStatusComplete")}
+				</option>
 			</Select>
 			<Select
 				label={t("workspaces.appInfoReadinessContactsLabel")}
@@ -182,15 +188,23 @@ const ReviewChecklistEditor = ({
 					);
 				}}
 			>
-				<option value="not_started">{t("workspaces.appInfoReadinessStatusNotStarted")}</option>
-				<option value="incomplete">{t("workspaces.appInfoReadinessStatusIncomplete")}</option>
-				<option value="complete">{t("workspaces.appInfoReadinessStatusComplete")}</option>
+				<option value="not_started">
+					{t("workspaces.appInfoReadinessStatusNotStarted")}
+				</option>
+				<option value="incomplete">
+					{t("workspaces.appInfoReadinessStatusIncomplete")}
+				</option>
+				<option value="complete">
+					{t("workspaces.appInfoReadinessStatusComplete")}
+				</option>
 			</Select>
 			<Select
-				label={t("workspaces.appInfoInternalReviewEnvironmentRegistrationLabel")}
 				name="environmentRegistrationStatus"
 				selectId="review-environment-registration-status"
 				value={reviewChecklistForm.environmentRegistrationStatus}
+				label={t(
+					"workspaces.appInfoInternalReviewEnvironmentRegistrationLabel"
+				)}
 				onInput={(event): void => {
 					updateReviewChecklistField(
 						"environmentRegistrationStatus",
@@ -198,9 +212,15 @@ const ReviewChecklistEditor = ({
 					);
 				}}
 			>
-				<option value="not_started">{t("workspaces.appInfoReadinessStatusNotStarted")}</option>
-				<option value="incomplete">{t("workspaces.appInfoReadinessStatusIncomplete")}</option>
-				<option value="complete">{t("workspaces.appInfoReadinessStatusComplete")}</option>
+				<option value="not_started">
+					{t("workspaces.appInfoReadinessStatusNotStarted")}
+				</option>
+				<option value="incomplete">
+					{t("workspaces.appInfoReadinessStatusIncomplete")}
+				</option>
+				<option value="complete">
+					{t("workspaces.appInfoReadinessStatusComplete")}
+				</option>
 			</Select>
 			<Select
 				label={t("workspaces.appInfoInternalReviewPromotionMetadataLabel")}
@@ -214,9 +234,15 @@ const ReviewChecklistEditor = ({
 					);
 				}}
 			>
-				<option value="not_started">{t("workspaces.appInfoReadinessStatusNotStarted")}</option>
-				<option value="incomplete">{t("workspaces.appInfoReadinessStatusIncomplete")}</option>
-				<option value="complete">{t("workspaces.appInfoReadinessStatusComplete")}</option>
+				<option value="not_started">
+					{t("workspaces.appInfoReadinessStatusNotStarted")}
+				</option>
+				<option value="incomplete">
+					{t("workspaces.appInfoReadinessStatusIncomplete")}
+				</option>
+				<option value="complete">
+					{t("workspaces.appInfoReadinessStatusComplete")}
+				</option>
 			</Select>
 			<Select
 				label={t("workspaces.appInfoInternalReviewEvidenceReferenceLabel")}
@@ -230,9 +256,15 @@ const ReviewChecklistEditor = ({
 					);
 				}}
 			>
-				<option value="not_started">{t("workspaces.appInfoReadinessStatusNotStarted")}</option>
-				<option value="incomplete">{t("workspaces.appInfoReadinessStatusIncomplete")}</option>
-				<option value="complete">{t("workspaces.appInfoReadinessStatusComplete")}</option>
+				<option value="not_started">
+					{t("workspaces.appInfoReadinessStatusNotStarted")}
+				</option>
+				<option value="incomplete">
+					{t("workspaces.appInfoReadinessStatusIncomplete")}
+				</option>
+				<option value="complete">
+					{t("workspaces.appInfoReadinessStatusComplete")}
+				</option>
 			</Select>
 			<Select
 				label={t("workspaces.appInfoInternalReviewProcessLinksLabel")}
@@ -246,9 +278,15 @@ const ReviewChecklistEditor = ({
 					);
 				}}
 			>
-				<option value="not_started">{t("workspaces.appInfoReadinessStatusNotStarted")}</option>
-				<option value="incomplete">{t("workspaces.appInfoReadinessStatusIncomplete")}</option>
-				<option value="complete">{t("workspaces.appInfoReadinessStatusComplete")}</option>
+				<option value="not_started">
+					{t("workspaces.appInfoReadinessStatusNotStarted")}
+				</option>
+				<option value="incomplete">
+					{t("workspaces.appInfoReadinessStatusIncomplete")}
+				</option>
+				<option value="complete">
+					{t("workspaces.appInfoReadinessStatusComplete")}
+				</option>
 			</Select>
 			<Textarea
 				label={t("workspaces.appInfoInternalReviewRationaleLabel")}
@@ -288,14 +326,11 @@ export const ApplicationInformationDetailPage = (): FunctionComponent => {
 	const search = useSearch({
 		from: "/workspaces/$workspaceUuid/application-information/$applicationInformationUuid",
 	});
-	const {
-		applicationInformation,
-		error,
-		isLoading,
-	} = useWorkspaceApplicationInformation(
-		workspaceUuid,
-		applicationInformationUuid
-	);
+	const { applicationInformation, error, isLoading } =
+		useWorkspaceApplicationInformation(
+			workspaceUuid,
+			applicationInformationUuid
+		);
 	const {
 		addContact,
 		contacts,
@@ -310,9 +345,20 @@ export const ApplicationInformationDetailPage = (): FunctionComponent => {
 		workspaceUuid,
 		applicationInformationUuid
 	);
-	const { deleteApplicationInformation, isDeleting: isDeletingApplicationInformation } =
-		useApplicationInformationManagement();
-	const isInternalReviewer = currentUser?.isSuperuser === true;
+	const {
+		deleteApplicationInformation,
+		isDeleting: isDeletingApplicationInformation,
+	} = useApplicationInformationManagement();
+	const authorizationContext = currentUser?.authorizationContext;
+	const isInternalReviewer = hasCapability(
+		authorizationContext,
+		"production_review"
+	);
+	const canEditApplicationInformation = hasCapability(
+		authorizationContext,
+		"application_information_write",
+		workspaceUuid
+	);
 	const {
 		addNote,
 		checklistSummary,
@@ -332,8 +378,10 @@ export const ApplicationInformationDetailPage = (): FunctionComponent => {
 			createEmptyApplicationInformationContactForm
 		);
 	const [reviewNoteBody, setReviewNoteBody] = useState("");
-	const [deleteApplicationInformationDialogOpen, setDeleteApplicationInformationDialogOpen] =
-		useState(false);
+	const [
+		deleteApplicationInformationDialogOpen,
+		setDeleteApplicationInformationDialogOpen,
+	] = useState(false);
 	const [deleteContactTarget, setDeleteContactTarget] =
 		useState<ApplicationInformationContactRead | null>(null);
 	const [editingContact, setEditingContact] =
@@ -402,9 +450,7 @@ export const ApplicationInformationDetailPage = (): FunctionComponent => {
 					return {
 						key: item.key,
 						label: t("workspaces.appInfoReadinessServiceIdentityLabel"),
-						nextStep: t(
-							"workspaces.appInfoReadinessServiceIdentityNextStep"
-						),
+						nextStep: t("workspaces.appInfoReadinessServiceIdentityNextStep"),
 						status: item.status,
 						statusLabel: readinessStatusLabel(item.status),
 					};
@@ -412,18 +458,14 @@ export const ApplicationInformationDetailPage = (): FunctionComponent => {
 					return {
 						key: item.key,
 						label: t("workspaces.appInfoReadinessBusinessContextLabel"),
-						nextStep: t(
-							"workspaces.appInfoReadinessBusinessContextNextStep"
-						),
+						nextStep: t("workspaces.appInfoReadinessBusinessContextNextStep"),
 						status: item.status,
 						statusLabel: readinessStatusLabel(item.status),
 					};
 				case "technical_integration":
 					return {
 						key: item.key,
-						label: t(
-							"workspaces.appInfoReadinessTechnicalIntegrationLabel"
-						),
+						label: t("workspaces.appInfoReadinessTechnicalIntegrationLabel"),
 						nextStep: t(
 							"workspaces.appInfoReadinessTechnicalIntegrationNextStep"
 						),
@@ -434,9 +476,7 @@ export const ApplicationInformationDetailPage = (): FunctionComponent => {
 					return {
 						key: item.key,
 						label: t("workspaces.appInfoReadinessSecurityPostureLabel"),
-						nextStep: t(
-							"workspaces.appInfoReadinessSecurityPostureNextStep"
-						),
+						nextStep: t("workspaces.appInfoReadinessSecurityPostureNextStep"),
 						status: item.status,
 						statusLabel: readinessStatusLabel(item.status),
 					};
@@ -444,9 +484,7 @@ export const ApplicationInformationDetailPage = (): FunctionComponent => {
 					return {
 						key: item.key,
 						label: t("workspaces.appInfoReadinessMigrationPlanningLabel"),
-						nextStep: t(
-							"workspaces.appInfoReadinessMigrationPlanningNextStep"
-						),
+						nextStep: t("workspaces.appInfoReadinessMigrationPlanningNextStep"),
 						status: item.status,
 						statusLabel: readinessStatusLabel(item.status),
 					};
@@ -499,7 +537,8 @@ export const ApplicationInformationDetailPage = (): FunctionComponent => {
 	};
 
 	const handleStartEditContact = (contactUuid: string): void => {
-		const contact = contacts.find((entry) => entry.uuid === contactUuid) ?? null;
+		const contact =
+			contacts.find((entry) => entry.uuid === contactUuid) ?? null;
 
 		if (!contact) {
 			return;
@@ -583,7 +622,9 @@ export const ApplicationInformationDetailPage = (): FunctionComponent => {
 		try {
 			await addNote({ body: trimmedBody });
 			setReviewNoteBody("");
-			setLocalSuccessMessage(t("workspaces.appInfoInternalReviewNoteSavedSuccess"));
+			setLocalSuccessMessage(
+				t("workspaces.appInfoInternalReviewNoteSavedSuccess")
+			);
 		} catch (requestError) {
 			setLocalError(requestError as Error);
 		}
@@ -596,19 +637,14 @@ export const ApplicationInformationDetailPage = (): FunctionComponent => {
 
 		try {
 			await saveChecklistSummary({
-				applicationInformationStatus:
-					form.applicationInformationStatus,
+				applicationInformationStatus: form.applicationInformationStatus,
 				contactsStatus: form.contactsStatus,
-				environmentRegistrationStatus:
-					form.environmentRegistrationStatus,
-				evidenceReferenceStatus:
-					form.evidenceReferenceStatus,
+				environmentRegistrationStatus: form.environmentRegistrationStatus,
+				evidenceReferenceStatus: form.evidenceReferenceStatus,
 				processLinksStatus: form.processLinksStatus,
-				promotionMetadataStatus:
-					form.promotionMetadataStatus,
-				rationale: form.rationale.trim().length > 0
-					? form.rationale.trim()
-						: null,
+				promotionMetadataStatus: form.promotionMetadataStatus,
+				rationale:
+					form.rationale.trim().length > 0 ? form.rationale.trim() : null,
 				reviewDisposition: form.reviewDisposition,
 			});
 			setLocalSuccessMessage(
@@ -671,9 +707,7 @@ export const ApplicationInformationDetailPage = (): FunctionComponent => {
 								<div>
 									<dt>
 										<strong>
-											{t(
-												"workspaces.appInfoReadinessSummaryLabel"
-											)}
+											{t("workspaces.appInfoReadinessSummaryLabel")}
 										</strong>
 									</dt>
 									<dd>
@@ -690,9 +724,7 @@ export const ApplicationInformationDetailPage = (): FunctionComponent => {
 									noticeTitle={t("workspaces.appInfoReadinessWarningTitle")}
 									noticeTitleTag="h3"
 								>
-									<Text>
-										{t("workspaces.appInfoReadinessWarningBody")}
-									</Text>
+									<Text>{t("workspaces.appInfoReadinessWarningBody")}</Text>
 								</Notice>
 							) : null}
 
@@ -717,9 +749,7 @@ export const ApplicationInformationDetailPage = (): FunctionComponent => {
 								noticeTitle={t("workspaces.appInfoReadinessExternalInfoTitle")}
 								noticeTitleTag="h3"
 							>
-								<Text>
-									{t("workspaces.appInfoReadinessExternalInfoBody")}
-								</Text>
+								<Text>{t("workspaces.appInfoReadinessExternalInfoBody")}</Text>
 							</Notice>
 						</div>
 					) : null}
@@ -729,9 +759,7 @@ export const ApplicationInformationDetailPage = (): FunctionComponent => {
 							<Heading tag="h2">
 								{t("workspaces.appInfoInternalReviewTitle")}
 							</Heading>
-							<Text>
-								{t("workspaces.appInfoInternalReviewSummary")}
-							</Text>
+							<Text>{t("workspaces.appInfoInternalReviewSummary")}</Text>
 
 							{isLoadingReview ? (
 								<Notice
@@ -750,14 +778,10 @@ export const ApplicationInformationDetailPage = (): FunctionComponent => {
 							{reviewError ? (
 								<Notice
 									noticeRole="warning"
+									noticeTitle={t("workspaces.appInfoInternalReviewErrorTitle")}
 									noticeTitleTag="h3"
-									noticeTitle={t(
-										"workspaces.appInfoInternalReviewErrorTitle"
-									)}
 								>
-									<Text>
-										{t("workspaces.appInfoInternalReviewErrorBody")}
-									</Text>
+									<Text>{t("workspaces.appInfoInternalReviewErrorBody")}</Text>
 								</Notice>
 							) : null}
 
@@ -812,16 +836,18 @@ export const ApplicationInformationDetailPage = (): FunctionComponent => {
 												)}
 											>
 												<Text>
-													{t(
-														"workspaces.appInfoInternalReviewNoChecklistBody"
-													)}
+													{t("workspaces.appInfoInternalReviewNoChecklistBody")}
 												</Text>
 											</Notice>
 										)}
 
 										{canEditInternalReview ? (
 											<ReviewChecklistEditor
-												key={checklistSummary?.updatedAt ?? checklistSummary?.createdAt ?? "empty"}
+												key={
+													checklistSummary?.updatedAt ??
+													checklistSummary?.createdAt ??
+													"empty"
+												}
 												initialForm={toReviewChecklistForm(checklistSummary)}
 												isSavingChecklist={isSavingChecklist}
 												t={t}
@@ -900,11 +926,11 @@ export const ApplicationInformationDetailPage = (): FunctionComponent => {
 												>
 													{isAddingNote
 														? t(
-															"workspaces.appInfoInternalReviewNoteSavingAction"
-														)
+																"workspaces.appInfoInternalReviewNoteSavingAction"
+															)
 														: t(
-															"workspaces.appInfoInternalReviewNoteSaveAction"
-														)}
+																"workspaces.appInfoInternalReviewNoteSaveAction"
+															)}
 												</Button>
 											</div>
 										) : null}
@@ -938,22 +964,26 @@ export const ApplicationInformationDetailPage = (): FunctionComponent => {
 						{`${t("workspaces.launchedAtLabel")}: ${applicationInformation.launchedAt ?? t("common.notAvailable")}`}
 					</Text>
 					<div className="flex flex-wrap gap-200">
-						<Button
-							buttonRole="secondary"
-							href={`/workspaces/${workspaceUuid}/application-information/${applicationInformationUuid}/edit`}
-							type="link"
-						>
-							{t("workspaces.appInfoEdit")}
-						</Button>
-						<Button
-							buttonRole="danger"
-							type="button"
-							onGcdsClick={() => {
-								setDeleteApplicationInformationDialogOpen(true);
-							}}
-						>
-							{t("workspaces.appInfoDelete")}
-						</Button>
+						{canEditApplicationInformation ? (
+							<>
+								<Button
+									buttonRole="secondary"
+									href={`/workspaces/${workspaceUuid}/application-information/${applicationInformationUuid}/edit`}
+									type="link"
+								>
+									{t("workspaces.appInfoEdit")}
+								</Button>
+								<Button
+									buttonRole="danger"
+									type="button"
+									onGcdsClick={() => {
+										setDeleteApplicationInformationDialogOpen(true);
+									}}
+								>
+									{t("workspaces.appInfoDelete")}
+								</Button>
+							</>
+						) : null}
 						<Button
 							href={`/workspaces/${workspaceUuid}/application-information`}
 							type="link"
@@ -964,9 +994,15 @@ export const ApplicationInformationDetailPage = (): FunctionComponent => {
 
 					<div className="grid gap-200 rounded-sm border border-solid border-[#d9d9d9] p-300">
 						<Heading tag="h2">{t("workspaces.appInfoContacts")}</Heading>
-						<Text>{t("workspaces.appInfoContactsSummary")}</Text>
+						<Text>
+							{t(
+								canEditApplicationInformation
+									? "workspaces.appInfoContactsSummary"
+									: "workspaces.appInfoContactsReadOnlySummary"
+							)}
+						</Text>
 
-						{isContactFormOpen ? (
+						{canEditApplicationInformation && isContactFormOpen ? (
 							<div className="grid gap-200">
 								<Heading tag="h3">
 									{editingContact
@@ -990,11 +1026,11 @@ export const ApplicationInformationDetailPage = (): FunctionComponent => {
 									}}
 								/>
 							</div>
-						) : (
+						) : canEditApplicationInformation ? (
 							<Button type="button" onGcdsClick={handleStartCreateContact}>
 								{t("workspaces.appInfoCreateContact")}
 							</Button>
-						)}
+						) : null}
 
 						{contacts.length === 0 ? (
 							<Notice
@@ -1007,72 +1043,83 @@ export const ApplicationInformationDetailPage = (): FunctionComponent => {
 						) : (
 							<DataTable
 								columns={contactColumns}
-								getRowId={(row): string => row.uuid}
-								itemLabel="application information contacts"
 								pagination={false}
 								rows={contactRows}
 								title={t("workspaces.appInfoContacts")}
-								action={[
-									{
-										buttonLabel: t("workspaces.appInfoContactEdit"),
-										buttonRole: "secondary",
-										onAction: (row): void => {
-											handleStartEditContact(row.uuid);
-										},
-										screenReaderLabel: (row): string => row.name,
-										variant: "button",
-									},
-									{
-										buttonLabel: t("workspaces.appInfoContactDelete"),
-										buttonRole: "danger",
-										onAction: (row): void => {
-											setDeleteContactTarget(
-												contacts.find((entry) => entry.uuid === row.uuid) ?? null
-											);
-										},
-										screenReaderLabel: (row): string => row.name,
-										variant: "button",
-									},
-								]}
+								action={
+									canEditApplicationInformation
+										? [
+												{
+													buttonLabel: t("workspaces.appInfoContactEdit"),
+													buttonRole: "secondary",
+													onAction: (row): void => {
+														handleStartEditContact(row.uuid);
+													},
+													screenReaderLabel: (row): string => row.name,
+													variant: "button",
+												},
+												{
+													buttonLabel: t("workspaces.appInfoContactDelete"),
+													buttonRole: "danger",
+													onAction: (row): void => {
+														setDeleteContactTarget(
+															contacts.find(
+																(entry) => entry.uuid === row.uuid
+															) ?? null
+														);
+													},
+													screenReaderLabel: (row): string => row.name,
+													variant: "button",
+												},
+											]
+										: undefined
+								}
+								itemLabel={t(
+									"workspaces.applicationInformationContactsItemLabel"
+								)}
 							/>
 						)}
 					</div>
 				</div>
 			) : null}
 
-			<ConfirmDialog
-				cancelLabel={t("workspaces.cancelAction")}
-				confirmLabel={t("workspaces.appInfoDelete")}
-				isOpen={deleteApplicationInformationDialogOpen}
-				isPending={isDeletingApplicationInformation}
-				title={t("workspaces.appInfoDeleteConfirmTitle")}
-				description={t("workspaces.appInfoDeleteConfirmBody", {
-					name: applicationInformation?.serviceNameEn ?? "",
-				})}
-				onClose={() => {
-					setDeleteApplicationInformationDialogOpen(false);
-				}}
-				onConfirm={() => {
-					void handleDeleteApplicationInformation();
-				}}
-			/>
+			{canEditApplicationInformation ? (
+				<ConfirmDialog
+					cancelLabel={t("workspaces.cancelAction")}
+					confirmLabel={t("workspaces.appInfoDelete")}
+					isOpen={deleteApplicationInformationDialogOpen}
+					isPending={isDeletingApplicationInformation}
+					title={t("workspaces.appInfoDeleteConfirmTitle")}
+					description={t("workspaces.appInfoDeleteConfirmBody", {
+						name: applicationInformation?.serviceNameEn ?? "",
+					})}
+					onClose={() => {
+						setDeleteApplicationInformationDialogOpen(false);
+					}}
+					onConfirm={() => {
+						void handleDeleteApplicationInformation();
+					}}
+				/>
+			) : null}
 
-			<ConfirmDialog
-				cancelLabel={t("workspaces.cancelAction")}
-				confirmLabel={t("workspaces.appInfoContactDelete")}
-				isOpen={deleteContactTarget !== null}
-				isPending={isDeleting}
-				title={t("workspaces.appInfoContactDeleteConfirmTitle")}
-				description={t("workspaces.appInfoContactDeleteConfirmBody", {
-					name: deleteContactTarget?.nameEn ?? "",
-				})}
-				onClose={() => {
-					setDeleteContactTarget(null);
-				}}
-				onConfirm={() => {
-					void handleDeleteContact();
-				}}
-			/>
+			{canEditApplicationInformation ? (
+				<ConfirmDialog
+					cancelLabel={t("workspaces.cancelAction")}
+					confirmLabel={t("workspaces.appInfoContactDelete")}
+					isOpen={deleteContactTarget !== null}
+					isPending={isDeleting}
+					title={t("workspaces.appInfoContactDeleteConfirmTitle")}
+					description={t("workspaces.appInfoContactDeleteConfirmBody", {
+						name: deleteContactTarget?.nameEn ?? "",
+					})}
+					onClose={() => {
+						setDeleteContactTarget(null);
+					}}
+					onConfirm={() => {
+						void handleDeleteContact();
+					}}
+				/>
+			) : null}
 		</>
 	);
 };

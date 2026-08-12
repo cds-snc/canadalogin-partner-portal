@@ -3,6 +3,9 @@ from pydantic import ValidationError
 
 from src.app.schemas.rp_application import (
     WorkspaceRPApplicationRegistrationCreate,
+    WorkspaceRPApplicationRegistrationDraftCreate,
+    WorkspaceRPApplicationRegistrationDraftPatch,
+    WorkspaceRPApplicationRegistrationDraftRead,
     WorkspaceRPApplicationRegistrationUpdate,
 )
 
@@ -16,9 +19,7 @@ def make_valid_registration_payload() -> dict[str, object]:
         "application_environment_url_en": "https://benefits.canada.ca",
         "application_environment_url_fr": "https://prestations.canada.ca",
         "redirect_uris": ["https://benefits.canada.ca/callback"],
-        "post_logout_redirect_uris": [
-            "https://benefits.canada.ca/logout-complete"
-        ],
+        "post_logout_redirect_uris": ["https://benefits.canada.ca/logout-complete"],
         "logout_mode": "front_channel",
         "logout_uri": "https://benefits.canada.ca/logout",
         "client_type": "confidential",
@@ -48,10 +49,104 @@ def make_valid_registration_payload() -> dict[str, object]:
 
 
 class TestWorkspaceRPApplicationRegistrationSchemas:
-    def test_create_accepts_valid_questionnaire_payload(self) -> None:
-        payload = WorkspaceRPApplicationRegistrationCreate(
-            **make_valid_registration_payload()
+    def test_draft_create_requires_only_valid_basics(self) -> None:
+        payload = WorkspaceRPApplicationRegistrationDraftCreate(
+            canadaLoginEnvironment="test",
+            serviceNameEn="Benefits Portal",
+            serviceNameFr="Portail des prestations",
         )
+
+        assert payload.model_dump(mode="json", by_alias=True, exclude_none=True) == {
+            "canadaLoginEnvironment": "test",
+            "serviceNameEn": "Benefits Portal",
+            "serviceNameFr": "Portail des prestations",
+        }
+
+    def test_partial_draft_patch_does_not_claim_step_completeness(self) -> None:
+        payload = WorkspaceRPApplicationRegistrationDraftPatch(
+            stepId="signing",
+            saveMode="partial",
+            expectedDraftVersion=3,
+            registrationAnswers={"requestSigningSupported": False},
+        )
+
+        assert payload.registration_answers.request_signing_supported is False
+        assert payload.registration_answers.request_signing_roadmap is None
+
+    def test_draft_read_exposes_only_public_ids_typed_answers_and_flow_metadata(
+        self,
+    ) -> None:
+        payload = WorkspaceRPApplicationRegistrationDraftRead.model_validate(
+            {
+                "workspaceUuid": "018f6f83-0000-0000-0000-000000000201",
+                "rpApplicationUuid": "018f6f83-0000-0000-0000-000000000701",
+                "onboardingState": "draft",
+                "registrationDraftVersion": 2,
+                "registrationLastCompletedStep": "endpoints",
+                "registrationAnswers": {
+                    "serviceNameEn": "Benefits Portal",
+                    "serviceNameFr": "Portail des prestations",
+                },
+                "id": 33,
+                "createdBy": 42,
+                "oidcRegistrationPayload": {"unsafe": "raw"},
+            }
+        )
+
+        serialized = payload.model_dump(mode="json", by_alias=True)
+        assert serialized["workspaceUuid"] == "018f6f83-0000-0000-0000-000000000201"
+        assert serialized["registrationAnswers"]["serviceNameEn"] == "Benefits Portal"
+        assert "id" not in serialized
+        assert "createdBy" not in serialized
+        assert "oidcRegistrationPayload" not in serialized
+
+    @pytest.mark.parametrize(
+        "unsafe_material",
+        [
+            '{"kty":"RSA","n":"public","e":"AQAB","d":"private"}',
+            '{"kty":"oct","k":"symmetric"}',
+            "-----BEGIN PRIVATE KEY-----\nsecret\n-----END PRIVATE KEY-----",
+            "not a certificate or JWK",
+        ],
+    )
+    def test_partial_draft_rejects_private_or_untyped_offline_key_material(
+        self,
+        unsafe_material: str,
+    ) -> None:
+        with pytest.raises(ValidationError, match="offline_jwk_or_certificate"):
+            WorkspaceRPApplicationRegistrationDraftPatch(
+                stepId="client-and-access",
+                saveMode="partial",
+                expectedDraftVersion=1,
+                registrationAnswers={
+                    "offlineJwkOrCertificate": unsafe_material,
+                },
+            )
+
+    @pytest.mark.parametrize(
+        "public_material",
+        [
+            '{"kty":"RSA","n":"public-modulus","e":"AQAB"}',
+            "-----BEGIN CERTIFICATE-----\nPUBLIC\n-----END CERTIFICATE-----",
+        ],
+    )
+    def test_partial_draft_accepts_public_offline_key_material(
+        self,
+        public_material: str,
+    ) -> None:
+        payload = WorkspaceRPApplicationRegistrationDraftPatch(
+            stepId="client-and-access",
+            saveMode="partial",
+            expectedDraftVersion=1,
+            registrationAnswers={
+                "offlineJwkOrCertificate": public_material,
+            },
+        )
+
+        assert payload.registration_answers.offline_jwk_or_certificate == public_material
+
+    def test_create_accepts_valid_questionnaire_payload(self) -> None:
+        payload = WorkspaceRPApplicationRegistrationCreate(**make_valid_registration_payload())
 
         assert payload.canada_login_environment == "staging"
         assert payload.requested_scopes == ["openid", "profile", "email"]
@@ -126,6 +221,4 @@ class TestWorkspaceRPApplicationRegistrationSchemas:
             ValidationError,
             match="private_key_distribution_method is required when client_auth_method is private_key_jwt",
         ):
-            WorkspaceRPApplicationRegistrationUpdate(
-                client_auth_method="private_key_jwt"
-            )
+            WorkspaceRPApplicationRegistrationUpdate(client_auth_method="private_key_jwt")

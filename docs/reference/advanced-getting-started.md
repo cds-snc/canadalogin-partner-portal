@@ -46,12 +46,12 @@ Generated VS Code solution repos receive:
 - `.vscode/`: extension recommendations, launch configurations, settings, and
   task shortcuts.
 
-Codex targets receive a generated root `AGENTS.md`, shared skills under
-`.agents/skills/`, role adapters under `.codex/agents/`, and prompt adapters
-under `.codex/prompts/`. Claude targets receive shared skills under
-`.claude/skills/`.
+Codex targets receive a generated root `AGENTS.md`, shared and workflow skills
+under `.agents/skills/`, and project custom-agent TOML under
+`.codex/agents/`. Claude targets receive shared skills under `.claude/skills/`.
 
-Start with these prompt names for common work:
+Start with these workflow names for common work. Invoke them as `$dl-*` skills
+in Codex or as prompts in VS Code:
 
 - `dl-requirements-start`: turn a rough brief or PRD into an OpenSpec change.
 - `dl-requirements-refine`: repair requirements, scenarios, tasks, or lifecycle

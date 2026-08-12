@@ -1,16 +1,76 @@
 """IBM Security Verify Admin API endpoints."""
 
+from collections.abc import Awaitable, Callable
 from typing import Annotated, Any, cast
 
 from fastapi import APIRouter, Depends, Request
 from pydantic import BaseModel, Field
 
+from ...api.dependencies import get_current_cl_admin
 from ...core.access_control import casbin_guard
+from ...core.authorization import (
+    VerifyAdminOperation,
+    is_verify_admin_operation_allowed,
+)
+from ...core.exceptions.http_exceptions import ForbiddenException
 from ...core.exceptions.openapi import error_responses
 from ...repositories.dependencies import get_ibm_sv_admin_client
 from ...repositories.ibm_sv_admin import IBMVerifyAdminClient
 
-router = APIRouter(tags=["ibm-sv-admin"])
+router = APIRouter(
+    tags=["ibm-sv-admin"],
+    dependencies=[Depends(get_current_cl_admin)],
+)
+
+
+async def _execute_verify_admin_operation(
+    operation: VerifyAdminOperation,
+    external_call: Callable[[], Awaitable[Any]],
+) -> Any:
+    """Enforce the immutable allowlist before invoking any Verify dependency."""
+
+    if not is_verify_admin_operation_allowed(operation):
+        raise ForbiddenException("This IBM Verify operation is not available.")
+    return await external_call()
+
+
+def _redact_verify_admin_response(value: Any) -> Any:
+    """Remove secret-bearing fields from otherwise permitted platform reads."""
+
+    if isinstance(value, list):
+        return [_redact_verify_admin_response(item) for item in value]
+    if not isinstance(value, dict):
+        return value
+
+    redacted: dict[str, Any] = {}
+    for key, item in value.items():
+        normalized_key = "".join(character for character in key.lower() if character.isalnum())
+        if any(
+            secret_key in normalized_key
+            for secret_key in (
+                "secret",
+                "credential",
+                "password",
+                "privatekey",
+                "apikey",
+                "accesstoken",
+                "refreshtoken",
+                "idtoken",
+                "bearertoken",
+                "authorization",
+            )
+        ):
+            continue
+        redacted[key] = _redact_verify_admin_response(item)
+    return redacted
+
+
+def _serialize_verify_admin_response(value: Any) -> Any:
+    """Serialize SDK/Pydantic values and apply the common secret boundary."""
+
+    if hasattr(value, "model_dump"):
+        value = value.model_dump(by_alias=True, exclude_none=True)
+    return _redact_verify_admin_response(value)
 
 
 class ApplicationCreateRequest(BaseModel):
@@ -53,9 +113,12 @@ async def list_users(
     client: Annotated[IBMVerifyAdminClient, Depends(get_ibm_sv_admin_client)],
 ) -> list[dict[str, Any]]:
     """List all users from IBM Security Verify."""
-    payload = await client.fetch_users()
+    payload = await _execute_verify_admin_operation(
+        VerifyAdminOperation.USER_LIST,
+        client.fetch_users,
+    )
     resources = payload.Resources or []
-    return [user.model_dump(by_alias=True, exclude_none=True) for user in resources]
+    return [cast("dict[str, Any]", _serialize_verify_admin_response(user)) for user in resources]
 
 
 @router.get("/ibm-sv-admin/users/search")
@@ -66,9 +129,12 @@ async def search_users(
     client: Annotated[IBMVerifyAdminClient, Depends(get_ibm_sv_admin_client)],
 ) -> list[dict[str, Any]]:
     """Search users by name in IBM Security Verify."""
-    payload = await client.search_users_by_name(username)
+    payload = await _execute_verify_admin_operation(
+        VerifyAdminOperation.USER_SEARCH,
+        lambda: client.search_users_by_name(username),
+    )
     resources = payload.Resources or []
-    return [user.model_dump(by_alias=True, exclude_none=True) for user in resources]
+    return [cast("dict[str, Any]", _serialize_verify_admin_response(user)) for user in resources]
 
 
 # Application endpoints
@@ -79,7 +145,11 @@ async def list_applications(
     client: Annotated[IBMVerifyAdminClient, Depends(get_ibm_sv_admin_client)],
 ) -> Any:
     """List all applications from IBM Security Verify."""
-    return await client.list_applications()
+    payload = await _execute_verify_admin_operation(
+        VerifyAdminOperation.APPLICATION_LIST,
+        client.list_applications,
+    )
+    return _serialize_verify_admin_response(payload)
 
 
 @router.get("/ibm-sv-admin/applications/{application_id}")
@@ -90,8 +160,11 @@ async def get_application(
     client: Annotated[IBMVerifyAdminClient, Depends(get_ibm_sv_admin_client)],
 ) -> dict[str, Any]:
     """Get application details from IBM Security Verify."""
-    payload = await client.get_application_detail(application_id)
-    return cast("dict[str, Any]", payload.model_dump(by_alias=True, exclude_none=True))
+    payload = await _execute_verify_admin_operation(
+        VerifyAdminOperation.APPLICATION_READ,
+        lambda: client.get_application_detail(application_id),
+    )
+    return cast("dict[str, Any]", _serialize_verify_admin_response(payload))
 
 
 @router.post("/ibm-sv-admin/applications", responses=error_responses(400, 401, 403, 422))
@@ -106,11 +179,13 @@ async def create_application(
 
     service = IBMVerifyAdminService(client)
     payload_data = app_data.model_dump(exclude={"owners"}, exclude_none=True)
-    return await service.create_application_from_rp_setup(payload_data, app_data.owners)
+    payload = await _execute_verify_admin_operation(
+        VerifyAdminOperation.APPLICATION_CREATE,
+        lambda: service.create_application_from_rp_setup(payload_data, app_data.owners),
+    )
+    return cast("dict[str, Any]", _serialize_verify_admin_response(payload))
 
 
-@router.put("/ibm-sv-admin/applications/{application_id}")
-@casbin_guard.require_permission("isv_application", "write")
 async def update_application(
     request: Request,
     application_id: str,
@@ -122,19 +197,23 @@ async def update_application(
 
     service = IBMVerifyAdminService(client)
     payload_data = app_data.model_dump(exclude_none=True)
-    await service.update_application_from_rp_setup(application_id, payload_data)
+    await _execute_verify_admin_operation(
+        VerifyAdminOperation.APPLICATION_UPDATE,
+        lambda: service.update_application_from_rp_setup(application_id, payload_data),
+    )
     return {"message": "Application updated"}
 
 
-@router.delete("/ibm-sv-admin/applications/{application_id}")
-@casbin_guard.require_permission("isv_application", "write")
 async def delete_application(
     request: Request,
     application_id: str,
     client: Annotated[IBMVerifyAdminClient, Depends(get_ibm_sv_admin_client)],
 ) -> dict[str, str]:
     """Delete an application from IBM Security Verify."""
-    await client.delete_application(application_id)
+    await _execute_verify_admin_operation(
+        VerifyAdminOperation.APPLICATION_DELETE,
+        lambda: client.delete_application(application_id),
+    )
     return {"message": "Application deleted"}
 
 
@@ -148,8 +227,11 @@ async def get_application_logins(
     to_date: str | None = None,
 ) -> dict[str, Any]:
     """Get total logins for an application."""
-    payload = await client.get_application_total_logins(application_id, from_date, to_date)
-    return cast("dict[str, Any]", payload.model_dump(by_alias=True, exclude_none=True))
+    payload = await _execute_verify_admin_operation(
+        VerifyAdminOperation.APPLICATION_LOGIN_QUERY,
+        lambda: client.get_application_total_logins(application_id, from_date, to_date),
+    )
+    return cast("dict[str, Any]", _serialize_verify_admin_response(payload))
 
 
 @router.get("/ibm-sv-admin/applications/{application_id}/audit-trail")
@@ -168,14 +250,18 @@ async def get_application_audit_trail(
     from ...services.ibm_sv_admin_service import IBMVerifyAdminService
 
     service = IBMVerifyAdminService(client)
-    return await service.get_application_audit_trail(
-        application_id=application_id,
-        from_date=from_date,
-        to_date=to_date,
-        size=size,
-        sort_by=sort_by,
-        sort_order=sort_order,
+    payload = await _execute_verify_admin_operation(
+        VerifyAdminOperation.APPLICATION_AUDIT_QUERY,
+        lambda: service.get_application_audit_trail(
+            application_id=application_id,
+            from_date=from_date,
+            to_date=to_date,
+            size=size,
+            sort_by=sort_by,
+            sort_order=sort_order,
+        ),
     )
+    return cast("dict[str, Any]", _serialize_verify_admin_response(payload))
 
 
 @router.get("/ibm-sv-admin/applications/{application_id}/entitlements")
@@ -186,8 +272,11 @@ async def get_application_entitlements(
     client: Annotated[IBMVerifyAdminClient, Depends(get_ibm_sv_admin_client)],
 ) -> dict[str, Any]:
     """Get entitlements for an application."""
-    payload = await client.get_application_entitlements(application_id)
-    return cast("dict[str, Any]", payload.model_dump(by_alias=True, exclude_none=True))
+    payload = await _execute_verify_admin_operation(
+        VerifyAdminOperation.APPLICATION_ENTITLEMENT_READ,
+        lambda: client.get_application_entitlements(application_id),
+    )
+    return cast("dict[str, Any]", _serialize_verify_admin_response(payload))
 
 
 # Group endpoints
@@ -200,9 +289,12 @@ async def list_groups(
     start_index: int = 1,
 ) -> list[dict[str, Any]]:
     """List all groups from IBM Security Verify."""
-    payload = await client.list_groups(count, start_index)
+    payload = await _execute_verify_admin_operation(
+        VerifyAdminOperation.GROUP_LIST,
+        lambda: client.list_groups(count, start_index),
+    )
     resources = payload.Resources or []
-    return [group.model_dump(by_alias=True, exclude_none=True) for group in resources]
+    return [cast("dict[str, Any]", _serialize_verify_admin_response(group)) for group in resources]
 
 
 @router.get("/ibm-sv-admin/groups/search")
@@ -213,9 +305,12 @@ async def search_groups(
     client: Annotated[IBMVerifyAdminClient, Depends(get_ibm_sv_admin_client)],
 ) -> list[dict[str, Any]]:
     """Search groups by name in IBM Security Verify."""
-    payload = await client.search_groups_by_name(group_name)
+    payload = await _execute_verify_admin_operation(
+        VerifyAdminOperation.GROUP_SEARCH,
+        lambda: client.search_groups_by_name(group_name),
+    )
     resources = payload.Resources or []
-    return [group.model_dump(by_alias=True, exclude_none=True) for group in resources]
+    return [cast("dict[str, Any]", _serialize_verify_admin_response(group)) for group in resources]
 
 
 @router.get("/ibm-sv-admin/groups/{group_id}")
@@ -226,8 +321,11 @@ async def get_group(
     client: Annotated[IBMVerifyAdminClient, Depends(get_ibm_sv_admin_client)],
 ) -> dict[str, Any]:
     """Get group details from IBM Security Verify."""
-    payload = await client.get_group_by_id(group_id)
-    return cast("dict[str, Any]", payload.model_dump(by_alias=True, exclude_none=True))
+    payload = await _execute_verify_admin_operation(
+        VerifyAdminOperation.GROUP_READ,
+        lambda: client.get_group_by_id(group_id),
+    )
+    return cast("dict[str, Any]", _serialize_verify_admin_response(payload))
 
 
 @router.post("/ibm-sv-admin/groups/{group_id}/users/{user_id}")
@@ -239,7 +337,10 @@ async def add_user_to_group(
     client: Annotated[IBMVerifyAdminClient, Depends(get_ibm_sv_admin_client)],
 ) -> dict[str, str]:
     """Add a user to a group."""
-    await client.add_user_to_group(group_id, user_id)
+    await _execute_verify_admin_operation(
+        VerifyAdminOperation.GROUP_MEMBERSHIP_ADD,
+        lambda: client.add_user_to_group(group_id, user_id),
+    )
     return {"message": "User added to group"}
 
 
@@ -252,7 +353,10 @@ async def remove_user_from_group(
     client: Annotated[IBMVerifyAdminClient, Depends(get_ibm_sv_admin_client)],
 ) -> dict[str, str]:
     """Remove a user from a group."""
-    await client.remove_user_from_group(group_id, user_id)
+    await _execute_verify_admin_operation(
+        VerifyAdminOperation.GROUP_MEMBERSHIP_REMOVE,
+        lambda: client.remove_user_from_group(group_id, user_id),
+    )
     return {"message": "User removed from group"}
 
 
@@ -265,5 +369,8 @@ async def check_user_in_group(
     client: Annotated[IBMVerifyAdminClient, Depends(get_ibm_sv_admin_client)],
 ) -> dict[str, bool]:
     """Check if a user is in a group."""
-    is_member = await client.is_user_in_group(group_id, user_id)
+    is_member = await _execute_verify_admin_operation(
+        VerifyAdminOperation.GROUP_MEMBERSHIP_READ,
+        lambda: client.is_user_in_group(group_id, user_id),
+    )
     return {"is_member": is_member}

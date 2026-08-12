@@ -1,53 +1,68 @@
-from unittest.mock import AsyncMock
+from unittest.mock import AsyncMock, patch
 from uuid import uuid4
 
 import pytest
 
+from src.app.core.authorization import CanonicalRoleCode
 from src.app.core.exceptions.http_exceptions import NotFoundException
+from src.app.services.authorization_service import (
+    AUTHORIZATION_STATE_KEY,
+    ResolvedAuthorizationState,
+    ResolvedPartnerAccess,
+)
 from src.app.services.rp_application_service import RPApplicationService
 
 
 @pytest.mark.asyncio
-async def test_get_current_user_rp_application_by_uuid_returns_match(mock_db):
+async def test_get_accessible_rp_application_by_uuid_returns_match(mock_db):
     service = RPApplicationService()
     application_uuid = uuid4()
-    current_user = {"email": "owner@example.gc.ca"}
-    ibm_user_service = object()
-    service.list_current_user_rp_applications = AsyncMock(  # type: ignore[method-assign]
-        return_value=[
-            {
+    workspace_uuid = uuid4()
+    current_user = {
+        "id": 11,
+        AUTHORIZATION_STATE_KEY: ResolvedAuthorizationState(
+            partner_access=(
+                ResolvedPartnerAccess(
+                    workspace_id=23,
+                    workspace_uuid=workspace_uuid,
+                    role=CanonicalRoleCode.READ_ONLY,
+                ),
+            )
+        ),
+    }
+
+    with patch("src.app.services.rp_application_service.crud_rp_applications") as mock_crud:
+        mock_crud.get = AsyncMock(
+            return_value={
                 "uuid": str(application_uuid),
+                "workspace_id": 23,
                 "dnr_app_name": "Test DNR App",
             }
-        ]
-    )
+        )
 
-    result = await service.get_current_user_rp_application_by_uuid(
-        db=mock_db,
-        current_user=current_user,
-        rp_application_uuid=application_uuid,
-        ibm_user_service=ibm_user_service,  # type: ignore[arg-type]
-    )
+        result = await service.get_accessible_rp_application_by_uuid(
+            db=mock_db,
+            current_user=current_user,
+            rp_application_uuid=application_uuid,
+        )
 
-    assert result["dnr_app_name"] == "Test DNR App"
-    service.list_current_user_rp_applications.assert_awaited_once_with(
-        db=mock_db,
-        current_user=current_user,
-        ibm_user_service=ibm_user_service,
-    )
+    assert result["dnrAppName"] == "Test DNR App"
+    assert result["workspaceUuid"] == workspace_uuid
+    mock_crud.get.assert_awaited_once()
+    mock_crud.get_multi.assert_not_called()
 
 
 @pytest.mark.asyncio
-async def test_get_current_user_rp_application_by_uuid_raises_not_found(mock_db):
+async def test_get_accessible_rp_application_by_uuid_raises_not_found(mock_db):
     service = RPApplicationService()
-    service.list_current_user_rp_applications = AsyncMock(  # type: ignore[method-assign]
-        return_value=[]
-    )
+    with patch("src.app.services.rp_application_service.crud_rp_applications") as mock_crud:
+        mock_crud.get = AsyncMock(return_value=None)
 
-    with pytest.raises(NotFoundException):
-        await service.get_current_user_rp_application_by_uuid(
-            db=mock_db,
-            current_user={"email": "owner@example.gc.ca"},
-            rp_application_uuid=uuid4(),
-            ibm_user_service=object(),  # type: ignore[arg-type]
-        )
+        with pytest.raises(NotFoundException):
+            await service.get_accessible_rp_application_by_uuid(
+                db=mock_db,
+                current_user={"email": "owner@example.gc.ca"},
+                rp_application_uuid=uuid4(),
+            )
+
+    mock_crud.get_multi.assert_not_called()

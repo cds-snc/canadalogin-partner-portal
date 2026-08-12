@@ -126,13 +126,14 @@ const buildReportQueryString = (
 export const getOnboardingOversightQueue = async (
 	filters: OnboardingOversightQueueFilters = {}
 ): Promise<Array<OnboardingOversightQueueRowRead>> => {
-	const result = await requestJson<Array<OnboardingOversightQueueRowRead> | null>(
-		`/api/v1/onboarding-oversight/queue${buildQueryString(filters)}`,
-		{
-			cache: "no-store",
-			method: "GET",
-		}
-	);
+	const result =
+		await requestJson<Array<OnboardingOversightQueueRowRead> | null>(
+			`/api/v1/onboarding-oversight/queue${buildQueryString(filters)}`,
+			{
+				cache: "no-store",
+				method: "GET",
+			}
+		);
 
 	return result ?? [];
 };
@@ -153,4 +154,24 @@ export const getOnboardingOversightReportExportUrl = (
 ): string =>
 	buildApiUrl(
 		`/api/v1/onboarding-oversight/reports/export${buildReportQueryString(filters)}`
+	);
+
+export const getWorkspaceReport = async (
+	workspaceUuid: string,
+	filters: OnboardingOversightReportFilters
+): Promise<OnboardingOversightReportRead | null> =>
+	requestJson<OnboardingOversightReportRead | null>(
+		`/api/v1/workspaces/${encodeURIComponent(workspaceUuid)}/reports${buildReportQueryString(filters)}`,
+		{
+			cache: "no-store",
+			method: "GET",
+		}
+	);
+
+export const getWorkspaceReportExportUrl = (
+	workspaceUuid: string,
+	filters: OnboardingOversightReportFilters
+): string =>
+	buildApiUrl(
+		`/api/v1/workspaces/${encodeURIComponent(workspaceUuid)}/reports/export${buildReportQueryString(filters)}`
 	);

@@ -111,7 +111,6 @@ def sample_user_read():
         username=email,
         email=email,
         profile_image_url=fake.image_url(),
-        role_uuids=[],
         tier_uuid=None,
     )
 

@@ -23,7 +23,9 @@ const createWorkspaceMock = vi.fn(() =>
 );
 
 vi.mock("react-i18next", () => ({
-	useTranslation: (): { t: (key: string, options?: Record<string, unknown>) => string } => ({
+	useTranslation: (): {
+		t: (key: string, options?: Record<string, unknown>) => string;
+	} => ({
 		t: (key: string, options?: Record<string, unknown>): string => {
 			const translations: Record<string, string> = {
 				"workspaces.cancelAction": "Cancel",
@@ -69,34 +71,63 @@ vi.mock("@/components/ui", () => ({
 				{children}
 			</button>
 		),
-	Heading: ({ children }: PropsWithChildren): ReactElement => <h1>{children}</h1>,
-	Input: ({ inputId, label, onInput, value }: { inputId: string; label: string; onInput?: (event: { target: { value: string } }) => void; value?: string }): ReactElement => (
+	Heading: ({ children }: PropsWithChildren): ReactElement => (
+		<h1>{children}</h1>
+	),
+	Input: ({
+		inputId,
+		label,
+		onInput,
+		value,
+	}: {
+		inputId: string;
+		label: string;
+		onInput?: (event: { target: { value: string } }) => void;
+		value?: string;
+	}): ReactElement => (
 		<label htmlFor={inputId}>
 			<span>{label}</span>
 			<input
 				id={inputId}
 				value={value}
 				onInput={(event): void => {
-					onInput?.({ target: { value: (event.target as HTMLInputElement).value } });
+					onInput?.({
+						target: { value: (event.target as HTMLInputElement).value },
+					});
 				}}
 			/>
 		</label>
 	),
-	Notice: ({ children, noticeTitle }: PropsWithChildren<{ noticeTitle: string }>): ReactElement => (
+	Notice: ({
+		children,
+		noticeTitle,
+	}: PropsWithChildren<{ noticeTitle: string }>): ReactElement => (
 		<section>
 			<h2>{noticeTitle}</h2>
 			{children}
 		</section>
 	),
 	Text: ({ children }: PropsWithChildren): ReactElement => <p>{children}</p>,
-	Textarea: ({ label, onInput, textareaId, value }: { label: string; onInput?: (event: { target: { value: string } }) => void; textareaId: string; value?: string }): ReactElement => (
+	Textarea: ({
+		label,
+		onInput,
+		textareaId,
+		value,
+	}: {
+		label: string;
+		onInput?: (event: { target: { value: string } }) => void;
+		textareaId: string;
+		value?: string;
+	}): ReactElement => (
 		<label htmlFor={textareaId}>
 			<span>{label}</span>
 			<textarea
 				id={textareaId}
 				value={value}
 				onInput={(event): void => {
-					onInput?.({ target: { value: (event.target as HTMLTextAreaElement).value } });
+					onInput?.({
+						target: { value: (event.target as HTMLTextAreaElement).value },
+					});
 				}}
 			/>
 		</label>
@@ -115,16 +146,20 @@ describe("WorkspaceCreatePage", () => {
 	it("creates a workspace against the current user department and redirects to detail", async () => {
 		vi.mocked(useSession).mockReturnValue({
 			currentUser: {
-				authProvider: "gc-sso",
-				authSubject: "subject-123",
+				acceptedTermsAt: "2026-06-11T12:00:00Z",
+				authorizationContext: {
+					globalRole: "cl_admin",
+					partnerAccess: [],
+				},
 				departmentAbbreviation: "TBS",
 				departmentUuid: "department-uuid-1",
 				email: "member@example.gc.ca",
 				name: "Member User",
-				profileImageUrl: null,
-				roleUuids: [],
+				profileImageUrl: "",
+				termsVersion: "2026-01",
 				tierUuid: null,
 				uuid: "user-uuid-1",
+				username: "member@example.gc.ca",
 			},
 			isAuthenticated: true,
 			isLoading: false,

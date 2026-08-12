@@ -1,132 +1,185 @@
 import type { PropsWithChildren, ReactElement } from "react";
-import { fireEvent, render, screen, waitFor } from "@testing-library/react";
-import { describe, expect, it, vi } from "vitest";
+import {
+	act,
+	fireEvent,
+	render,
+	screen,
+	waitFor,
+} from "@testing-library/react";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import { WorkspaceMembersPage } from "@/features/workspaces/pages/WorkspaceMembersPage";
+import { useWorkspaceAccessInvitations } from "@/features/workspaces/hooks/use-workspace-access-invitations";
 import { useWorkspace } from "@/features/workspaces/hooks/use-workspace";
-import { useWorkspaceMembers } from "@/features/workspaces/hooks/use-workspace-members";
+import { useWorkspaceRoleAssignments } from "@/features/workspaces/hooks/use-workspace-role-assignments";
+import { useWorkspaceRPApplications } from "@/features/workspaces/hooks/use-workspace-rp-applications";
+import { useSession } from "@/hooks";
 
-const addMemberMock = vi.fn(() =>
-	Promise.resolve({
-		createdAt: "2026-07-30T14:00:00Z",
-		deletedAt: null,
-		id: 14,
-		isDeleted: false,
-		role: "workspace_member",
-		userEmail: "candidate@example.gc.ca",
-		userId: 100,
-		userName: "Candidate User",
-		userUuid: "user-uuid-2",
-		uuid: "membership-uuid-2",
-		workspaceId: 9,
-	})
-);
-const removeMemberMock = vi.fn(() => Promise.resolve());
-const searchCandidatesMock = vi.fn(() =>
+const assignment = {
+	assignedAt: "2026-08-11T18:00:00Z",
+	assignmentUuid: "assignment-uuid-1",
+	role: "read_only" as const,
+	userEmail: "reader@example.test",
+	userName: "Local Reader",
+	userUuid: "reader-uuid-1",
+	workspaceUuid: "workspace-uuid-1",
+};
+
+const assignMock = vi.fn(() => Promise.resolve(assignment));
+const replaceMock = vi.fn(() => Promise.resolve(assignment));
+const revokeMock = vi.fn(() => Promise.resolve());
+const searchMock = vi.fn(() =>
 	Promise.resolve([
 		{
-			email: "candidate@example.gc.ca",
+			email: "candidate@example.test",
 			name: "Candidate User",
-			uuid: "user-uuid-2",
+			uuid: "candidate-uuid-1",
 		},
 	])
 );
-const updateMemberRoleMock = vi.fn(() =>
-	Promise.resolve({
-		createdAt: "2026-07-30T14:00:00Z",
-		deletedAt: null,
-		id: 12,
-		isDeleted: false,
-		role: "workspace_admin",
-		userEmail: "member@example.gc.ca",
-		userId: 99,
-		userName: "Member User",
-		userUuid: "user-uuid-1",
-		uuid: "membership-uuid-1",
-		workspaceId: 9,
-	})
-);
+const routerState = vi.hoisted(() => ({ workspaceUuid: "workspace-uuid-1" }));
 
 vi.mock("react-i18next", () => ({
-	useTranslation: (): { t: (key: string, options?: Record<string, unknown>) => string } => ({
-		t: (key: string, options?: Record<string, unknown>): string => {
-			const translations: Record<string, string> = {
-				"common.notAvailable": "Not available",
-				"common.search": "Search",
-				"common.searching": "Searching...",
-				"workspaces.addMemberAction": "Add member",
-				"workspaces.addingMemberAction": "Adding member...",
-				"workspaces.cancelAction": "Cancel",
-				"workspaces.currentMembers": "Current Members",
-				"workspaces.memberAddedSuccess": "Member added successfully",
-				"workspaces.memberEmail": "Email",
-				"workspaces.memberName": "Name",
-				"workspaces.memberRemovedSuccess": "Member removed successfully",
-				"workspaces.memberRole": "Role",
-				"workspaces.memberUpdatedSuccess": "Member role updated successfully",
-				"workspaces.membersLoadingBody": "Loading the current members and workspace access controls.",
-				"workspaces.membersLoadingTitle": "Loading workspace members",
-				"workspaces.membersSummary": "Search for users, add them to this workspace, update roles, and remove access when needed.",
-				"workspaces.noMembersBody": "Search for a user and add them to this workspace.",
-				"workspaces.noMembersTitle": "No members yet",
-				"workspaces.noSearchResults": "No matching users were found.",
-				"workspaces.removeMemberAction": "Remove member",
-				"workspaces.removeMemberConfirmTitle": "Remove member?",
-				"workspaces.removingMemberAction": "Removing member...",
-				"workspaces.roleAdmin": "Workspace admin",
-				"workspaces.roleMember": "Workspace member",
-				"workspaces.saveRoleAction": "Save role",
-				"workspaces.searchResults": "Search Results",
-				"workspaces.searchUsers": "Search Users",
-				"workspaces.selectRole": "Select role",
-				"workspaces.manageMembers": "Manage Members",
-				"workspaces.membersSearchSummary": "Search for users who are not already members of this workspace.",
-			};
-
-			if (key === "workspaces.membersPageTitle") {
-				return `Workspace Members - ${String(options?.["name"] ?? "")}`;
-			}
-
-			if (key === "workspaces.removeMemberConfirmBody") {
-				return `This will remove ${String(options?.["name"] ?? "")} from the workspace.`;
-			}
-
-			return translations[key] ?? key;
-		},
+	useTranslation: () => ({
+		t: (key: string, options?: Record<string, unknown>): string =>
+			key === "authorization.activeWorkspaceNameContext"
+				? `Active role: ${String(options?.["role"])} for ${String(options?.["workspaceName"])}.`
+				: key === "workspaces.accessPageTitle"
+					? `Access — ${String(options?.["name"])}`
+					: key === "workspaces.accessInvitationRevokeConfirmBody"
+						? `Revoke the invitation for ${String(options?.["email"])}?`
+						: key === "workspaces.accessInvitationReissueConfirmBody"
+							? `Reissue the invitation for ${String(options?.["email"])}?`
+							: key === "workspaces.revokeRoleConfirmBody"
+								? `Remove access from ${String(options?.["name"])}.`
+								: ({
+										"authorization.roles.clAdmin": "CL Admin",
+										"authorization.roles.readOnly": "Read Only",
+										"authorization.roles.rpAdmin": "RP Admin",
+										"authorization.roles.rpUserEdit": "RP User (Edit)",
+										"common.cancel": "Cancel",
+										"common.search": "Search",
+										"common.searching": "Searching...",
+										"workspaces.assignRoleAction": "Assign role",
+										"workspaces.assignRoleForUser": `Assign role to ${String(options?.["name"] ?? "")}`,
+										"workspaces.assigningRoleAction": "Assigning role...",
+										"workspaces.currentAssignments": "Current role assignments",
+										"workspaces.manageMembers": "Manage roles",
+										"workspaces.memberEmail": "Email",
+										"workspaces.memberName": "Name",
+										"workspaces.memberRole": "Role",
+										"workspaces.memberRoleForUser": `Role for ${String(options?.["name"] ?? "")}`,
+										"workspaces.membersSearchSummary": "Search eligible users.",
+										"workspaces.rpAdminMembersSearchSummary":
+											"Enter an exact email address.",
+										"workspaces.membersSummary":
+											"Manage canonical workspace roles.",
+										"workspaces.accessSummary": "Manage workspace access.",
+										"workspaces.accessInvitationCreateAction":
+											"Choose an RP application to create an invitation",
+										"workspaces.accessInvitationManageApplication":
+											"Manage invitation in RP application",
+										"workspaces.accessInvitationRevokeConfirmTitle":
+											"Revoke invitation?",
+										"workspaces.accessInvitationReissueAction":
+											"Reissue invitation",
+										"workspaces.accessInvitationReissueConfirmTitle":
+											"Reissue invitation?",
+										"workspaces.accessInvitationsEmptyBody":
+											"Create the first invitation.",
+										"workspaces.accessInvitationsEmptyTitle":
+											"No workspace invitations",
+										"workspaces.accessInvitationsSummary":
+											"Review invitation status.",
+										"workspaces.accessInvitationsTitle":
+											"Workspace invitations",
+										"workspaces.applicationsInvitationEmailLabel": "Email",
+										"workspaces.applicationsInvitationExpiresAtDisplayLabel":
+											"Expires",
+										"workspaces.applicationsInvitationRevokeAction":
+											"Revoke invitation",
+										"workspaces.applicationsInvitationRevokingAction":
+											"Revoking invitation...",
+										"workspaces.applicationsInvitationRoleLabel":
+											"Invitation role",
+										"workspaces.applicationsInvitationStatusLabel": "Status",
+										"workspaces.applicationsInvitationStatusPending": "Pending",
+										"workspaces.navigation.access": "Access",
+										"workspaces.workspaceLabel": "Workspace",
+										"workspaces.noSearchResults": "No users found.",
+										"workspaces.rpAdminNoSearchResults":
+											"No eligible user matched that exact email address.",
+										"workspaces.rpAdminSearchUsersEmailError":
+											"Enter a complete email address.",
+										"workspaces.rpAdminSearchUsersHint":
+											"Partial names and email addresses are not searched.",
+										"workspaces.revokeRoleAction": "Revoke role",
+										"workspaces.revokeRoleConfirmTitle":
+											"Revoke workspace role?",
+										"workspaces.revokingRoleAction": "Revoking role...",
+										"workspaces.roleAssignedSuccess":
+											"Workspace role assigned successfully",
+										"workspaces.roleReplacedSuccess":
+											"Workspace role replaced successfully",
+										"workspaces.roleRevokedSuccess":
+											"Workspace role revoked successfully",
+										"workspaces.roleMutationError":
+											"The workspace role change could not be completed.",
+										"workspaces.saveRoleAction": "Save role",
+										"workspaces.searchResults": "Search results",
+										"workspaces.searchUserByEmail":
+											"Find eligible user by email",
+										"workspaces.searchUsers": "Search users",
+										"workspaces.searchUsersHint": "Search by name or email.",
+										"workspaces.searchUsersLengthError":
+											"Enter between 2 and 100 characters.",
+										"workspaces.selectRole": "Select role",
+									}[key] ?? key),
 	}),
 }));
 
 vi.mock("@tanstack/react-router", () => ({
-	useParams: (): { workspaceUuid: string } => ({ workspaceUuid: "workspace-uuid-1" }),
+	useParams: () => ({ workspaceUuid: routerState.workspaceUuid }),
+}));
+
+vi.mock("@/hooks", () => ({ useSession: vi.fn() }));
+vi.mock("@/features/workspaces/hooks/use-workspace", () => ({
+	useWorkspace: vi.fn(),
+}));
+vi.mock("@/features/workspaces/hooks/use-workspace-role-assignments", () => ({
+	useWorkspaceRoleAssignments: vi.fn(),
+}));
+vi.mock("@/features/workspaces/hooks/use-workspace-rp-applications", () => ({
+	useWorkspaceRPApplications: vi.fn(),
+}));
+vi.mock("@/features/workspaces/hooks/use-workspace-access-invitations", () => ({
+	useWorkspaceAccessInvitations: vi.fn(),
 }));
 
 vi.mock("@/components/ui", () => ({
 	Button: ({
 		children,
+		disabled,
 		onGcdsClick,
-		type,
 	}: PropsWithChildren<{
+		disabled?: boolean;
 		onGcdsClick?: () => void;
-		type: "button" | "link" | "reset" | "submit";
-	}>): ReactElement =>
-		type === "button" ? (
-			<button onClick={onGcdsClick} type="button">
-				{children}
-			</button>
-		) : (
-			<a href="#">{children}</a>
-		),
+	}>): ReactElement => (
+		<button disabled={disabled} onClick={onGcdsClick} type="button">
+			{children}
+		</button>
+	),
 	ConfirmDialog: ({
 		confirmLabel,
 		description,
+		errorMessage,
 		isOpen,
-		onClose,
 		onConfirm,
 		title,
 	}: {
 		confirmLabel: string;
 		description: string;
+		errorMessage?: string | null;
 		isOpen: boolean;
-		onClose: () => void;
 		onConfirm: () => void;
 		title: string;
 	}): ReactElement | null =>
@@ -134,9 +187,7 @@ vi.mock("@/components/ui", () => ({
 			<section>
 				<h2>{title}</h2>
 				<p>{description}</p>
-				<button onClick={onClose} type="button">
-					Cancel
-				</button>
+				{errorMessage ? <p role="alert">{errorMessage}</p> : null}
 				<button onClick={onConfirm} type="button">
 					{confirmLabel}
 				</button>
@@ -147,169 +198,401 @@ vi.mock("@/components/ui", () => ({
 		columns,
 		rows,
 	}: {
-		action?: Array<{
+		action: Array<{
 			buttonLabel: string;
-			onAction: (row: { role: string; userEmail: string; userName: string; userUuid: string; uuid: string }) => void;
+			isVisible?: (row: (typeof rows)[number]) => boolean;
+			onAction: (row: (typeof rows)[number]) => void;
 		}>;
-		columns: Array<{ cellRenderer?: (row: { role: string; userEmail: string; userName: string; userUuid: string; uuid: string }) => ReactElement | null; headerName: string }>;
-		rows: Array<{ role: string; userEmail: string; userName: string; userUuid: string; uuid: string }>;
+		columns: Array<{
+			cellRenderer?: (row: (typeof rows)[number]) => ReactElement;
+			headerName: string;
+		}>;
+		rows: Array<{
+			assignmentUuid: string;
+			role: string;
+			userEmail: string;
+			userName: string;
+			userUuid: string;
+		}>;
 	}): ReactElement => (
 		<section>
-			{columns.map((column) => (
-				<div key={column.headerName}>{column.headerName}</div>
-			))}
 			{rows.map((row) => (
-				<div key={row.uuid}>
+				<div key={row.assignmentUuid}>
 					<span>{row.userName}</span>
-					<span>{row.userEmail}</span>
 					{columns.map((column) =>
 						column.cellRenderer ? (
-							<div key={`${row.uuid}-${column.headerName}`}>{column.cellRenderer(row)}</div>
+							<div key={column.headerName}>{column.cellRenderer(row)}</div>
 						) : null
 					)}
-					{action?.map((item) => (
-						<button
-							key={`${row.uuid}-${item.buttonLabel}`}
-							onClick={() => item.onAction(row)}
-							type="button"
-						>
-							{item.buttonLabel}
-						</button>
-					))}
+					{action
+						.filter((item) => item.isVisible?.(row) ?? true)
+						.map((item) => (
+							<button
+								key={item.buttonLabel}
+								onClick={() => item.onAction(row)}
+								type="button"
+							>
+								{item.buttonLabel}
+							</button>
+						))}
 				</div>
 			))}
 		</section>
 	),
-	Heading: ({ children }: PropsWithChildren): ReactElement => <h1>{children}</h1>,
-	Input: ({ inputId, label, onInput, value }: { inputId: string; label: string; onInput?: (event: { target: { value: string } }) => void; value?: string }): ReactElement => (
-		<label htmlFor={inputId}>
-			<span>{label}</span>
-			<input
-				id={inputId}
-				value={value}
-				onInput={(event): void => {
-					onInput?.({ target: { value: (event.target as HTMLInputElement).value } });
-				}}
-			/>
-		</label>
+	Heading: ({ children }: PropsWithChildren): ReactElement => (
+		<h2>{children}</h2>
 	),
-	Notice: ({ children, noticeTitle }: PropsWithChildren<{ noticeTitle: string }>): ReactElement => (
+	Link: ({
+		children,
+		href,
+	}: PropsWithChildren<{ href: string }>): ReactElement => (
+		<a href={href}>{children}</a>
+	),
+	Input: ({
+		errorMessage,
+		hint,
+		inputId,
+		label,
+		onInput,
+		type,
+	}: {
+		errorMessage?: string;
+		hint?: string;
+		inputId: string;
+		label: string;
+		onInput: (event: { target: { value: string } }) => void;
+		type?: "email" | "search";
+	}): ReactElement => (
+		<div>
+			<label htmlFor={inputId}>
+				{label}
+				<input
+					id={inputId}
+					type={type}
+					onInput={(event) =>
+						onInput({
+							target: { value: (event.target as HTMLInputElement).value },
+						})
+					}
+				/>
+			</label>
+			{hint ? <p>{hint}</p> : null}
+			{errorMessage ? <p role="alert">{errorMessage}</p> : null}
+		</div>
+	),
+	Notice: ({
+		children,
+		noticeTitle,
+	}: PropsWithChildren<{ noticeTitle: string }>) => (
 		<section>
 			<h2>{noticeTitle}</h2>
 			{children}
 		</section>
 	),
-	Select: ({ children, onInput, selectId, value }: PropsWithChildren<{ onInput?: (event: { target: { value: string } }) => void; selectId: string; value?: string }>): ReactElement => (
-		<select
-			id={selectId}
-			value={value}
-			onInput={(event): void => {
-				onInput?.({ target: { value: (event.target as HTMLSelectElement).value } });
-			}}
-		>
-			{children}
-		</select>
+	Select: ({
+		children,
+		label,
+		onInput,
+		selectId,
+		value,
+	}: PropsWithChildren<{
+		label: string;
+		onInput: (event: { target: { value: string } }) => void;
+		selectId: string;
+		value: string;
+	}>): ReactElement => (
+		<label htmlFor={selectId}>
+			{label}
+			<select
+				id={selectId}
+				value={value}
+				onInput={(event) =>
+					onInput({
+						target: { value: (event.target as HTMLSelectElement).value },
+					})
+				}
+			>
+				{children}
+			</select>
+		</label>
 	),
 	Text: ({ children }: PropsWithChildren): ReactElement => <p>{children}</p>,
 }));
 
-vi.mock("@/features/workspaces/hooks/use-workspace", () => ({
-	useWorkspace: vi.fn(),
-}));
-
-vi.mock("@/features/workspaces/hooks/use-workspace-members", () => ({
-	useWorkspaceMembers: vi.fn(),
-}));
+const setState = (globalRole: "cl_admin" | null): void => {
+	vi.mocked(useSession).mockReturnValue({
+		currentUser: {
+			acceptedTermsAt: null,
+			authorizationContext: globalRole
+				? { globalRole, partnerAccess: [] }
+				: {
+						globalRole: null,
+						partnerAccess: [
+							{ role: "rp_admin", workspaceUuid: "workspace-uuid-1" },
+						],
+					},
+			departmentAbbreviation: null,
+			departmentUuid: null,
+			email: "actor@example.test",
+			name: "Actor",
+			profileImageUrl: "",
+			termsVersion: null,
+			tierUuid: null,
+			uuid: "actor-uuid-1",
+			username: "actor@example.test",
+		},
+		isAuthenticated: true,
+		isLoading: false,
+		login: vi.fn(),
+		logout: vi.fn(async () => undefined),
+		refreshSession: vi.fn(async () => null),
+	});
+	vi.mocked(useWorkspace).mockReturnValue({
+		error: null,
+		isLoading: false,
+		refetch: vi.fn(),
+		workspace: {
+			name: routerState.workspaceUuid === "workspace-uuid-1" ? "Alpha" : "Beta",
+			uuid: routerState.workspaceUuid,
+		},
+	} as never);
+	vi.mocked(useWorkspaceRoleAssignments).mockReturnValue({
+		assign: assignMock,
+		assignments: [assignment],
+		error: null,
+		isAssigning: false,
+		isLoading: false,
+		isReplacing: false,
+		isRevoking: false,
+		isSearching: false,
+		replace: replaceMock,
+		revoke: revokeMock,
+		searchCandidates: searchMock,
+	});
+	vi.mocked(useWorkspaceRPApplications).mockReturnValue({
+		applications: [],
+		error: null,
+		isLoading: false,
+		refetch: vi.fn(),
+	});
+	vi.mocked(useWorkspaceAccessInvitations).mockReturnValue({
+		createInvitation: vi.fn(),
+		error: null,
+		invitations: [],
+		isCreating: false,
+		isLoading: false,
+		isReissuing: false,
+		isRevoking: false,
+		refetch: vi.fn(),
+		reissueInvitation: vi.fn(),
+		revokeInvitation: vi.fn(),
+	});
+};
 
 describe("WorkspaceMembersPage", () => {
-	it("searches for candidates, adds a member, updates a role, and removes a member", async () => {
-		vi.mocked(useWorkspace).mockReturnValue({
-			error: null,
-			isLoading: false,
-			refetch: vi.fn((): Promise<unknown> => Promise.resolve()),
-			workspace: {
-				createdAt: "2026-07-30T12:00:00Z",
-				createdBy: 42,
-				deletedAt: null,
-				description: "Primary workspace",
-				departmentId: 7,
-				id: 9,
-				isDeleted: false,
-				name: "Benefits Workspace",
-				slug: "benefits-workspace",
-				updatedAt: null,
-				uuid: "workspace-uuid-1",
-			},
+	beforeEach(() => {
+		vi.clearAllMocks();
+		routerState.workspaceUuid = "workspace-uuid-1";
+	});
+
+	it("lets an RP Admin assign, replace, and revoke only lower roles", async () => {
+		setState(null);
+		render(<WorkspaceMembersPage />);
+
+		expect(screen.queryByRole("option", { name: "RP Admin" })).toBeNull();
+		const candidateSearch = screen.getByLabelText(
+			"Find eligible user by email"
+		);
+		expect((candidateSearch as HTMLInputElement).type).toBe("email");
+		expect(
+			screen.getByText("Partial names and email addresses are not searched.")
+		).toBeTruthy();
+		fireEvent.input(candidateSearch, {
+			target: { value: "candidate" },
 		});
-		vi.mocked(useWorkspaceMembers).mockReturnValue({
-			addMember: addMemberMock,
-			error: null,
-			isAdding: false,
-			isLoading: false,
-			isRemoving: false,
-			isSearching: false,
-			isUpdatingRole: false,
-			members: [
+		fireEvent.click(screen.getByRole("button", { name: "Search" }));
+		expect(screen.getByRole("alert").textContent).toContain(
+			"Enter a complete email address."
+		);
+		expect(searchMock).not.toHaveBeenCalled();
+
+		fireEvent.input(candidateSearch, {
+			target: { value: "candidate@example.test" },
+		});
+		fireEvent.click(screen.getByRole("button", { name: "Search" }));
+		await waitFor(() =>
+			expect(searchMock).toHaveBeenCalledWith("candidate@example.test")
+		);
+
+		fireEvent.input(screen.getAllByLabelText("Select role")[0]!, {
+			target: { value: "rp_user_edit" },
+		});
+		fireEvent.click(
+			screen.getByRole("button", { name: "Assign role Candidate User" })
+		);
+		await waitFor(() =>
+			expect(assignMock).toHaveBeenCalledWith({
+				role: "rp_user_edit",
+				userUuid: "candidate-uuid-1",
+			})
+		);
+
+		fireEvent.input(screen.getByLabelText("Role for Local Reader"), {
+			target: { value: "rp_user_edit" },
+		});
+		fireEvent.click(screen.getByRole("button", { name: "Save role" }));
+		await waitFor(() =>
+			expect(replaceMock).toHaveBeenCalledWith("reader-uuid-1", "rp_user_edit")
+		);
+
+		fireEvent.click(screen.getByRole("button", { name: "Revoke role" }));
+		fireEvent.click(screen.getAllByRole("button", { name: "Revoke role" })[1]!);
+		await waitFor(() =>
+			expect(revokeMock).toHaveBeenCalledWith("reader-uuid-1")
+		);
+	});
+
+	it("lets a CL Admin select RP Admin and retain broad directory search", async () => {
+		setState("cl_admin");
+		render(<WorkspaceMembersPage />);
+
+		expect(
+			screen.getAllByRole("option", { name: "RP Admin" }).length
+		).toBeGreaterThan(0);
+		expect(screen.getByText(/Active role: CL Admin/)).toBeTruthy();
+		const candidateSearch = screen.getByLabelText("Search users");
+		expect((candidateSearch as HTMLInputElement).type).toBe("search");
+		fireEvent.input(candidateSearch, {
+			target: { value: "Candidate User" },
+		});
+		fireEvent.click(screen.getByRole("button", { name: "Search" }));
+		await waitFor(() =>
+			expect(searchMock).toHaveBeenCalledWith("Candidate User")
+		);
+	});
+
+	it("shows canonical invitations across RP applications and confirms revocation", async () => {
+		setState(null);
+		const revokeInvitation = vi.fn(() => Promise.resolve({} as never));
+		const reissueInvitation = vi.fn(() =>
+			Promise.resolve({
+				acceptanceUrl: "http://localhost:3000/invitations/new-token",
+			} as never)
+		);
+		vi.mocked(useWorkspaceRPApplications).mockReturnValue({
+			applications: [
 				{
-					createdAt: "2026-07-30T14:00:00Z",
-					deletedAt: null,
-					id: 12,
-					isDeleted: false,
-					role: "workspace_member",
-					userEmail: "member@example.gc.ca",
-					userId: 99,
-					userName: "Member User",
-					userUuid: "user-uuid-1",
-					uuid: "membership-uuid-1",
-					workspaceId: 9,
-				},
+					dnr_app_name: "Benefits Portal",
+					uuid: "rp-application-uuid-1",
+				} as never,
 			],
-			refetch: vi.fn((): Promise<unknown> => Promise.resolve()),
-			removeMember: removeMemberMock,
-			searchCandidates: searchCandidatesMock,
-			updateMemberRole: updateMemberRoleMock,
+			error: null,
+			isLoading: false,
+			refetch: vi.fn(),
+		});
+		vi.mocked(useWorkspaceAccessInvitations).mockReturnValue({
+			createInvitation: vi.fn(),
+			error: null,
+			invitations: [
+				{
+					createdAt: "2026-08-11T18:00:00Z",
+					inviteExpiresAt: "2026-09-01T00:00:00Z",
+					invitedEmail: "invitee@example.test",
+					role: "read_only",
+					status: "pending",
+					uuid: "invitation-uuid-1",
+				} as never,
+			],
+			isCreating: false,
+			isLoading: false,
+			isReissuing: false,
+			isRevoking: false,
+			refetch: vi.fn(),
+			reissueInvitation,
+			revokeInvitation,
 		});
 
 		render(<WorkspaceMembersPage />);
 
-		fireEvent.input(screen.getByLabelText(/search users/i), {
-			target: { value: "candidate" },
-		});
-		fireEvent.click(screen.getByRole("button", { name: /^search$/i }));
-
-		await waitFor(() => {
-			expect(searchCandidatesMock).toHaveBeenCalledWith("candidate");
-		});
-
-		fireEvent.click(screen.getByRole("button", { name: /add member/i }));
-
-		await waitFor(() => {
-			expect(addMemberMock).toHaveBeenCalledWith({
-				role: "workspace_member",
-				userUuid: "user-uuid-2",
-			});
-		});
-
-		fireEvent.input(screen.getAllByDisplayValue(/workspace member/i)[1]!, {
-			target: { value: "workspace_admin" },
-		});
-		fireEvent.click(screen.getByRole("button", { name: /save role/i }));
-
-		await waitFor(() => {
-			expect(updateMemberRoleMock).toHaveBeenCalledWith("user-uuid-1", {
-				role: "workspace_admin",
-			});
-		});
-
-		fireEvent.click(screen.getByRole("button", { name: /remove member/i }));
-		fireEvent.click(screen.getAllByRole("button", { name: /remove member/i })[1]!);
-
-		await waitFor(() => {
-			expect(removeMemberMock).toHaveBeenCalledWith("user-uuid-1");
-		});
-
 		expect(
-			screen.getByRole("heading", { name: /member removed successfully/i })
+			screen.getByRole("heading", { name: "invitee@example.test" })
 		).toBeTruthy();
+		fireEvent.click(
+			screen.getByRole("button", {
+				name: "Revoke invitation invitee@example.test",
+			})
+		);
+		fireEvent.click(screen.getByRole("button", { name: "Revoke invitation" }));
+
+		await waitFor(() =>
+			expect(revokeInvitation).toHaveBeenCalledWith("invitation-uuid-1")
+		);
+
+		fireEvent.click(screen.getByRole("button", { name: /Reissue invitation/ }));
+		fireEvent.click(screen.getByRole("button", { name: "Reissue invitation" }));
+		await waitFor(() =>
+			expect(reissueInvitation).toHaveBeenCalledWith(
+				"invitation-uuid-1",
+				expect.objectContaining({ inviteExpiresAt: expect.any(String) })
+			)
+		);
+	});
+
+	it("keeps revoke failures inside the open confirmation dialog", async () => {
+		setState(null);
+		revokeMock.mockRejectedValueOnce(new Error("revoke failed"));
+		render(<WorkspaceMembersPage />);
+
+		fireEvent.click(screen.getByRole("button", { name: "Revoke role" }));
+		fireEvent.click(screen.getAllByRole("button", { name: "Revoke role" })[1]!);
+
+		expect((await screen.findByRole("alert")).textContent).toContain(
+			"The workspace role change could not be completed."
+		);
+		expect(
+			screen.getByRole("heading", { name: "Revoke workspace role?" })
+		).toBeTruthy();
+	});
+
+	it("clears workspace state and ignores stale search results when the route changes", async () => {
+		setState(null);
+		let resolveSearch: (
+			value: Awaited<ReturnType<typeof searchMock>>
+		) => void = () => undefined;
+		searchMock.mockImplementationOnce(
+			() =>
+				new Promise((resolve) => {
+					resolveSearch = resolve;
+				})
+		);
+		const view = render(<WorkspaceMembersPage />);
+
+		fireEvent.input(screen.getByLabelText("Find eligible user by email"), {
+			target: { value: "candidate@example.test" },
+		});
+		fireEvent.click(screen.getByRole("button", { name: "Search" }));
+		fireEvent.click(screen.getByRole("button", { name: "Revoke role" }));
+
+		routerState.workspaceUuid = "workspace-uuid-2";
+		setState(null);
+		view.rerender(<WorkspaceMembersPage />);
+		await waitFor(() =>
+			expect(
+				screen.queryByRole("heading", { name: "Revoke workspace role?" })
+			).toBeNull()
+		);
+
+		await act(async () => {
+			resolveSearch([
+				{
+					email: "stale@example.test",
+					name: "Stale Alpha Result",
+					uuid: "stale-user-uuid",
+				},
+			]);
+		});
+
+		expect(screen.queryByText("Stale Alpha Result")).toBeNull();
+		expect(revokeMock).not.toHaveBeenCalled();
 	});
 });

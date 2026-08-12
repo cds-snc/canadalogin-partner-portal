@@ -77,10 +77,11 @@ const exportToCSV = (
 
 export const MAUReportPage = (): FunctionComponent => {
 	const { i18n, t } = useTranslation();
-	const { rpApplicationUuid } = useParams({
-		from: "/your-applications/$rpApplicationUuid/mau-report",
+	const { rpApplicationUuid, workspaceUuid } = useParams({
+		from: "/workspaces/$workspaceUuid/applications/$rpApplicationUuid/usage",
 	});
 	const rpApplicationUuidValue = String(rpApplicationUuid);
+	const workspaceUuidValue = String(workspaceUuid);
 	const defaultDateRange = useMemo(() => buildDefaultDateRange(), []);
 	const [draftStartDate, setDraftStartDate] = useState(
 		defaultDateRange.startDate
@@ -92,6 +93,7 @@ export const MAUReportPage = (): FunctionComponent => {
 	const [activeEndDate, setActiveEndDate] = useState(defaultDateRange.endDate);
 
 	const { data, error, isLoading, isRefetching } = useMauReport(
+		workspaceUuidValue,
 		rpApplicationUuidValue,
 		activeStartDate,
 		activeEndDate
@@ -104,10 +106,10 @@ export const MAUReportPage = (): FunctionComponent => {
 			error.code === "rp_application_department_required"
 		) {
 			globalThis.location.replace(
-				`/your-applications/${rpApplicationUuidValue}/department-setup`
+				`/your-applications/${rpApplicationUuidValue}/department-setup?redirect=${encodeURIComponent(`/workspaces/${workspaceUuidValue}/applications/${rpApplicationUuidValue}/usage`)}`
 			);
 		}
-	}, [error, rpApplicationUuidValue]);
+	}, [error, rpApplicationUuidValue, workspaceUuidValue]);
 
 	const responseData = data as MAUReportResponseRead | null;
 

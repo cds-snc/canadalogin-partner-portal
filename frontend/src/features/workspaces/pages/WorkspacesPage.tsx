@@ -1,9 +1,12 @@
 import { useNavigate, useSearch } from "@tanstack/react-router";
 import { useTranslation } from "react-i18next";
 import type { FunctionComponent } from "@/common/types";
+import { useDocumentTitle } from "@/common/use-document-title";
 import { Button, DataTable, Heading, Notice, Text } from "@/components/ui";
 import type { DataTableColumn } from "@/components/ui/DataTable";
 import { getRequestErrorNotice } from "@/fetch";
+import { hasCapability } from "@/features/auth/authorization";
+import { useSession } from "@/hooks";
 import { useWorkspaces } from "../hooks/use-workspaces";
 import { getWorkspaceOnboardingStateLabel } from "../onboarding-display";
 
@@ -21,7 +24,9 @@ export const WorkspacesPage = (): FunctionComponent => {
 			options?: Record<string, unknown>
 		) => string;
 	};
+	useDocumentTitle(t("workspaces.title"), t("home.title"));
 	const navigate = useNavigate();
+	const { currentUser } = useSession();
 	const search = useSearch({ from: "/workspaces" });
 	const { error, isLoading, workspaces } = useWorkspaces();
 	const errorNotice = getRequestErrorNotice(error, {
@@ -30,6 +35,11 @@ export const WorkspacesPage = (): FunctionComponent => {
 	});
 	const successMessage =
 		search.deleted === "1" ? t("workspaces.deletedSuccess") : null;
+	const canCreateWorkspace = hasCapability(
+		currentUser?.authorizationContext,
+		"partner_bootstrap"
+	);
+	const canAdoptRPRegistrations = canCreateWorkspace;
 	const rows: Array<WorkspaceTableRow> = workspaces.map((workspace) => ({
 		name: workspace.name,
 		onboardingState: workspace.onboardingState?.trim()
@@ -51,6 +61,22 @@ export const WorkspacesPage = (): FunctionComponent => {
 		<>
 			<Heading tag="h1">{t("workspaces.title")}</Heading>
 			<Text>{t("workspaces.summary")}</Text>
+
+			{canAdoptRPRegistrations ? (
+				<div className="mb-500 grid gap-100">
+					<Heading tag="h2">{t("workspaces.clAdminTasksTitle")}</Heading>
+					<Text>{t("workspaces.rpAdoptionTaskDescription")}</Text>
+					<div>
+						<Button
+							buttonRole="secondary"
+							href="/workspaces/rp-registration-adoption"
+							type="link"
+						>
+							{t("workspaces.rpAdoptionTaskAction")}
+						</Button>
+					</div>
+				</div>
+			) : null}
 
 			{successMessage ? (
 				<Notice
@@ -89,11 +115,13 @@ export const WorkspacesPage = (): FunctionComponent => {
 					noticeTitleTag="h2"
 				>
 					<Text>{t("workspaces.emptyBody")}</Text>
-					<div className="mt-200">
-						<Button href="/workspaces/new" type="link">
-							{t("workspaces.createAction")}
-						</Button>
-					</div>
+					{canCreateWorkspace ? (
+						<div className="mt-200">
+							<Button href="/workspaces/new" type="link">
+								{t("workspaces.createAction")}
+							</Button>
+						</div>
+					) : null}
 				</Notice>
 			) : null}
 
@@ -101,8 +129,7 @@ export const WorkspacesPage = (): FunctionComponent => {
 				<div className="grid gap-300">
 					<DataTable
 						columns={columns}
-						getRowId={(row): string => row.uuid}
-						itemLabel="workspaces"
+						itemLabel={t("workspaces.itemLabel")}
 						rows={rows}
 						title={t("workspaces.title")}
 						action={{
@@ -115,12 +142,16 @@ export const WorkspacesPage = (): FunctionComponent => {
 							},
 							screenReaderLabel: (row): string => row.name,
 						}}
-						primaryAction={{
-							buttonLabel: t("workspaces.createAction"),
-							onAction: (): void => {
-								void navigate({ to: "/workspaces/new" });
-							},
-						}}
+						primaryAction={
+							canCreateWorkspace
+								? {
+										buttonLabel: t("workspaces.createAction"),
+										onAction: (): void => {
+											void navigate({ to: "/workspaces/new" });
+										},
+									}
+								: undefined
+						}
 					/>
 				</div>
 			) : null}

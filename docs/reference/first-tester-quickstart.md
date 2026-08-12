@@ -21,11 +21,13 @@ want the fuller end-to-end tester pass.
 
 Approval remains human-owned. The template can prepare evidence and approval context, but it does not approve work.
 
-## Which prompt should I use?
+## Which workflow should I use?
 
-Start with these main prompts for most tester work:
+Start with these main workflow names for most tester work. In Codex, invoke
+them as repo skills such as `$dl-dev-continue`; VS Code exposes the same names
+as prompt entrypoints.
 
-| Prompt | Use when |
+| Workflow | Use when |
 |---|---|
 | `dl-requirements-shape` | The idea is not clear enough for a spec, design, or task yet. |
 | `dl-requirements-start` | A rough brief, requirements note, or issue should become the first active OpenSpec change package. |
@@ -57,7 +59,9 @@ Examples:
 - Commit readiness: "Make the staged changes commit-ready and commit with `<message>`."
 - Push readiness: "Check this branch before push."
 
-Use the prompt README for the full prompt picker, including advanced and targeted prompts. In generated VS Code solution repos it is `.github/prompts/README.md`; in the upstream template source it is `agent-configs/vscode/prompts/README.md`.
+In Codex, browse the repo skill picker for all `dl-*` workflows. For the VS
+Code prompt picker, use `.github/prompts/README.md`; in the upstream template
+source it is `agent-configs/vscode/prompts/README.md`.
 
 ## Before you start
 

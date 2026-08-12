@@ -1,52 +1,109 @@
+import json
 import logging
 import re
 import uuid as uuid_pkg
 from collections.abc import Mapping
 from datetime import UTC, datetime
-from typing import Any, Optional
+from typing import Any, Literal, Optional
 
 from fastcrud import compute_offset, paginated_response
 from ibm_verify_community_sdk.applications.models import ListApplicationsResponse
+from sqlalchemy import func, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from ..core.authorization import (
+    PARTNER_ROLE_CODES,
+    CanonicalResourceScopeDecisionPoint,
+    CanonicalRoleCode,
+    Capability,
+    ResourceScopeDecision,
+    ResourceScopeRequest,
+)
 from ..core.config import settings
-from ..core.exceptions.http_exceptions import NotFoundException, RPApplicationDepartmentRequiredException
+from ..core.exceptions.cache_exceptions import MissingClientError
+from ..core.exceptions.http_exceptions import (
+    BadRequestException,
+    CustomException,
+    ForbiddenException,
+    NotFoundException,
+    RPApplicationAdoptionConflictException,
+    RPApplicationDepartmentRequiredException,
+)
+from ..core.logging_privacy import hash_log_value
+from ..models.application_information import ApplicationInformation
+from ..models.audit_log import AuditLog
+from ..models.department import Department
+from ..models.rp_application import RPApplication
+from ..models.workspace import Workspace
 from ..repositories.crud_departments import crud_departments
-from ..repositories.crud_rp_application_access_grants import crud_rp_application_access_grants
 from ..repositories.crud_rp_applications import crud_rp_applications
-from ..repositories.crud_users import crud_users
+from ..repositories.crud_workspaces import crud_workspaces
+from ..repositories.dependencies import IBMVerifyAdminClientFactory
 from ..repositories.ibm_sv_admin import IBMVerifyAdminClient
+from ..schemas.authorization_audit import (
+    AuthorizationActorType,
+    AuthorizationAuditActor,
+    AuthorizationAuditResult,
+    PrivilegedAccessAuditEvent,
+    PrivilegedResourceType,
+)
 from ..schemas.rp_application import (
-    CurrentUserRPApplicationDepartmentAssignRequest,
-    CurrentUserRPApplicationSummaryRead,
+    AccessibleRPApplicationDepartmentAssignRequest,
+    AccessibleRPApplicationOAuthSetupRead,
+    AccessibleRPApplicationRead,
+    AccessibleRPApplicationSummaryRead,
     RPApplicationClientCredentialsRead,
     RPApplicationClientRotatedSecretCreateRequest,
     RPApplicationClientRotatedSecretRead,
     RPApplicationClientSecretRotateRequest,
     RPApplicationCreate,
     RPApplicationCreateInternal,
-    RPApplicationCurrentUserOAuthSetupRead,
-    RPApplicationCurrentUserRead,
-    RPApplicationOwnerRead,
-    RPApplicationOwnerSnapshotRead,
     RPApplicationRead,
     RPApplicationUpdate,
 )
-from ..schemas.rp_application_access_grant import (
-    RPApplicationAccessGrantCreateInternal,
-    RPApplicationAccessGrantRead,
+from ..schemas.rp_application_adoption import (
+    RPApplicationAdoptionAuditEvent,
+    RPApplicationAdoptionCandidateListRead,
+    RPApplicationAdoptionCandidatePreviewRead,
+    RPApplicationAdoptionCandidateRead,
+    RPApplicationAdoptionFieldComparisonRead,
+    RPApplicationAdoptionFieldName,
+    RPApplicationAdoptionProviderMetadata,
+    RPApplicationWorkspaceAdoptionRead,
+    RPApplicationWorkspaceLinkWrite,
 )
+from ..schemas.workspace import WorkspaceRead
 from .audit_service import AuditService
-from .ibm_sv_user_service import IBMVerifyUserService
+from .authorization_service import (
+    AuthorizationService,
+    ResolvedPartnerAccess,
+    get_resolved_authorization_state,
+)
+from .rp_application_adoption_metadata_provider import RPApplicationAdoptionMetadataProvider
+from .rp_application_summary import build_rp_application_summary
 
 logger = logging.getLogger(__name__)
 APPLICATION_ID_PATTERN = re.compile(r"/applications/([^/?#]+)")
-SUMMARY_ACCESS_GRANT_ROLES = frozenset({"rp admin", "rp user (edit)", "read only"})
-SECRET_ACCESS_GRANT_ROLES = frozenset({"rp admin", "rp user (edit)"})
-OWNER_ACCESS_GRANT_ROLE = "RP User (Edit)"
+SUMMARY_ACCESS_GRANT_ROLES = PARTNER_ROLE_CODES
+CONFIGURATION_EDIT_GRANT_ROLES = frozenset({CanonicalRoleCode.RP_ADMIN, CanonicalRoleCode.RP_USER_EDIT})
+SECRET_ACCESS_GRANT_ROLES = CONFIGURATION_EDIT_GRANT_ROLES
+ADOPTION_FIELD_NAMES: tuple[RPApplicationAdoptionFieldName, ...] = (
+    "displayName",
+    "providerApplicationState",
+    "applicationUrl",
+    "redirectUris",
+    "logoutUri",
+    "logoutRedirectUris",
+    "pkceEnabled",
+    "clientType",
+    "clientAuthMethod",
+)
 
 
 class RPApplicationService:
+    def __init__(self) -> None:
+        self._decision_point = CanonicalResourceScopeDecisionPoint()
+
     def _as_dict(self, value: Any) -> dict[str, Any]:
         if isinstance(value, dict):
             return value
@@ -104,6 +161,644 @@ class RPApplicationService:
             return False
 
         return None
+
+    def _require_platform_capability(
+        self,
+        *,
+        current_user: dict[str, Any],
+        capability: Capability,
+    ) -> None:
+        decision = self._platform_capability_decision(
+            current_user=current_user,
+            capability=capability,
+        )
+        if not decision.allowed:
+            raise ForbiddenException("You do not have enough privileges.")
+
+    def _platform_capability_decision(
+        self,
+        *,
+        current_user: dict[str, Any],
+        capability: Capability,
+    ) -> ResourceScopeDecision:
+        state = get_resolved_authorization_state(current_user)
+        role_scopes = state.role_scopes if state is not None else ()
+        return self._decision_point.decide(
+            ResourceScopeRequest(
+                role_scopes=role_scopes,
+                capability=capability,
+            )
+        )
+
+    def _safe_adoption_correlation_id(self, correlation_id: str) -> str:
+        normalized = correlation_id.strip()
+        if len(normalized) <= 128 and re.fullmatch(r"[A-Za-z0-9][A-Za-z0-9_.:-]*", normalized) is not None:
+            return normalized
+        return hash_log_value(correlation_id)
+
+    async def _persist_adoption_authorization_decision(
+        self,
+        *,
+        db: AsyncSession,
+        current_user: dict[str, Any],
+        decision: ResourceScopeDecision,
+        rp_application_uuid: uuid_pkg.UUID,
+        workspace_uuid: uuid_pkg.UUID,
+        correlation_id: str,
+    ) -> None:
+        last_error: Exception | None = None
+        for _attempt in range(2):
+            try:
+                event = PrivilegedAccessAuditEvent(
+                    timestamp=datetime.now(UTC),
+                    actor=AuthorizationAuditActor(
+                        type=AuthorizationActorType.USER,
+                        user_uuid=current_user.get("uuid"),
+                    ),
+                    correlation_id=correlation_id,
+                    result=(AuthorizationAuditResult.ALLOWED if decision.allowed else AuthorizationAuditResult.DENIED),
+                    role=decision.role,
+                    capability=Capability.PARTNER_BOOTSTRAP,
+                    resource_type=PrivilegedResourceType.RP_APPLICATION,
+                    resource_uuid=rp_application_uuid,
+                    workspace_uuid=workspace_uuid,
+                    decision_reason=decision.reason,
+                    reason_code="rp_adoption_link",
+                )
+                db.add(
+                    AuditLog(
+                        user="authorization_actor",
+                        user_uuid=current_user.get("uuid"),
+                        target="authorization_decision",
+                        target_uuid=rp_application_uuid,
+                        operation="authorize",
+                        description=json.dumps(
+                            event.model_dump(mode="json", by_alias=True),
+                            separators=(",", ":"),
+                        ),
+                    )
+                )
+                await db.commit()
+                return
+            except Exception as exc:
+                last_error = exc
+                await db.rollback()
+
+        logger.critical(
+            "RP adoption authorization audit unavailable rp_uuid=%s correlation_id=%s",
+            hash_log_value(str(rp_application_uuid)),
+            correlation_id,
+        )
+        if decision.allowed:
+            raise CustomException(
+                status_code=503,
+                detail="Authorization audit service is unavailable",
+            ) from last_error
+
+    def _add_adoption_outcome_audit(
+        self,
+        *,
+        db: AsyncSession,
+        current_user: dict[str, Any],
+        rp_application_uuid: uuid_pkg.UUID,
+        workspace_uuid: uuid_pkg.UUID,
+        correlation_id: str,
+        result: Literal["succeeded", "failed"],
+        filled_field_names: list[RPApplicationAdoptionFieldName] | None = None,
+        reason_code: str | None = None,
+        timestamp: datetime | None = None,
+    ) -> None:
+        event_timestamp = timestamp or datetime.now(UTC)
+        event = RPApplicationAdoptionAuditEvent(
+            timestamp=event_timestamp,
+            actor_uuid=current_user["uuid"],
+            rp_application_uuid=rp_application_uuid,
+            workspace_uuid=workspace_uuid,
+            result=result,
+            correlation_id=correlation_id,
+            filled_field_names=filled_field_names or [],
+            reason_code=reason_code,
+        )
+        db.add(
+            AuditLog(
+                user="authorization_actor",
+                user_uuid=current_user["uuid"],
+                target="rp_application",
+                target_uuid=rp_application_uuid,
+                operation="workspace_adopt",
+                description=json.dumps(
+                    event.model_dump(mode="json", by_alias=True),
+                    separators=(",", ":"),
+                ),
+                created_at=event_timestamp,
+            )
+        )
+
+    def _adoption_failure_reason_code(self, error: Exception) -> str:
+        if isinstance(error, RPApplicationAdoptionConflictException):
+            return "rp_already_linked"
+        if isinstance(error, NotFoundException):
+            return "resource_unavailable"
+        if isinstance(error, BadRequestException):
+            return "invalid_request"
+        if isinstance(error, MissingClientError | CustomException):
+            return "provider_unavailable"
+        return "operation_failed"
+
+    def _adoption_candidate_statement(
+        self,
+        rp_application_uuid: uuid_pkg.UUID | None = None,
+    ):
+        statement = select(
+            RPApplication.id,
+            RPApplication.uuid,
+            RPApplication.dnr_app_name,
+            RPApplication.ibm_sv_application_id,
+            RPApplication.canada_login_environment,
+            RPApplication.status,
+            RPApplication.oidc_registration_payload,
+            RPApplication.updated_at,
+        ).where(
+            RPApplication.workspace_id.is_(None),
+            RPApplication.is_deleted.is_(False),
+            RPApplication.deleted_at.is_(None),
+            RPApplication.ibm_sv_application_id.is_not(None),
+            func.length(func.trim(RPApplication.ibm_sv_application_id)) > 0,
+        )
+        if rp_application_uuid is not None:
+            return statement.where(RPApplication.uuid == rp_application_uuid)
+        return statement.order_by(
+            RPApplication.updated_at.desc().nullslast(),
+            RPApplication.id.asc(),
+        )
+
+    def _adoption_link_target_statement(self, rp_application_uuid: uuid_pkg.UUID):
+        return (
+            select(
+                RPApplication.id,
+                RPApplication.uuid,
+                RPApplication.workspace_id,
+                RPApplication.department_id,
+                RPApplication.application_information_id,
+                RPApplication.dnr_app_name,
+                RPApplication.canada_login_environment,
+                RPApplication.status,
+                RPApplication.ibm_sv_application_id,
+                RPApplication.oidc_registration_payload,
+                RPApplication.updated_at,
+            )
+            .where(
+                RPApplication.uuid == rp_application_uuid,
+                RPApplication.is_deleted.is_(False),
+                RPApplication.deleted_at.is_(None),
+                RPApplication.ibm_sv_application_id.is_not(None),
+                func.length(func.trim(RPApplication.ibm_sv_application_id)) > 0,
+            )
+            .with_for_update()
+        )
+
+    def _adoption_local_values(
+        self,
+        candidate: Mapping[str, Any],
+    ) -> dict[RPApplicationAdoptionFieldName, Any]:
+        payload = self._as_dict(candidate.get("oidc_registration_payload"))
+        return {
+            "displayName": self._first_string_value(candidate, ("dnr_app_name",)),
+            "providerApplicationState": self._first_string_value(candidate, ("status",)),
+            "applicationUrl": self._first_string_value(
+                payload,
+                (
+                    "application_environment_url_en",
+                    "applicationEnvironmentUrlEn",
+                    "application_url",
+                    "applicationUrl",
+                ),
+            ),
+            "redirectUris": self._extract_redirect_uris(payload.get("redirect_uris", payload.get("redirectUris"))),
+            "logoutUri": self._first_string_value(payload, ("logout_uri", "logoutUri")),
+            "logoutRedirectUris": self._extract_redirect_uris(
+                payload.get(
+                    "post_logout_redirect_uris",
+                    payload.get("postLogoutRedirectUris", payload.get("logoutRedirectUris")),
+                )
+            ),
+            "pkceEnabled": self._extract_bool(payload.get("pkce_supported", payload.get("pkceSupported"))),
+            "clientType": self._first_string_value(payload, ("client_type", "clientType")),
+            "clientAuthMethod": self._first_string_value(
+                payload,
+                ("client_auth_method", "clientAuthMethod"),
+            ),
+        }
+
+    def _adoption_provider_values(
+        self,
+        metadata: RPApplicationAdoptionProviderMetadata,
+    ) -> dict[RPApplicationAdoptionFieldName, Any]:
+        provider = metadata.model_dump(mode="json", by_alias=False)
+        return {
+            "displayName": provider["display_name"],
+            "providerApplicationState": provider["application_state"],
+            "applicationUrl": provider["application_url"],
+            "redirectUris": provider["redirect_uris"],
+            "logoutUri": provider["logout_uri"],
+            "logoutRedirectUris": provider["logout_redirect_uris"],
+            "pkceEnabled": provider["pkce_enabled"],
+            "clientType": provider["client_type"],
+            "clientAuthMethod": provider["client_auth_method"],
+        }
+
+    def _adoption_value_is_missing(self, value: Any) -> bool:
+        if value is None:
+            return True
+        if isinstance(value, str):
+            return value.strip() == ""
+        if isinstance(value, list):
+            return len(value) == 0
+        return False
+
+    async def _load_adoption_provider_metadata(
+        self,
+        *,
+        application_id: str,
+        metadata_provider: RPApplicationAdoptionMetadataProvider,
+    ) -> RPApplicationAdoptionProviderMetadata:
+        try:
+            provider_result = await metadata_provider.get_registration_metadata(application_id)
+            return RPApplicationAdoptionProviderMetadata.model_validate(provider_result)
+        except MissingClientError:
+            raise
+        except Exception as exc:
+            logger.warning(
+                "RP adoption metadata preview unavailable application_id=%s",
+                hash_log_value(application_id),
+            )
+            raise CustomException(
+                status_code=503,
+                detail="RP adoption metadata provider is unavailable",
+            ) from exc
+
+    def _build_adoption_comparisons(
+        self,
+        *,
+        local_values: Mapping[RPApplicationAdoptionFieldName, Any],
+        provider_values: Mapping[RPApplicationAdoptionFieldName, Any],
+    ) -> list[RPApplicationAdoptionFieldComparisonRead]:
+        comparisons: list[RPApplicationAdoptionFieldComparisonRead] = []
+        for field_name in ADOPTION_FIELD_NAMES:
+            local_value = local_values[field_name]
+            provider_value = provider_values[field_name]
+            local_missing = self._adoption_value_is_missing(local_value)
+            provider_missing = self._adoption_value_is_missing(provider_value)
+            if local_missing and provider_missing:
+                status = "missing"
+            elif local_missing:
+                status = "fillable"
+            elif provider_missing or local_value == provider_value:
+                status = "preserved"
+            else:
+                status = "conflict"
+            comparisons.append(
+                RPApplicationAdoptionFieldComparisonRead(
+                    field_name=field_name,
+                    status=status,
+                    local_value=local_value,
+                    provider_value=provider_value,
+                )
+            )
+        return comparisons
+
+    def _apply_adoption_fill_values(
+        self,
+        *,
+        candidate: Mapping[str, Any],
+        comparisons: list[RPApplicationAdoptionFieldComparisonRead],
+    ) -> dict[str, Any]:
+        update_values: dict[str, Any] = {}
+        registration_payload = dict(self._as_dict(candidate.get("oidc_registration_payload")))
+        payload_field_names = {
+            "applicationUrl": "application_environment_url_en",
+            "redirectUris": "redirect_uris",
+            "logoutUri": "logout_uri",
+            "logoutRedirectUris": "post_logout_redirect_uris",
+            "pkceEnabled": "pkce_supported",
+            "clientType": "client_type",
+            "clientAuthMethod": "client_auth_method",
+        }
+        for comparison in comparisons:
+            if comparison.status != "fillable":
+                continue
+            if comparison.field_name == "displayName":
+                update_values["dnr_app_name"] = comparison.provider_value
+            elif comparison.field_name == "providerApplicationState":
+                update_values["status"] = comparison.provider_value
+            else:
+                payload_field_name = payload_field_names.get(comparison.field_name)
+                if payload_field_name is not None:
+                    registration_payload[payload_field_name] = comparison.provider_value
+        update_values["oidc_registration_payload"] = registration_payload
+        return update_values
+
+    def _build_adoption_candidate_read(
+        self,
+        candidate: Mapping[str, Any],
+    ) -> RPApplicationAdoptionCandidateRead:
+        local_values = self._adoption_local_values(candidate)
+        missing_field_names = [field_name for field_name in ADOPTION_FIELD_NAMES if self._adoption_value_is_missing(local_values[field_name])]
+        return RPApplicationAdoptionCandidateRead(
+            rp_application_uuid=candidate["uuid"],
+            name=str(candidate["dnr_app_name"]),
+            ibm_application_id=str(candidate["ibm_sv_application_id"]),
+            metadata_completeness=("incomplete" if missing_field_names else "complete"),
+            missing_field_names=missing_field_names,
+            updated_at=candidate.get("updated_at"),
+        )
+
+    async def list_rp_application_adoption_candidates(
+        self,
+        *,
+        db: AsyncSession,
+        current_user: dict[str, Any],
+    ) -> dict[str, Any]:
+        self._require_platform_capability(
+            current_user=current_user,
+            capability=Capability.PARTNER_BOOTSTRAP,
+        )
+        result = await db.execute(self._adoption_candidate_statement())
+        candidates = [self._build_adoption_candidate_read(self._as_dict(row)) for row in result.mappings().all()]
+        return RPApplicationAdoptionCandidateListRead(items=candidates).model_dump(
+            mode="json",
+            by_alias=True,
+        )
+
+    async def preview_rp_application_adoption_candidate(
+        self,
+        *,
+        db: AsyncSession,
+        current_user: dict[str, Any],
+        rp_application_uuid: uuid_pkg.UUID,
+        metadata_provider: RPApplicationAdoptionMetadataProvider,
+    ) -> dict[str, Any]:
+        self._require_platform_capability(
+            current_user=current_user,
+            capability=Capability.PARTNER_BOOTSTRAP,
+        )
+        result = await db.execute(self._adoption_candidate_statement(rp_application_uuid))
+        candidate_row = result.mappings().one_or_none()
+        if candidate_row is None:
+            raise NotFoundException("RP application adoption candidate not found")
+        candidate = self._as_dict(candidate_row)
+        ibm_application_id = str(candidate["ibm_sv_application_id"])
+
+        provider_metadata = await self._load_adoption_provider_metadata(
+            application_id=ibm_application_id,
+            metadata_provider=metadata_provider,
+        )
+        local_values = self._adoption_local_values(candidate)
+        provider_values = self._adoption_provider_values(provider_metadata)
+        comparisons = self._build_adoption_comparisons(
+            local_values=local_values,
+            provider_values=provider_values,
+        )
+
+        preview = RPApplicationAdoptionCandidatePreviewRead(
+            candidate=self._build_adoption_candidate_read(candidate),
+            canada_login_environment=candidate.get("canada_login_environment"),
+            fields=comparisons,
+            fillable_field_names=[field.field_name for field in comparisons if field.status == "fillable"],
+            preserved_local_field_names=[field.field_name for field in comparisons if field.status == "preserved"],
+            conflicting_field_names=[field.field_name for field in comparisons if field.status == "conflict"],
+        )
+        return preview.model_dump(mode="json", by_alias=True)
+
+    async def link_rp_application_to_workspace(
+        self,
+        *,
+        db: AsyncSession,
+        current_user: dict[str, Any],
+        rp_application_uuid: uuid_pkg.UUID,
+        payload: RPApplicationWorkspaceLinkWrite,
+        metadata_provider: RPApplicationAdoptionMetadataProvider,
+        correlation_id: str,
+    ) -> dict[str, Any]:
+        safe_correlation_id = self._safe_adoption_correlation_id(correlation_id)
+        decision = self._platform_capability_decision(
+            current_user=current_user,
+            capability=Capability.PARTNER_BOOTSTRAP,
+        )
+        await self._persist_adoption_authorization_decision(
+            db=db,
+            current_user=current_user,
+            decision=decision,
+            rp_application_uuid=rp_application_uuid,
+            workspace_uuid=payload.workspace_uuid,
+            correlation_id=safe_correlation_id,
+        )
+        if not decision.allowed:
+            raise ForbiddenException("You do not have enough privileges.")
+
+        hashed_rp_uuid = hash_log_value(str(rp_application_uuid))
+        try:
+            rp_result = await db.execute(self._adoption_link_target_statement(rp_application_uuid))
+            rp_row = rp_result.mappings().one_or_none()
+            if rp_row is None:
+                raise NotFoundException("RP application adoption candidate not found")
+            candidate = self._as_dict(rp_row)
+
+            workspace_result = await db.execute(
+                select(
+                    Workspace.id,
+                    Workspace.uuid,
+                    Workspace.department_id,
+                )
+                .where(
+                    Workspace.uuid == payload.workspace_uuid,
+                    Workspace.is_deleted.is_(False),
+                    Workspace.deleted_at.is_(None),
+                )
+                .with_for_update()
+            )
+            workspace_row = workspace_result.mappings().one_or_none()
+            if workspace_row is None:
+                raise NotFoundException("Workspace not found")
+            workspace = self._as_dict(workspace_row)
+
+            existing_workspace_id = candidate.get("workspace_id")
+            if existing_workspace_id is not None and existing_workspace_id != workspace["id"]:
+                raise RPApplicationAdoptionConflictException()
+
+            department_result = await db.execute(
+                select(Department.uuid).where(
+                    Department.id == workspace["department_id"],
+                    Department.is_deleted.is_(False),
+                    Department.deleted_at.is_(None),
+                )
+            )
+            department_uuid = department_result.scalar_one_or_none()
+            if department_uuid is None:
+                raise BadRequestException("Selected workspace department is unavailable")
+
+            application_information_id = candidate.get("application_information_id")
+            application_information_uuid: uuid_pkg.UUID | None = None
+            if application_information_id is not None:
+                application_information_result = await db.execute(
+                    select(ApplicationInformation.id, ApplicationInformation.uuid).where(
+                        ApplicationInformation.id == application_information_id,
+                        ApplicationInformation.workspace_id == workspace["id"],
+                        ApplicationInformation.is_deleted.is_(False),
+                        ApplicationInformation.deleted_at.is_(None),
+                    )
+                )
+                application_information_row = application_information_result.mappings().one_or_none()
+                if application_information_row is None:
+                    raise BadRequestException("Existing application information is unavailable for the selected workspace")
+                application_information = self._as_dict(application_information_row)
+                application_information_uuid = application_information["uuid"]
+                if payload.application_information_uuid is not None and payload.application_information_uuid != application_information_uuid:
+                    raise BadRequestException("Existing application information cannot be replaced during adoption")
+            elif payload.application_information_uuid is not None:
+                application_information_result = await db.execute(
+                    select(ApplicationInformation.id, ApplicationInformation.uuid).where(
+                        ApplicationInformation.uuid == payload.application_information_uuid,
+                        ApplicationInformation.workspace_id == workspace["id"],
+                        ApplicationInformation.is_deleted.is_(False),
+                        ApplicationInformation.deleted_at.is_(None),
+                    )
+                )
+                application_information_row = application_information_result.mappings().one_or_none()
+                if application_information_row is None:
+                    raise BadRequestException("Application information is unavailable for the selected workspace")
+                application_information = self._as_dict(application_information_row)
+                application_information_id = application_information["id"]
+                application_information_uuid = application_information["uuid"]
+
+            existing_environment = self._first_string_value(
+                candidate,
+                ("canada_login_environment",),
+            )
+            if (
+                existing_environment is not None
+                and payload.canada_login_environment is not None
+                and existing_environment != payload.canada_login_environment
+            ):
+                raise BadRequestException("Existing CanadaLogin environment cannot be replaced during adoption")
+            canada_login_environment = existing_environment or payload.canada_login_environment
+            if canada_login_environment is None:
+                raise BadRequestException("CanadaLogin environment is required")
+            if canada_login_environment not in {"test", "staging", "production"}:
+                raise BadRequestException("CanadaLogin environment is invalid")
+
+            if existing_workspace_id == workspace["id"]:
+                await db.commit()
+                replay = RPApplicationWorkspaceAdoptionRead(
+                    rp_application_uuid=candidate["uuid"],
+                    workspace_uuid=workspace["uuid"],
+                    department_uuid=department_uuid,
+                    application_information_uuid=application_information_uuid,
+                    ibm_application_id=str(candidate["ibm_sv_application_id"]),
+                    name=str(candidate["dnr_app_name"]),
+                    canada_login_environment=canada_login_environment,
+                    filled_field_names=[],
+                    preserved_local_field_names=[],
+                    conflicting_field_names=[],
+                    idempotent_replay=True,
+                )
+                return replay.model_dump(mode="json", by_alias=True)
+
+            ibm_application_id = str(candidate["ibm_sv_application_id"])
+            provider_metadata = await self._load_adoption_provider_metadata(
+                application_id=ibm_application_id,
+                metadata_provider=metadata_provider,
+            )
+            comparisons = self._build_adoption_comparisons(
+                local_values=self._adoption_local_values(candidate),
+                provider_values=self._adoption_provider_values(provider_metadata),
+            )
+            update_values = self._apply_adoption_fill_values(
+                candidate=candidate,
+                comparisons=comparisons,
+            )
+            now = datetime.now(UTC)
+            update_values.update(
+                {
+                    "workspace_id": workspace["id"],
+                    "department_id": workspace["department_id"],
+                    "application_information_id": application_information_id,
+                    "canada_login_environment": canada_login_environment,
+                    "updated_at": now,
+                }
+            )
+            update_result = await db.execute(
+                update(RPApplication)
+                .where(
+                    RPApplication.id == candidate["id"],
+                    RPApplication.workspace_id.is_(None),
+                    RPApplication.is_deleted.is_(False),
+                    RPApplication.deleted_at.is_(None),
+                )
+                .values(**update_values)
+            )
+            if update_result.rowcount != 1:
+                raise RPApplicationAdoptionConflictException()
+
+            filled_field_names = [field.field_name for field in comparisons if field.status == "fillable"]
+            preserved_local_field_names = [field.field_name for field in comparisons if field.status == "preserved"]
+            conflicting_field_names = [field.field_name for field in comparisons if field.status == "conflict"]
+            self._add_adoption_outcome_audit(
+                db=db,
+                current_user=current_user,
+                rp_application_uuid=candidate["uuid"],
+                workspace_uuid=workspace["uuid"],
+                correlation_id=safe_correlation_id,
+                result="succeeded",
+                filled_field_names=filled_field_names,
+                timestamp=now,
+            )
+            await db.commit()
+
+            adopted = RPApplicationWorkspaceAdoptionRead(
+                rp_application_uuid=candidate["uuid"],
+                workspace_uuid=workspace["uuid"],
+                department_uuid=department_uuid,
+                application_information_uuid=application_information_uuid,
+                ibm_application_id=ibm_application_id,
+                name=str(update_values.get("dnr_app_name", candidate["dnr_app_name"])),
+                canada_login_environment=canada_login_environment,
+                filled_field_names=filled_field_names,
+                preserved_local_field_names=preserved_local_field_names,
+                conflicting_field_names=conflicting_field_names,
+            )
+            return adopted.model_dump(mode="json", by_alias=True)
+        except Exception as error:
+            await db.rollback()
+            failure_audit_persisted = False
+            for _attempt in range(2):
+                try:
+                    self._add_adoption_outcome_audit(
+                        db=db,
+                        current_user=current_user,
+                        rp_application_uuid=rp_application_uuid,
+                        workspace_uuid=payload.workspace_uuid,
+                        correlation_id=safe_correlation_id,
+                        result="failed",
+                        reason_code=self._adoption_failure_reason_code(error),
+                    )
+                    await db.commit()
+                    failure_audit_persisted = True
+                    break
+                except Exception:
+                    await db.rollback()
+            if not failure_audit_persisted:
+                logger.critical(
+                    "RP adoption failure audit unavailable rp_uuid=%s correlation_id=%s",
+                    hashed_rp_uuid,
+                    safe_correlation_id,
+                )
+            logger.warning(
+                "RP adoption failed rp_uuid=%s correlation_id=%s",
+                hashed_rp_uuid,
+                safe_correlation_id,
+            )
+            raise
 
     def _extract_client_secret(self, value: Any) -> str | None:
         value_dict = self._as_dict(value)
@@ -217,10 +912,13 @@ class RPApplicationService:
         normalized_entries: list[dict[str, Any]] = []
         for index, secret_entry in enumerate(rotated_secrets):
             entry_dict = self._as_dict(secret_entry)
-            delete_path = self._first_string_value(
-                entry_dict,
-                ("path", "secretId", "secret_id", "id"),
-            ) or f"/rotatedSecrets/{index}"
+            delete_path = (
+                self._first_string_value(
+                    entry_dict,
+                    ("path", "secretId", "secret_id", "id"),
+                )
+                or f"/rotatedSecrets/{index}"
+            )
             normalized_entries.append(
                 RPApplicationClientRotatedSecretRead(
                     description=self._first_string_value(entry_dict, ("description",)),
@@ -333,39 +1031,6 @@ class RPApplicationService:
 
         return None
 
-    def _extract_owner_email(self, owner: Any) -> str | None:
-        if isinstance(owner, dict):
-            for key in ("email", "mail", "userName", "username", "displayName", "name", "value"):
-                value = owner.get(key)
-                if value is None:
-                    continue
-                normalized = str(value).strip()
-                if normalized:
-                    return normalized
-
-            return None
-
-        for attr in ("email", "mail", "userName", "username", "displayName", "name", "value"):
-            value = getattr(owner, attr, None)
-            if value is None:
-                continue
-            normalized = str(value).strip()
-            if normalized:
-                return normalized
-
-        normalized = str(owner or "").strip()
-        return normalized or None
-
-    def _extract_current_user_email(self, current_user: dict[str, Any]) -> str | None:
-        for key in ("email", "mail", "userName", "username"):
-            value = current_user.get(key)
-            if value is None:
-                continue
-            normalized = str(value).strip()
-            if normalized:
-                return normalized
-        return None
-
     def _extract_current_user_id(self, current_user: dict[str, Any]) -> int | None:
         raw_user_id = current_user.get("id")
         if raw_user_id is None or isinstance(raw_user_id, bool):
@@ -383,85 +1048,29 @@ class RPApplicationService:
         except ValueError:
             return None
 
-    def _normalize_access_grant_role(self, role: Any) -> str | None:
-        if role is None:
-            return None
-
-        normalized = str(role).strip().lower()
-        return normalized or None
-
-    def _is_owner_email_match(self, application_owner: Any, current_user_email: str) -> bool:
-        owner_snapshot = self._build_application_owner_snapshot(application_owner)
-        if owner_snapshot is None:
-            return False
-
-        normalized_email = current_user_email.strip().lower()
-        return any(owner.email.strip().lower() == normalized_email for owner in owner_snapshot.owners)
-
-    async def _list_current_user_granted_workspace_roles(
+    async def _list_granted_workspace_roles(
         self,
         db: AsyncSession,
         current_user: dict[str, Any],
-    ) -> dict[int, str]:
+    ) -> dict[int, ResolvedPartnerAccess]:
+        state = get_resolved_authorization_state(current_user)
+        if state is not None:
+            return state.partner_access_by_workspace_id()
+
         user_id = self._extract_current_user_id(current_user)
         if user_id is None:
             return {}
+        return (await AuthorizationService().resolve_for_user(db, user_id=user_id)).partner_access_by_workspace_id()
 
-        grants_data = await crud_rp_application_access_grants.get_multi(
-            db=db,
-            user_id=user_id,
-            status="active",
-            is_deleted=False,
-            schema_to_select=RPApplicationAccessGrantRead,
-        )
-        grants = grants_data.get("data", []) if isinstance(grants_data, dict) else grants_data
-
-        workspace_roles: dict[int, str] = {}
-        for grant in grants:
-            grant_data = grant if isinstance(grant, dict) else dict(grant)
-            workspace_id = grant_data.get("workspace_id")
-            normalized_role = self._normalize_access_grant_role(grant_data.get("role"))
-            if normalized_role is None or workspace_id is None:
-                continue
-
-            try:
-                workspace_roles[int(str(workspace_id).strip())] = normalized_role
-            except ValueError:
-                continue
-
-        return workspace_roles
-
-    async def _get_current_user_workspace_grant(
-        self,
-        db: AsyncSession,
-        current_user: dict[str, Any],
-        workspace_id: int | None,
-    ) -> dict[str, Any] | None:
-        if workspace_id is None:
-            return None
-
-        user_id = self._extract_current_user_id(current_user)
-        if user_id is None:
-            return None
-
-        return await crud_rp_application_access_grants.get(
-            db=db,
-            user_id=user_id,
-            workspace_id=workspace_id,
-            status="active",
-            is_deleted=False,
-            schema_to_select=RPApplicationAccessGrantRead,
-        )
-
-    async def _resolve_current_user_rp_application_access(
+    async def _resolve_accessible_rp_application_access(
         self,
         db: AsyncSession,
         rp_application_uuid: uuid_pkg.UUID | str,
         current_user: dict[str, Any],
         *,
-        allowed_grant_roles: frozenset[str] | None,
-        forbidden_message: str,
-    ) -> tuple[dict[str, Any], str | None]:
+        allowed_grant_roles: frozenset[CanonicalRoleCode] | None,
+        expected_workspace_uuid: uuid_pkg.UUID | str | None = None,
+    ) -> tuple[dict[str, Any], ResolvedPartnerAccess]:
         rp_application = await crud_rp_applications.get(
             db=db,
             uuid=rp_application_uuid,
@@ -477,104 +1086,58 @@ class RPApplicationService:
 
         workspace_id_raw = rp_application_data.get("workspace_id")
         workspace_id = workspace_id_raw if isinstance(workspace_id_raw, int) else self._extract_current_user_id({"id": workspace_id_raw})
-        grant = await self._get_current_user_workspace_grant(
-            db=db,
-            current_user=current_user,
-            workspace_id=workspace_id,
+        workspace_access = (
+            (
+                await self._list_granted_workspace_roles(
+                    db=db,
+                    current_user=current_user,
+                )
+            ).get(workspace_id)
+            if workspace_id is not None
+            else None
         )
-        if grant is None:
+        if workspace_access is None or workspace_access.role not in allowed_grant_roles:
+            raise NotFoundException("RP application not found")
+        if expected_workspace_uuid is not None and str(workspace_access.workspace_uuid) != str(expected_workspace_uuid):
             raise NotFoundException("RP application not found")
 
-        grant_role = self._normalize_access_grant_role(self._as_dict(grant).get("role"))
-        if grant_role is None or grant_role not in allowed_grant_roles:
-            raise NotFoundException("RP application not found")
+        return rp_application_data, workspace_access
 
-        return rp_application_data, grant_role
-
-    async def _ensure_workspace_access_grant(
+    def _accessible_rp_application_read(
         self,
-        db: AsyncSession,
-        workspace_id: int | None,
-        user_id: int | None,
-        role: str,
-    ) -> None:
-        if workspace_id is None or user_id is None:
-            return
+        application_data: Mapping[str, Any],
+        workspace_access: ResolvedPartnerAccess,
+    ) -> dict[str, Any]:
+        """Build the public grant-derived application projection."""
 
-        existing_grant = await crud_rp_application_access_grants.get(
-            db=db,
-            workspace_id=workspace_id,
-            user_id=user_id,
-            status="active",
-            is_deleted=False,
-            schema_to_select=RPApplicationAccessGrantRead,
-        )
-        if existing_grant is not None:
-            return
+        return AccessibleRPApplicationRead(
+            uuid=application_data["uuid"],
+            dnr_app_name=application_data["dnr_app_name"],
+            workspace_uuid=workspace_access.workspace_uuid,
+            role=workspace_access.role,
+            ibm_sv_application_id=application_data.get("ibm_sv_application_id"),
+            canada_login_environment=application_data.get("canada_login_environment"),
+            onboarding_state=application_data.get("onboarding_state"),
+            promotion_status=application_data.get("promotion_status"),
+        ).model_dump()
 
-        created_grant = await crud_rp_application_access_grants.create(
-            db=db,
-            object=RPApplicationAccessGrantCreateInternal(
-                workspace_id=workspace_id,
-                user_id=user_id,
-                role=role,
-                status="active",
-            ),
-            schema_to_select=RPApplicationAccessGrantRead,
-        )
-        if created_grant is None:
-            raise NotFoundException("Failed to create RP application access grant")
-
-    async def _backfill_workspace_owner_access_grants(
+    async def _resolve_ibm_admin_client(
         self,
-        db: AsyncSession,
-        workspace_id: int | None,
-        application_owner: RPApplicationOwnerSnapshotRead | None,
-    ) -> None:
-        if workspace_id is None or application_owner is None:
-            return
-
-        seen_emails: set[str] = set()
-        for owner in application_owner.owners:
-            normalized_email = owner.email.strip().lower()
-            if not normalized_email or normalized_email in seen_emails:
-                continue
-            seen_emails.add(normalized_email)
-
-            local_user = await crud_users.get(
-                db=db,
-                email=normalized_email,
-                is_deleted=False,
-            )
-            if local_user is None:
-                continue
-
-            local_user_id = self._extract_current_user_id(self._as_dict(local_user))
-            await self._ensure_workspace_access_grant(
-                db=db,
-                workspace_id=workspace_id,
-                user_id=local_user_id,
-                role=OWNER_ACCESS_GRANT_ROLE,
-            )
-
-    async def _get_current_user_application_detail_context(
-        self,
-        db: AsyncSession,
-        rp_application_uuid: uuid_pkg.UUID | str,
-        current_user: dict[str, Any],
-        ibm_admin_client: IBMVerifyAdminClient,
         *,
-        allowed_grant_roles: frozenset[str] | None,
-        forbidden_message: str,
-    ) -> tuple[dict[str, Any], dict[str, Any], str]:
-        rp_application_data, _ = await self._resolve_current_user_rp_application_access(
-            db=db,
-            rp_application_uuid=rp_application_uuid,
-            current_user=current_user,
-            allowed_grant_roles=allowed_grant_roles,
-            forbidden_message=forbidden_message,
-        )
+        ibm_admin_client: IBMVerifyAdminClient | None,
+        ibm_admin_client_factory: IBMVerifyAdminClientFactory | None,
+    ) -> IBMVerifyAdminClient:
+        if ibm_admin_client_factory is not None:
+            return await ibm_admin_client_factory()
+        if ibm_admin_client is not None:
+            return ibm_admin_client
+        raise RuntimeError("IBM Verify admin client dependency was not provided")
 
+    async def _get_application_detail_context(
+        self,
+        rp_application_data: dict[str, Any],
+        ibm_admin_client: IBMVerifyAdminClient,
+    ) -> tuple[dict[str, Any], str]:
         ibm_application_id = self._first_string_value(
             rp_application_data,
             ("ibm_sv_application_id", "ibmSvApplicationId"),
@@ -582,9 +1145,7 @@ class RPApplicationService:
         if ibm_application_id is None:
             raise NotFoundException("IBM Verify application not found for RP application")
 
-        ibm_application_detail = await ibm_admin_client.get_application_detail(
-            ibm_application_id
-        )
+        ibm_application_detail = await ibm_admin_client.get_application_detail(ibm_application_id)
         detail_data = self._as_dict(ibm_application_detail)
         providers = self._as_dict(detail_data.get("providers"))
         oidc_provider = self._as_dict(providers.get("oidc"))
@@ -602,31 +1163,7 @@ class RPApplicationService:
         if client_id is None:
             raise RuntimeError("IBM Verify application detail missing client ID")
 
-        return rp_application_data, detail_data, client_id
-
-    def _build_application_owner_snapshot(self, owners: Any) -> RPApplicationOwnerSnapshotRead | None:
-        if owners is None:
-            return None
-
-        raw_owners: list[Any]
-        if isinstance(owners, dict):
-            raw_owners = []
-            for key in ("owners", "owner", "applicationOwners", "application_owners"):
-                value = owners.get(key)
-                if isinstance(value, list):
-                    raw_owners.extend(value)
-                elif value is not None:
-                    raw_owners.append(value)
-        elif isinstance(owners, list):
-            raw_owners = owners
-        else:
-            raw_owners = [owners]
-
-        normalized_owners = [RPApplicationOwnerRead(email=email) for email in (self._extract_owner_email(owner) for owner in raw_owners) if email]
-        if len(normalized_owners) == 0:
-            return None
-
-        return RPApplicationOwnerSnapshotRead(owners=normalized_owners)
+        return detail_data, client_id
 
     async def create_rp_application(
         self,
@@ -642,7 +1179,6 @@ class RPApplicationService:
                 dnr_app_name=rp_application.dnr_app_name,
                 ibm_sv_application_id=rp_application.ibm_sv_application_id,
                 created_by=created_by,
-                application_owner=None,
             ),
             schema_to_select=RPApplicationRead,
         )
@@ -677,82 +1213,95 @@ class RPApplicationService:
             items_per_page=items_per_page,
         )
 
-    async def list_current_user_rp_applications(
+    async def list_accessible_rp_applications(
         self,
         db: AsyncSession,
         current_user: dict[str, Any],
-        ibm_user_service: IBMVerifyUserService,
     ) -> list[dict[str, Any]]:
-        _ = ibm_user_service
-        granted_workspace_roles = await self._list_current_user_granted_workspace_roles(
+        granted_workspace_roles = await self._list_granted_workspace_roles(
             db=db,
             current_user=current_user,
         )
         if len(granted_workspace_roles) == 0:
             return []
 
-        local_applications_data = await crud_rp_applications.get_multi(
+        workspace_ids = tuple(sorted(granted_workspace_roles))
+        applications_result = await crud_rp_applications.get_multi(
             db=db,
+            limit=None,
+            return_total_count=False,
+            sort_columns="id",
+            sort_orders="asc",
             is_deleted=False,
+            workspace_id__in=workspace_ids,
             schema_to_select=RPApplicationRead,
         )
-        local_applications = (
-            local_applications_data.get("data", [])
-            if isinstance(local_applications_data, dict)
-            else local_applications_data
-        )
-
-        matched_applications: dict[str, dict[str, Any]] = {}
-        for application in local_applications:
-            application_data = application if isinstance(application, dict) else dict(application)
-            workspace_id = application_data.get("workspace_id")
-            normalized_grant_role = granted_workspace_roles.get(workspace_id) if isinstance(workspace_id, int) else None
-            has_workspace_grant = normalized_grant_role in SUMMARY_ACCESS_GRANT_ROLES
-            if not has_workspace_grant:
-                continue
-
-            application_read = RPApplicationCurrentUserRead.model_validate(application_data).model_dump()
-            matched_applications[str(application_read["uuid"])] = application_read
-
-        return list(matched_applications.values())
-
-    async def get_current_user_rp_application_by_uuid(
-        self,
-        db: AsyncSession,
-        current_user: dict[str, Any],
-        rp_application_uuid: uuid_pkg.UUID | str,
-        ibm_user_service: IBMVerifyUserService,
-    ) -> dict[str, Any]:
-        applications = await self.list_current_user_rp_applications(
+        workspaces_result = await crud_workspaces.get_multi(
             db=db,
-            current_user=current_user,
-            ibm_user_service=ibm_user_service,
+            limit=None,
+            return_total_count=False,
+            is_deleted=False,
+            id__in=workspace_ids,
+            schema_to_select=WorkspaceRead,
         )
+        workspaces_by_id = {
+            int(workspace["id"]): workspace for item in workspaces_result.get("data", []) if (workspace := self._as_dict(item)).get("id") is not None
+        }
 
-        expected_uuid = str(rp_application_uuid)
-        for application in applications:
-            if str(application.get("uuid")) == expected_uuid:
-                return application
+        summaries: list[dict[str, Any]] = []
+        for item in applications_result.get("data", []):
+            application = self._as_dict(item)
+            raw_workspace_id = application.get("workspace_id", application.get("workspaceId"))
+            workspace_id = raw_workspace_id if isinstance(raw_workspace_id, int) else None
+            access = granted_workspace_roles.get(workspace_id) if workspace_id is not None else None
+            workspace = workspaces_by_id.get(workspace_id) if workspace_id is not None else None
+            if access is None or workspace is None:
+                continue
+            summaries.append(
+                build_rp_application_summary(
+                    application=application,
+                    workspace_uuid=access.workspace_uuid,
+                    workspace_name=str(workspace.get("name") or "").strip(),
+                    role=access.role,
+                    can_resume_registration=access.role in CONFIGURATION_EDIT_GRANT_ROLES,
+                )
+            )
+        return summaries
 
-        raise NotFoundException("RP application not found")
-
-    async def get_current_user_rp_application_department_preflight(
+    async def get_accessible_rp_application_by_uuid(
         self,
         db: AsyncSession,
-        rp_application_uuid: uuid_pkg.UUID | str,
         current_user: dict[str, Any],
+        rp_application_uuid: uuid_pkg.UUID | str,
     ) -> dict[str, Any]:
-        """Return a lightweight department preflight record from local DB only.
-        Does NOT call IBM Verify SDK. Raises 403 for non-owners, 404 for unknown."""
-        rp_application_data, _ = await self._resolve_current_user_rp_application_access(
+        application_data, workspace_access = await self._resolve_accessible_rp_application_access(
             db=db,
             rp_application_uuid=rp_application_uuid,
             current_user=current_user,
             allowed_grant_roles=SUMMARY_ACCESS_GRANT_ROLES,
-            forbidden_message="Only RP application owners can access this resource",
+        )
+        return self._accessible_rp_application_read(
+            application_data,
+            workspace_access,
         )
 
-        response = CurrentUserRPApplicationSummaryRead(
+    async def get_accessible_rp_application_department_preflight(
+        self,
+        db: AsyncSession,
+        rp_application_uuid: uuid_pkg.UUID | str,
+        current_user: dict[str, Any],
+        expected_workspace_uuid: uuid_pkg.UUID | str | None = None,
+    ) -> dict[str, Any]:
+        """Return a local-only preflight for an assigned partner workspace."""
+        rp_application_data, _ = await self._resolve_accessible_rp_application_access(
+            db=db,
+            rp_application_uuid=rp_application_uuid,
+            current_user=current_user,
+            allowed_grant_roles=SUMMARY_ACCESS_GRANT_ROLES,
+            expected_workspace_uuid=expected_workspace_uuid,
+        )
+
+        response = AccessibleRPApplicationSummaryRead(
             id=rp_application_data["id"],
             uuid=rp_application_data["uuid"],
             dnr_app_name=rp_application_data["dnr_app_name"],
@@ -760,25 +1309,22 @@ class RPApplicationService:
         )
         return response.model_dump(by_alias=True)
 
-    async def assign_current_user_rp_application_department(
+    async def assign_accessible_rp_application_department(
         self,
         db: AsyncSession,
         rp_application_uuid: uuid_pkg.UUID | str,
         current_user: dict[str, Any],
-        payload: CurrentUserRPApplicationDepartmentAssignRequest,
+        payload: AccessibleRPApplicationDepartmentAssignRequest,
     ) -> dict[str, Any]:
-        """Assign a department to an RP application for the first time (one-time).
-        Raises 409 conflict if department already assigned, 404 for unknown department."""
-        rp_application_data, _ = await self._resolve_current_user_rp_application_access(
+        """Assign a department once for an RP Admin or RP User (Edit)."""
+        rp_application_data, _ = await self._resolve_accessible_rp_application_access(
             db=db,
             rp_application_uuid=rp_application_uuid,
             current_user=current_user,
-            allowed_grant_roles=None,
-            forbidden_message="Only RP application owners can access this resource",
+            allowed_grant_roles=CONFIGURATION_EDIT_GRANT_ROLES,
         )
 
         if rp_application_data.get("department_id") is not None:
-            from fastcrud.exceptions.http_exceptions import CustomException
             raise CustomException(status_code=409, detail="RP application already has a department assigned")
 
         department = await crud_departments.get(
@@ -793,39 +1339,39 @@ class RPApplicationService:
         department_id = department_data.get("id")
 
         now = datetime.now(UTC)
-        await crud_rp_applications.update(
-            db=db,
-            object={
-                "department_id": department_id,
-                "updated_at": now,
-            },
-            uuid=rp_application_uuid,
-            is_deleted=False,
+        assignment_result = await db.execute(
+            update(RPApplication)
+            .where(
+                RPApplication.uuid == rp_application_uuid,
+                RPApplication.is_deleted.is_(False),
+                RPApplication.department_id.is_(None),
+            )
+            .values(
+                department_id=department_id,
+                updated_at=now,
+            )
+            .returning(
+                RPApplication.id,
+                RPApplication.uuid,
+                RPApplication.dnr_app_name,
+                RPApplication.department_id,
+            )
         )
-
-        updated = await crud_rp_applications.get(
-            db=db,
-            uuid=rp_application_uuid,
-            is_deleted=False,
-            schema_to_select=RPApplicationRead,
-        )
+        updated = assignment_result.mappings().one_or_none()
         if updated is None:
-            raise NotFoundException("RP application not found after update")
+            raise CustomException(status_code=409, detail="RP application already has a department assigned")
 
-        updated_data = self._as_dict(updated)
+        updated_data = dict(updated)
 
         await self._create_audit_log_entry(
             db=db,
             current_user=current_user,
             rp_application_data=updated_data,
             operation="UPDATE",
-            description=(
-                f"Assigned department id={department_id} to RP application "
-                f"'{updated_data.get('dnr_app_name', '')}'"
-            ),
+            description=(f"Assigned department id={department_id} to RP application '{updated_data.get('dnr_app_name', '')}'"),
         )
 
-        response = CurrentUserRPApplicationSummaryRead(
+        response = AccessibleRPApplicationSummaryRead(
             id=updated_data["id"],
             uuid=updated_data["uuid"],
             dnr_app_name=updated_data["dnr_app_name"],
@@ -841,23 +1387,30 @@ class RPApplicationService:
         if rp_application_data.get("department_id") is None:
             raise RPApplicationDepartmentRequiredException()
 
-    async def get_current_user_rp_application_oauth_setup(
+    async def get_accessible_rp_application_oauth_setup(
         self,
         db: AsyncSession,
         rp_application_uuid: uuid_pkg.UUID | str,
         current_user: dict[str, Any],
-        ibm_admin_client: IBMVerifyAdminClient,
+        ibm_admin_client: IBMVerifyAdminClient | None = None,
+        ibm_admin_client_factory: IBMVerifyAdminClientFactory | None = None,
     ) -> dict[str, Any]:
-        rp_application_data, detail_data, _ = await self._get_current_user_application_detail_context(
+        rp_application_data, _ = await self._resolve_accessible_rp_application_access(
             db=db,
             rp_application_uuid=rp_application_uuid,
             current_user=current_user,
-            ibm_admin_client=ibm_admin_client,
             allowed_grant_roles=SUMMARY_ACCESS_GRANT_ROLES,
-            forbidden_message="Only RP application owners can view OAuth setup",
         )
-
         await self._require_rp_application_department(rp_application_data)
+
+        resolved_ibm_admin_client = await self._resolve_ibm_admin_client(
+            ibm_admin_client=ibm_admin_client,
+            ibm_admin_client_factory=ibm_admin_client_factory,
+        )
+        detail_data, _ = await self._get_application_detail_context(
+            rp_application_data=rp_application_data,
+            ibm_admin_client=resolved_ibm_admin_client,
+        )
 
         providers = self._as_dict(detail_data.get("providers"))
         oidc_provider = self._as_dict(providers.get("oidc"))
@@ -882,14 +1435,10 @@ class RPApplicationService:
                 ("applicationUrl", "application_url"),
             )
 
-        redirect_uris = self._extract_redirect_uris(
-            oidc_properties.get("redirectUris")
-        )
+        redirect_uris = self._extract_redirect_uris(oidc_properties.get("redirectUris"))
         logout_redirect_uris: list[str] = []
         for key in ("logoutRedirectURIs", "logoutRedirectUris", "logout_redirect_uris"):
-            logout_redirect_uris = self._extract_redirect_uris(
-                additional_config.get(key)
-            )
+            logout_redirect_uris = self._extract_redirect_uris(additional_config.get(key))
             if logout_redirect_uris:
                 break
 
@@ -897,9 +1446,7 @@ class RPApplicationService:
             additional_config,
             ("logoutURI", "logoutUri", "logout_uri"),
         )
-        pkce_enabled = self._extract_bool(
-            oidc_provider.get("requirePkceVerification")
-        )
+        pkce_enabled = self._extract_bool(oidc_provider.get("requirePkceVerification"))
 
         department_name: Optional[str] = None
         department_name_fr: Optional[str] = None
@@ -911,7 +1458,7 @@ class RPApplicationService:
                 department_name = dept_data.get("name") or None
                 department_name_fr = dept_data.get("name_fr") or None
 
-        response = RPApplicationCurrentUserOAuthSetupRead(
+        response = AccessibleRPApplicationOAuthSetupRead(
             rp_application_name=rp_application_data["dnr_app_name"],
             status=status,
             canada_login_environment=rp_application_data.get("canada_login_environment"),
@@ -928,34 +1475,53 @@ class RPApplicationService:
         )
         return response.model_dump(by_alias=True)
 
-    async def _get_current_user_secret_context(
+    async def _get_accessible_secret_context(
         self,
         db: AsyncSession,
         rp_application_uuid: uuid_pkg.UUID | str,
         current_user: dict[str, Any],
-        ibm_admin_client: IBMVerifyAdminClient,
-    ) -> tuple[dict[str, Any], dict[str, Any], str]:
-        return await self._get_current_user_application_detail_context(
+        ibm_admin_client: IBMVerifyAdminClient | None,
+        ibm_admin_client_factory: IBMVerifyAdminClientFactory | None,
+        expected_workspace_uuid: uuid_pkg.UUID | str | None = None,
+    ) -> tuple[dict[str, Any], dict[str, Any], str, IBMVerifyAdminClient]:
+        rp_application_data, _ = await self._resolve_accessible_rp_application_access(
             db=db,
             rp_application_uuid=rp_application_uuid,
             current_user=current_user,
-            ibm_admin_client=ibm_admin_client,
             allowed_grant_roles=SECRET_ACCESS_GRANT_ROLES,
-            forbidden_message="Only RP application owners can view client information",
+            expected_workspace_uuid=expected_workspace_uuid,
+        )
+        resolved_ibm_admin_client = await self._resolve_ibm_admin_client(
+            ibm_admin_client=ibm_admin_client,
+            ibm_admin_client_factory=ibm_admin_client_factory,
+        )
+        detail_data, client_id = await self._get_application_detail_context(
+            rp_application_data=rp_application_data,
+            ibm_admin_client=resolved_ibm_admin_client,
+        )
+        return (
+            rp_application_data,
+            detail_data,
+            client_id,
+            resolved_ibm_admin_client,
         )
 
-    async def get_current_user_rp_application_client_credentials(
+    async def get_accessible_rp_application_client_credentials(
         self,
         db: AsyncSession,
         rp_application_uuid: uuid_pkg.UUID | str,
         current_user: dict[str, Any],
-        ibm_admin_client: IBMVerifyAdminClient,
+        ibm_admin_client: IBMVerifyAdminClient | None = None,
+        ibm_admin_client_factory: IBMVerifyAdminClientFactory | None = None,
+        expected_workspace_uuid: uuid_pkg.UUID | str | None = None,
     ) -> dict[str, Any]:
-        rp_application_data, _, client_id = await self._get_current_user_secret_context(
+        rp_application_data, _, client_id, resolved_ibm_admin_client = await self._get_accessible_secret_context(
             db=db,
             rp_application_uuid=rp_application_uuid,
             current_user=current_user,
             ibm_admin_client=ibm_admin_client,
+            ibm_admin_client_factory=ibm_admin_client_factory,
+            expected_workspace_uuid=expected_workspace_uuid,
         )
 
         await self._create_audit_log_entry(
@@ -963,83 +1529,83 @@ class RPApplicationService:
             current_user=current_user,
             rp_application_data=rp_application_data,
             operation="REVEAL_SECRET",
-            description=(
-                f"Revealed client credentials for RP application '{rp_application_data.get('dnr_app_name', '')}'"
-            ),
+            description=(f"Revealed client credentials for RP application '{rp_application_data.get('dnr_app_name', '')}'"),
         )
 
         logger.warning(
-            "User '%s' revealing client credentials for RP application '%s'",
-            current_user.get("uuid", ""),
-            rp_application_data.get("dnr_app_name", ""),
+            "Sensitive credential action=reveal actor_id=%s application_id=%s",
+            hash_log_value(current_user.get("uuid", "")),
+            hash_log_value(rp_application_data.get("uuid", rp_application_uuid)),
         )
 
         return await self._read_client_credentials(
-            ibm_admin_client=ibm_admin_client,
+            ibm_admin_client=resolved_ibm_admin_client,
             client_id=client_id,
         )
 
-    async def list_current_user_rp_application_rotated_secrets(
+    async def list_accessible_rp_application_rotated_secrets(
         self,
         db: AsyncSession,
         rp_application_uuid: uuid_pkg.UUID | str,
         current_user: dict[str, Any],
-        ibm_admin_client: IBMVerifyAdminClient,
+        ibm_admin_client: IBMVerifyAdminClient | None = None,
+        ibm_admin_client_factory: IBMVerifyAdminClientFactory | None = None,
+        expected_workspace_uuid: uuid_pkg.UUID | str | None = None,
     ) -> list[dict[str, Any]]:
-        rp_application_data, _, client_id = await self._get_current_user_secret_context(
+        rp_application_data, _, client_id, resolved_ibm_admin_client = await self._get_accessible_secret_context(
             db=db,
             rp_application_uuid=rp_application_uuid,
             current_user=current_user,
             ibm_admin_client=ibm_admin_client,
+            ibm_admin_client_factory=ibm_admin_client_factory,
+            expected_workspace_uuid=expected_workspace_uuid,
         )
 
-        client_secret_response = await ibm_admin_client.get_client_secret(client_id)
+        client_secret_response = await resolved_ibm_admin_client.get_client_secret(client_id)
         await self._create_audit_log_entry(
             db=db,
             current_user=current_user,
             rp_application_data=rp_application_data,
             operation="VIEW_ROTATED",
-            description=(
-                f"Viewed rotated client secrets for RP application '{rp_application_data.get('dnr_app_name', '')}'"
-            ),
+            description=(f"Viewed rotated client secrets for RP application '{rp_application_data.get('dnr_app_name', '')}'"),
         )
 
         logger.warning(
-            "User '%s' Viewed rotated client secrets for RP application '%s'",
-            current_user.get("uuid", ""),
-            rp_application_data.get("dnr_app_name", ""),
+            "Sensitive credential action=view_rotated actor_id=%s application_id=%s",
+            hash_log_value(current_user.get("uuid", "")),
+            hash_log_value(rp_application_data.get("uuid", rp_application_uuid)),
         )
 
         return self._extract_rotated_secret_entries(client_secret_response)
 
-    async def rotate_current_user_rp_application_client_secret(
+    async def rotate_accessible_rp_application_client_secret(
         self,
         db: AsyncSession,
         rp_application_uuid: uuid_pkg.UUID | str,
         current_user: dict[str, Any],
         payload: RPApplicationClientSecretRotateRequest,
-        ibm_admin_client: IBMVerifyAdminClient,
+        ibm_admin_client: IBMVerifyAdminClient | None = None,
+        ibm_admin_client_factory: IBMVerifyAdminClientFactory | None = None,
+        expected_workspace_uuid: uuid_pkg.UUID | str | None = None,
     ) -> dict[str, Any]:
-        rp_application_data, _, client_id = await self._get_current_user_secret_context(
+        rp_application_data, _, client_id, resolved_ibm_admin_client = await self._get_accessible_secret_context(
             db=db,
             rp_application_uuid=rp_application_uuid,
             current_user=current_user,
             ibm_admin_client=ibm_admin_client,
+            ibm_admin_client_factory=ibm_admin_client_factory,
+            expected_workspace_uuid=expected_workspace_uuid,
         )
 
-        await ibm_admin_client.update_client_secret(
+        await resolved_ibm_admin_client.update_client_secret(
             client_id,
             payload.model_dump(by_alias=True),
         )
         operation = "ROTATE_SECRET"
-        description = (
-            f"Rotated client secret for RP application '{rp_application_data.get('dnr_app_name', '')}'"
-        )
+        description = f"Rotated client secret for RP application '{rp_application_data.get('dnr_app_name', '')}'"
         if payload.description.strip() == "" and payload.rotated_secret_expired_at == 0:
             operation = "REGENERATE"
-            description = (
-                f"Regenerated client secret for RP application '{rp_application_data.get('dnr_app_name', '')}'"
-            )
+            description = f"Regenerated client secret for RP application '{rp_application_data.get('dnr_app_name', '')}'"
 
         await self._create_audit_log_entry(
             db=db,
@@ -1050,32 +1616,36 @@ class RPApplicationService:
         )
 
         logger.warning(
-            "User '%s' Regenerated client secret for RP application '%s'",
-            current_user.get("uuid", ""),
-            rp_application_data.get("dnr_app_name", ""),
+            "Sensitive credential action=rotate actor_id=%s application_id=%s",
+            hash_log_value(current_user.get("uuid", "")),
+            hash_log_value(rp_application_data.get("uuid", rp_application_uuid)),
         )
 
         return await self._read_client_credentials(
-            ibm_admin_client=ibm_admin_client,
+            ibm_admin_client=resolved_ibm_admin_client,
             client_id=client_id,
         )
 
-    async def create_current_user_rp_application_rotated_secret(
+    async def create_accessible_rp_application_rotated_secret(
         self,
         db: AsyncSession,
         rp_application_uuid: uuid_pkg.UUID | str,
         current_user: dict[str, Any],
         payload: RPApplicationClientRotatedSecretCreateRequest,
-        ibm_admin_client: IBMVerifyAdminClient,
+        ibm_admin_client: IBMVerifyAdminClient | None = None,
+        ibm_admin_client_factory: IBMVerifyAdminClientFactory | None = None,
+        expected_workspace_uuid: uuid_pkg.UUID | str | None = None,
     ) -> list[dict[str, Any]]:
-        rp_application_data, _, client_id = await self._get_current_user_secret_context(
+        rp_application_data, _, client_id, resolved_ibm_admin_client = await self._get_accessible_secret_context(
             db=db,
             rp_application_uuid=rp_application_uuid,
             current_user=current_user,
             ibm_admin_client=ibm_admin_client,
+            ibm_admin_client_factory=ibm_admin_client_factory,
+            expected_workspace_uuid=expected_workspace_uuid,
         )
 
-        await ibm_admin_client.update_client_secret(
+        await resolved_ibm_admin_client.update_client_secret(
             client_id,
             {
                 "deleteRotatedSecrets": False,
@@ -1088,60 +1658,61 @@ class RPApplicationService:
             current_user=current_user,
             rp_application_data=rp_application_data,
             operation="ROTATE_SECRET",
-            description=(
-                f"Created rotated client secret for RP application '{rp_application_data.get('dnr_app_name', '')}'"
-            ),
+            description=(f"Created rotated client secret for RP application '{rp_application_data.get('dnr_app_name', '')}'"),
         )
 
         logger.warning(
-            "User '%s' Rotated client secret for RP application '%s'",
-            current_user.get("uuid", ""),
-            rp_application_data.get("dnr_app_name", ""),
+            "Sensitive credential action=create_rotated actor_id=%s application_id=%s",
+            hash_log_value(current_user.get("uuid", "")),
+            hash_log_value(rp_application_data.get("uuid", rp_application_uuid)),
         )
 
-        client_secret_response = await ibm_admin_client.get_client_secret(client_id)
+        client_secret_response = await resolved_ibm_admin_client.get_client_secret(client_id)
         return self._extract_rotated_secret_entries(client_secret_response)
 
-    async def delete_current_user_rp_application_rotated_secret(
+    async def delete_accessible_rp_application_rotated_secret(
         self,
         db: AsyncSession,
         rp_application_uuid: uuid_pkg.UUID | str,
         current_user: dict[str, Any],
-        value: str,
-        ibm_admin_client: IBMVerifyAdminClient,
+        secret_id: str,
+        ibm_admin_client: IBMVerifyAdminClient | None = None,
+        ibm_admin_client_factory: IBMVerifyAdminClientFactory | None = None,
+        expected_workspace_uuid: uuid_pkg.UUID | str | None = None,
     ) -> bool:
-        rp_application_data, _, client_id = await self._get_current_user_secret_context(
+        rp_application_data, _, client_id, resolved_ibm_admin_client = await self._get_accessible_secret_context(
             db=db,
             rp_application_uuid=rp_application_uuid,
             current_user=current_user,
             ibm_admin_client=ibm_admin_client,
+            ibm_admin_client_factory=ibm_admin_client_factory,
+            expected_workspace_uuid=expected_workspace_uuid,
         )
 
-        delete_path = value
-
-        client_secret_response = await ibm_admin_client.get_client_secret(client_id)
+        client_secret_response = await resolved_ibm_admin_client.get_client_secret(client_id)
         rotated_secrets = self._extract_rotated_secret_entries(client_secret_response)
-        # check if delete_path exists in rotated_secrets
-        if not any(secret.get("value") == delete_path for secret in rotated_secrets):
-                raise NotFoundException("Rotated client secret not found")
+        selected_secret = next(
+            (secret for secret in rotated_secrets if secret.get("secretId") == secret_id),
+            None,
+        )
+        if selected_secret is None:
+            raise NotFoundException("Rotated client secret not found")
 
-        deleted = await ibm_admin_client.delete_rotated_client_secrets(
+        deleted = await resolved_ibm_admin_client.delete_rotated_client_secrets(
             client_id,
-            [delete_path],
+            [secret_id],
         )
         await self._create_audit_log_entry(
             db=db,
             current_user=current_user,
             rp_application_data=rp_application_data,
             operation="DELETE_ROTATED",
-            description=(
-                f"Deleted rotated client secret for RP application '{rp_application_data.get('dnr_app_name', '')}'"
-            ),
+            description=(f"Deleted rotated client secret for RP application '{rp_application_data.get('dnr_app_name', '')}'"),
         )
         logger.warning(
-            "User '%s' Deleted rotated client secret for RP application '%s'",
-            current_user.get("uuid", ""),
-            rp_application_data.get("dnr_app_name", ""),
+            "Sensitive credential action=delete_rotated actor_id=%s application_id=%s",
+            hash_log_value(current_user.get("uuid", "")),
+            hash_log_value(rp_application_data.get("uuid", rp_application_uuid)),
         )
 
         return deleted
@@ -1164,16 +1735,14 @@ class RPApplicationService:
             application_name = self._extract_application_name(application)
             if application_id is None or application_name is None:
                 logger.info(
-                    "Skipping RP application sync item because it is missing an id or name: %s",
-                    application,
+                    "Skipping RP application sync item with missing metadata item_id=%s",
+                    hash_log_value(application),
                 )
                 skipped += 1
                 continue
 
-            application_detail = await ibm_admin_client.get_application_detail(application_id)
-            application_owner = self._build_application_owner_snapshot(getattr(application_detail, "owners", None))
-            if application_owner is None:
-                application_owner = self._build_application_owner_snapshot(getattr(application, "owners", None))
+            logged_application_id = hash_log_value(application_id)
+
             existing_application = await crud_rp_applications.get(
                 db=db,
                 ibm_sv_application_id=application_id,
@@ -1189,67 +1758,29 @@ class RPApplicationService:
                         dnr_app_name=application_name,
                         ibm_sv_application_id=application_id,
                         created_by=None,
-                        application_owner=application_owner,
                     ),
                     schema_to_select=RPApplicationRead,
                 )
                 if created_application is None:
                     logger.info(
-                        "Skipping RP application sync item because the missing record could not be created: %s",
-                        application_name,
+                        "Skipping RP application sync item because its record could not be created application_id=%s",
+                        logged_application_id,
                     )
                     skipped += 1
                     continue
 
                 logger.info(
-                    "Created RP application from IBM Verify: %s",
-                    application_name,
-                )
-                created_application_data = self._as_dict(created_application)
-                await self._backfill_workspace_owner_access_grants(
-                    db=db,
-                    workspace_id=created_application_data.get("workspace_id"),
-                    application_owner=application_owner,
+                    "Created RP application from IBM Verify application_id=%s",
+                    logged_application_id,
                 )
                 created += 1
                 continue
 
-            existing_application_data = (
-                existing_application if isinstance(existing_application, dict) else dict(existing_application)
-            )
-            if existing_application_data.get("application_owner") == (
-                application_owner.model_dump(by_alias=True) if application_owner is not None else None
-            ):
-                await self._backfill_workspace_owner_access_grants(
-                    db=db,
-                    workspace_id=existing_application_data.get("workspace_id"),
-                    application_owner=application_owner,
-                )
-                logger.info(
-                    "Skipping RP application sync item because it is already up to date: %s",
-                    application_name,
-                )
-                skipped += 1
-                continue
-
-            await crud_rp_applications.update(
-                db=db,
-                object={
-                    "application_owner": application_owner.model_dump(by_alias=True) if application_owner is not None else None,
-                    "updated_at": datetime.now(UTC),
-                },
-                uuid=existing_application_data["uuid"],
-            )
-            await self._backfill_workspace_owner_access_grants(
-                db=db,
-                workspace_id=existing_application_data.get("workspace_id"),
-                application_owner=application_owner,
-            )
             logger.info(
-                "Updated RP application from IBM Verify: %s",
-                application_name,
+                "Skipping existing RP application sync item application_id=%s",
+                logged_application_id,
             )
-            updated += 1
+            skipped += 1
 
         return {
             "created": created,

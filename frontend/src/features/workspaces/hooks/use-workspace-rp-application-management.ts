@@ -1,9 +1,7 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import {
-	createRPApplication as postRPApplication,
 	deleteRPApplication as removeRPApplication,
 	updateRPApplication as patchRPApplication,
-	type RPApplicationCreate,
 	type RPApplicationRead,
 	type ApiMessageResponse,
 	type RPApplicationUpdate,
@@ -14,15 +12,10 @@ import {
 } from "./use-workspace-rp-applications";
 
 export type WorkspaceRPApplicationManagementState = {
-	createRPApplication: (
-		workspaceUuid: string,
-		payload: RPApplicationCreate
-	) => Promise<RPApplicationRead>;
 	deleteRPApplication: (
 		workspaceUuid: string,
 		rpApplicationUuid: string
 	) => Promise<ApiMessageResponse>;
-	isCreating: boolean;
 	isDeleting: boolean;
 	isUpdating: boolean;
 	updateRPApplication: (
@@ -54,19 +47,6 @@ export const useWorkspaceRPApplicationManagement =
 			}
 		};
 
-		const createMutation = useMutation({
-			mutationFn: ({
-				payload,
-				workspaceUuid,
-			}: {
-				payload: RPApplicationCreate;
-				workspaceUuid: string;
-			}) => postRPApplication(workspaceUuid, payload),
-			onSuccess: async (application, variables) => {
-				await refresh(variables.workspaceUuid, application.uuid);
-			},
-		});
-
 		const updateMutation = useMutation({
 			mutationFn: ({
 				payload,
@@ -96,17 +76,11 @@ export const useWorkspaceRPApplicationManagement =
 		});
 
 		return {
-			createRPApplication: (
-				workspaceUuid: string,
-				payload: RPApplicationCreate
-			): Promise<RPApplicationRead> =>
-				createMutation.mutateAsync({ payload, workspaceUuid }),
 			deleteRPApplication: (
 				workspaceUuid: string,
 				rpApplicationUuid: string
 			): Promise<ApiMessageResponse> =>
 				deleteMutation.mutateAsync({ rpApplicationUuid, workspaceUuid }),
-			isCreating: createMutation.isPending,
 			isDeleting: deleteMutation.isPending,
 			isUpdating: updateMutation.isPending,
 			updateRPApplication: (

@@ -1,7 +1,7 @@
 import { Outlet, createFileRoute } from "@tanstack/react-router";
 import i18n from "@/common/i18n";
 import type { RouteBackLinkContext } from "@/types/route-breadcrumbs";
-import { requireAuthenticatedUser } from "../../../features/auth/auth-routing";
+import { requireApplicationInformationRead } from "../../../features/auth/auth-routing";
 
 type ApplicationInformationListSearch = {
 	deleted?: "1";
@@ -17,8 +17,9 @@ export const Route = createFileRoute(
 	"/workspaces/$workspaceUuid/application-information"
 )({
 	beforeLoad: async ({ params }) => {
-		await requireAuthenticatedUser(
-			`/workspaces/${params.workspaceUuid}/application-information`
+		await requireApplicationInformationRead(
+			`/workspaces/${params.workspaceUuid}/application-information`,
+			params.workspaceUuid
 		);
 
 		return {

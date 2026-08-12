@@ -1,5 +1,7 @@
 import { useMemo, type ReactElement, type ReactNode } from "react";
+import { useTranslation } from "react-i18next";
 import Button from "./Button";
+import Input from "./Input";
 import Table, { type TableColumn } from "./Table";
 
 export type DataTableColumn<Row extends Record<string, unknown>> = {
@@ -33,21 +35,19 @@ export type DataTableProps<Row extends Record<string, unknown>> = {
 	action?: DataTableAction<Row> | Array<DataTableAction<Row>>;
 	columns: Array<DataTableColumn<Row>>;
 	emptyMessage?: string;
-	exportFileName?: string;
-	exportLabel?: string;
-	getRowId?: (row: Row) => string;
+	filter?: boolean;
 	itemLabel: string;
-	layout?: "scroll" | "stacked";
 	onSearchChange?: (query: string) => void;
 	onSearchSubmit?: (query: string) => void;
-	pageNumber?: number;
 	pagination?: boolean;
 	primaryAction?: DataTableToolbarAction;
-	actionColumnWidth?: { max?: number; min?: number };
 	rows: Array<Row>;
 	searchLabel?: string;
+	searchLengthError?: string;
+	searchMaxLength?: number;
+	searchMode?: "client" | "server";
+	searchMinLength?: number;
 	searchQuery?: string;
-	searchPlaceholder?: string;
 	summary?: string;
 	title?: string;
 };
@@ -55,10 +55,46 @@ export type DataTableProps<Row extends Record<string, unknown>> = {
 const DataTable = <Row extends Record<string, unknown>>({
 	action,
 	columns,
+	emptyMessage,
+	filter,
+	itemLabel,
+	onSearchChange,
+	onSearchSubmit,
 	pagination: paginationProp,
+	primaryAction,
 	rows,
+	searchLabel,
+	searchLengthError,
+	searchMaxLength,
+	searchMode = "client",
+	searchMinLength,
+	searchQuery = "",
+	summary,
 	title = "Data table",
 }: DataTableProps<Row>): ReactElement => {
+	const { t } = useTranslation();
+	const normalizedSearchQuery = searchQuery.trim().toLocaleLowerCase();
+	const searchIsInvalid =
+		normalizedSearchQuery.length > 0 &&
+		((searchMinLength !== undefined &&
+			normalizedSearchQuery.length < searchMinLength) ||
+			(searchMaxLength !== undefined &&
+				normalizedSearchQuery.length > searchMaxLength));
+	const visibleRows = useMemo(
+		() =>
+			searchMode === "client" &&
+			onSearchChange &&
+			normalizedSearchQuery.length > 0
+				? rows.filter((row) =>
+						Object.values(row).some(
+							(value) =>
+								typeof value === "string" &&
+								value.toLocaleLowerCase().includes(normalizedSearchQuery)
+						)
+					)
+				: rows,
+		[normalizedSearchQuery, onSearchChange, rows, searchMode]
+	);
 	const gcdsColumns = useMemo<Array<TableColumn<Row>>>(() => {
 		const baseColumns = columns.map((col): TableColumn<Row> => {
 			const renderCell = col.cellRenderer;
@@ -86,7 +122,7 @@ const DataTable = <Row extends Record<string, unknown>>({
 			...baseColumns,
 			{
 				field: "_actions",
-				header: "Actions",
+				header: t("common.actions"),
 				sort: false,
 				renderCell: ({ row }): ReactNode => {
 					const rowData = row as unknown as Row | null;
@@ -105,9 +141,10 @@ const DataTable = <Row extends Record<string, unknown>>({
 					return (
 						<div className="flex gap-100">
 							{visibleActions.map((a, index) =>
-								a.variant === "button" ? (
+								a.variant !== "link" ? (
 									<Button
 										key={index}
+										buttonId={a.buttonId?.(rowData)}
 										buttonRole={a.buttonRole ?? "secondary"}
 										type="button"
 										onGcdsClick={() => {
@@ -116,10 +153,12 @@ const DataTable = <Row extends Record<string, unknown>>({
 									>
 										{a.buttonLabel}
 										{a.screenReaderLabel ? (
-											<span className="gcds-sr-only">
+											<>
 												{" "}
-												{a.screenReaderLabel(rowData)}
-											</span>
+												<span className="sr-only">
+													{a.screenReaderLabel(rowData)}
+												</span>
+											</>
 										) : null}
 									</Button>
 								) : (
@@ -134,10 +173,12 @@ const DataTable = <Row extends Record<string, unknown>>({
 									>
 										{a.buttonLabel}
 										{a.screenReaderLabel ? (
-											<span className="gcds-sr-only">
+											<>
 												{" "}
-												{a.screenReaderLabel(rowData)}
-											</span>
+												<span className="sr-only">
+													{a.screenReaderLabel(rowData)}
+												</span>
+											</>
 										) : null}
 									</a>
 								)
@@ -147,17 +188,80 @@ const DataTable = <Row extends Record<string, unknown>>({
 				},
 			},
 		];
-	}, [action, columns]);
+	}, [action, columns, t]);
 
 	return (
-		<Table
-			filter
-			sort
-			caption={title}
-			columns={gcdsColumns}
-			data={rows}
-			pagination={paginationProp ?? true}
-		/>
+		<div className="grid gap-300">
+			{summary ? <p>{summary}</p> : null}
+			{onSearchChange && searchLabel ? (
+				<div className="grid max-w-prose gap-200">
+					<Input
+						errorMessage={searchIsInvalid ? searchLengthError : undefined}
+						label={searchLabel}
+						maxLength={searchMaxLength}
+						minLength={searchMinLength}
+						name="data-table-search"
+						type="search"
+						validateOn="other"
+						value={searchQuery}
+						inputId={`data-table-search-${title
+							.toLocaleLowerCase()
+							.replace(/[^a-z0-9]+/g, "-")}`}
+						onInput={(event): void => {
+							onSearchChange((event.target as HTMLInputElement).value);
+						}}
+						onKeyDown={(event): void => {
+							if (event.key === "Enter" && onSearchSubmit && !searchIsInvalid) {
+								event.preventDefault();
+								onSearchSubmit(searchQuery.trim());
+							}
+						}}
+					/>
+					{onSearchSubmit ? (
+						<div>
+							<Button
+								disabled={searchIsInvalid}
+								type="button"
+								onGcdsClick={() => {
+									onSearchSubmit(searchQuery.trim());
+								}}
+							>
+								{t("common.search")}
+							</Button>
+						</div>
+					) : null}
+				</div>
+			) : null}
+			{primaryAction ? (
+				<div>
+					<Button
+						buttonId={primaryAction.buttonId}
+						type="button"
+						onGcdsClick={primaryAction.onAction}
+					>
+						{primaryAction.buttonLabel}
+					</Button>
+				</div>
+			) : null}
+			<p aria-live="polite">
+				{t("common.itemsShown", {
+					count: searchIsInvalid ? 0 : visibleRows.length,
+					itemLabel,
+				})}
+			</p>
+			{!searchIsInvalid && visibleRows.length === 0 && emptyMessage ? (
+				<p>{emptyMessage}</p>
+			) : (
+				<Table
+					sort
+					caption={title}
+					columns={gcdsColumns}
+					data={searchIsInvalid ? [] : visibleRows}
+					filter={filter ?? !onSearchChange}
+					pagination={paginationProp ?? true}
+				/>
+			)}
+		</div>
 	);
 };
 

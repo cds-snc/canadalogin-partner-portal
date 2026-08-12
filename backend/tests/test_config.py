@@ -1,4 +1,7 @@
-from src.app.core.config import Settings
+import pytest
+from pydantic import ValidationError
+
+from src.app.core.config import LOCAL_TEST_SECRET_KEY, Settings
 
 
 class TestRedisSettings:
@@ -63,3 +66,156 @@ class TestRedisSettings:
 
         assert settings.REDIS_SESSION_PASSWORD is None
         assert settings.REDIS_SESSION_URL == "redis://redis.internal:6380/1"
+
+
+class TestSecuritySettings:
+    def test_local_default_uses_a_nontrivial_test_only_key(self) -> None:
+        config = Settings(_env_file=None)
+
+        assert config.SECRET_KEY.get_secret_value() == LOCAL_TEST_SECRET_KEY
+        assert len(config.SECRET_KEY.get_secret_value().encode("utf-8")) >= 32
+        assert config.FILE_LOG_ENABLED is False
+        assert config.IBM_RP_APPLICATION_SYNC_ENABLED is False
+        assert config.SESSION_COOKIE_DOMAIN is None
+
+    @pytest.mark.parametrize("environment", ["local", "test"])
+    def test_local_and_test_may_explicitly_enable_ibm_rp_application_sync(
+        self,
+        environment: str,
+    ) -> None:
+        config = Settings(
+            _env_file=None,
+            ENVIRONMENT=environment,
+            IBM_RP_APPLICATION_SYNC_ENABLED=True,
+        )
+
+        assert config.IBM_RP_APPLICATION_SYNC_ENABLED is True
+
+    @pytest.mark.parametrize("environment", ["dev", "staging", "production"])
+    def test_shared_environments_reject_ibm_rp_application_sync_enablement(
+        self,
+        environment: str,
+    ) -> None:
+        with pytest.raises(
+            ValidationError,
+            match="IBM_RP_APPLICATION_SYNC_ENABLED may be enabled only in local or test",
+        ):
+            Settings(
+                _env_file=None,
+                ENVIRONMENT=environment,
+                IBM_RP_APPLICATION_SYNC_ENABLED=True,
+                SECRET_KEY="a" * 32,
+                CORS_ORIGINS=["https://portal.example.ca"],
+                SESSION_COOKIE_DOMAIN=".example.ca",
+            )
+
+    @pytest.mark.parametrize("environment", ["local", "test"])
+    @pytest.mark.parametrize("ambient_domain", [".canada.ca", "canada.ca", "localhost"])
+    def test_local_and_test_sessions_ignore_ambient_cookie_domains(
+        self,
+        environment: str,
+        ambient_domain: str,
+    ) -> None:
+        config = Settings(
+            _env_file=None,
+            ENVIRONMENT=environment,
+            SESSION_COOKIE_DOMAIN=ambient_domain,
+        )
+
+        assert config.SESSION_COOKIE_DOMAIN is None
+
+    @pytest.mark.parametrize("environment", ["local", "test", "production"])
+    def test_secret_key_shorter_than_256_bits_is_rejected(
+        self,
+        environment: str,
+    ) -> None:
+        with pytest.raises(ValidationError, match="at least 256 bits"):
+            Settings(
+                _env_file=None,
+                ENVIRONMENT=environment,
+                SECRET_KEY="secret-key",
+                CORS_ORIGINS=["https://portal.example.ca"],
+            )
+
+    @pytest.mark.parametrize("environment", ["dev", "staging", "production"])
+    def test_shared_environments_require_an_explicit_secret_key(
+        self,
+        environment: str,
+    ) -> None:
+        with pytest.raises(ValidationError, match="explicitly configured"):
+            Settings(
+                _env_file=None,
+                ENVIRONMENT=environment,
+                CORS_ORIGINS=["https://portal.example.ca"],
+                SESSION_COOKIE_DOMAIN=".example.ca",
+            )
+
+    def test_production_accepts_explicit_secret_and_https_origin(self) -> None:
+        config = Settings(
+            _env_file=None,
+            ENVIRONMENT="production",
+            SECRET_KEY="a" * 32,
+            CORS_ORIGINS=["https://portal.example.ca"],
+            SESSION_COOKIE_DOMAIN=".example.ca",
+        )
+
+        assert config.CORS_ORIGINS == ["https://portal.example.ca"]
+        assert config.SESSION_COOKIE_DOMAIN == ".example.ca"
+
+    def test_default_cors_headers_allow_idempotent_registration_creation(self) -> None:
+        config = Settings(_env_file=None)
+
+        assert "Idempotency-Key" in config.CORS_HEADERS
+
+    def test_shared_environments_require_an_explicit_cookie_domain(self) -> None:
+        with pytest.raises(
+            ValidationError,
+            match="SESSION_COOKIE_DOMAIN must be explicitly configured",
+        ):
+            Settings(
+                _env_file=None,
+                ENVIRONMENT="production",
+                SECRET_KEY="a" * 32,
+                CORS_ORIGINS=["https://portal.example.ca"],
+            )
+
+    @pytest.mark.parametrize(
+        "domain",
+        ["localhost", "127.0.0.1", "https://portal.example.ca", "*.example.ca"],
+    )
+    def test_shared_environments_reject_unsafe_cookie_domains(self, domain: str) -> None:
+        with pytest.raises(ValidationError, match="session cookie domain"):
+            Settings(
+                _env_file=None,
+                ENVIRONMENT="production",
+                SECRET_KEY="a" * 32,
+                CORS_ORIGINS=["https://portal.example.ca"],
+                SESSION_COOKIE_DOMAIN=domain,
+            )
+
+    @pytest.mark.parametrize(
+        "override",
+        [
+            {"CORS_ORIGINS": ["*"]},
+            {"CORS_METHODS": ["*"]},
+            {"CORS_HEADERS": ["*"]},
+        ],
+    )
+    def test_credentialed_cors_rejects_wildcards(
+        self,
+        override: dict[str, list[str]],
+    ) -> None:
+        with pytest.raises(ValidationError):
+            Settings(_env_file=None, **override)
+
+    def test_shared_environments_reject_loopback_cors_defaults(self) -> None:
+        with pytest.raises(
+            ValidationError,
+            match="CORS_ORIGINS must be explicitly configured",
+        ):
+            Settings(
+                _env_file=None,
+                ENVIRONMENT="production",
+                SECRET_KEY="b" * 32,
+                SESSION_COOKIE_DOMAIN=".example.ca",
+            )

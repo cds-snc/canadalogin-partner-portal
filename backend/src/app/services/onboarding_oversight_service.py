@@ -7,9 +7,17 @@ from uuid import UUID
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from ..core.exceptions.http_exceptions import OnboardingReportRequestException
-from ..repositories.crud_audit_log import crud_audit_log
+from ..core.authorization import (
+    CanonicalResourceScopeDecisionPoint,
+    Capability,
+    ResourceScopeRequest,
+)
+from ..core.exceptions.http_exceptions import (
+    NotFoundException,
+    OnboardingReportRequestException,
+)
 from ..repositories.crud_application_information import crud_application_information
+from ..repositories.crud_audit_log import crud_audit_log
 from ..repositories.crud_departments import crud_departments
 from ..repositories.crud_rp_application_developer_invitations import (
     crud_rp_application_developer_invitations,
@@ -36,6 +44,7 @@ from ..schemas.onboarding_oversight import (
 from ..schemas.rp_application import CanadaLoginEnvironment, RPApplicationRead
 from ..schemas.rp_application_promotion_request import PromotionRequestStatus
 from ..schemas.workspace import WorkspaceRead
+from .authorization_service import get_resolved_authorization_state
 
 VISIBLE_QUEUE_STATES: set[str] = {"submitted", "under_review", "approved", "launched"}
 STATE_SORT_PRIORITY: dict[str, int] = {
@@ -56,6 +65,61 @@ SUPPORTED_REPORT_GROUP_BY: set[str] = {"day", "week", "month"}
 
 
 class OnboardingOversightService:
+    def __init__(self) -> None:
+        self._decision_point = CanonicalResourceScopeDecisionPoint()
+
+    async def _resolve_report_workspace_scope(
+        self,
+        *,
+        db: AsyncSession,
+        current_user: dict[str, Any] | None,
+        workspace_uuid: str | None,
+    ) -> tuple[int | None, UUID | None]:
+        state = (
+            get_resolved_authorization_state(current_user)
+            if current_user is not None
+            else None
+        )
+        if state is None:
+            raise NotFoundException("Report not found")
+
+        normalized_workspace_uuid: UUID | None = None
+        if workspace_uuid is not None:
+            try:
+                normalized_workspace_uuid = UUID(str(workspace_uuid))
+            except (TypeError, ValueError, AttributeError) as exc:
+                raise OnboardingReportRequestException(
+                    code="onboarding_report_invalid_workspace",
+                    message="Workspace scope must be a valid UUID.",
+                ) from exc
+        elif not state.is_cl_admin:
+            raise OnboardingReportRequestException(
+                code="onboarding_report_workspace_required",
+                message="Partner reporting requires exactly one active workspace.",
+            )
+
+        decision = self._decision_point.decide(
+            ResourceScopeRequest(
+                role_scopes=state.role_scopes,
+                capability=Capability.AGGREGATE_REPORT_READ,
+                resource_workspace_uuid=normalized_workspace_uuid,
+            )
+        )
+        if not decision.allowed:
+            raise NotFoundException("Report not found")
+        if normalized_workspace_uuid is None:
+            return None, None
+
+        workspace = await crud_workspaces.get(
+            db=db,
+            uuid=normalized_workspace_uuid,
+            is_deleted=False,
+            schema_to_select=WorkspaceRead,
+        )
+        if workspace is None:
+            raise NotFoundException("Report not found")
+        return int(workspace["id"]), normalized_workspace_uuid
+
     async def get_report(
         self,
         db: AsyncSession,
@@ -67,6 +131,7 @@ class OnboardingOversightService:
         workspace_uuid: str | None = None,
         department_id: str | None = None,
         environment: str | None = None,
+        current_user: dict[str, Any] | None = None,
     ) -> dict[str, Any]:
         resolved_metric = self._parse_report_metric(metric)
         resolved_start_date = self._parse_report_date(start_date)
@@ -77,14 +142,20 @@ class OnboardingOversightService:
                 message="Start date must be on or before end date.",
             )
 
-        if workspace_uuid or department_id or environment:
+        if department_id or environment:
             raise OnboardingReportRequestException(
                 code="onboarding_report_unsupported_filter",
                 message=(
-                    "Workspace, department, and environment filters are not available "
+                    "Department and environment filters are not available "
                     "in the first onboarding reporting release."
                 ),
             )
+
+        workspace_scope_id, resolved_workspace_uuid = await self._resolve_report_workspace_scope(
+            db=db,
+            current_user=current_user,
+            workspace_uuid=workspace_uuid,
+        )
 
         resolved_group_by = self._parse_report_group_by(group_by)
         if (
@@ -105,6 +176,8 @@ class OnboardingOversightService:
                 start_date=resolved_start_date,
                 end_date=resolved_end_date,
                 group_by=resolved_group_by or "week",
+                workspace_id=workspace_scope_id,
+                workspace_uuid=resolved_workspace_uuid,
             )
         if resolved_metric == "invitation_conversion":
             return await self._build_invitation_conversion_report(
@@ -112,12 +185,16 @@ class OnboardingOversightService:
                 start_date=resolved_start_date,
                 end_date=resolved_end_date,
                 group_by=resolved_group_by or "week",
+                workspace_id=workspace_scope_id,
+                workspace_uuid=resolved_workspace_uuid,
             )
 
         return await self._build_secret_rotation_hygiene_report(
             db=db,
             start_date=resolved_start_date,
             end_date=resolved_end_date,
+            workspace_id=workspace_scope_id,
+            workspace_uuid=resolved_workspace_uuid,
         )
 
     async def export_report_csv(
@@ -131,6 +208,7 @@ class OnboardingOversightService:
         workspace_uuid: str | None = None,
         department_id: str | None = None,
         environment: str | None = None,
+        current_user: dict[str, Any] | None = None,
     ) -> tuple[str, str]:
         report = await self.get_report(
             db=db,
@@ -141,6 +219,7 @@ class OnboardingOversightService:
             workspace_uuid=workspace_uuid,
             department_id=department_id,
             environment=environment,
+            current_user=current_user,
         )
         csv_content = self._serialize_report_csv(report)
         applied_filters = report["applied_filters"]
@@ -352,21 +431,26 @@ class OnboardingOversightService:
         start_date: date,
         end_date: date,
         group_by: OnboardingOversightReportGroupBy,
+        workspace_id: int | None,
+        workspace_uuid: UUID | None,
     ) -> dict[str, Any]:
         workspaces = await crud_workspaces.get_multi(
             db=db,
             is_deleted=False,
             schema_to_select=WorkspaceRead,
+            **({"id": workspace_id} if workspace_id is not None else {}),
         )
         application_information_records = await crud_application_information.get_multi(
             db=db,
             is_deleted=False,
             schema_to_select=ApplicationInformationRead,
+            **({"workspace_id": workspace_id} if workspace_id is not None else {}),
         )
         rp_applications = await crud_rp_applications.get_multi(
             db=db,
             is_deleted=False,
             schema_to_select=RPApplicationRead,
+            **({"workspace_id": workspace_id} if workspace_id is not None else {}),
         )
 
         grouped_rows: dict[tuple[date, date, str], dict[str, Any]] = {}
@@ -419,6 +503,7 @@ class OnboardingOversightService:
             start_date=start_date,
             end_date=end_date,
             group_by=group_by,
+            workspace_uuid=workspace_uuid,
             summary=OnboardingOversightReportSummaryRead(**summary),
             rows=self._sorted_report_rows(grouped_rows),
         )
@@ -430,10 +515,13 @@ class OnboardingOversightService:
         start_date: date,
         end_date: date,
         group_by: OnboardingOversightReportGroupBy,
+        workspace_id: int | None,
+        workspace_uuid: UUID | None,
     ) -> dict[str, Any]:
         invitations = await crud_rp_application_developer_invitations.get_multi(
             db=db,
             is_deleted=False,
+            **({"workspace_id": workspace_id} if workspace_id is not None else {}),
         )
 
         grouped_rows: dict[tuple[date, date, str], dict[str, Any]] = {}
@@ -489,6 +577,7 @@ class OnboardingOversightService:
             start_date=start_date,
             end_date=end_date,
             group_by=group_by,
+            workspace_uuid=workspace_uuid,
             summary=OnboardingOversightReportSummaryRead(
                 invitations_sent=invitations_sent,
                 invitations_accepted=invitations_accepted,
@@ -506,11 +595,14 @@ class OnboardingOversightService:
         *,
         start_date: date,
         end_date: date,
+        workspace_id: int | None,
+        workspace_uuid: UUID | None,
     ) -> dict[str, Any]:
         rp_applications = await crud_rp_applications.get_multi(
             db=db,
             is_deleted=False,
             schema_to_select=RPApplicationRead,
+            **({"workspace_id": workspace_id} if workspace_id is not None else {}),
         )
         audit_logs = await crud_audit_log.get_multi(
             db=db,
@@ -560,6 +652,7 @@ class OnboardingOversightService:
             start_date=start_date,
             end_date=end_date,
             group_by=None,
+            workspace_uuid=workspace_uuid,
             policy_window_days=policy_window_days,
             summary=OnboardingOversightReportSummaryRead(
                 total_rp_applications=total_rp_applications,
@@ -595,6 +688,7 @@ class OnboardingOversightService:
         start_date: date,
         end_date: date,
         group_by: OnboardingOversightReportGroupBy | None,
+        workspace_uuid: UUID | None,
         summary: OnboardingOversightReportSummaryRead,
         rows: list[dict[str, Any]],
         policy_window_days: int | None = None,
@@ -608,6 +702,7 @@ class OnboardingOversightService:
                 start_date=start_date,
                 end_date=end_date,
                 group_by=group_by,
+                workspace_uuid=workspace_uuid,
                 policy_window_days=policy_window_days,
             ),
             summary=summary,

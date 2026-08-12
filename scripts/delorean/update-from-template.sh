@@ -50,7 +50,7 @@ Options:
   --architecture-docs-dir PATH
                            Target folder for copied architecture docs. Defaults to architecture_docs.
   --dry-run                Show what would change without writing files.
-  --agent-config-only      Only update local agents, prompts, skills, hooks, and related repo-guidance docs.
+  --agent-config-only      Only update local agents, workflow skills, hooks, and related repo-guidance docs.
   --agent-tool TOOL        Agent customization target for materialized files. Supported: auto, vscode, codex, claude, all, none.
   --level2-prompt-set SET  Prompt set for Level 2 repos. Supported: core, full. Defaults to core.
   --include-level2-nice-to-have-prompts
@@ -83,8 +83,8 @@ helper detects existing VS Code, Codex, or Claude target folders in the current
 repo and updates those targets. If none are present, it defaults to vscode.
 For Codex, generated AGENTS.md is refreshed only when the existing file still
 has the generated Codex marker; custom solution-owned AGENTS.md files are
-preserved. Codex agent and prompt adapters are refreshed under .codex/agents/
-and .codex/prompts/.
+preserved. Codex custom-agent TOML is refreshed under .codex/agents/, and
+Codex workflow skills are refreshed under .agents/skills/.
 
 Level 2 repos receive the core prompt set by default. Use
 --include-level2-nice-to-have-prompts or --level2-prompt-set full when the repo
@@ -374,6 +374,33 @@ remove_deprecated_agent_feedback_mcp_paths() {
   done
 }
 
+remove_deprecated_codex_adapter_paths() {
+  local repo_root="$1"
+  local deprecated_path
+  local deprecated_paths=(
+    ".codex/prompts"
+    ".codex/agents/builder-general.md"
+    ".codex/agents/coordinator.md"
+    ".codex/agents/delivery-planner.md"
+    ".codex/agents/qa-support.md"
+    ".codex/agents/release-readiness.md"
+    ".codex/agents/spec-author.md"
+  )
+
+  for deprecated_path in "${deprecated_paths[@]}"; do
+    if [ ! -e "${repo_root}/${deprecated_path}" ]; then
+      continue
+    fi
+
+    if [ "$dry_run" -eq 1 ]; then
+      echo "Would remove deprecated Codex adapter path: ${deprecated_path}"
+    else
+      rm -rf -- "${repo_root:?}/${deprecated_path}"
+      echo "Removed deprecated Codex adapter path: ${deprecated_path}"
+    fi
+  done
+}
+
 is_level2_core_prompt_file() {
   local prompt_file="$1"
   local core_prompt_file
@@ -531,8 +558,13 @@ materialize_codex_agent_configs() {
 
   copy_codex_agents_file "$source_root" "$repo_root"
   copy_agent_config_dir "$source_root" "$repo_root" "shared/skills" ".agents/skills"
-  copy_agent_config_dir "$source_root" "$repo_root" "codex/agents" ".codex/agents"
-  copy_agent_config_dir "$source_root" "$repo_root" "codex/prompts" ".codex/prompts"
+  if [ -d "${source_root}/codex/skills" ] && [ -f "${source_root}/codex/agents/coordinator.toml" ]; then
+    copy_agent_config_dir "$source_root" "$repo_root" "codex/skills" ".agents/skills"
+    copy_agent_config_dir "$source_root" "$repo_root" "codex/agents" ".codex/agents"
+    remove_deprecated_codex_adapter_paths "$repo_root"
+  else
+    echo "Template does not contain discoverable Codex workflow skills and agent TOML; preserving local Codex assets." >&2
+  fi
   copy_agent_config_file "$source_root" "$repo_root" "codex/config.toml" ".codex/config.toml"
 }
 

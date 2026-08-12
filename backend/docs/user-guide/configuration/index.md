@@ -121,8 +121,8 @@ DEFAULT_RATE_LIMIT_PERIOD=3600  # 1 hour in seconds
 
 ### Admin User
 ```env
-# The first superuser bootstrap script uses built-in defaults.
-# Update backend/src/scripts/create_first_superuser.py if you need different values.
+# Set only while explicitly running create_initial_cl_admin.
+INITIAL_CL_ADMIN_EMAIL="admin@example.test"
 ```
 
 ## Environment-Specific Configurations
@@ -165,8 +165,7 @@ Docker Compose automatically loads your `.env` file:
 ```yaml
 services:
   web:
-# The first superuser bootstrap script uses built-in defaults.
-# Update backend/src/scripts/create_first_superuser.py if you need different values.
+# The initial CL Admin bootstrap is a separate, explicitly invoked service.
 ## Common Configuration Patterns
     ENABLE_BACKGROUND_JOBS: bool = True
 
@@ -278,4 +277,4 @@ Each guide provides practical examples and copy-paste configurations:
 3. **[Docker Setup](docker-setup.md)** - Service configuration and overrides
 4. **[Environment-Specific](environment-specific.md)** - Production-ready configurations
 
-The boilerplate provides sensible defaults - just customize what you need! 
+The boilerplate provides sensible defaults - just customize what you need!

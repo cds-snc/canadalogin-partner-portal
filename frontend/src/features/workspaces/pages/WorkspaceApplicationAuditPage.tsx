@@ -104,7 +104,7 @@ export const WorkspaceApplicationAuditPage = (): FunctionComponent => {
 			<Heading tag="h1">
 				{application
 					? t("workspaces.applicationsAuditPageTitle", {
-							name: application.dnr_app_name,
+							name: application.dnrAppName,
 						})
 					: t("workspaces.applicationsAuditAction")}
 			</Heading>
@@ -176,8 +176,7 @@ export const WorkspaceApplicationAuditPage = (): FunctionComponent => {
 					) : null}
 					<DataTable
 						columns={columns}
-						getRowId={(row): string => row.uuid}
-						itemLabel="workspace RP application audit events"
+						itemLabel={t("workspaces.applicationAuditEventsItemLabel")}
 						pagination={false}
 						rows={rows}
 						title={t("workspaces.applicationsAuditAction")}

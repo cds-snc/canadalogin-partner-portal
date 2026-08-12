@@ -4,7 +4,7 @@ from ..models.rp_application_developer_invitation import RPApplicationDeveloperI
 from ..schemas.rp_application_developer_invitation import (
     RPApplicationDeveloperInvitationCreateInternal,
     RPApplicationDeveloperInvitationDelete,
-    RPApplicationDeveloperInvitationRead,
+    RPApplicationDeveloperInvitationReadInternal,
     RPApplicationDeveloperInvitationUpdate,
     RPApplicationDeveloperInvitationUpdateInternal,
 )
@@ -15,6 +15,6 @@ CRUDRPApplicationDeveloperInvitation = FastCRUD[
     RPApplicationDeveloperInvitationUpdate,
     RPApplicationDeveloperInvitationUpdateInternal,
     RPApplicationDeveloperInvitationDelete,
-    RPApplicationDeveloperInvitationRead,
+    RPApplicationDeveloperInvitationReadInternal,
 ]
 crud_rp_application_developer_invitations = CRUDRPApplicationDeveloperInvitation(RPApplicationDeveloperInvitation)

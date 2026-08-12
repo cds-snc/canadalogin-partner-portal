@@ -1,4 +1,9 @@
-import { useMemo, useState, type FormEvent, type FormEventHandler } from "react";
+import {
+	useMemo,
+	useState,
+	type FormEvent,
+	type FormEventHandler,
+} from "react";
 import { useNavigate, useSearch } from "@tanstack/react-router";
 import { useTranslation } from "react-i18next";
 import type { FunctionComponent } from "@/common/types";
@@ -81,7 +86,10 @@ const getEnvironmentLabel = (
 	}
 };
 
-const formatDateTime = (value: string | null | undefined, language: string): string => {
+const formatDateTime = (
+	value: string | null | undefined,
+	language: string
+): string => {
 	if (!value) {
 		return "-";
 	}
@@ -120,9 +128,8 @@ const QueueFiltersForm = ({
 	onSubmit,
 	t,
 }: QueueFiltersFormProps): FunctionComponent => {
-	const [draftFilters, setDraftFilters] = useState<OnboardingOversightQueueFilters>(
-		initialFilters
-	);
+	const [draftFilters, setDraftFilters] =
+		useState<OnboardingOversightQueueFilters>(initialFilters);
 
 	const setDraftFilter = <Key extends keyof OnboardingOversightQueueFilters>(
 		key: Key,
@@ -142,17 +149,16 @@ const QueueFiltersForm = ({
 
 	const handleSelectFilterInput = <
 		Key extends
-			| "environment"
-			| "onboardingState"
-			| "promotionStatus"
-			| "recordType",
+			"environment" | "onboardingState" | "promotionStatus" | "recordType",
 	>(
 		key: Key
 	): FormEventHandler<Element> => {
 		return (event): void => {
 			setDraftFilter(
 				key,
-				readInputValue(event.nativeEvent) as OnboardingOversightQueueFilters[Key]
+				readInputValue(
+					event.nativeEvent
+				) as OnboardingOversightQueueFilters[Key]
 			);
 		};
 	};
@@ -308,9 +314,7 @@ export const OnboardingOversightQueuePage = (): FunctionComponent => {
 			},
 			{
 				field: "primaryRecordLabel",
-				headerName: t(
-					"onboardingOversight.queue.primaryRecordLabelColumn"
-				),
+				headerName: t("onboardingOversight.queue.primaryRecordLabelColumn"),
 			},
 			{
 				field: "workspaceName",
@@ -419,7 +423,6 @@ export const OnboardingOversightQueuePage = (): FunctionComponent => {
 			{!errorNotice && tableRows.length > 0 ? (
 				<DataTable
 					columns={columns}
-					getRowId={(row): string => row.recordUuid}
 					itemLabel={t("onboardingOversight.queue.tableTitle")}
 					rows={tableRows}
 					title={t("onboardingOversight.queue.tableTitle")}

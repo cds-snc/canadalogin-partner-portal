@@ -47,7 +47,7 @@ python_backend_available() {
   fi
 
   command -v "${python_command}" >/dev/null 2>&1 &&
-    PYTHONPATH="${repo_root}/backend" "${python_command}" -c "from app.main import app; app.openapi()" >/dev/null 2>&1
+    PYTHONPATH="${repo_root}/backend" "${python_command}" -c "from src.app.main import app; app.openapi()" >/dev/null 2>&1
 }
 
 handle_missing_tool() {
@@ -103,10 +103,10 @@ is_backend_api_change() {
   local file="$1"
 
   case "${file}" in
-    backend/app/*.py | backend/app/*/*.py | backend/app/*/*/*.py | backend/scripts/export_openapi.py)
+    backend/src/app/*.py | backend/src/app/*/*.py | backend/src/app/*/*/*.py | backend/scripts/export_openapi.py)
       return 0
       ;;
-    backend/requirements.txt | backend/requirements-dev.txt | openapi/* | openapi/*/* | openapi/*/*/*)
+    backend/pyproject.toml | backend/uv.lock | openapi/* | openapi/*/* | openapi/*/*/*)
       return 0
       ;;
   esac

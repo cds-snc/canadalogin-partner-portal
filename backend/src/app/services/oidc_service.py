@@ -6,7 +6,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from starlette.requests import Request
 from starsessions.session import generate_session_id, get_session_handler
 
-from ..core.config import settings
+from ..core.config import LOCAL_DEV_SESSION_FIXTURE_KEY, settings
 from ..core.exceptions.http_exceptions import ForbiddenException, UnauthorizedException
 from ..core.oidc import build_oidc_redirect_uri, get_oidc_client, load_oidc_server_metadata, sync_oidc_user
 from .oidc_logout_service import OidcLogoutService
@@ -41,6 +41,7 @@ class OidcService:
             handler.session_id = claims.get("sid") or generate_session_id()
         except (AssertionError, KeyError, TypeError):
             pass
+        request.session.pop(LOCAL_DEV_SESSION_FIXTURE_KEY, None)
         request.session["user_uuid"] = str(oidc_user["uuid"])
         request.session["tokens"] = token
         request.session["oidc_logout"] = {

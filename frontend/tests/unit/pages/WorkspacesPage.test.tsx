@@ -8,19 +8,26 @@ const navigateMock = vi.fn();
 const useSearchMock = vi.fn(() => ({}));
 
 vi.mock("react-i18next", () => ({
-	useTranslation: (): { t: (key: string, options?: Record<string, unknown>) => string } => ({
+	useTranslation: (): {
+		t: (key: string, options?: Record<string, unknown>) => string;
+	} => ({
 		t: (key: string, options?: Record<string, unknown>): string => {
 			const translations: Record<string, string> = {
 				"common.notAvailable": "Not available",
 				"workspaces.createAction": "Create workspace",
+				"workspaces.clAdminTasksTitle": "CL Admin tasks",
 				"workspaces.deletedSuccess": "Workspace deleted successfully",
-				"workspaces.emptyBody": "No workspaces are available for your account yet.",
+				"workspaces.emptyBody":
+					"No workspaces are available for your account yet.",
 				"workspaces.emptyTitle": "No workspaces yet",
-				"workspaces.loadingBody": "Loading workspaces available to your account.",
+				"workspaces.loadingBody":
+					"Loading workspaces available to your account.",
 				"workspaces.loadingTitle": "Loading workspaces",
 				"workspaces.nameLabel": "Name",
 				"workspaces.onboardingStateColumn": "Onboarding status",
 				"workspaces.onboardingStateUnderReview": "Under review",
+				"workspaces.rpAdoptionTaskAction": "Adopt existing RP registrations",
+				"workspaces.rpAdoptionTaskDescription": "Link retained registrations.",
 				"workspaces.slugLabel": "Slug",
 				"workspaces.summary": "Review and manage workspaces.",
 				"workspaces.title": "Workspaces",
@@ -39,6 +46,14 @@ vi.mock("react-i18next", () => ({
 vi.mock("@tanstack/react-router", () => ({
 	useNavigate: (): typeof navigateMock => navigateMock,
 	useSearch: (): ReturnType<typeof useSearchMock> => useSearchMock(),
+}));
+
+vi.mock("@/hooks", () => ({
+	useSession: () => ({
+		currentUser: {
+			authorizationContext: { globalRole: "cl_admin", partnerAccess: [] },
+		},
+	}),
 }));
 
 vi.mock("@/components/ui", () => ({
@@ -66,10 +81,23 @@ vi.mock("@/components/ui", () => ({
 		rows,
 		title,
 	}: {
-		action?: { buttonLabel: string; onAction: (row: { name: string; onboardingState: string; slug: string; uuid: string }) => void };
+		action?: {
+			buttonLabel: string;
+			onAction: (row: {
+				name: string;
+				onboardingState: string;
+				slug: string;
+				uuid: string;
+			}) => void;
+		};
 		columns: Array<{ headerName: string }>;
 		primaryAction?: { buttonLabel: string; onAction: () => void };
-		rows: Array<{ name: string; onboardingState: string; slug: string; uuid: string }>;
+		rows: Array<{
+			name: string;
+			onboardingState: string;
+			slug: string;
+			uuid: string;
+		}>;
 		title: string;
 	}): ReactElement => (
 		<section>
@@ -96,8 +124,13 @@ vi.mock("@/components/ui", () => ({
 			) : null}
 		</section>
 	),
-	Heading: ({ children }: PropsWithChildren): ReactElement => <h1>{children}</h1>,
-	Notice: ({ children, noticeTitle }: PropsWithChildren<{ noticeTitle: string }>): ReactElement => (
+	Heading: ({ children }: PropsWithChildren): ReactElement => (
+		<h1>{children}</h1>
+	),
+	Notice: ({
+		children,
+		noticeTitle,
+	}: PropsWithChildren<{ noticeTitle: string }>): ReactElement => (
 		<section>
 			<h2>{noticeTitle}</h2>
 			{children}
@@ -129,12 +162,18 @@ describe("WorkspacesPage", () => {
 
 		const { rerender } = render(<WorkspacesPage />);
 
-		expect(screen.getByRole("heading", { name: /loading workspaces/i })).toBeTruthy();
+		expect(
+			screen.getByRole("heading", { name: /loading workspaces/i })
+		).toBeTruthy();
 
 		rerender(<WorkspacesPage />);
 
-		expect(screen.getByRole("heading", { name: /no workspaces yet/i })).toBeTruthy();
-		expect(screen.getByRole("link", { name: /create workspace/i })).toBeTruthy();
+		expect(
+			screen.getByRole("heading", { name: /no workspaces yet/i })
+		).toBeTruthy();
+		expect(
+			screen.getByRole("link", { name: /create workspace/i })
+		).toBeTruthy();
 	});
 
 	it("renders delete success feedback from route search state", () => {
@@ -151,6 +190,24 @@ describe("WorkspacesPage", () => {
 		expect(
 			screen.getByRole("heading", { name: /workspace deleted successfully/i })
 		).toBeTruthy();
+	});
+
+	it("exposes the CL Admin adoption task from Workspaces", () => {
+		useSearchMock.mockReturnValue({});
+		vi.mocked(useWorkspaces).mockReturnValue({
+			error: null,
+			isLoading: false,
+			refetch: vi.fn((): Promise<unknown> => Promise.resolve()),
+			workspaces: [],
+		});
+
+		render(<WorkspacesPage />);
+
+		expect(
+			screen
+				.getByRole("link", { name: "Adopt existing RP registrations" })
+				.getAttribute("href")
+		).toBe("/workspaces/rp-registration-adoption");
 	});
 
 	it("navigates to the selected workspace detail route", () => {

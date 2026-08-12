@@ -1,5 +1,5 @@
-import type { PropsWithChildren, ReactElement } from "react";
-import { render, screen } from "@testing-library/react";
+import { forwardRef, type PropsWithChildren, type ReactElement } from "react";
+import { render, screen, waitFor } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 import ErrorSummary from "@/components/ui/ErrorSummary";
 import LangToggle from "@/components/ui/LangToggle";
@@ -10,13 +10,26 @@ import Table from "@/components/ui/Table";
 import TopicMenu from "@/components/ui/TopicMenu";
 
 vi.mock("@gcds-core/components-react", () => ({
-	GcdsErrorSummary: ({
-		listen,
-	}: {
-		listen?: boolean;
-	}): ReactElement => (
-		<div data-listen={listen ? "true" : "false"}>Error summary</div>
-	),
+	GcdsErrorSummary: forwardRef<
+		HTMLDivElement,
+		{
+			errorLinks?: Record<string, string>;
+			heading?: string;
+			listen?: boolean;
+		}
+	>(({ errorLinks, heading, listen }, ref): ReactElement => (
+		<div
+			ref={ref}
+			data-error-links={JSON.stringify(errorLinks ?? {})}
+			data-heading={heading}
+			data-listen={listen ? "true" : "false"}
+			tabIndex={-1}
+		>
+			<div role="alert" tabIndex={-1}>
+				Error summary
+			</div>
+		</div>
+	)),
 	GcdsLink: ({
 		children,
 		href,
@@ -48,22 +61,32 @@ vi.mock("@gcds-core/components-react", () => ({
 	}: PropsWithChildren<{
 		currentStep: number;
 		totalSteps: number;
-	}>): ReactElement => (
-		<div>{`${children} ${currentStep}/${totalSteps}`}</div>
-	),
+	}>): ReactElement => <div>{`${children} ${currentStep}/${totalSteps}`}</div>,
 	GcdsTable: ({
 		captionSlot,
 		data,
 		columns,
+		filter,
+		lang,
+		pagination,
+		sort,
 	}: {
 		captionSlot?: React.ReactNode;
 		data?: Array<Record<string, unknown>>;
 		columns?: Array<Record<string, unknown>>;
+		filter?: boolean;
+		lang?: string;
+		pagination?: boolean;
+		sort?: boolean;
 	}): ReactElement => (
 		<div
 			data-caption={captionSlot ?? ""}
 			data-columns={columns?.length ?? 0}
+			data-filter={filter ? "true" : "false"}
+			data-lang={lang}
+			data-pagination={pagination ? "true" : "false"}
 			data-rows={data?.length ?? 0}
+			data-sort={sort ? "true" : "false"}
 			data-testid="gcds-table"
 		/>
 	),
@@ -96,6 +119,19 @@ describe("GCDS UI wrappers", () => {
 
 		expect(screen.getByLabelText("Heads up")).toBeTruthy();
 		expect(screen.getByText("Body copy")).toBeTruthy();
+		expect(screen.getByRole("status").getAttribute("aria-live")).toBe("polite");
+	});
+
+	it("announces a danger notice assertively", () => {
+		render(
+			<Notice noticeRole="danger" noticeTitle="Failed" noticeTitleTag="h2">
+				<p>Try again.</p>
+			</Notice>
+		);
+
+		expect(screen.getByRole("alert").getAttribute("aria-live")).toBe(
+			"assertive"
+		);
 	});
 
 	it("renders a link through the shared wrapper", () => {
@@ -109,9 +145,31 @@ describe("GCDS UI wrappers", () => {
 	it("renders an error summary through the shared wrapper", () => {
 		render(<ErrorSummary listen />);
 
-		expect(screen.getByText("Error summary").getAttribute("data-listen")).toBe(
-			"true"
+		expect(
+			screen
+				.getByText("Error summary")
+				.parentElement?.getAttribute("data-listen")
+		).toBe("true");
+	});
+
+	it("passes explicit links and moves focus to an actionable error summary", async () => {
+		render(
+			<ErrorSummary
+				errorLinks={{ "#application-url": "Check this answer." }}
+				focusOnRender
+				heading="The registration could not be saved"
+				listen={false}
+			/>
 		);
+
+		const summary = screen.getByText("Error summary");
+		expect(summary.parentElement?.getAttribute("data-error-links")).toBe(
+			'{"#application-url":"Check this answer."}'
+		);
+		expect(summary.parentElement?.getAttribute("data-heading")).toBe(
+			"The registration could not be saved"
+		);
+		await waitFor(() => expect(document.activeElement).toBe(summary.parentElement));
 	});
 
 	it("renders a stepper through the shared wrapper", () => {
@@ -150,6 +208,10 @@ describe("GCDS UI wrappers", () => {
 		expect(table?.getAttribute("data-columns")).toBe("2");
 		expect(table?.getAttribute("data-rows")).toBe("2");
 		expect(table?.getAttribute("data-caption")).toBe("Users");
+		expect(table?.getAttribute("data-filter")).toBe("true");
+		expect(table?.getAttribute("data-lang")).toBe("en");
+		expect(table?.getAttribute("data-pagination")).toBe("true");
+		expect(table?.getAttribute("data-sort")).toBe("true");
 	});
 
 	it("renders a topic menu through the shared wrapper", () => {

@@ -1,24 +1,18 @@
-import { createFileRoute } from "@tanstack/react-router";
-import { lazy } from "react";
-import i18n from "@/common/i18n";
-import type { RouteBackLinkContext } from "@/types/route-breadcrumbs";
-import { requireAuthenticatedUser } from "../../../features/auth/auth-routing";
-
-const WorkspaceMembersPage = lazy(async () => ({
-	default: (await import("../../../features/workspaces/pages/WorkspaceMembersPage"))
-		.WorkspaceMembersPage,
-}));
+import { createFileRoute, redirect } from "@tanstack/react-router";
+import { requireCapability } from "../../../features/auth/auth-routing";
 
 export const Route = createFileRoute("/workspaces/$workspaceUuid/members")({
 	beforeLoad: async ({ params }) => {
-		await requireAuthenticatedUser(`/workspaces/${params.workspaceUuid}/members`);
+		await requireCapability(
+			`/workspaces/${params.workspaceUuid}/members`,
+			"partner_staff_assignment",
+			params.workspaceUuid
+		);
 
-		return {
-			backLink: {
-				href: `/workspaces/${params.workspaceUuid}`,
-				label: i18n.t("workspaces.workspaceLabel"),
-			},
-		} satisfies RouteBackLinkContext;
+		throw redirect({
+			params: { workspaceUuid: params.workspaceUuid },
+			replace: true,
+			to: "/workspaces/$workspaceUuid/access",
+		}) as unknown as Error;
 	},
-	component: WorkspaceMembersPage,
 });

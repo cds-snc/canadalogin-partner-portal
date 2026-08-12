@@ -179,17 +179,14 @@ export const AuditLogsPage = (): FunctionComponent => {
 				<div className="grid gap-300">
 					<DataTable
 						columns={auditLogColumns}
-						exportFileName="audit-logs.csv"
-						getRowId={(row) => row.uuid}
-						itemLabel="auditLogs"
-						pageNumber={response?.page ?? page}
+						itemLabel={t("auditLogs.itemLabel")}
 						pagination={false}
 						rows={auditLogRows}
 						title={t("auditLogs.title")}
 					/>
 					<Pagination
 						currentPage={page}
-						label="Audit logs pagination"
+						label={t("auditLogs.paginationLabel")}
 						totalPages={totalPages}
 						onPageChange={setPage}
 					/>

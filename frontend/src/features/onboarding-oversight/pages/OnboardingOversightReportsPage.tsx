@@ -8,13 +8,12 @@ import {
 import { useNavigate, useSearch } from "@tanstack/react-router";
 import { useTranslation } from "react-i18next";
 import type { FunctionComponent } from "@/common/types";
+import { getRequestErrorNotice } from "@/fetch";
 import {
-	buildApiUrl,
-	getRequestErrorNotice,
-} from "@/fetch";
-import type {
-	OnboardingOversightReportRead,
-	OnboardingOversightReportRowRead,
+	getOnboardingOversightReportExportUrl,
+	getWorkspaceReportExportUrl,
+	type OnboardingOversightReportRead,
+	type OnboardingOversightReportRowRead,
 } from "@/fetch/onboarding-oversight";
 import {
 	Button,
@@ -22,6 +21,7 @@ import {
 	DateInput,
 	Grid,
 	Heading,
+	Link,
 	Notice,
 	Select,
 	Text,
@@ -250,28 +250,6 @@ const reportKpis = (
 	];
 };
 
-const buildExportQueryString = (
-	filters: Pick<
-		OnboardingOversightReportRead["appliedFilters"],
-		"metric" | "startDate" | "endDate" | "groupBy"
-	>
-): string => {
-	const normalizedFilters = normalizeOnboardingOversightReportFilters({
-		endDate: filters.endDate,
-		groupBy: filters.groupBy ?? undefined,
-		metric: filters.metric,
-		startDate: filters.startDate,
-	});
-	const params = new URLSearchParams();
-	params.set("metric", normalizedFilters.metric);
-	params.set("start_date", normalizedFilters.startDate);
-	params.set("end_date", normalizedFilters.endDate);
-	if (normalizedFilters.groupBy) {
-		params.set("group_by", normalizedFilters.groupBy);
-	}
-	return `?${params.toString()}`;
-};
-
 type ReportFiltersFormProps = {
 	initialFilters: OnboardingOversightReportFilters;
 	onSubmit: (filters: OnboardingOversightReportFilters) => void;
@@ -283,9 +261,8 @@ const ReportFiltersForm = ({
 	onSubmit,
 	t,
 }: ReportFiltersFormProps): FunctionComponent => {
-	const [draftFilters, setDraftFilters] = useState<OnboardingOversightReportFilters>(
-		initialFilters
-	);
+	const [draftFilters, setDraftFilters] =
+		useState<OnboardingOversightReportFilters>(initialFilters);
 	const showGroupBy = supportsOnboardingOversightGrouping(draftFilters.metric);
 
 	const handleFilterSubmit = (event: FormEvent<HTMLFormElement>): void => {
@@ -298,7 +275,9 @@ const ReportFiltersForm = ({
 			className="flex flex-col gap-300 rounded-sm border border-[var(--gcds-border-default)] bg-[var(--gcds-bg-white)] p-300"
 			onSubmit={handleFilterSubmit}
 		>
-			<Heading tag="h2">{t("onboardingOversight.reports.filtersTitle")}</Heading>
+			<Heading tag="h2">
+				{t("onboardingOversight.reports.filtersTitle")}
+			</Heading>
 			<div className="grid gap-300 md:grid-cols-2 xl:grid-cols-4">
 				<Select
 					label={t("onboardingOversight.reports.filtersMetricLabel")}
@@ -382,16 +361,36 @@ const ReportFiltersForm = ({
 	);
 };
 
-export const OnboardingOversightReportsPage = (): FunctionComponent => {
+type AggregateReportsPageContentProps = {
+	accessNoticeBody: string;
+	accessNoticeTitle: string;
+	filters: OnboardingOversightReportFilters;
+	onFilterSubmit: (filters: OnboardingOversightReportFilters) => void;
+	pageTitle: string;
+	returnHref?: string;
+	returnLabel?: string;
+	summary: string;
+	workspaceUuid?: string;
+};
+
+export const AggregateReportsPageContent = ({
+	accessNoticeBody,
+	accessNoticeTitle,
+	filters,
+	onFilterSubmit,
+	pageTitle,
+	returnHref,
+	returnLabel,
+	summary,
+	workspaceUuid,
+}: AggregateReportsPageContentProps): FunctionComponent => {
 	const { t } = useTranslation() as unknown as { t: Translate };
-	const navigate = useNavigate();
-	const search = useSearch({ from: "/onboarding-oversight/reports" });
-	const normalizedSearch = normalizeOnboardingOversightReportFilters(search);
+	const normalizedSearch = normalizeOnboardingOversightReportFilters(filters);
 	const filterFormKey = JSON.stringify(normalizedSearch);
 	const [lastSuccessfulReport, setLastSuccessfulReport] =
 		useState<OnboardingOversightReportRead | null>(null);
-	const { error, isLoading, isRefetching, report } =
-		useOnboardingOversightReport(normalizedSearch);
+	const { error, isLoading, isRefetching, refetch, report } =
+		useOnboardingOversightReport(normalizedSearch, workspaceUuid);
 
 	useEffect(() => {
 		if (!report) {
@@ -421,39 +420,37 @@ export const OnboardingOversightReportsPage = (): FunctionComponent => {
 		[displayedReport, t]
 	);
 	const exportHref = displayedReport?.exportAvailable
-		? buildApiUrl(
-				`/api/v1/onboarding-oversight/reports/export${buildExportQueryString(
-					displayedReport.appliedFilters
-				)}`
-			)
+		? workspaceUuid
+			? getWorkspaceReportExportUrl(
+					workspaceUuid,
+					normalizeOnboardingOversightReportFilters(
+						displayedReport.appliedFilters
+					)
+				)
+			: getOnboardingOversightReportExportUrl(
+					normalizeOnboardingOversightReportFilters(
+						displayedReport.appliedFilters
+					)
+				)
 		: undefined;
-
-	const handleFilterSubmit = (
-		filters: OnboardingOversightReportFilters
-	): void => {
-		void navigate({
-			search: normalizeOnboardingOversightReportFilters(filters),
-			to: "/onboarding-oversight/reports",
-		});
-	};
 
 	return (
 		<Grid columns="1fr" tag="div">
-			<Heading tag="h1">{t("onboardingOversight.reports.pageTitle")}</Heading>
-			<Text>{t("onboardingOversight.reports.summary")}</Text>
+			<Heading tag="h1">{pageTitle}</Heading>
+			<Text>{summary}</Text>
 			<Notice
 				noticeRole="info"
-				noticeTitle={t("onboardingOversight.reports.accessNoticeTitle")}
+				noticeTitle={accessNoticeTitle}
 				noticeTitleTag="h2"
 			>
-				<Text>{t("onboardingOversight.reports.accessNoticeBody")}</Text>
+				<Text>{accessNoticeBody}</Text>
 			</Notice>
 
 			<ReportFiltersForm
 				key={filterFormKey}
 				initialFilters={normalizedSearch}
 				t={t}
-				onSubmit={handleFilterSubmit}
+				onSubmit={onFilterSubmit}
 			/>
 			{exportHref ? (
 				<div className="flex flex-wrap gap-200">
@@ -480,6 +477,14 @@ export const OnboardingOversightReportsPage = (): FunctionComponent => {
 					noticeTitleTag="h2"
 				>
 					<Text>{errorNotice.bodyText ?? t(errorNotice.bodyKey)}</Text>
+					<Button
+						type="button"
+						onGcdsClick={() => {
+							void refetch();
+						}}
+					>
+						{t("onboardingOversight.reports.retryAction")}
+					</Button>
 				</Notice>
 			) : null}
 
@@ -528,7 +533,10 @@ export const OnboardingOversightReportsPage = (): FunctionComponent => {
 				</section>
 			) : null}
 
-			{!isLoading && !isRefetching && displayedReport && tableRows.length === 0 ? (
+			{!isLoading &&
+			!isRefetching &&
+			displayedReport &&
+			tableRows.length === 0 ? (
 				<Notice
 					noticeRole="info"
 					noticeTitle={t("onboardingOversight.reports.emptyTitle")}
@@ -541,13 +549,40 @@ export const OnboardingOversightReportsPage = (): FunctionComponent => {
 			{displayedReport && tableRows.length > 0 ? (
 				<DataTable
 					columns={columns}
-					getRowId={(row): string => row.bucketLabel}
 					itemLabel={t("onboardingOversight.reports.tableTitle")}
 					pagination={false}
 					rows={tableRows}
 					title={t("onboardingOversight.reports.tableTitle")}
 				/>
 			) : null}
+			{returnHref && returnLabel ? (
+				<div className="flex flex-wrap gap-200">
+					<Link href={returnHref}>{returnLabel}</Link>
+				</div>
+			) : null}
 		</Grid>
+	);
+};
+
+export const OnboardingOversightReportsPage = (): FunctionComponent => {
+	const { t } = useTranslation() as unknown as { t: Translate };
+	const navigate = useNavigate();
+	const search = useSearch({ from: "/onboarding-oversight/reports" });
+	const normalizedSearch = normalizeOnboardingOversightReportFilters(search);
+
+	return (
+		<AggregateReportsPageContent
+			accessNoticeBody={t("onboardingOversight.reports.accessNoticeBody")}
+			accessNoticeTitle={t("onboardingOversight.reports.accessNoticeTitle")}
+			filters={normalizedSearch}
+			pageTitle={t("onboardingOversight.reports.pageTitle")}
+			summary={t("onboardingOversight.reports.summary")}
+			onFilterSubmit={(filters): void => {
+				void navigate({
+					search: normalizeOnboardingOversightReportFilters(filters),
+					to: "/onboarding-oversight/reports",
+				});
+			}}
+		/>
 	);
 };

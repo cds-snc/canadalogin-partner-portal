@@ -22,7 +22,7 @@ Starter scripts:
 - [check-openspec-scenario-preservation.js](check-openspec-scenario-preservation.js): checks modified OpenSpec requirement deltas so archive does not drop existing scenarios that should be preserved.
 - [create-openspec-change.sh](create-openspec-change.sh): creates a local-first OpenSpec change package without needing the official OpenSpec CLI.
 - [select-openspec-change.sh](select-openspec-change.sh): lists, picks, or validates an active OpenSpec change from `openspec/changes/`.
-- [sync-codex-adapters.sh](sync-codex-adapters.sh): regenerates Codex role and prompt adapters from the VS Code agent and prompt source files, or checks that they are in sync.
+- [check-codex-assets.sh](check-codex-assets.sh): validates discoverable repo skills and project custom-agent TOML, and rejects deprecated repo-local prompt adapters.
 - [update-architecture-docs.sh](update-architecture-docs.sh): refreshes generated `architecture_docs/` from `delorean_architecture` without running a broader template update.
 - [update-from-template.sh](update-from-template.sh): pulls template-owned files from the upstream template into an existing solution repo. It can run from the solution repo root or from a separate template checkout with `--target`.
 

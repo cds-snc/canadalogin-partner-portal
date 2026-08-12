@@ -7,15 +7,17 @@ import type {
 	MessageDecryptionTarget,
 	PKCEAlgorithm,
 	PrivateKeyDistributionMethod,
-	RPApplicationCreate,
 	RPApplicationRead,
 	RPApplicationUpdate,
 	RequestedScope,
 	RequestEncryptionTarget,
+	RegistrationDataStep,
 	SignatureAlgorithm,
 	SignatureValidationTarget,
 	SigningTarget,
 	CanadaLoginEnvironment,
+	WorkspaceRPApplicationRegistrationAnswers,
+	WorkspaceRPApplicationRegistrationDraftRead,
 } from "@/fetch/rp-applications";
 
 export type BooleanField = "" | "yes" | "no";
@@ -94,7 +96,7 @@ export type WorkspaceRPApplicationFormState = {
 const readPayload = (
 	application: RPApplicationRead
 ): Record<string, unknown> | null => {
-	const payload = application.oidc_registration_payload;
+	const payload = application.oidcRegistrationPayload;
 	if (!payload || typeof payload !== "object") {
 		return null;
 	}
@@ -365,8 +367,357 @@ export const validateWorkspaceRPApplicationForm = (
 	return Array.from(errors);
 };
 
-// Backend RP application contracts are snake_case; keep that translation localized here.
-/* eslint-disable camelcase */
+export const validateWorkspaceRPApplicationStep = (
+	form: WorkspaceRPApplicationFormState,
+	step: RegistrationDataStep
+): Array<WorkspaceRPApplicationValidationMessageKey> => {
+	const errors = new Set<WorkspaceRPApplicationValidationMessageKey>();
+	if (
+		step === "basics" &&
+		(!hasValue(form.canadaLoginEnvironment) ||
+			!hasValue(form.serviceNameEn) ||
+			!hasValue(form.serviceNameFr))
+	) {
+		errors.add("workspaces.applicationsValidationRequiredAnswers");
+	}
+	if (
+		step === "endpoints" &&
+		(!hasValue(form.applicationEnvironmentUrlEn) ||
+			!hasValue(form.applicationEnvironmentUrlFr) ||
+			!hasLineEntries(form.redirectUris) ||
+			!hasValue(form.logoutMode) ||
+			!hasValue(form.logoutUri))
+	) {
+		errors.add("workspaces.applicationsValidationRequiredAnswers");
+	}
+	if (
+		step === "endpoints" &&
+		form.logoutMode === "front_channel" &&
+		(!isCanadaCaUrl(form.applicationEnvironmentUrlEn) ||
+			!isCanadaCaUrl(form.applicationEnvironmentUrlFr))
+	) {
+		errors.add("workspaces.applicationsValidationFrontChannelCanadaDomain");
+	}
+	if (step === "client-and-access") {
+		for (const error of validateWorkspaceRPApplicationForm({
+			...form,
+			applicationEnvironmentUrlEn: "https://canada.ca",
+			applicationEnvironmentUrlFr: "https://canada.ca/fr",
+			canadaLoginEnvironment: form.canadaLoginEnvironment || "test",
+			logoutMode: "back_channel",
+			logoutUri: "https://canada.ca/logout",
+			messageDecryptionSupported: "no",
+			messageDecryptionRoadmap: "no",
+			redirectUris: "https://canada.ca/callback",
+			requestEncryptionSupported: "no",
+			requestEncryptionRoadmap: "no",
+			requestSigningSupported: "no",
+			requestSigningRoadmap: "no",
+			serviceNameEn: form.serviceNameEn || "Service",
+			serviceNameFr: form.serviceNameFr || "Service",
+			signatureValidationSupported: "no",
+			signatureValidationRoadmap: "no",
+		})) {
+			if (
+				error.includes("AuthorizationCode") ||
+				error.includes("OpenId") ||
+				error.includes("PublicClient") ||
+				error.includes("PrivateKey") ||
+				error.includes("Pkce") ||
+				error.endsWith("RequiredAnswers")
+			) {
+				errors.add(error);
+			}
+		}
+	}
+	if (step === "signing") {
+		const allErrors = validateWorkspaceRPApplicationForm({
+			...form,
+			applicationEnvironmentUrlEn: "https://canada.ca",
+			applicationEnvironmentUrlFr: "https://canada.ca/fr",
+			canadaLoginEnvironment: "test",
+			clientAuthMethod: "client_secret_basic",
+			clientType: "confidential",
+			logoutMode: "back_channel",
+			logoutUri: "https://canada.ca/logout",
+			messageDecryptionSupported: "no",
+			messageDecryptionRoadmap: "no",
+			pkceSupported: "no",
+			redirectUris: "https://canada.ca/callback",
+			requestedScopes: ["openid"],
+			requestEncryptionSupported: "no",
+			requestEncryptionRoadmap: "no",
+			sectorIdentifier: "https://canada.ca",
+			serviceNameEn: "Service",
+			serviceNameFr: "Service",
+			sharesPairwiseIdentifiers: "no",
+			supportsAuthorizationCodeFlow: "yes",
+		});
+		for (const error of allErrors.filter(
+			(error) =>
+				error.includes("RequestSigning") ||
+				error.includes("SignatureValidation") ||
+				error.endsWith("RequiredAnswers")
+		)) {
+			errors.add(error);
+		}
+	}
+	if (step === "encryption") {
+		const allErrors = validateWorkspaceRPApplicationForm({
+			...form,
+			applicationEnvironmentUrlEn: "https://canada.ca",
+			applicationEnvironmentUrlFr: "https://canada.ca/fr",
+			canadaLoginEnvironment: "test",
+			clientAuthMethod: "client_secret_basic",
+			clientType: "confidential",
+			logoutMode: "back_channel",
+			logoutUri: "https://canada.ca/logout",
+			pkceSupported: "no",
+			redirectUris: "https://canada.ca/callback",
+			requestedScopes: ["openid"],
+			requestSigningSupported: "no",
+			requestSigningRoadmap: "no",
+			sectorIdentifier: "https://canada.ca",
+			serviceNameEn: "Service",
+			serviceNameFr: "Service",
+			sharesPairwiseIdentifiers: "no",
+			signatureValidationSupported: "no",
+			signatureValidationRoadmap: "no",
+			supportsAuthorizationCodeFlow: "yes",
+		});
+		for (const error of allErrors.filter(
+			(error) =>
+				error.includes("RequestEncryption") ||
+				error.includes("MessageDecryption") ||
+				error.endsWith("RequiredAnswers")
+		)) {
+			errors.add(error);
+		}
+	}
+	return [...errors];
+};
+
+export type WorkspaceRPApplicationFieldErrorKeys = Partial<
+	Record<
+		keyof WorkspaceRPApplicationFormState,
+		WorkspaceRPApplicationValidationMessageKey
+	>
+>;
+
+const REQUIRED_FIELDS_BY_STEP: Record<
+	RegistrationDataStep,
+	Array<keyof WorkspaceRPApplicationFormState>
+> = {
+	basics: ["canadaLoginEnvironment", "serviceNameEn", "serviceNameFr"],
+	"client-and-access": [
+		"supportsAuthorizationCodeFlow",
+		"clientType",
+		"clientAuthMethod",
+		"requestedScopes",
+		"sectorIdentifier",
+		"sharesPairwiseIdentifiers",
+		"pkceSupported",
+	],
+	endpoints: [
+		"applicationEnvironmentUrlEn",
+		"applicationEnvironmentUrlFr",
+		"redirectUris",
+		"logoutMode",
+		"logoutUri",
+	],
+	encryption: ["requestEncryptionSupported", "messageDecryptionSupported"],
+	signing: ["requestSigningSupported", "signatureValidationSupported"],
+};
+
+const answerIsMissing = (value: string | Array<string>): boolean =>
+	Array.isArray(value) ? value.length === 0 : !hasValue(value);
+
+export const getWorkspaceRPApplicationStepFieldErrorKeys = (
+	form: WorkspaceRPApplicationFormState,
+	step: RegistrationDataStep,
+	messageKeys: Array<WorkspaceRPApplicationValidationMessageKey>
+): WorkspaceRPApplicationFieldErrorKeys => {
+	const fieldErrors: WorkspaceRPApplicationFieldErrorKeys = {};
+	const setError = (
+		field: keyof WorkspaceRPApplicationFormState,
+		messageKey: WorkspaceRPApplicationValidationMessageKey
+	): void => {
+		fieldErrors[field] ??= messageKey;
+	};
+
+	for (const messageKey of messageKeys) {
+		if (messageKey === "workspaces.applicationsValidationRequiredAnswers") {
+			for (const field of REQUIRED_FIELDS_BY_STEP[step]) {
+				if (answerIsMissing(form[field])) setError(field, messageKey);
+			}
+			continue;
+		}
+
+		if (
+			messageKey ===
+			"workspaces.applicationsValidationAuthorizationCodeFlowRequired"
+		) {
+			setError("supportsAuthorizationCodeFlow", messageKey);
+		} else if (
+			messageKey === "workspaces.applicationsValidationOpenIdScopeRequired"
+		) {
+			setError("requestedScopes", messageKey);
+		} else if (
+			messageKey === "workspaces.applicationsValidationPublicClientPkceRequired"
+		) {
+			setError("pkceSupported", messageKey);
+		} else if (
+			messageKey === "workspaces.applicationsValidationFrontChannelCanadaDomain"
+		) {
+			if (!isCanadaCaUrl(form.applicationEnvironmentUrlEn))
+				setError("applicationEnvironmentUrlEn", messageKey);
+			if (!isCanadaCaUrl(form.applicationEnvironmentUrlFr))
+				setError("applicationEnvironmentUrlFr", messageKey);
+		} else if (
+			messageKey ===
+			"workspaces.applicationsValidationPrivateKeyDetailsRequired"
+		) {
+			if (!hasValue(form.privateKeyDistributionMethod)) {
+				setError("privateKeyDistributionMethod", messageKey);
+			} else if (
+				form.privateKeyDistributionMethod === "jwks_uri" &&
+				!hasValue(form.jwksUri)
+			) {
+				setError("jwksUri", messageKey);
+			} else if (
+				form.privateKeyDistributionMethod === "offline_exchange" &&
+				!hasValue(form.offlineJwkOrCertificate)
+			) {
+				setError("offlineJwkOrCertificate", messageKey);
+			}
+		} else if (
+			messageKey === "workspaces.applicationsValidationPkceDetailsRequired"
+		) {
+			if (form.pkceAlgorithms.length === 0)
+				setError("pkceAlgorithms", messageKey);
+			if (
+				includesOther(form.pkceAlgorithms) &&
+				!hasValue(form.pkceOtherAlgorithm)
+			)
+				setError("pkceOtherAlgorithm", messageKey);
+		} else if (
+			messageKey ===
+			"workspaces.applicationsValidationRequestSigningDetailsRequired"
+		) {
+			if (form.requestSigningTargets.length === 0)
+				setError("requestSigningTargets", messageKey);
+			if (form.requestSigningAlgorithms.length === 0)
+				setError("requestSigningAlgorithms", messageKey);
+			if (
+				includesOther(form.requestSigningAlgorithms) &&
+				!hasValue(form.requestSigningOtherAlgorithm)
+			)
+				setError("requestSigningOtherAlgorithm", messageKey);
+		} else if (
+			messageKey ===
+			"workspaces.applicationsValidationSignatureValidationDetailsRequired"
+		) {
+			if (form.signatureValidationTargets.length === 0)
+				setError("signatureValidationTargets", messageKey);
+			if (form.signatureValidationAlgorithms.length === 0)
+				setError("signatureValidationAlgorithms", messageKey);
+			if (
+				includesOther(form.signatureValidationAlgorithms) &&
+				!hasValue(form.signatureValidationOtherAlgorithm)
+			)
+				setError("signatureValidationOtherAlgorithm", messageKey);
+		} else if (
+			messageKey ===
+			"workspaces.applicationsValidationRequestSigningRoadmapRequired"
+		) {
+			if (form.requestSigningRoadmap === "")
+				setError("requestSigningRoadmap", messageKey);
+			if (
+				form.requestSigningRoadmap === "yes" &&
+				!hasValue(form.requestSigningRevisitOn)
+			)
+				setError("requestSigningRevisitOn", messageKey);
+		} else if (
+			messageKey ===
+			"workspaces.applicationsValidationSignatureValidationRoadmapRequired"
+		) {
+			if (form.signatureValidationRoadmap === "")
+				setError("signatureValidationRoadmap", messageKey);
+			if (
+				form.signatureValidationRoadmap === "yes" &&
+				!hasValue(form.signatureValidationRevisitOn)
+			)
+				setError("signatureValidationRevisitOn", messageKey);
+		} else if (
+			messageKey ===
+			"workspaces.applicationsValidationRequestEncryptionDetailsRequired"
+		) {
+			for (const field of [
+				"requestEncryptionTargets",
+				"requestEncryptionKeyManagementAlgorithms",
+				"requestEncryptionContentAlgorithms",
+			] as const) {
+				if (form[field].length === 0) setError(field, messageKey);
+			}
+			if (
+				includesOther(form.requestEncryptionKeyManagementAlgorithms) &&
+				!hasValue(form.requestEncryptionOtherKeyManagementAlgorithm)
+			)
+				setError("requestEncryptionOtherKeyManagementAlgorithm", messageKey);
+			if (
+				includesOther(form.requestEncryptionContentAlgorithms) &&
+				!hasValue(form.requestEncryptionOtherContentAlgorithm)
+			)
+				setError("requestEncryptionOtherContentAlgorithm", messageKey);
+		} else if (
+			messageKey ===
+			"workspaces.applicationsValidationMessageDecryptionDetailsRequired"
+		) {
+			for (const field of [
+				"messageDecryptionTargets",
+				"messageDecryptionKeyManagementAlgorithms",
+				"messageDecryptionContentAlgorithms",
+			] as const) {
+				if (form[field].length === 0) setError(field, messageKey);
+			}
+			if (
+				includesOther(form.messageDecryptionKeyManagementAlgorithms) &&
+				!hasValue(form.messageDecryptionOtherKeyManagementAlgorithm)
+			)
+				setError("messageDecryptionOtherKeyManagementAlgorithm", messageKey);
+			if (
+				includesOther(form.messageDecryptionContentAlgorithms) &&
+				!hasValue(form.messageDecryptionOtherContentAlgorithm)
+			)
+				setError("messageDecryptionOtherContentAlgorithm", messageKey);
+		} else if (
+			messageKey ===
+			"workspaces.applicationsValidationRequestEncryptionRoadmapRequired"
+		) {
+			if (form.requestEncryptionRoadmap === "")
+				setError("requestEncryptionRoadmap", messageKey);
+			if (
+				form.requestEncryptionRoadmap === "yes" &&
+				!hasValue(form.requestEncryptionRevisitOn)
+			)
+				setError("requestEncryptionRevisitOn", messageKey);
+		} else if (
+			messageKey ===
+			"workspaces.applicationsValidationMessageDecryptionRoadmapRequired"
+		) {
+			if (form.messageDecryptionRoadmap === "")
+				setError("messageDecryptionRoadmap", messageKey);
+			if (
+				form.messageDecryptionRoadmap === "yes" &&
+				!hasValue(form.messageDecryptionRevisitOn)
+			)
+				setError("messageDecryptionRevisitOn", messageKey);
+		}
+	}
+
+	return fieldErrors;
+};
+
 const buildBasePayload = (
 	form: WorkspaceRPApplicationFormState
 ): RPApplicationUpdate => {
@@ -375,282 +726,282 @@ const buildBasePayload = (
 		form.applicationInformationUuid
 	);
 	if (applicationInformationUuid) {
-		payload.application_information_uuid = applicationInformationUuid;
+		payload.applicationInformationUuid = applicationInformationUuid;
 	}
 
 	const environment = trimOrUndefined(form.canadaLoginEnvironment);
 	if (environment) {
-		payload.canada_login_environment = environment as CanadaLoginEnvironment;
+		payload.canadaLoginEnvironment = environment as CanadaLoginEnvironment;
 	}
 
 	const serviceNameEn = trimOrUndefined(form.serviceNameEn);
 	if (serviceNameEn) {
-		payload.service_name_en = serviceNameEn;
+		payload.serviceNameEn = serviceNameEn;
 	}
 	const serviceNameFr = trimOrUndefined(form.serviceNameFr);
 	if (serviceNameFr) {
-		payload.service_name_fr = serviceNameFr;
+		payload.serviceNameFr = serviceNameFr;
 	}
 	const applicationEnvironmentUrlEn = trimOrUndefined(
 		form.applicationEnvironmentUrlEn
 	);
 	if (applicationEnvironmentUrlEn) {
-		payload.application_environment_url_en = applicationEnvironmentUrlEn;
+		payload.applicationEnvironmentUrlEn = applicationEnvironmentUrlEn;
 	}
 	const applicationEnvironmentUrlFr = trimOrUndefined(
 		form.applicationEnvironmentUrlFr
 	);
 	if (applicationEnvironmentUrlFr) {
-		payload.application_environment_url_fr = applicationEnvironmentUrlFr;
+		payload.applicationEnvironmentUrlFr = applicationEnvironmentUrlFr;
 	}
 
 	const redirectUris = parseLines(form.redirectUris);
 	if (redirectUris.length > 0) {
-		payload.redirect_uris = redirectUris;
+		payload.redirectUris = redirectUris;
 	}
 	const postLogoutRedirectUris = parseLines(form.postLogoutRedirectUris);
 	if (postLogoutRedirectUris.length > 0) {
-		payload.post_logout_redirect_uris = postLogoutRedirectUris;
+		payload.postLogoutRedirectUris = postLogoutRedirectUris;
 	}
 
 	const logoutMode = trimOrUndefined(form.logoutMode);
 	if (logoutMode) {
-		payload.logout_mode = logoutMode as LogoutMode;
+		payload.logoutMode = logoutMode as LogoutMode;
 	}
 	const logoutUri = trimOrUndefined(form.logoutUri);
 	if (logoutUri) {
-		payload.logout_uri = logoutUri;
+		payload.logoutUri = logoutUri;
 	}
 
 	const clientType = trimOrUndefined(form.clientType);
 	if (clientType) {
-		payload.client_type = clientType as ClientType;
+		payload.clientType = clientType as ClientType;
 	}
 	const supportsAuthorizationCodeFlow = toBoolean(
 		form.supportsAuthorizationCodeFlow
 	);
 	if (typeof supportsAuthorizationCodeFlow === "boolean") {
-		payload.supports_authorization_code_flow = supportsAuthorizationCodeFlow;
+		payload.supportsAuthorizationCodeFlow = supportsAuthorizationCodeFlow;
 	}
 	const clientAuthMethod = trimOrUndefined(form.clientAuthMethod);
 	if (clientAuthMethod) {
-		payload.client_auth_method = clientAuthMethod as ClientAuthMethod;
+		payload.clientAuthMethod = clientAuthMethod as ClientAuthMethod;
 	}
 	const privateKeyDistributionMethod = trimOrUndefined(
 		form.privateKeyDistributionMethod
 	);
 	if (privateKeyDistributionMethod) {
-		payload.private_key_distribution_method =
+		payload.privateKeyDistributionMethod =
 			privateKeyDistributionMethod as PrivateKeyDistributionMethod;
 	}
 	const jwksUri = trimOrUndefined(form.jwksUri);
 	if (jwksUri) {
-		payload.jwks_uri = jwksUri;
+		payload.jwksUri = jwksUri;
 	}
 	const offlineJwkOrCertificate = trimOrUndefined(form.offlineJwkOrCertificate);
 	if (offlineJwkOrCertificate) {
-		payload.offline_jwk_or_certificate = offlineJwkOrCertificate;
+		payload.offlineJwkOrCertificate = offlineJwkOrCertificate;
 	}
 
 	const requestedScopes = arrayOrUndefined(form.requestedScopes);
 	if (requestedScopes) {
-		payload.requested_scopes = requestedScopes as Array<RequestedScope>;
+		payload.requestedScopes = requestedScopes as Array<RequestedScope>;
 	}
 	const sectorIdentifier = trimOrUndefined(form.sectorIdentifier);
 	if (sectorIdentifier) {
-		payload.sector_identifier = sectorIdentifier;
+		payload.sectorIdentifier = sectorIdentifier;
 	}
 	const sharesPairwiseIdentifiers = toBoolean(form.sharesPairwiseIdentifiers);
 	if (typeof sharesPairwiseIdentifiers === "boolean") {
-		payload.shares_pairwise_identifiers = sharesPairwiseIdentifiers;
+		payload.sharesPairwiseIdentifiers = sharesPairwiseIdentifiers;
 	}
 	const migrationSectorIdentifierUrl = trimOrUndefined(
 		form.migrationSectorIdentifierUrl
 	);
 	if (migrationSectorIdentifierUrl) {
-		payload.migration_sector_identifier_url = migrationSectorIdentifierUrl;
+		payload.migrationSectorIdentifierUrl = migrationSectorIdentifierUrl;
 	}
 
 	const pkceSupported = toBoolean(form.pkceSupported);
 	if (typeof pkceSupported === "boolean") {
-		payload.pkce_supported = pkceSupported;
+		payload.pkceSupported = pkceSupported;
 	}
 	const pkceAlgorithms = arrayOrUndefined(form.pkceAlgorithms);
 	if (pkceAlgorithms) {
-		payload.pkce_algorithms = pkceAlgorithms as Array<PKCEAlgorithm>;
+		payload.pkceAlgorithms = pkceAlgorithms as Array<PKCEAlgorithm>;
 	}
 	const pkceOtherAlgorithm = trimOrUndefined(form.pkceOtherAlgorithm);
 	if (pkceOtherAlgorithm) {
-		payload.pkce_other_algorithm = pkceOtherAlgorithm;
+		payload.pkceOtherAlgorithm = pkceOtherAlgorithm;
 	}
 
 	const requestSigningSupported = toBoolean(form.requestSigningSupported);
 	if (typeof requestSigningSupported === "boolean") {
-		payload.request_signing_supported = requestSigningSupported;
+		payload.requestSigningSupported = requestSigningSupported;
 	}
 	const requestSigningTargets = arrayOrUndefined(form.requestSigningTargets);
 	if (requestSigningTargets) {
-		payload.request_signing_targets =
+		payload.requestSigningTargets =
 			requestSigningTargets as Array<SigningTarget>;
 	}
 	const requestSigningAlgorithms = arrayOrUndefined(
 		form.requestSigningAlgorithms
 	);
 	if (requestSigningAlgorithms) {
-		payload.request_signing_algorithms =
+		payload.requestSigningAlgorithms =
 			requestSigningAlgorithms as Array<SignatureAlgorithm>;
 	}
 	const requestSigningOtherAlgorithm = trimOrUndefined(
 		form.requestSigningOtherAlgorithm
 	);
 	if (requestSigningOtherAlgorithm) {
-		payload.request_signing_other_algorithm = requestSigningOtherAlgorithm;
+		payload.requestSigningOtherAlgorithm = requestSigningOtherAlgorithm;
 	}
 	const requestSigningRoadmap = toBoolean(form.requestSigningRoadmap);
 	if (typeof requestSigningRoadmap === "boolean") {
-		payload.request_signing_roadmap = requestSigningRoadmap;
+		payload.requestSigningRoadmap = requestSigningRoadmap;
 	}
 	const requestSigningRevisitOn = trimOrUndefined(form.requestSigningRevisitOn);
 	if (requestSigningRevisitOn) {
-		payload.request_signing_revisit_on = requestSigningRevisitOn;
+		payload.requestSigningRevisitOn = requestSigningRevisitOn;
 	}
 
 	const signatureValidationSupported = toBoolean(
 		form.signatureValidationSupported
 	);
 	if (typeof signatureValidationSupported === "boolean") {
-		payload.signature_validation_supported = signatureValidationSupported;
+		payload.signatureValidationSupported = signatureValidationSupported;
 	}
 	const signatureValidationTargets = arrayOrUndefined(
 		form.signatureValidationTargets
 	);
 	if (signatureValidationTargets) {
-		payload.signature_validation_targets =
+		payload.signatureValidationTargets =
 			signatureValidationTargets as Array<SignatureValidationTarget>;
 	}
 	const signatureValidationAlgorithms = arrayOrUndefined(
 		form.signatureValidationAlgorithms
 	);
 	if (signatureValidationAlgorithms) {
-		payload.signature_validation_algorithms =
+		payload.signatureValidationAlgorithms =
 			signatureValidationAlgorithms as Array<SignatureAlgorithm>;
 	}
 	const signatureValidationOtherAlgorithm = trimOrUndefined(
 		form.signatureValidationOtherAlgorithm
 	);
 	if (signatureValidationOtherAlgorithm) {
-		payload.signature_validation_other_algorithm =
+		payload.signatureValidationOtherAlgorithm =
 			signatureValidationOtherAlgorithm;
 	}
 	const signatureValidationRoadmap = toBoolean(form.signatureValidationRoadmap);
 	if (typeof signatureValidationRoadmap === "boolean") {
-		payload.signature_validation_roadmap = signatureValidationRoadmap;
+		payload.signatureValidationRoadmap = signatureValidationRoadmap;
 	}
 	const signatureValidationRevisitOn = trimOrUndefined(
 		form.signatureValidationRevisitOn
 	);
 	if (signatureValidationRevisitOn) {
-		payload.signature_validation_revisit_on = signatureValidationRevisitOn;
+		payload.signatureValidationRevisitOn = signatureValidationRevisitOn;
 	}
 
 	const requestEncryptionSupported = toBoolean(form.requestEncryptionSupported);
 	if (typeof requestEncryptionSupported === "boolean") {
-		payload.request_encryption_supported = requestEncryptionSupported;
+		payload.requestEncryptionSupported = requestEncryptionSupported;
 	}
 	const requestEncryptionTargets = arrayOrUndefined(
 		form.requestEncryptionTargets
 	);
 	if (requestEncryptionTargets) {
-		payload.request_encryption_targets =
+		payload.requestEncryptionTargets =
 			requestEncryptionTargets as Array<RequestEncryptionTarget>;
 	}
 	const requestEncryptionKeyManagementAlgorithms = arrayOrUndefined(
 		form.requestEncryptionKeyManagementAlgorithms
 	);
 	if (requestEncryptionKeyManagementAlgorithms) {
-		payload.request_encryption_key_management_algorithms =
+		payload.requestEncryptionKeyManagementAlgorithms =
 			requestEncryptionKeyManagementAlgorithms as Array<KeyManagementAlgorithm>;
 	}
 	const requestEncryptionOtherKeyManagementAlgorithm = trimOrUndefined(
 		form.requestEncryptionOtherKeyManagementAlgorithm
 	);
 	if (requestEncryptionOtherKeyManagementAlgorithm) {
-		payload.request_encryption_other_key_management_algorithm =
+		payload.requestEncryptionOtherKeyManagementAlgorithm =
 			requestEncryptionOtherKeyManagementAlgorithm;
 	}
 	const requestEncryptionContentAlgorithms = arrayOrUndefined(
 		form.requestEncryptionContentAlgorithms
 	);
 	if (requestEncryptionContentAlgorithms) {
-		payload.request_encryption_content_algorithms =
+		payload.requestEncryptionContentAlgorithms =
 			requestEncryptionContentAlgorithms as Array<ContentEncryptionAlgorithm>;
 	}
 	const requestEncryptionOtherContentAlgorithm = trimOrUndefined(
 		form.requestEncryptionOtherContentAlgorithm
 	);
 	if (requestEncryptionOtherContentAlgorithm) {
-		payload.request_encryption_other_content_algorithm =
+		payload.requestEncryptionOtherContentAlgorithm =
 			requestEncryptionOtherContentAlgorithm;
 	}
 	const requestEncryptionRoadmap = toBoolean(form.requestEncryptionRoadmap);
 	if (typeof requestEncryptionRoadmap === "boolean") {
-		payload.request_encryption_roadmap = requestEncryptionRoadmap;
+		payload.requestEncryptionRoadmap = requestEncryptionRoadmap;
 	}
 	const requestEncryptionRevisitOn = trimOrUndefined(
 		form.requestEncryptionRevisitOn
 	);
 	if (requestEncryptionRevisitOn) {
-		payload.request_encryption_revisit_on = requestEncryptionRevisitOn;
+		payload.requestEncryptionRevisitOn = requestEncryptionRevisitOn;
 	}
 
 	const messageDecryptionSupported = toBoolean(form.messageDecryptionSupported);
 	if (typeof messageDecryptionSupported === "boolean") {
-		payload.message_decryption_supported = messageDecryptionSupported;
+		payload.messageDecryptionSupported = messageDecryptionSupported;
 	}
 	const messageDecryptionTargets = arrayOrUndefined(
 		form.messageDecryptionTargets
 	);
 	if (messageDecryptionTargets) {
-		payload.message_decryption_targets =
+		payload.messageDecryptionTargets =
 			messageDecryptionTargets as Array<MessageDecryptionTarget>;
 	}
 	const messageDecryptionKeyManagementAlgorithms = arrayOrUndefined(
 		form.messageDecryptionKeyManagementAlgorithms
 	);
 	if (messageDecryptionKeyManagementAlgorithms) {
-		payload.message_decryption_key_management_algorithms =
+		payload.messageDecryptionKeyManagementAlgorithms =
 			messageDecryptionKeyManagementAlgorithms as Array<KeyManagementAlgorithm>;
 	}
 	const messageDecryptionOtherKeyManagementAlgorithm = trimOrUndefined(
 		form.messageDecryptionOtherKeyManagementAlgorithm
 	);
 	if (messageDecryptionOtherKeyManagementAlgorithm) {
-		payload.message_decryption_other_key_management_algorithm =
+		payload.messageDecryptionOtherKeyManagementAlgorithm =
 			messageDecryptionOtherKeyManagementAlgorithm;
 	}
 	const messageDecryptionContentAlgorithms = arrayOrUndefined(
 		form.messageDecryptionContentAlgorithms
 	);
 	if (messageDecryptionContentAlgorithms) {
-		payload.message_decryption_content_algorithms =
+		payload.messageDecryptionContentAlgorithms =
 			messageDecryptionContentAlgorithms as Array<ContentEncryptionAlgorithm>;
 	}
 	const messageDecryptionOtherContentAlgorithm = trimOrUndefined(
 		form.messageDecryptionOtherContentAlgorithm
 	);
 	if (messageDecryptionOtherContentAlgorithm) {
-		payload.message_decryption_other_content_algorithm =
+		payload.messageDecryptionOtherContentAlgorithm =
 			messageDecryptionOtherContentAlgorithm;
 	}
 	const messageDecryptionRoadmap = toBoolean(form.messageDecryptionRoadmap);
 	if (typeof messageDecryptionRoadmap === "boolean") {
-		payload.message_decryption_roadmap = messageDecryptionRoadmap;
+		payload.messageDecryptionRoadmap = messageDecryptionRoadmap;
 	}
 	const messageDecryptionRevisitOn = trimOrUndefined(
 		form.messageDecryptionRevisitOn
 	);
 	if (messageDecryptionRevisitOn) {
-		payload.message_decryption_revisit_on = messageDecryptionRevisitOn;
+		payload.messageDecryptionRevisitOn = messageDecryptionRevisitOn;
 	}
 
 	return payload;
@@ -727,7 +1078,7 @@ export const toWorkspaceRPApplicationFormState = (
 			"application_environment_url_fr"
 		),
 		applicationInformationUuid: applicationInformationUuid ?? "",
-		canadaLoginEnvironment: application.canada_login_environment ?? "",
+		canadaLoginEnvironment: application.canadaLoginEnvironment ?? "",
 		clientAuthMethod: readString(payload, "client_auth_method"),
 		clientType: readString(payload, "client_type"),
 		jwksUri: readString(payload, "jwks_uri"),
@@ -832,7 +1183,7 @@ export const toWorkspaceRPApplicationFormState = (
 		requestedScopes: readStringArray(payload, "requested_scopes"),
 		sectorIdentifier: readString(payload, "sector_identifier"),
 		serviceNameEn:
-			readString(payload, "service_name_en") || application.dnr_app_name || "",
+			readString(payload, "service_name_en") || application.dnrAppName || "",
 		serviceNameFr: readString(payload, "service_name_fr"),
 		sharesPairwiseIdentifiers: readBooleanField(
 			payload,
@@ -869,39 +1220,100 @@ export const toWorkspaceRPApplicationFormState = (
 	};
 };
 
-export const toRPApplicationCreatePayload = (
-	form: WorkspaceRPApplicationFormState
-): RPApplicationCreate => ({
-	...buildBasePayload(form),
-	application_environment_url_en: form.applicationEnvironmentUrlEn.trim(),
-	application_environment_url_fr: form.applicationEnvironmentUrlFr.trim(),
-	canada_login_environment:
-		form.canadaLoginEnvironment as CanadaLoginEnvironment,
-	client_auth_method: form.clientAuthMethod as ClientAuthMethod,
-	client_type: form.clientType as ClientType,
-	logout_mode: form.logoutMode as LogoutMode,
-	logout_uri: form.logoutUri.trim(),
-	message_decryption_supported:
-		toBoolean(form.messageDecryptionSupported) ?? false,
-	pkce_supported: toBoolean(form.pkceSupported) ?? false,
-	redirect_uris: parseLines(form.redirectUris),
-	request_encryption_supported:
-		toBoolean(form.requestEncryptionSupported) ?? false,
-	request_signing_supported: toBoolean(form.requestSigningSupported) ?? false,
-	requested_scopes: form.requestedScopes as Array<RequestedScope>,
-	sector_identifier: form.sectorIdentifier.trim(),
-	service_name_en: form.serviceNameEn.trim(),
-	service_name_fr: form.serviceNameFr.trim(),
-	shares_pairwise_identifiers:
-		toBoolean(form.sharesPairwiseIdentifiers) ?? false,
-	signature_validation_supported:
-		toBoolean(form.signatureValidationSupported) ?? false,
-	supports_authorization_code_flow:
-		toBoolean(form.supportsAuthorizationCodeFlow) ?? true,
-});
-
-/* eslint-enable camelcase */
-
 export const toRPApplicationUpdatePayload = (
 	form: WorkspaceRPApplicationFormState
 ): RPApplicationUpdate => buildBasePayload(form);
+
+const camelToSnake = (key: string): string =>
+	key.replace(/[A-Z]/gu, (letter) => `_${letter.toLowerCase()}`);
+
+export const toWorkspaceRPApplicationRegistrationAnswers = (
+	form: WorkspaceRPApplicationFormState,
+	step?: RegistrationDataStep
+): WorkspaceRPApplicationRegistrationAnswers => {
+	const answers = { ...buildBasePayload(form) } as Record<string, unknown>;
+
+	if (step === "client-and-access") {
+		if (form.clientAuthMethod !== "private_key_jwt") {
+			answers["privateKeyDistributionMethod"] = null;
+			answers["jwksUri"] = null;
+			answers["offlineJwkOrCertificate"] = null;
+		} else if (form.privateKeyDistributionMethod === "jwks_uri") {
+			answers["offlineJwkOrCertificate"] = null;
+		} else if (form.privateKeyDistributionMethod === "offline_exchange") {
+			answers["jwksUri"] = null;
+		} else {
+			answers["jwksUri"] = null;
+			answers["offlineJwkOrCertificate"] = null;
+		}
+		if (form.pkceSupported !== "yes") {
+			answers["pkceAlgorithms"] = null;
+			answers["pkceOtherAlgorithm"] = null;
+		}
+	}
+	if (step === "signing") {
+		if (form.requestSigningSupported !== "yes") {
+			answers["requestSigningTargets"] = null;
+			answers["requestSigningAlgorithms"] = null;
+			answers["requestSigningOtherAlgorithm"] = null;
+		} else {
+			answers["requestSigningRoadmap"] = null;
+			answers["requestSigningRevisitOn"] = null;
+		}
+		if (form.signatureValidationSupported !== "yes") {
+			answers["signatureValidationTargets"] = null;
+			answers["signatureValidationAlgorithms"] = null;
+			answers["signatureValidationOtherAlgorithm"] = null;
+		} else {
+			answers["signatureValidationRoadmap"] = null;
+			answers["signatureValidationRevisitOn"] = null;
+		}
+	}
+	if (step === "encryption") {
+		for (const prefix of ["requestEncryption", "messageDecryption"] as const) {
+			const supported =
+				prefix === "requestEncryption"
+					? form.requestEncryptionSupported
+					: form.messageDecryptionSupported;
+			if (supported !== "yes") {
+				answers[`${prefix}Targets`] = null;
+				answers[`${prefix}KeyManagementAlgorithms`] = null;
+				answers[`${prefix}OtherKeyManagementAlgorithm`] = null;
+				answers[`${prefix}ContentAlgorithms`] = null;
+				answers[`${prefix}OtherContentAlgorithm`] = null;
+			} else {
+				answers[`${prefix}Roadmap`] = null;
+				answers[`${prefix}RevisitOn`] = null;
+			}
+		}
+	}
+
+	return answers;
+};
+
+export const toWorkspaceRPApplicationDraftFormState = (
+	draft: WorkspaceRPApplicationRegistrationDraftRead
+): WorkspaceRPApplicationFormState => {
+	const snakeAnswers = Object.fromEntries(
+		Object.entries(draft.registrationAnswers).map(([key, value]) => [
+			camelToSnake(key),
+			value,
+		])
+	);
+	return toWorkspaceRPApplicationFormState(
+		{
+			canadaLoginEnvironment:
+				draft.registrationAnswers.canadaLoginEnvironment ?? null,
+			createdAt: "",
+			createdBy: null,
+			dnrAppName: draft.registrationAnswers.serviceNameEn ?? "",
+			id: 0,
+			isDeleted: false,
+			oidcRegistrationPayload: snakeAnswers,
+			status: null,
+			uuid: draft.rpApplicationUuid,
+			workspaceId: null,
+		},
+		draft.registrationAnswers.applicationInformationUuid ?? null
+	);
+};

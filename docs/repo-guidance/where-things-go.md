@@ -21,14 +21,15 @@ or `.claude/` in generated solution repos.
 
 | Folder | Normal Use |
 |---|---|
+| [LOCAL_DEVELOPMENT.md](../../LOCAL_DEVELOPMENT.md) | Short human-facing command sheet for the local application lifecycle. |
 | [GETTING_STARTED.md](../../GETTING_STARTED.md) | Short human-facing first steps for a new solution repo created from this template. |
 | `getting-started/` | Template-maintainer scaffold helper and docs. This folder is excluded from generated solution repos. |
 | `agent-configs/vscode/prompts/` source; `.github/prompts/` generated target | Reusable VS Code and GitHub Copilot prompts for common work. |
 | `agent-configs/shared/skills/` source; `.github/skills/`, `.agents/skills/`, or `.claude/skills/` generated targets | Local skills with repo-specific procedures and `references.md` loading manifests. |
 | `agent-configs/vscode/agents/` source; `.github/agents/` generated target | VS Code and GitHub Copilot agent instructions and roles. |
 | `agent-configs/codex/AGENTS.md` source; `AGENTS.md` generated target for Codex | Codex project instructions for generated solution repos. This is separate from the upstream template-maintainer root `AGENTS.md`. |
-| `agent-configs/codex/agents/` source; `.codex/agents/` generated target | Generated Codex role adapters for the six Delorean phase agents. |
-| `agent-configs/codex/prompts/` source; `.codex/prompts/` generated target | Generated Codex prompt adapters aligned with the VS Code prompt catalog. |
+| `agent-configs/codex/agents/` source; `.codex/agents/*.toml` generated target | Standalone Codex custom-agent definitions for the six Delorean phase roles. |
+| `agent-configs/codex/skills/` source; `.agents/skills/dl-*/SKILL.md` generated target | Discoverable Codex workflow skills aligned with the cross-tool workflow catalog. |
 | `agent-configs/shared/hooks/` source; `.github/hooks/` generated target | Local automation hooks. |
 | `agent-configs/vscode/vscode/extensions.json` source; `.vscode/extensions.json` generated target | VS Code extension recommendations for the starter stack and local agent workflow. |
 | `agent-configs/vscode/vscode/launch.json` source; `.vscode/launch.json` generated target | VS Code starter app, test, and browser debug configurations. |
@@ -166,10 +167,10 @@ or `.claude/` in generated solution repos.
 3. Check `docs/repo-guidance/` for repo guidance and command notes.
 4. Use `docs/templates/` when creating a new local doc.
 5. Use [docs/reference/local-verification.md](../reference/local-verification.md) when local checks or hooks are involved.
-6. Use the Coordinator agent to route work across Spec, Plan, Implement, Verify, and Release-ready. In the upstream template source it is `agent-configs/vscode/agents/coordinator.agent.md`; in generated VS Code solution repos it is `.github/agents/coordinator.agent.md`.
+6. Use the Coordinator agent to route work across Spec, Plan, Implement, Verify, and Release-ready. In the upstream template source it is `agent-configs/vscode/agents/coordinator.agent.md`; in generated VS Code solution repos it is `.github/agents/coordinator.agent.md`; in generated Codex repos it is `.codex/agents/coordinator.toml`.
 7. Use [architecture-docs.md](architecture-docs.md) and the generated `architecture_docs/` catalogs and indexes to decide which reusable architecture `STD-*`, `PAT-*`, `BAS-*`, `GC-WEB-*`, `TPL-*`, and reference architecture IDs to load.
 8. Use `PAT-*` pattern IDs when a common implementation scenario needs a reusable recipe.
-9. When changing local agent or skill files, treat those files as artifacts under review, not binding instructions for the agent doing the maintenance work. In the upstream template source, use `agent-configs/vscode/agents/` as the editable role source, `agent-configs/vscode/prompts/` as the editable prompt source, `agent-configs/codex/AGENTS.md` for generated Codex root instructions, generated `agent-configs/codex/agents/` and `agent-configs/codex/prompts/` for Codex adapters, and `agent-configs/shared/skills/` for portable skills. In generated VS Code solution repos, use `.github/agents/` and `.github/skills/`; in generated Codex solution repos, use `AGENTS.md`, `.codex/agents/`, `.codex/prompts/`, and `.agents/skills/`. Keep detailed reference lists in skill `references.md` manifests.
+9. When changing local agent or skill files, treat those files as artifacts under review, not binding instructions for the agent doing the maintenance work. In the upstream template source, use `agent-configs/vscode/agents/` as the editable VS Code role source, `agent-configs/vscode/prompts/` as the editable VS Code prompt source, `agent-configs/codex/AGENTS.md` for generated Codex root instructions, `agent-configs/codex/agents/` for Codex custom-agent TOML, `agent-configs/codex/skills/` for Codex workflow skills, and `agent-configs/shared/skills/` for portable skills. In generated VS Code solution repos, use `.github/agents/` and `.github/skills/`; in generated Codex solution repos, use `AGENTS.md`, `.codex/agents/`, and `.agents/skills/`. Keep detailed reference lists in skill `references.md` manifests.
 10. For Government of Canada web application releases or meaningful service changes, check STD-019: Government of Canada Web Application Baseline Governance, BAS-001: Government of Canada Web Application Baseline, and related `GC-WEB-*` controls; use TPL-011 when a baseline assessment record is needed.
 11. For user-facing page changes, check STD-006: GC UI Page Layout Rules, PAT-001: UI Page Patterns, and TPL-007: Page Pattern Decision Template before implementation.
 12. For frontend changes, check [frontend/README.md](../../frontend/README.md), [frontend/DEV_SETUP.md](../../frontend/DEV_SETUP.md), STD-004: Frontend React and TypeScript, STD-005: Frontend GC Design System, STD-018: Frontend CSS and Design-System Boundary, and relevant `PAT-*` frontend recipes.

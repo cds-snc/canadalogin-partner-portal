@@ -6,9 +6,24 @@ from src.app.api.dependencies import (
     get_current_user,
     get_onboarding_oversight_service,
 )
+from src.app.core.authorization import CanonicalRoleCode
 from src.app.core.db.database import async_get_db
 from src.app.core.exceptions.http_exceptions import OnboardingReportRequestException
 from src.app.main import app
+from src.app.services.authorization_service import (
+    AUTHORIZATION_STATE_KEY,
+    ResolvedAuthorizationState,
+)
+
+
+def _cl_admin() -> dict:
+    return {
+        "id": 1,
+        "username": "admin@example.gc.ca",
+        AUTHORIZATION_STATE_KEY: ResolvedAuthorizationState(
+            global_role=CanonicalRoleCode.CL_ADMIN
+        ),
+    }
 
 
 class TestOnboardingOversightQueueRoute:
@@ -58,11 +73,7 @@ class TestOnboardingOversightQueueRoute:
         )
         db = Mock()
 
-        app.dependency_overrides[get_current_user] = lambda: {
-            "id": 1,
-            "username": "admin@example.gc.ca",
-            "is_superuser": True,
-        }
+        app.dependency_overrides[get_current_user] = _cl_admin
         app.dependency_overrides[get_onboarding_oversight_service] = lambda: service
         app.dependency_overrides[async_get_db] = lambda: db
 
@@ -111,17 +122,24 @@ class TestOnboardingOversightQueueRoute:
 
 
 class TestOnboardingOversightReportsRoute:
-    def test_reports_require_superuser_access(self) -> None:
+    def test_reports_delegate_authorization_to_scope_aware_service(self) -> None:
         service = Mock()
-        service.get_report = AsyncMock()
-
-        app.dependency_overrides[get_current_user] = lambda: {
+        service.get_report = AsyncMock(
+            side_effect=OnboardingReportRequestException(
+                code="onboarding_report_workspace_required",
+                message="Partner reporting requires exactly one active workspace.",
+            )
+        )
+        current_user = {
             "id": 42,
             "username": "member@example.gc.ca",
-            "is_superuser": False,
+            AUTHORIZATION_STATE_KEY: ResolvedAuthorizationState(),
         }
+        db = Mock()
+
+        app.dependency_overrides[get_current_user] = lambda: current_user
         app.dependency_overrides[get_onboarding_oversight_service] = lambda: service
-        app.dependency_overrides[async_get_db] = lambda: Mock()
+        app.dependency_overrides[async_get_db] = lambda: db
 
         try:
             with TestClient(app) as client:
@@ -136,8 +154,19 @@ class TestOnboardingOversightReportsRoute:
         finally:
             app.dependency_overrides.clear()
 
-        assert response.status_code == 403
-        service.get_report.assert_not_called()
+        assert response.status_code == 400
+        assert response.json()["error"]["code"] == "onboarding_report_workspace_required"
+        service.get_report.assert_awaited_once_with(
+            db=db,
+            metric="onboarding_throughput",
+            start_date="2026-08-01",
+            end_date="2026-08-31",
+            group_by=None,
+            workspace_uuid=None,
+            department_id=None,
+            environment=None,
+            current_user=current_user,
+        )
 
     def test_reports_forward_filters_and_return_payload(self) -> None:
         service = Mock()
@@ -172,11 +201,8 @@ class TestOnboardingOversightReportsRoute:
         )
         db = Mock()
 
-        app.dependency_overrides[get_current_user] = lambda: {
-            "id": 1,
-            "username": "admin@example.gc.ca",
-            "is_superuser": True,
-        }
+        current_user = _cl_admin()
+        app.dependency_overrides[get_current_user] = lambda: current_user
         app.dependency_overrides[get_onboarding_oversight_service] = lambda: service
         app.dependency_overrides[async_get_db] = lambda: db
 
@@ -210,6 +236,7 @@ class TestOnboardingOversightReportsRoute:
             workspace_uuid=None,
             department_id=None,
             environment=None,
+            current_user=current_user,
         )
 
     def test_report_export_returns_csv_attachment(self) -> None:
@@ -222,11 +249,8 @@ class TestOnboardingOversightReportsRoute:
         )
         db = Mock()
 
-        app.dependency_overrides[get_current_user] = lambda: {
-            "id": 1,
-            "username": "admin@example.gc.ca",
-            "is_superuser": True,
-        }
+        current_user = _cl_admin()
+        app.dependency_overrides[get_current_user] = lambda: current_user
         app.dependency_overrides[get_onboarding_oversight_service] = lambda: service
         app.dependency_overrides[async_get_db] = lambda: db
 
@@ -257,6 +281,7 @@ class TestOnboardingOversightReportsRoute:
             workspace_uuid=None,
             department_id=None,
             environment=None,
+            current_user=current_user,
         )
 
     def test_reports_surface_stable_bad_request_codes(self) -> None:
@@ -268,11 +293,7 @@ class TestOnboardingOversightReportsRoute:
             )
         )
 
-        app.dependency_overrides[get_current_user] = lambda: {
-            "id": 1,
-            "username": "admin@example.gc.ca",
-            "is_superuser": True,
-        }
+        app.dependency_overrides[get_current_user] = _cl_admin
         app.dependency_overrides[get_onboarding_oversight_service] = lambda: service
         app.dependency_overrides[async_get_db] = lambda: Mock()
 

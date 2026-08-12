@@ -1,0 +1,150 @@
+ui_page_pattern_decision:
+  page_role: selected workspace access administration
+  page_type: focused administration page with assignments, invitations, and consequential actions
+  selected_pattern:
+    - "PAT-001: UI Page Patterns"
+    - "PAT-002: API Query and Mutation"
+    - "PAT-004: Protected Route"
+    - "PAT-005: Router, Service, Schema"
+    - "PAT-008: Audit Log"
+    - "PAT-010: RBAC Policy Check"
+    - "PAT-013: GC Design System React App Shell"
+    - "PAT-003: Form Page"
+    - "PAT-020: Status and Feedback"
+    - "PAT-023: Frontend Data Table"
+  source_reference:
+    - "ADR-001: BFF and Server Session Authority"
+    - "ADR-002: API Wire and Error Contract"
+    - "ADR-003: Casbin Authorization Model"
+    - "STD-004: Frontend React and TypeScript"
+    - "STD-005: Frontend GC Design System"
+    - "STD-006: GC UI Page Layout Rules"
+    - "STD-007: UI Accessibility Basics"
+    - "STD-008: Backend FastAPI"
+    - "STD-009: REST API"
+    - "STD-010: API Response and Error Models"
+    - "STD-013: Security and Privacy Basics"
+    - openspec/changes/refine-workspace-task-hub-and-registration-flow/design.md
+    - openspec/changes/define-four-role-authorization-model/specs/partner-portal-role-management/spec.md
+    - openspec/changes/define-four-role-authorization-model/specs/partner-portal-external-developer-invitations-and-scoped-access/spec.md
+  dependency_status: rebase after define-four-role-authorization-model is archived before implementation
+  target_stack: Vite React with TanStack Router and GC Design System React components
+  task_structure:
+    multiple_user_goals: true
+    entry_page: /workspaces/$workspaceUuid/access
+    parent_route: /workspaces/$workspaceUuid
+    task_areas:
+      - current canonical assignments
+      - pending and historical invitations allowed by the role contract
+      - invite, assignment, replacement, revocation, or cancellation actions allowed by the role contract
+    home_page_or_service_home: /
+    single_page_rationale: assignments and invitations share one selected-workspace access context, while each consequential action remains a focused form or confirmation interaction
+  data_sections:
+    - name: Current access
+      source: canonical workspace assignment projection owned by the four-role change
+      structure: PAT-023 table when attributes require comparison; PAT-017-style itemized list when the result is short
+      states:
+        - loading
+        - populated
+        - empty
+        - error
+        - unauthorized
+    - name: Invitations
+      source: canonical workspace invitation lifecycle owned by the four-role change
+      structure: PAT-023 table with safe status and permitted actions
+      states:
+        - loading
+        - populated
+        - empty
+        - error
+        - unauthorized
+  required_shell:
+    header: shared GcdsHeader through AppShell
+    footer: shared GcdsFooter through AppShell
+    main_content: stable AppShell main landmark and skip target
+    skip_link: existing header skip link targeting main content
+    h1: localized Access H1 with selected workspace name in nearby context
+    date_modified: provided by AppShell when required
+  navigation:
+    primary_task_paths:
+      - task: review current workspace access
+        entry_route: /workspaces/$workspaceUuid
+        navigation_elements:
+          - authorized Access hub link
+          - authorized workspace GcdsSideNav item
+        destination_routes:
+          - /workspaces/$workspaceUuid/access
+        return_path: workspace side navigation or breadcrumb to the workspace hub
+      - task: perform a permitted access action
+        entry_route: /workspaces/$workspaceUuid/access
+        navigation_elements:
+          - action beside the selected assignment or invitation, or one clear page action
+        destination_routes:
+          - focused form or confirmation interaction within the Access route family
+        return_path: Access overview with preserved safe list state
+    shared_menu:
+      provided: true
+      component: Workspaces child inside the global Partner work GcdsNavGroup
+      home_link: /
+      new_page_or_parent_task_link: /workspaces
+      exclusion_reason: Access is nested under the selected workspace and appears only when authorized
+    breadcrumbs:
+      path: Home then Workspaces then workspace name then Access
+      component: GcdsBreadcrumbs and GcdsBreadcrumbsItem
+    language_toggle:
+      provided_by_header: true
+      equivalent_language_route: preserve selected workspace and safe list state; preserve or warn about unsaved form input
+      standalone_toggle_in_body: false
+    top_navigation: Partner work remains active
+    side_navigation:
+      component: GcdsSideNav
+      active_item: Access
+      items_from: translated workspace route metadata filtered by canonical authorization
+  forms:
+    required: true
+    scope: only when the role contract exposes an assignment or invitation action
+    pattern: focused PAT-003 form with error summary and field-level errors
+    confirmation: grant, role replacement, revocation, invitation cancellation, and other consequential actions explain scope and consequences and require explicit confirmation when the role contract says the action is available
+    no_action_state: Read-only users see no disabled or misleading mutation controls
+  component_plan:
+    page_shell:
+      - need: focused Access page shell and selected workspace context
+        gc_component: shared AppShell, GcdsContainer, GcdsHeading, and GcdsText
+        custom_exception: none
+    navigation:
+      - need: workspace location and return path
+        gc_component: GcdsSideNav, GcdsBreadcrumbs, GcdsBreadcrumbsItem, and GcdsLink
+        custom_exception: none
+    actions_and_forms:
+      - need: invitation or assignment fields and actions
+        gc_component: GcdsInput, GcdsSelect or GcdsRadios, GcdsFieldset, GcdsHint, GcdsButton, GcdsErrorSummary, and GcdsErrorMessage as applicable
+        custom_exception: none
+      - need: consequential action confirmation
+        gc_component: focused confirmation page or existing accessible confirmation wrapper using GcdsButton and GcdsNotice semantics
+        custom_exception: implementation must record one if the existing wrapper cannot meet keyboard, focus, and accessible-name behavior
+    status_and_content:
+      - need: assignments and invitation lifecycle rows
+        gc_component: PAT-023 with GcdsTable or a recorded semantic-table implementation
+        custom_exception: none
+      - need: empty, success, conflict, expired, revoked, denied, and error states
+        gc_component: PAT-020 content or GcdsNotice at the affected scope
+        custom_exception: none
+  security_and_privacy:
+    backend_authorization_authoritative: true
+    selected_workspace_scope_required: true
+    secret_values_displayed: false
+    hidden_controls_as_security: false
+    safe_error_content: no disclosure of out-of-scope users, assignments, invitations, or internal identifiers
+  evidence_required:
+    desktop_screenshot: populated Access page and one focused action/confirmation state
+    mobile_screenshot: responsive assignments or invitations view plus action controls
+    accessibility_result: keyboard, focus, table/list, form, error-summary, confirmation, status, and side-navigation review
+    bilingual_result: English and French labels, statuses, actions, confirmation consequences, errors, and accessible names
+    design_system_checklist: required
+    state_tests: loading, populated, empty, read-only, error, conflict, expired/revoked, unauthorized, and successful action
+    authorization_tests: representative permitted, hidden, denied, stale, and cross-workspace requests using the role change as matrix source
+  exceptions:
+    required: false
+    timing: before implementation
+    approval_status: not needed
+    notes: Exact fields and actions come from the archived four-role contract; this decision owns the page pattern and evidence, not the permission matrix.

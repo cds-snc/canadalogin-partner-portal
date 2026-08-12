@@ -3,6 +3,9 @@
 
 Monorepo for the CanadaLogin Partner Portal - a FastAPI backend and Vite + React frontend.
 
+**Just need to run the application locally?** Use the short
+[Local Development command sheet](LOCAL_DEVELOPMENT.md).
+
 
 This root README summarizes the repository, quick-start commands, and where to
 find detailed docs for each part. Start with the
@@ -109,7 +112,7 @@ make db-logs
 make db-down
 
 # Rebuild the local Postgres/Redis state, apply migrations, and rerun
-# the local superuser and access-policy seed scripts
+# the initial canonical CL Admin bootstrap
 make db-reset-local
 
 # Run backend tests
@@ -129,6 +132,10 @@ make bk-migration
 
 # Start with docker compose (local)
 cd backend && docker compose up --build
+
+# Or seed deterministic fake role personas and run the loopback-only selector
+make seed-local-personas
+make start-local-personas
 ```
 
 ## Frontend (Vite + React) — Highlights
@@ -213,6 +220,8 @@ See the backend contribution and code-of-conduct files in `backend/CONTRIBUTING.
 
 ## Where to find more details
 
+- [Local Development command sheet](LOCAL_DEVELOPMENT.md): the shortest path
+  for starting, updating, stopping, and resetting the local application.
 - [Documentation index](docs/README.md).
 - [Current solution architecture and ADRs](docs/architecture/README.md).
 - [Repository-specific development and verification conventions](docs/repo-guidance/development-conventions.md).

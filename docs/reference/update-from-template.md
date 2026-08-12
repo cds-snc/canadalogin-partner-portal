@@ -4,7 +4,7 @@ Use this guide when an existing solution repo needs to pull the latest
 Delorean template-owned files from the upstream template.
 
 The update helper is intentionally conservative. By default, it updates local
-agents, prompts, skills, hooks, workflows, Delorean starter files,
+agents, workflow skills, prompts for tools that support them, hooks, workflows, Delorean starter files,
 local docs templates, repo-guidance docs, verification config, the Python
 version pin, and small repo support files. It does not update solution implementation code, working OpenSpec
 changes, root README files, solution-owned agent instructions, or architecture
@@ -137,11 +137,11 @@ scripts/delorean/update-from-template.sh --path docs/reference/local-verificatio
 Use `--agent-config-only` when a solution repo wants the latest materialized agent targets, hooks, VS Code workspace extension recommendations, launch configurations, settings and tasks, active OpenSpec change picker, agent-run collection helper, and the reference or repo-guidance docs those agent configs depend on without refreshing broader template-owned docs and starter support files. For a default VS Code repo, this updates `.github/agents/`, `.github/prompts/`, `.github/skills/`, `.github/hooks/`, `.vscode/extensions.json`, `.vscode/launch.json`, `.vscode/settings.json`, `.vscode/tasks.json`, and `scripts/delorean/select-openspec-change.sh`. For Codex or Claude targets, it updates the corresponding `.agents/`, `.codex/`, or `.claude/` paths that are supported by the template source. It also removes deprecated generated VS Code feedback paths from existing VS Code solution repos when present.
 
 For Codex targets, first-time scaffold writes root `AGENTS.md` from
-`agent-configs/codex/AGENTS.md`, shared skills to `.agents/skills/`, Codex
-role adapters to `.codex/agents/`, and Codex prompt adapters to
-`.codex/prompts/`. Existing solution updates refresh `AGENTS.md` only while it
-still has the generated Codex marker. If a solution has replaced it with local
-instructions, the update helper preserves it and prints a preservation message.
+`agent-configs/codex/AGENTS.md`, shared and Codex workflow skills to
+`.agents/skills/`, and custom-agent TOML to `.codex/agents/`. Existing solution
+updates refresh `AGENTS.md` only while it still has the generated Codex marker.
+If a solution has replaced it with local instructions, the update helper
+preserves it and prints a preservation message.
 
 Level 2 repos use `--level2-prompt-set core` by default. That keeps the VS Code
 prompt picker focused on the core onboarding prompts for requirements,
@@ -150,7 +150,7 @@ OpenSpec questions, OpenSpec archive, UI work, development, QA, and Git readines
 nice-to-have prompts such as repo-wide autopilot, full delivery autopilot,
 security review, platform update, data/API specialization, and hotfix prompts.
 
-Use `--include-root-docs` only when you want to update `README.md` and `GETTING_STARTED.md`. Solution repos often customize these files. The upstream template's root `AGENTS.md` is template-maintainer guidance and is not copied into solution repos. Codex generated-solution instructions are updated from `agent-configs/codex/AGENTS.md` through agent config materialization, with the preservation rule above. Codex role and prompt adapters are refreshed from `agent-configs/codex/agents/` and `agent-configs/codex/prompts/`. GitHub Copilot instructions are updated through agent config materialization.
+Use `--include-root-docs` only when you want to update `README.md` and `GETTING_STARTED.md`. Solution repos often customize these files. The upstream template's root `AGENTS.md` is template-maintainer guidance and is not copied into solution repos. Codex generated-solution instructions are updated from `agent-configs/codex/AGENTS.md` through agent config materialization, with the preservation rule above. Codex custom agents are refreshed from `agent-configs/codex/agents/`, and Codex workflow skills are refreshed from `agent-configs/codex/skills/`. GitHub Copilot instructions are updated through agent config materialization.
 
 Use `--include-architecture-docs` when the repo should refresh generated shared
 architecture guidance from `delorean_architecture` into `architecture_docs/`.

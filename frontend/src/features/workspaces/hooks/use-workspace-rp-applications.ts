@@ -1,13 +1,16 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
 	getRPApplication,
+	getWorkspaceRPApplicationConfiguration,
 	getRPApplications,
 	getRPApplicationUsageAuditTrail,
 	getRPApplicationUsageAuditTrailSearchAfter,
 	getRPApplicationUsageSummary,
 	type RPApplicationRead,
+	type RPApplicationSummaryRead,
 	type RPApplicationUsageAuditTrailRead,
 	type RPApplicationUsageSummaryRead,
+	type WorkspaceRPApplicationConfigurationRead,
 } from "@/fetch/rp-applications";
 
 export const workspaceRPApplicationsQueryKey = (workspaceUuid: string) =>
@@ -20,6 +23,15 @@ export const workspaceRPApplicationQueryKey = (
 	[
 		...workspaceRPApplicationsQueryKey(workspaceUuid),
 		rpApplicationUuid,
+	] as const;
+
+export const workspaceRPApplicationConfigurationQueryKey = (
+	workspaceUuid: string,
+	rpApplicationUuid: string
+) =>
+	[
+		...workspaceRPApplicationQueryKey(workspaceUuid, rpApplicationUuid),
+		"configuration",
 	] as const;
 
 export const workspaceRPApplicationUsageSummaryQueryKey = (
@@ -47,7 +59,14 @@ export const workspaceRPApplicationAuditTrailQueryKey = (
 	] as const;
 
 export type WorkspaceRPApplicationsState = {
-	applications: Array<RPApplicationRead>;
+	applications: Array<RPApplicationSummaryRead>;
+	error: Error | null;
+	isLoading: boolean;
+	refetch: () => Promise<unknown>;
+};
+
+export type WorkspaceRPApplicationConfigurationState = {
+	configuration: WorkspaceRPApplicationConfigurationRead | null;
 	error: Error | null;
 	isLoading: boolean;
 	refetch: () => Promise<unknown>;
@@ -81,7 +100,7 @@ export type WorkspaceRPApplicationAuditTrailState = {
 export const useWorkspaceRPApplications = (
 	workspaceUuid: string
 ): WorkspaceRPApplicationsState => {
-	const query = useQuery<Array<RPApplicationRead>, Error>({
+	const query = useQuery<Array<RPApplicationSummaryRead>, Error>({
 		enabled: workspaceUuid.length > 0,
 		queryFn: () => getRPApplications(workspaceUuid),
 		queryKey: workspaceRPApplicationsQueryKey(workspaceUuid),
@@ -89,6 +108,31 @@ export const useWorkspaceRPApplications = (
 
 	return {
 		applications: query.data ?? [],
+		error: query.error ?? null,
+		isLoading: query.isLoading,
+		refetch: () => query.refetch(),
+	};
+};
+
+export const useWorkspaceRPApplicationConfiguration = (
+	workspaceUuid: string,
+	rpApplicationUuid: string
+): WorkspaceRPApplicationConfigurationState => {
+	const query = useQuery<WorkspaceRPApplicationConfigurationRead, Error>({
+		enabled: workspaceUuid.length > 0 && rpApplicationUuid.length > 0,
+		queryFn: () =>
+			getWorkspaceRPApplicationConfiguration(
+				workspaceUuid,
+				rpApplicationUuid
+			),
+		queryKey: workspaceRPApplicationConfigurationQueryKey(
+			workspaceUuid,
+			rpApplicationUuid
+		),
+	});
+
+	return {
+		configuration: query.data ?? null,
 		error: query.error ?? null,
 		isLoading: query.isLoading,
 		refetch: () => query.refetch(),

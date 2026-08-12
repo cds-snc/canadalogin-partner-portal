@@ -6,6 +6,7 @@ from .crud_roles import crud_roles
 from .crud_rp_application_developer_invitations import crud_rp_application_developer_invitations
 from .crud_rp_applications import crud_rp_applications
 from .crud_tier import crud_tiers
+from .crud_user_roles import crud_user_roles
 from .crud_users import crud_users
 from .crud_workspace_members import crud_workspace_members
 from .crud_workspaces import crud_workspaces
@@ -25,6 +26,7 @@ __all__ = [
     "crud_rp_application_developer_invitations",
     "crud_tiers",
     "crud_users",
+    "crud_user_roles",
     "crud_workspace_members",
     "crud_workspaces",
 ]

@@ -56,7 +56,47 @@ make bk-dev
 
 `make db-up` starts the `db` and `redis` services from `backend/docker-compose.yml` and publishes them to the host on `localhost:5432` and `localhost:6379`.
 
-Local OIDC authentication is group-gated. The callback only creates a session when the configured claim in `OIDC_GROUP_CLAIM_KEY` contains either `OIDC_ADMIN_GROUP_NAME` or `OIDC_APPLICATION_OWNERS_GROUP_NAME`, which then map to the local roles named by `CLPP_ADMIN_ROLE_NAME` and `CLPP_APPLICATION_OWNERS_ROLE_NAME`.
+OIDC establishes identity only. Upstream group claims and application-owner
+metadata do not grant portal authorization. Each protected request resolves
+active canonical CL Admin assignments and workspace-scoped partner grants from
+the local database; unknown, legacy, mixed, or duplicate active state fails
+closed. Use `INITIAL_CL_ADMIN_EMAIL` only during controlled environment setup
+to bootstrap the first normalized CL Admin assignment. It creates a new enabled
+identity when needed, but fails closed for an existing disabled or deleted user.
+
+## Deterministic local role sessions
+
+The fake role selector is an explicit local-only identity substitute. From the
+repository root, seed its stable `local.example` identities and start both apps
+with the exact gate using:
+
+```bash
+make seed-local-personas
+make start-local-personas
+```
+
+`start-local-personas` sets `ENVIRONMENT=local`, `AUTH_MODE=local_dev`,
+`ENABLE_DEV_ROLE_SELECTOR=true`, and `OIDC_ENABLED=false` for that process. It
+also pins post-login, access-denied, and logout redirects to the configured
+loopback frontend host so a host-only simulated session is not stranded by an
+ambient `.env` redirect. It does not change `.env`, auto-seed application
+startup, or enable the adapter in
+any shared environment. Partial values or an OIDC/local-dev conflict stop
+configuration loading. In ordinary OIDC mode the development route is not
+mounted and is absent from OpenAPI.
+
+To remove and recreate only the namespaced fake persona records:
+
+```bash
+make reset-local-personas
+```
+
+The development API is `GET|POST|DELETE /api/v1/dev/session`. POST accepts only
+`{"fixtureId":"<allowlisted-id>"}`; it never accepts a role or user UUID.
+Browser mutations must send a loopback Origin allowed by
+`DEV_SESSION_ALLOWED_ORIGINS`. An absent Origin is accepted only to support
+local command-line and automated-test clients. Keep these settings and fixture
+commands on a developer workstation; do not use them against shared data.
 
 ## Running
 
@@ -82,6 +122,18 @@ make db-down
 ## Migrations
 
 When authoring Alembic migrations in `backend/src/migrations/versions/`, keep the internal `revision` string at 32 characters or fewer. Prefer short symbolic ids; the filename can stay more descriptive if needed.
+
+The fixed four-role persistence rollout uses the reviewed
+`0019_four_role_expand` -> `0020_four_role_backfill` ->
+`0021_four_role_constraints` sequence, followed by the additive
+`0022_invitation_revocation_actor` and `0023_authorization_im` history and
+information-management revisions. Revision 0020 never derives access from
+legacy admin flags, role arrays, or workspace memberships. An explicit
+`FOUR_ROLE_BACKFILL_MANIFEST` is optional and, when supplied, must keep both
+legacy-assignment lists empty; canonical CL Admin and partner access are
+established through the bootstrap and role-management flows. The dry-run
+reconciliation and optional review-provenance flow is documented in
+`backend/src/migrations/README.md`.
 
 ## Docker
 

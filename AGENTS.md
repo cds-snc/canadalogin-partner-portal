@@ -128,34 +128,35 @@ Common choices:
   accessibility, bilingual, security, privacy, IAM, or records concerns may
   apply.
 
-## Codex Agents And Prompts
+## Codex Agents And Workflow Skills
 
-Codex scaffold targets receive the six Delorean role adapters under
+Codex scaffold targets receive six project-scoped custom agents under
 `.codex/agents/`:
 
-- `coordinator.md`
-- `spec-author.md`
-- `delivery-planner.md`
-- `builder-general.md`
-- `qa-support.md`
-- `release-readiness.md`
+- `coordinator.toml`
+- `spec-author.toml`
+- `delivery-planner.toml`
+- `builder-general.toml`
+- `qa-support.toml`
+- `release-readiness.toml`
 
-They mirror the VS Code agents without VS Code frontmatter or tool names. When
-Codex subagent or multi-agent tooling is available, invoke the receiving role
-with a concise handoff. If it is unavailable, read the target role file and
-continue in this session using that role contract.
+Each standalone TOML file defines `name`, `description`, and
+`developer_instructions`. When Codex subagent or multi-agent tooling is
+available, invoke the receiving role with a concise handoff. If it is
+unavailable, follow the target role contract in the current session.
 
-The matching prompt catalog is under `.codex/prompts/`. Use the prompt file
-that matches the request, for example:
+Reusable Codex workflows are discoverable repo skills under
+`.agents/skills/<name>/SKILL.md`. Invoke the skill that matches the request,
+for example:
 
-- `dl-requirements-start.md`
-- `dl-dev-continue.md`
-- `dl-dev-autopilot.md`
-- `dl-ui-build-page.md`
-- `dl-qa-check.md`
-- `dl-qa-review.md`
+- `$dl-requirements-start`
+- `$dl-dev-continue`
+- `$dl-dev-autopilot`
+- `$dl-ui-build-page`
+- `$dl-qa-check`
+- `$dl-qa-review`
 
-Prompt files include their recommended receiving role.
+Each workflow skill records its recommended receiving role.
 
 ## Implementation Rules
 

@@ -4,9 +4,7 @@ from src.app.main import app
 def test_openapi_documents_unified_error_schema_for_selected_endpoints() -> None:
     openapi_schema = app.openapi()
 
-    error_response_schema_ref = {
-        "$ref": "#/components/schemas/ErrorResponse"
-    }
+    error_response_schema_ref = {"$ref": "#/components/schemas/ErrorResponse"}
 
     user_me_responses = openapi_schema["paths"]["/api/v1/user/me/"]["get"]["responses"]
     assert user_me_responses["401"]["content"]["application/json"]["schema"] == error_response_schema_ref
@@ -26,10 +24,8 @@ def test_openapi_documents_unified_error_schema_for_selected_endpoints() -> None
     assert workspace_detail_responses["404"]["content"]["application/json"]["schema"] == error_response_schema_ref
     assert workspace_detail_responses["422"]["content"]["application/json"]["schema"] == error_response_schema_ref
 
-    workspace_member_create_responses = openapi_schema["paths"]["/api/v1/workspaces/{workspace_uuid}/members"]["post"]["responses"]
-    assert workspace_member_create_responses["400"]["content"]["application/json"]["schema"] == error_response_schema_ref
-    assert workspace_member_create_responses["403"]["content"]["application/json"]["schema"] == error_response_schema_ref
-    assert workspace_member_create_responses["409"]["content"]["application/json"]["schema"] == error_response_schema_ref
+    assert "/api/v1/workspaces/{workspace_uuid}/members" not in openapi_schema["paths"]
+    assert "/api/v1/workspaces/{workspace_uuid}/members/{user_uuid}" not in openapi_schema["paths"]
 
     workspace_application_create_responses = openapi_schema["paths"]["/api/v1/workspaces/{workspace_uuid}/applications"]["post"]["responses"]
     assert workspace_application_create_responses["400"]["content"]["application/json"]["schema"] == error_response_schema_ref
@@ -37,11 +33,15 @@ def test_openapi_documents_unified_error_schema_for_selected_endpoints() -> None
     assert workspace_application_create_responses["404"]["content"]["application/json"]["schema"] == error_response_schema_ref
     assert workspace_application_create_responses["422"]["content"]["application/json"]["schema"] == error_response_schema_ref
 
-    workspace_application_usage_responses = openapi_schema["paths"]["/api/v1/workspaces/{workspace_uuid}/applications/{rp_application_uuid}/usage/summary"]["get"]["responses"]
+    workspace_application_usage_responses = openapi_schema["paths"][
+        "/api/v1/workspaces/{workspace_uuid}/applications/{rp_application_uuid}/usage/summary"
+    ]["get"]["responses"]
     assert workspace_application_usage_responses["400"]["content"]["application/json"]["schema"] == error_response_schema_ref
     assert workspace_application_usage_responses["409"]["content"]["application/json"]["schema"] == error_response_schema_ref
 
-    workspace_application_audit_responses = openapi_schema["paths"]["/api/v1/workspaces/{workspace_uuid}/applications/{rp_application_uuid}/audit-events"]["get"]["responses"]
+    workspace_application_audit_responses = openapi_schema["paths"][
+        "/api/v1/workspaces/{workspace_uuid}/applications/{rp_application_uuid}/audit-events"
+    ]["get"]["responses"]
     assert workspace_application_audit_responses["404"]["content"]["application/json"]["schema"] == error_response_schema_ref
     assert workspace_application_audit_responses["409"]["content"]["application/json"]["schema"] == error_response_schema_ref
 

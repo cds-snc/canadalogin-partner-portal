@@ -1,493 +1,331 @@
 import type { PropsWithChildren, ReactElement } from "react";
-import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
-import { describe, expect, it, vi } from "vitest";
+import { fireEvent, render, screen } from "@testing-library/react";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import { UnauthorizedRequestError } from "@/fetch";
 import { UsersPage } from "@/features/users/pages/UsersPage";
-import { useDepartments, useRoles, useUserDepartment, useUserManagement, useUserRole } from "@/hooks";
-import { ToastProvider } from "@/components/ui/Toast";
+import { usePendingUserInvitations, useUserManagement } from "@/hooks";
 
-const navigate = vi.fn((options: { replace?: boolean; search?: Record<string, string>; to: string }): Promise<void> => {
-	void options;
+const adminListState = vi.hoisted(() => ({
+	page: 1,
+	searchDraft: "",
+	setPage: vi.fn(),
+	setSearchDraft: vi.fn(),
+}));
+const navigate = vi.hoisted(() => vi.fn());
 
-	return Promise.resolve();
-});
+vi.mock("@tanstack/react-router", () => ({
+	useNavigate: () => navigate,
+}));
 
 vi.mock("react-i18next", () => ({
-	useTranslation: (): { t: (key: string, options?: Record<string, string>) => string } => ({
-			t: (key: string, options?: Record<string, string>): string => {
-				const translations: Record<string, string> = {
-					"users.addRole": "Add role",
-					"users.currentRoles": "Assigned roles",
-					"users.department": `Department: ${options?.["value"] ?? ""}`,
-					"users.departmentFilterLabel": "Filter departments",
-					"users.departmentLabel": "Department",
-					"users.departmentSaveAction": "Save department",
-				"users.createAction": "Create user",
-				"users.createTitle": "Create user",
-					"users.loadingDepartmentBody": "Loading department assignment.",
-				"users.editTitle": "Edit user",
-				"users.email": `Email: ${options?.["value"] ?? ""}`,
-				"users.loadingRoleBody": "Loading role assignment.",
-					"users.manageDepartmentTitle": "Assigned department",
-				"users.manageAction": "Manage user",
-					"users.manageRolesAction": "Manage roles",
-					"users.manageRolesTitle": `Manage roles for ${options?.["email"] ?? ""}`,
-				"users.manageRoleTitle": "Assigned roles",
-					"users.noDepartment": "No department assigned",
-					"users.noRole": "No roles assigned",
-					"users.addRoleAction": "Add role",
-					"users.addingRoleAction": "Adding role...",
-					"users.selectRole": "Select a role to add...",
-				"users.profileLink": "Open profile",
-				"users.provider": `Provider: ${options?.["value"] ?? ""}`,
-				"users.role": `Role: ${options?.["value"] ?? ""}`,
-				"users.roleLabel": "Role",
-				"users.resultsSummary": `Showing ${options?.["count"] ?? "0"} users on page ${options?.["page"] ?? "1"}`,
-				"users.roleSaveAction": "Save role",
-					"users.roleRemovedSuccess": "Role removed.",
-					"users.roleAddedSuccess": "Role added.",
-					"users.removeRole": "Remove role",
-					"users.removeRoleConfirmTitle": "Remove role?",
-				"users.summary": "Protected list of backend users.",
-				"users.title": "Users",
-					"users.username": `Username: ${options?.["value"] ?? ""}`,
-			};
-
-			return translations[key] ?? key;
-		},
+	useTranslation: () => ({
+		i18n: { resolvedLanguage: "en" },
+		t: (key: string): string =>
+			({
+				"authorization.roles.clAdmin": "CL Admin",
+				"authorization.roles.readOnly": "Read Only",
+				"users.accountStatusActive": "Active",
+				"users.accountStatusDisabled": "Disabled",
+				"users.accountStatusLabel": "Account status",
+				"users.emailLabel": "Email",
+				"users.globalAccessLabel": "Global access",
+				"users.invitationExpiresLabel": "Expires",
+				"users.invitationItemLabel": "pending invitations",
+				"users.invitationStatusLabel": "Status",
+				"users.inviteWorkspaceLabel": "Workspace",
+				"users.inviteAction": "Invite user",
+				"users.manageAction": "Manage",
+				"users.nameLabel": "Name",
+				"users.noCanonicalGlobalRoleShort": "None",
+				"users.noPendingInvitations": "No pending invitations.",
+				"users.noWorkspaceAccess": "None",
+				"users.pendingInvitationsSummary":
+					"People listed here have not accepted access yet.",
+				"users.pendingInvitationsErrorBody":
+					"The pending invitations list could not be loaded.",
+				"users.pendingInvitationsErrorTitle":
+					"Unable to load pending invitations",
+				"users.pendingInvitationsTitle": "Pending invitations",
+				"users.pendingInvitationStatus": "Pending",
+				"users.requestedRoleLabel": "Requested role",
+				"users.searchEmptyBody": "No users matched the directory search.",
+				"users.searchLabel": "Search users",
+				"users.summary": "Review users and their canonical access.",
+				"users.title": "Users and access",
+				"users.workspaceAccessLabel": "Workspace access",
+			})[key] ?? key,
 	}),
 }));
 
-vi.mock("@gcds-core/components-react", () => ({
-	GcdsBreadcrumbs: ({ children }: PropsWithChildren): ReactElement => <nav>{children}</nav>,
-	GcdsBreadcrumbsItem: ({ children }: PropsWithChildren): ReactElement => <span>{children}</span>,
-	GcdsHeading: ({ children }: PropsWithChildren): ReactElement => <h1>{children}</h1>,
-	GcdsLink: ({ children, ...properties }: PropsWithChildren<Record<string, unknown>>): ReactElement => <a {...properties}>{children}</a>,
-	GcdsNotice: ({ children, noticeTitle }: PropsWithChildren<{ noticeTitle?: string }>): ReactElement => (
+vi.mock("@/components/ui", () => ({
+	DataTable: ({
+		action,
+		columns,
+		emptyMessage,
+		onSearchChange,
+		primaryAction,
+		rows,
+		searchLabel,
+		searchQuery,
+		title,
+	}: {
+		action?: Array<{
+			buttonLabel: string;
+			onAction: (row: Record<string, string>) => void;
+			screenReaderLabel?: (row: Record<string, string>) => string;
+		}>;
+		columns: Array<{ field: string; headerName: string }>;
+		emptyMessage?: string;
+		onSearchChange?: (query: string) => void;
+		primaryAction?: { buttonLabel: string; onAction: () => void };
+		rows: Array<Record<string, string>>;
+		searchLabel?: string;
+		searchQuery?: string;
+		title: string;
+	}): ReactElement => (
 		<section>
-			{noticeTitle ? <h2>{noticeTitle}</h2> : null}
-			{children}
+			<h2>{title}</h2>
+			{columns.map((column) => (
+				<span key={column.field}>{column.headerName}</span>
+			))}
+			{searchLabel && onSearchChange ? (
+				<label>
+					{searchLabel}
+					<input
+						type="search"
+						value={searchQuery}
+						onInput={(event) => {
+							onSearchChange((event.target as HTMLInputElement).value);
+						}}
+					/>
+				</label>
+			) : null}
+			{rows.length === 0 && emptyMessage ? <p>{emptyMessage}</p> : null}
+			{primaryAction ? (
+				<button type="button" onClick={primaryAction.onAction}>
+					{primaryAction.buttonLabel}
+				</button>
+			) : null}
+			{rows.map((row) => (
+				<div key={row["uuid"] ?? row["invitationUuid"]}>
+					{columns.map((column) => (
+						<span key={column.field}>{row[column.field]}</span>
+					))}
+					{action?.map((item) => (
+						<button
+							key={item.buttonLabel}
+							type="button"
+							onClick={() => item.onAction(row)}
+						>
+							{item.buttonLabel}{" "}
+							<span className="sr-only">{item.screenReaderLabel?.(row)}</span>
+						</button>
+					))}
+				</div>
+			))}
 		</section>
 	),
-	GcdsText: ({ children }: PropsWithChildren): ReactElement => <p>{children}</p>,
-}));
-
-vi.mock("@/components/ui", () => ({
-	Button: ({ children, onGcdsClick, type }: PropsWithChildren<{ onGcdsClick?: () => void; type?: "button" | "submit" }>): ReactElement => (
-		<button type={type ?? "button"} onClick={onGcdsClick}>
-			{children}
-		</button>
+	Heading: ({
+		children,
+		tag = "h1",
+	}: PropsWithChildren<{ tag?: "h1" | "h2" }>): ReactElement => {
+		const Component = tag;
+		return <Component>{children}</Component>;
+	},
+	Notice: ({ children }: PropsWithChildren): ReactElement => (
+		<section>{children}</section>
 	),
-	ConfirmDialog: ({ confirmLabel, isOpen, onConfirm, title }: { confirmLabel?: string; isOpen: boolean; onConfirm?: () => void; title: string }): ReactElement | null =>
-		isOpen ? (
-			<section aria-label={title} role="dialog">
-				<h2>{title}</h2>
-				<button type="button" onClick={onConfirm}>{confirmLabel ?? "Confirm"}</button>
-			</section>
-		) : null,
-	DataTable: ({ action, pageNumber, primaryAction, rows, title, summary }: { action?: any; pageNumber?: number; primaryAction?: { buttonLabel: string; onAction: () => void }; rows?: Array<{ email: string; name: string; provider: string; roleName: string; uuid: string }>; title?: string; summary?: string }): ReactElement => (
-    <section>
-        {title ? <h2>{title}</h2> : null}
-        <p>{summary ?? `Showing ${rows?.length ?? 0} users on page ${pageNumber ?? 1}`}</p>
-        {primaryAction ? <button onClick={primaryAction.onAction} type="button">{primaryAction.buttonLabel}</button> : null}
-        {action && rows && rows[0] ? (
-            Array.isArray(action) ? (
-                action.map((a: any, i: number) => (
-                    <button key={i} onClick={() => a.onAction(rows[0]!)} type="button">{a.buttonLabel}</button>
-                ))
-            ) : (
-                <button onClick={() => action.onAction(rows[0]!)} type="button">{action.buttonLabel}</button>
-            )
-        ) : null}
-    </section>
-),
-	Pagination: ({ currentPage, totalPages }: { currentPage: number; totalPages: number }): ReactElement | null => (totalPages > 1 ? <p>{`Page ${currentPage} of ${totalPages}`}</p> : null),
-	Input: ({ inputId, label, name, onInput, type, value }: { inputId: string; label: string; name: string; onInput?: (event: { target: { value: string } }) => void; type?: string; value?: string }): ReactElement => (
-		<label htmlFor={inputId}>
-			<span>{label}</span>
-			<input id={inputId} name={name} type={type} value={value} onInput={(event): void => onInput?.({ target: { value: (event.target as HTMLInputElement).value } })} />
-		</label>
-	),
-	Heading: ({ children }: PropsWithChildren): ReactElement => <h1>{children}</h1>,
-	Notice: ({ children, noticeTitle }: PropsWithChildren<{ noticeTitle?: string }>): ReactElement => <section>{noticeTitle ? <h2>{noticeTitle}</h2> : null}{children}</section>,
-	Select: ({ children, label, name, onInput, selectId, value }: PropsWithChildren<{ label: string; name: string; onInput?: (event: { target: { value: string } }) => void; selectId: string; value?: string }>): ReactElement => (
-		<label htmlFor={selectId}>
-			<span>{label}</span>
-			<select id={selectId} name={name} value={value} onInput={(event): void => onInput?.({ target: { value: (event.target as HTMLSelectElement).value } })}>
-				{children}
-			</select>
-		</label>
-	),
+	Pagination: (): null => null,
 	Text: ({ children }: PropsWithChildren): ReactElement => <p>{children}</p>,
-	Modal: ({ children, footer, isOpen, title }: PropsWithChildren<{ footer?: ReactElement; isOpen: boolean; title: string }>): ReactElement | null => (isOpen ? <section><h2>{title}</h2>{children}{footer}</section> : null),
-	ToastProvider: ({ children }: PropsWithChildren): ReactElement => <>{children}</>,
-}));
-
-vi.mock("@tanstack/react-router", () => ({
-	useNavigate: (): typeof navigate => navigate,
-	useRouterState: ({ select }: { select: (state: { location: { pathname: string } }) => string }): string =>
-		select({ location: { pathname: "/users" } }),
 }));
 
 vi.mock("@/hooks", () => ({
-	useAdminListState: vi.fn(() => ({
-		page: 1,
-		searchDraft: "",
-		setPage: vi.fn(),
-		setSearchDraft: vi.fn(),
-	})),
-	useRoles: vi.fn(),
-	useDepartments: vi.fn(),
+	useAdminListState: () => adminListState,
+	usePendingUserInvitations: vi.fn(),
 	useUserManagement: vi.fn(),
-	useUserDepartment: vi.fn(),
-	useUserRole: vi.fn(),
 }));
 
+const sampleUser = {
+	email: "jane@example.com",
+	enabled: true,
+	globalRole: "cl_admin" as const,
+	name: "Jane Doe",
+	uuid: "user-uuid-7",
+	workspaceAssignments: [
+		{
+			role: "read_only" as const,
+			workspaceName: "Benefits",
+			workspaceUuid: "workspace-uuid-1",
+		},
+	],
+};
+
+const sampleInvitation = {
+	createdAt: "2026-08-12T12:00:00Z",
+	invitationUuid: "invitation-uuid-1",
+	inviteExpiresAt: "2026-08-20T12:00:00Z",
+	invitedEmail: "invited@example.com",
+	role: "read_only" as const,
+	status: "pending" as const,
+	workspaceName: "Benefits",
+	workspaceUuid: "workspace-uuid-1",
+};
+
+const setUsers = (
+	users: Array<typeof sampleUser>,
+	error: Error | null = null
+): void => {
+	vi.mocked(useUserManagement).mockReturnValue({
+		error,
+		isLoading: false,
+		response: error
+			? null
+			: {
+					data: users,
+					has_more: false,
+					items_per_page: 10,
+					page: 1,
+					total_count: users.length,
+				},
+		users,
+	} as never);
+};
+
 describe("UsersPage", () => {
-	it("supports modal-driven user management with inline role assignment", () => {
-		vi.mocked(useUserManagement).mockReturnValue({
+	beforeEach(() => {
+		vi.clearAllMocks();
+		adminListState.page = 1;
+		adminListState.searchDraft = "";
+		vi.mocked(usePendingUserInvitations).mockReturnValue({
 			error: null,
-			createUser: vi.fn((): Promise<void> => Promise.resolve()),
-			deleteUser: vi.fn((): Promise<void> => Promise.resolve()),
-			isCreating: false,
-			isDeleting: false,
+			invitations: [],
 			isLoading: false,
-			isUpdating: false,
-			itemsPerPage: 10,
-			page: 1,
 			response: {
-				data: [
-					{
-							"authProvider": "gc-sso",
-							"authSubject": "subject-123",
-							"departmentAbbreviation": "AAFC",
-						email: "jane@example.com",
-						name: "Jane Doe",
-					"profileImageUrl": "https://example.com/jane.png",
-					"departmentUuid": "department-uuid-1",
-					"roleUuids": ["role-uuid-3"],
-					"tierUuid": "tier-uuid-3",
-						uuid: "user-uuid-7",
-					},
-				],
-				"has_more": false,
-				"items_per_page": 10,
-				page: 1,
-				"total_count": 1,
-			},
-			users: [
-				{
-							"authProvider": "gc-sso",
-							"authSubject": "subject-123",
-							"departmentAbbreviation": "AAFC",
-					email: "jane@example.com",
-					name: "Jane Doe",
-					"profileImageUrl": "https://example.com/jane.png",
-					"departmentUuid": "department-uuid-1",
-					"roleUuids": ["role-uuid-3"],
-					"tierUuid": "tier-uuid-3",
-					uuid: "user-uuid-7",
-				},
-			],
-			updateUser: vi.fn((): Promise<void> => Promise.resolve()),
-		});
-		vi.mocked(useRoles).mockReturnValue({
-			error: null,
-			isLoading: false,
-			itemsPerPage: 10,
-			page: 1,
-			refetch: vi.fn((): Promise<unknown> => Promise.resolve()),
-			response: {
-				data: [
-					{ created_at: "2026-03-17T00:00:00Z", description: "Administrator role", name: "admin", uuid: "role-uuid-3" },
-					{ created_at: "2026-03-17T00:00:00Z", description: "Editor role", name: "editor", uuid: "role-uuid-4" },
-				],
-				"has_more": false,
-				"items_per_page": 10,
-				page: 1,
-				"total_count": 2,
-			},
-			roles: [
-				{ created_at: "2026-03-17T00:00:00Z", description: "Administrator role", name: "admin", uuid: "role-uuid-3" },
-				{ created_at: "2026-03-17T00:00:00Z", description: "Editor role", name: "editor", uuid: "role-uuid-4" },
-			],
-		});
-		const department = {
-			abbreviation: "AAFC",
-			abbreviationFr: "AAC",
-			createdAt: "2026-03-23T00:00:00Z",
-			gcOrgId: 42,
-			leadDepartmentName: "Agriculture and Agri-Food Canada",
-			leadDepartmentNameFr: "Agriculture et Agroalimentaire Canada",
-			name: "Engineering",
-			nameFr: "Ingenierie",
-			uuid: "department-uuid-1",
-		};
-		const secondDepartment = {
-			abbreviation: "FIN",
-			abbreviationFr: "FIN",
-			createdAt: "2026-03-23T00:00:00Z",
-			gcOrgId: 108,
-			leadDepartmentName: "Department of Finance Canada",
-			leadDepartmentNameFr: "Ministere des Finances Canada",
-			name: "Finance",
-			nameFr: "Finances",
-			uuid: "department-uuid-2",
-		};
-		vi.mocked(useDepartments).mockReturnValue({
-			error: null,
-			isLoading: false,
-			itemsPerPage: 200,
-			page: 1,
-			refetch: vi.fn((): Promise<unknown> => Promise.resolve()),
-			response: {
-				data: [department, secondDepartment],
+				data: [],
 				has_more: false,
-				items_per_page: 200,
+				items_per_page: 10,
 				page: 1,
-				total_count: 2,
+				total_count: 0,
 			},
-			departments: [department, secondDepartment],
-		});
-		vi.mocked(useUserDepartment).mockReturnValue({
-			department,
-			error: null,
-			isLoading: false,
-			isUpdating: false,
-			updateUserDepartment: vi.fn((): Promise<void> => Promise.resolve()),
-		});
-		vi.mocked(useUserRole).mockReturnValue({
-			addRole: vi.fn((): Promise<void> => Promise.resolve()),
-			error: null,
-			isAdding: false,
-			isLoading: false,
-			isRemoving: false,
-			removeRole: vi.fn((): Promise<void> => Promise.resolve()),
-			roles: [{ created_at: "2026-03-17T00:00:00Z", description: "Administrator role", name: "admin", uuid: "role-uuid-3" }],
-		});
-
-		render(
-			<ToastProvider>
-				<UsersPage />
-			</ToastProvider>,
-		);
-
-		expect(screen.getAllByRole("heading", { name: /users/i }).length).toBeGreaterThan(0);
-		expect(screen.getByRole("button", { name: /create user/i })).toBeTruthy();
-		expect(screen.getByText(/showing 1 users on page 1/i)).toBeTruthy();
-
-		fireEvent.click(screen.getByRole("button", { name: /create user/i }));
-		expect(screen.getByRole("heading", { name: /create user/i })).toBeTruthy();
-
-		fireEvent.click(screen.getByRole("button", { name: /manage user/i }));
-		expect(useDepartments).toHaveBeenCalledWith(1, 200);
-		expect(screen.getByRole("heading", { name: /edit user/i })).toBeTruthy();
-		expect(screen.getByRole("heading", { name: /assigned department/i })).toBeTruthy();
-		expect(screen.getByLabelText(/filter departments/i)).toBeTruthy();
-		expect(screen.getByRole("option", { name: /engineering/i })).toBeTruthy();
-		expect(screen.getByRole("option", { name: /finance/i })).toBeTruthy();
-		fireEvent.input(screen.getByLabelText(/filter departments/i), { target: { value: "fin" } });
-		expect(screen.queryByRole("option", { name: /engineering/i })).toBeNull();
-		expect(screen.getByRole("option", { name: /finance/i })).toBeTruthy();
-		expect(screen.getByRole("button", { name: /save department/i })).toBeTruthy();
-		fireEvent.input(screen.getByLabelText(/^department$/i), { target: { value: "FIN" } });
-		fireEvent.click(screen.getByRole("button", { name: /save department/i }));
-		expect(vi.mocked(useUserDepartment).mock.results[0]?.value.updateUserDepartment).toHaveBeenCalledWith("user-uuid-7", { departmentAbbreviation: "FIN" });
+		} as never);
 	});
 
-	it("supports inline role assignment and removal from the roles modal", async () => {
-		const addRole = vi.fn((): Promise<void> => Promise.resolve());
-		const removeRole = vi.fn((): Promise<void> => Promise.resolve());
+	it("shows access instead of provider metadata and uses concise actions", () => {
+		setUsers([sampleUser]);
 
-		vi.mocked(useUserManagement).mockReturnValue({
-			error: null,
-			createUser: vi.fn((): Promise<void> => Promise.resolve()),
-			deleteUser: vi.fn((): Promise<void> => Promise.resolve()),
-			isCreating: false,
-			isDeleting: false,
-			isLoading: false,
-			isUpdating: false,
-			itemsPerPage: 10,
-			page: 1,
-			response: {
-				data: [
-					{
-						"authProvider": "gc-sso",
-						"authSubject": "subject-123",
-						"departmentAbbreviation": "AAFC",
-						email: "jane@example.com",
-						name: "Jane Doe",
-						"profileImageUrl": "https://example.com/jane.png",
-						"departmentUuid": "department-uuid-1",
-						"roleUuids": [],
-						"tierUuid": "tier-uuid-3",
-						uuid: "user-uuid-7",
-					},
-				],
-				"has_more": false,
-				"items_per_page": 10,
-				page: 1,
-				"total_count": 1,
-			},
-			users: [
-				{
-					"authProvider": "gc-sso",
-					"authSubject": "subject-123",
-					"departmentAbbreviation": "AAFC",
-					email: "jane@example.com",
-					name: "Jane Doe",
-					"profileImageUrl": "https://example.com/jane.png",
-					"departmentUuid": "department-uuid-1",
-					"roleUuids": [],
-					"tierUuid": "tier-uuid-3",
-					uuid: "user-uuid-7",
-				},
-			],
-			updateUser: vi.fn((): Promise<void> => Promise.resolve()),
-		});
-		vi.mocked(useRoles).mockReturnValue({
-			error: null,
-			isLoading: false,
-			itemsPerPage: 10,
-			page: 1,
-			refetch: vi.fn((): Promise<unknown> => Promise.resolve()),
-			response: {
-				data: [
-					{ created_at: "2026-03-17T00:00:00Z", description: "Administrator role", name: "admin", uuid: "role-uuid-3" },
-					{ created_at: "2026-03-17T00:00:00Z", description: "Editor role", name: "editor", uuid: "role-uuid-4" },
-				],
-				"has_more": false,
-				"items_per_page": 10,
-				page: 1,
-				"total_count": 2,
-			},
-			roles: [
-				{ created_at: "2026-03-17T00:00:00Z", description: "Administrator role", name: "admin", uuid: "role-uuid-3" },
-				{ created_at: "2026-03-17T00:00:00Z", description: "Editor role", name: "editor", uuid: "role-uuid-4" },
-			],
-		});
-		vi.mocked(useDepartments).mockReturnValue({
-			error: null,
-			isLoading: false,
-			itemsPerPage: 200,
-			page: 1,
-			refetch: vi.fn((): Promise<unknown> => Promise.resolve()),
-			response: { data: [], has_more: false, items_per_page: 200, page: 1, total_count: 0 },
-			departments: [],
-		});
-		vi.mocked(useUserDepartment).mockReturnValue({
-			department: null,
-			error: null,
-			isLoading: false,
-			isUpdating: false,
-			updateUserDepartment: vi.fn((): Promise<void> => Promise.resolve()),
-		});
-		vi.mocked(useUserRole).mockReturnValue({
-			addRole,
-			error: null,
-			isAdding: false,
-			isLoading: false,
-			isRemoving: false,
-			removeRole,
-			roles: [
-				{
-					created_at: "2026-03-17T00:00:00Z",
-					description: "Administrator role",
-					name: "admin",
-					uuid: "role-uuid-3",
-				},
-			],
-		});
+		render(<UsersPage />);
 
-		render(
-			<ToastProvider>
-				<UsersPage />
-			</ToastProvider>,
+		expect(
+			screen.getByRole("heading", { name: "Users and access", level: 1 })
+		).toBeTruthy();
+		expect(screen.getByText("Global access")).toBeTruthy();
+		expect(screen.getByText("Workspace access")).toBeTruthy();
+		expect(screen.getByText("CL Admin")).toBeTruthy();
+		expect(screen.getByText("Benefits — Read Only")).toBeTruthy();
+		expect(screen.queryByText(/auth provider/i)).toBeNull();
+		expect(screen.getByRole("button", { name: "Invite user" })).toBeTruthy();
+		expect(
+			screen.getByRole("button", { name: "Manage jane@example.com" })
+		).toBeTruthy();
+	});
+
+	it("routes invite and manage actions to their dedicated workflows", () => {
+		setUsers([sampleUser]);
+		render(<UsersPage />);
+
+		fireEvent.click(screen.getByRole("button", { name: "Invite user" }));
+		fireEvent.click(
+			screen.getByRole("button", { name: "Manage jane@example.com" })
 		);
 
-		fireEvent.click(screen.getByRole("button", { name: /manage roles/i }));
-
-		await waitFor(() => {
-			expect(useUserRole).toHaveBeenLastCalledWith("user-uuid-7");
-		});
-		expect(screen.getByText("admin")).toBeTruthy();
-		fireEvent.input(screen.getByLabelText(/^role$/i), {
-			target: { value: "role-uuid-4" },
-		});
-		fireEvent.click(screen.getByRole("button", { name: /^add role$/i }));
-
-		await waitFor(() => {
-			expect(addRole).toHaveBeenCalledWith("user-uuid-7", "role-uuid-4");
-		});
-
-		fireEvent.click(screen.getByRole("button", { name: /manage roles/i }));
-		fireEvent.click(screen.getAllByRole("button", { name: /^remove role$/i })[0]!);
-
-		const dialog = screen.getByRole("dialog", { name: /remove role\?/i });
-		fireEvent.click(within(dialog).getByRole("button", { name: /^remove role$/i }));
-
-		await waitFor(() => {
-			expect(removeRole).toHaveBeenCalledWith("user-uuid-7", "role-uuid-3");
+		expect(navigate).toHaveBeenNthCalledWith(1, { to: "/users/invite" });
+		expect(navigate).toHaveBeenNthCalledWith(2, {
+			params: { userUuid: sampleUser.uuid },
+			to: "/users/$userUuid",
 		});
 	});
 
-	it("does not render a generic error notice for unauthorized hook errors", () => {
-		vi.mocked(useUserManagement).mockReturnValue({
-			error: new UnauthorizedRequestError(),
-			createUser: vi.fn((): Promise<void> => Promise.resolve()),
-			deleteUser: vi.fn((): Promise<void> => Promise.resolve()),
-			isCreating: false,
-			isDeleting: false,
-			isLoading: false,
-			isUpdating: false,
-			itemsPerPage: 10,
-			page: 1,
-			response: null,
-			updateUser: vi.fn((): Promise<void> => Promise.resolve()),
-			users: [],
-		});
-		vi.mocked(useRoles).mockReturnValue({
+	it("shows pending invitees separately and routes management to workspace access", () => {
+		setUsers([sampleUser]);
+		vi.mocked(usePendingUserInvitations).mockReturnValue({
 			error: null,
+			invitations: [sampleInvitation],
 			isLoading: false,
-			itemsPerPage: 10,
-			page: 1,
-			refetch: vi.fn((): Promise<unknown> => Promise.resolve()),
-			response: null,
-			roles: [],
-		});
-		vi.mocked(useDepartments).mockReturnValue({
-			error: null,
-			isLoading: false,
-			itemsPerPage: 10,
-			page: 1,
-			refetch: vi.fn((): Promise<unknown> => Promise.resolve()),
-			response: null,
-			departments: [],
-		});
-		vi.mocked(useUserDepartment).mockReturnValue({
-			department: null,
-			error: null,
-			isLoading: false,
-			isUpdating: false,
-			updateUserDepartment: vi.fn((): Promise<void> => Promise.resolve()),
-		});
-		vi.mocked(useUserRole).mockReturnValue({
-			error: null,
-			isAdding: false,
-			isLoading: false,
-			isRemoving: false,
-			roles: [],
-			addRole: vi.fn((): Promise<void> => Promise.resolve()),
-			removeRole: vi.fn((): Promise<void> => Promise.resolve()),
-		});
+			response: {
+				data: [sampleInvitation],
+				has_more: false,
+				items_per_page: 10,
+				page: 1,
+				total_count: 1,
+			},
+		} as never);
 
-		render(
-			<ToastProvider>
-				<UsersPage />
-			</ToastProvider>,
+		render(<UsersPage />);
+
+		expect(
+			screen.getAllByRole("heading", {
+				name: "Pending invitations",
+				level: 2,
+			})
+		).toHaveLength(2);
+		expect(screen.getAllByText("invited@example.com")).toHaveLength(2);
+		expect(screen.getByText("Pending")).toBeTruthy();
+		fireEvent.click(
+			screen.getByRole("button", { name: "Manage invited@example.com" })
 		);
+		expect(navigate).toHaveBeenLastCalledWith({
+			params: { workspaceUuid: "workspace-uuid-1" },
+			to: "/workspaces/$workspaceUuid/access",
+		});
+	});
 
-		expect(navigate).not.toHaveBeenCalled();
-		expect(screen.queryByText(/users.errorTitle/i)).toBeNull();
+	it("states when there are no pending invitations", () => {
+		setUsers([sampleUser]);
+		render(<UsersPage />);
+
+		expect(screen.getByText("No pending invitations.")).toBeTruthy();
+	});
+
+	it("keeps the invite task available when no accepted users exist", () => {
+		setUsers([]);
+		render(<UsersPage />);
+
+		expect(screen.getByRole("button", { name: "Invite user" })).toBeTruthy();
+	});
+
+	it("shows a safe section error when pending invitations cannot load", () => {
+		setUsers([sampleUser]);
+		vi.mocked(usePendingUserInvitations).mockReturnValue({
+			error: new Error("database details must not render"),
+			invitations: [],
+			isLoading: false,
+			response: null,
+		} as never);
+
+		render(<UsersPage />);
+
+		expect(
+			screen.getByText("The pending invitations list could not be loaded.")
+		).toBeTruthy();
+		expect(screen.queryByText(/database details/i)).toBeNull();
+	});
+
+	it("keeps server-backed directory search visible when no users match", () => {
+		adminListState.searchDraft = "missing person";
+		setUsers([]);
+		render(<UsersPage />);
+
+		const search = screen.getByRole("searchbox", { name: "Search users" });
+		expect((search as HTMLInputElement).value).toBe("missing person");
+		expect(
+			screen.getByText("No users matched the directory search.")
+		).toBeTruthy();
+	});
+
+	it("does not render a duplicate notice for an unauthorized list response", () => {
+		setUsers([], new UnauthorizedRequestError());
+		render(<UsersPage />);
+
+		expect(screen.queryByText("users.errorTitle")).toBeNull();
 	});
 });

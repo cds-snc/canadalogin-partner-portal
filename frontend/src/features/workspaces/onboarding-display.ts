@@ -4,10 +4,23 @@ type Translate = (
 ) => string;
 
 const formatTokenLabel = (value: string): string =>
-	value
-		.trim()
-		.replace(/_/g, " ")
-		.replace(/\s+/g, " ");
+	value.trim().replace(/_/g, " ").replace(/\s+/g, " ");
+
+export const getCanadaLoginEnvironmentLabel = (
+	t: Translate,
+	environment: string
+): string => {
+	switch (environment.trim().toLowerCase()) {
+		case "test":
+			return t("workspaces.environmentTest");
+		case "staging":
+			return t("workspaces.environmentStaging");
+		case "production":
+			return t("workspaces.environmentProduction");
+		default:
+			return formatTokenLabel(environment);
+	}
+};
 
 export const getWorkspaceOnboardingStateLabel = (
 	t: Translate,

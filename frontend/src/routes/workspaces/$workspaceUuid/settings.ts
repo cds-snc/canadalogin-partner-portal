@@ -2,17 +2,20 @@ import { createFileRoute } from "@tanstack/react-router";
 import { lazy } from "react";
 import i18n from "@/common/i18n";
 import type { RouteBackLinkContext } from "@/types/route-breadcrumbs";
-import { requireAuthenticatedUser } from "../../../features/auth/auth-routing";
+import { requireCapability } from "../../../features/auth/auth-routing";
 
 const WorkspaceSettingsPage = lazy(async () => ({
-	default: (await import("../../../features/workspaces/pages/WorkspaceSettingsPage"))
-		.WorkspaceSettingsPage,
+	default: (
+		await import("../../../features/workspaces/pages/WorkspaceSettingsPage")
+	).WorkspaceSettingsPage,
 }));
 
 export const Route = createFileRoute("/workspaces/$workspaceUuid/settings")({
 	beforeLoad: async ({ params }) => {
-		await requireAuthenticatedUser(
-			`/workspaces/${params.workspaceUuid}/settings`
+		await requireCapability(
+			`/workspaces/${params.workspaceUuid}/settings`,
+			"workspace_metadata_write",
+			params.workspaceUuid
 		);
 
 		return {

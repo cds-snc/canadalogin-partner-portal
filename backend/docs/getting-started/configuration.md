@@ -68,6 +68,11 @@ ACCESS_TOKEN_EXPIRE_MINUTES=30               # Default: 30
 REFRESH_TOKEN_EXPIRE_DAYS=7                  # Default: 7
 ```
 
+`SECRET_KEY` must contain at least 32 bytes. Local and test use an explicit
+test-only sentinel by default; `dev`, `staging`, and `production` refuse to
+start until a different key is injected. Keep the key in a runtime secret
+store, not a container build argument or image layer.
+
 ### Session and OIDC Settings
 
 ```env
@@ -95,22 +100,16 @@ OIDC_CLIENT_SECRET="your-client-secret"
 OIDC_SCOPES="openid profile email"
 OIDC_REDIRECT_URI="http://127.0.0.1:8000/api/v1/auth/oidc/callback"
 OIDC_POST_LOGIN_REDIRECT="http://localhost:3000/auth-complete"
-OIDC_GROUP_CLAIM_KEY="groupIds"
-OIDC_ADMIN_GROUP_NAME="admin"
-OIDC_APPLICATION_OWNERS_GROUP_NAME="application owners"
-CLPP_ADMIN_ROLE_NAME="admin"
-CLPP_APPLICATION_OWNERS_ROLE_NAME="application owners"
 
 ```
 
 - Set `OIDC_ENABLED=true` to enable `/api/v1/auth/oidc/login` and `/api/v1/auth/oidc/callback`.
 - If your IdP strictly validates callback host and port, set `OIDC_REDIRECT_URI` to the exact pre-registered callback URL to avoid `redirect_uri` mismatch errors.
 - For split-origin local development, set `OIDC_POST_LOGIN_REDIRECT` to the frontend origin, for example `http://localhost:3000/auth-complete`, so the backend callback returns the browser to the SPA instead of the backend host.
-- The callback reads the claim named by `OIDC_GROUP_CLAIM_KEY` and only allows users who belong to `OIDC_ADMIN_GROUP_NAME` or `OIDC_APPLICATION_OWNERS_GROUP_NAME`.
-- If your provider returns a different claim name such as `groups`, change `OIDC_GROUP_CLAIM_KEY` to match.
-- If your test account is in differently named groups, update `OIDC_ADMIN_GROUP_NAME` and `OIDC_APPLICATION_OWNERS_GROUP_NAME` instead of changing code.
-- For local-only development, `OIDC_GROUP_CLAIM_KEY` can point to another stable claim such as `email`; setting `OIDC_ADMIN_GROUP_NAME` to your own email address effectively fakes local group membership without changing code.
-- `CLPP_ADMIN_ROLE_NAME` and `CLPP_APPLICATION_OWNERS_ROLE_NAME` are the local database role names that the matched IdP groups map to.
+- OIDC claims establish identity and account linkage only. They never grant a portal role.
+- The callback admits an enabled user only when the portal has a current canonical assignment or the user has an eligible pending invitation.
+- Use the role-assignment API to manage canonical roles. For the first CL Admin only, explicitly run the idempotent bootstrap with `INITIAL_CL_ADMIN_EMAIL` set for that invocation.
+- For local persona testing, use the exact local-only `AUTH_MODE=local_dev` gate described in the repository README; do not repurpose identity claims as roles.
 - `REDIS_SESSION_DB=1` keeps session records separate from the cache, queue, and rate-limit Redis keys while still allowing a shared local Redis server.
 - `REDIS_SESSION_PREFIX` lets you distinguish session keys during local inspection and cleanup.
 - `SESSION_ROLLING=true` extends cookie expiration on every request; leave it `false` for fixed-lifetime sessions.
@@ -154,30 +153,26 @@ DEFAULT_RATE_LIMIT_PERIOD=3600   # Default: 3600 seconds (1 hour)
 
 ### Access Control Policies
 
-Decorator-based authorization is backed by PostgreSQL rows in the `access_policy` table.
-
-Seed the default admin-heavy policies with:
-
-```bash
-uv run python -m src.scripts.seed_access_policies
-```
-
-That seed set includes the default `admin` permissions for `tiers`, `rate_limits`, `users_admin`, and `roles`. After pulling RBAC updates into an existing environment, run Alembic first so the role-management policies are inserted before you exercise `/api/v1/role` or `/api/v1/roles`.
+The active canonical Casbin policy is code-owned and uses the four fixed role
+codes. It is loaded automatically; there is no runtime policy seed command.
+Object and workspace scope are still enforced by backend services on every
+request.
 
 ### CORS Configuration
 
 Configure Cross-Origin Resource Sharing for your frontend:
 
 ```env
-# CORS Settings
-CORS_ORIGINS=["*"]                         # Comma-separated origins (use specific domains in production)
-CORS_METHODS=["*"]                         # Comma-separated HTTP methods or "*" for all
-CORS_HEADERS=["*"]                         # Comma-separated headers or "*" for all
+# CORS Settings (credentialed requests; wildcards are rejected)
+CORS_ORIGINS=["http://127.0.0.1:3000","http://localhost:3000"]
+CORS_METHODS=["GET","POST","PUT","PATCH","DELETE","OPTIONS"]
+CORS_HEADERS=["Accept","Content-Type","Idempotency-Key","X-Request-ID"]
 ```
 
-!!! warning "CORS in Production"
-Never use `"*"` for CORS_ORIGINS in production. Specify exact domains:
-`env     CORS_ORIGINS=["https://yourapp.com","https://www.yourapp.com"]     CORS_METHODS=["GET","POST","PUT","DELETE","PATCH"]     CORS_HEADERS=["Authorization","Content-Type"]     `
+All three CORS lists must be explicit because the portal sends an opaque
+session cookie. Shared environments must also replace the loopback origins
+with their exact frontend origins. Cookie-authenticated state-changing API
+requests are checked against the same origin allowlist.
 
 ### First Tier
 

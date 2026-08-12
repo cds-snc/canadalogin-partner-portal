@@ -1,30 +1,22 @@
-import { createFileRoute } from "@tanstack/react-router";
-import { lazy } from "react";
-import i18n from "@/common/i18n";
-import type { RouteBackLinkContext } from "@/types/route-breadcrumbs";
-import { requireAuthenticatedUser } from "../../../features/auth/auth-routing";
-
-const MAUReportPage = lazy(async () => ({
-	default: (await import("../../../features/mau-reports/pages/MAUReportPage"))
-		.MAUReportPage,
-}));
+import { createFileRoute, redirect } from "@tanstack/react-router";
+import { requireAccessibleRPApplicationCapability } from "../../../features/auth/auth-routing";
 
 export const Route = createFileRoute(
 	"/your-applications/$rpApplicationUuid/mau-report"
 )({
-	beforeLoad: async ({ params, context }) => {
-		await requireAuthenticatedUser(
-			`/your-applications/${params.rpApplicationUuid}/mau-report`
+	beforeLoad: async ({ params }) => {
+		const { application } = await requireAccessibleRPApplicationCapability(
+			`/your-applications/${params.rpApplicationUuid}/mau-report`,
+			params.rpApplicationUuid,
+			"mau_report_read"
 		);
-
-		const appName =
-			(context as { rpApplicationName?: string | null }).rpApplicationName ??
-			i18n.t("nav.dashboard");
-		const appHref = `/your-applications/${params.rpApplicationUuid}`;
-
-		return {
-			backLink: { href: appHref, label: appName },
-		} satisfies RouteBackLinkContext;
+		throw redirect({
+			params: {
+				rpApplicationUuid: params.rpApplicationUuid,
+				workspaceUuid: application.workspaceUuid,
+			},
+			replace: true,
+			to: "/workspaces/$workspaceUuid/applications/$rpApplicationUuid/usage",
+		}) as unknown as Error;
 	},
-	component: MAUReportPage,
 });

@@ -1,7 +1,7 @@
 import uuid as uuid_pkg
 from datetime import UTC, datetime
 
-from sqlalchemy import JSON, DateTime, ForeignKey, String
+from sqlalchemy import JSON, CheckConstraint, DateTime, ForeignKey, Index, Integer, String, text
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import Mapped, mapped_column
 from uuid6 import uuid7
@@ -11,6 +11,24 @@ from ..core.db.database import Base
 
 class RPApplication(Base):
     __tablename__ = "rp_application"
+    __table_args__ = (
+        CheckConstraint(
+            "registration_draft_version >= 0",
+            name="ck_rp_application_registration_draft_version",
+        ),
+        CheckConstraint(
+            "registration_last_completed_step IS NULL OR "
+            "registration_last_completed_step IN "
+            "('basics', 'endpoints', 'client-and-access', 'signing', 'encryption')",
+            name="ck_rp_application_registration_last_completed_step",
+        ),
+        Index(
+            "uq_rp_application_registration_creation_key",
+            "registration_creation_key",
+            unique=True,
+            postgresql_where=text("registration_creation_key IS NOT NULL"),
+        ),
+    )
 
     id: Mapped[int] = mapped_column(autoincrement=True, primary_key=True, init=False)
     workspace_id: Mapped[int | None] = mapped_column(
@@ -33,6 +51,22 @@ class RPApplication(Base):
     application_owner: Mapped[dict[str, object] | None] = mapped_column(JSON, nullable=True, default=None)
     oidc_registration_payload: Mapped[dict[str, object] | None] = mapped_column(
         JSON,
+        nullable=True,
+        default=None,
+    )
+    registration_creation_key: Mapped[uuid_pkg.UUID | None] = mapped_column(
+        UUID(as_uuid=True),
+        nullable=True,
+        default=None,
+    )
+    registration_draft_version: Mapped[int] = mapped_column(
+        Integer,
+        nullable=False,
+        default=0,
+        server_default=text("0"),
+    )
+    registration_last_completed_step: Mapped[str | None] = mapped_column(
+        String(32),
         nullable=True,
         default=None,
     )

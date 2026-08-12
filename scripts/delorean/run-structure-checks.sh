@@ -138,42 +138,41 @@ vscode_agent_paths=(
 codex_agent_paths=(
   "agents"
   "agents/README.md"
-  "agents/coordinator.md"
-  "agents/spec-author.md"
-  "agents/delivery-planner.md"
-  "agents/builder-general.md"
-  "agents/qa-support.md"
-  "agents/release-readiness.md"
+  "agents/coordinator.toml"
+  "agents/spec-author.toml"
+  "agents/delivery-planner.toml"
+  "agents/builder-general.toml"
+  "agents/qa-support.toml"
+  "agents/release-readiness.toml"
 )
 
-codex_prompt_paths=(
-  "prompts"
-  "prompts/README.md"
-  "prompts/dl-requirements-shape.md"
-  "prompts/dl-requirements-start.md"
-  "prompts/dl-requirements-refine.md"
-  "prompts/dl-requirements-answer-questions.md"
-  "prompts/dl-requirements-archive.md"
-  "prompts/dl-plan-feature.md"
-  "prompts/dl-plan-refine.md"
-  "prompts/dl-delivery-autopilot.md"
-  "prompts/dl-ui-build-page.md"
-  "prompts/dl-ui-refine.md"
-  "prompts/dl-ui-review-accessibility.md"
-  "prompts/dl-dev-continue.md"
-  "prompts/dl-dev-active-change.md"
-  "prompts/dl-dev-autopilot.md"
-  "prompts/dl-dev-fix-bug.md"
-  "prompts/dl-dev-change-api.md"
-  "prompts/dl-dev-change-data.md"
-  "prompts/dl-qa-commit-ready.md"
-  "prompts/dl-qa-push-ready.md"
-  "prompts/dl-qa-check.md"
-  "prompts/dl-qa-review.md"
-  "prompts/dl-security-review.md"
-  "prompts/dl-docs-update.md"
-  "prompts/dl-platform-update.md"
-  "prompts/dl-ops-hotfix.md"
+codex_workflow_skill_paths=(
+  "skills"
+  "skills/dl-requirements-shape/SKILL.md"
+  "skills/dl-requirements-start/SKILL.md"
+  "skills/dl-requirements-refine/SKILL.md"
+  "skills/dl-requirements-answer-questions/SKILL.md"
+  "skills/dl-requirements-archive/SKILL.md"
+  "skills/dl-plan-feature/SKILL.md"
+  "skills/dl-plan-refine/SKILL.md"
+  "skills/dl-delivery-autopilot/SKILL.md"
+  "skills/dl-ui-build-page/SKILL.md"
+  "skills/dl-ui-refine/SKILL.md"
+  "skills/dl-ui-review-accessibility/SKILL.md"
+  "skills/dl-dev-continue/SKILL.md"
+  "skills/dl-dev-active-change/SKILL.md"
+  "skills/dl-dev-autopilot/SKILL.md"
+  "skills/dl-dev-fix-bug/SKILL.md"
+  "skills/dl-dev-change-api/SKILL.md"
+  "skills/dl-dev-change-data/SKILL.md"
+  "skills/dl-qa-commit-ready/SKILL.md"
+  "skills/dl-qa-push-ready/SKILL.md"
+  "skills/dl-qa-check/SKILL.md"
+  "skills/dl-qa-review/SKILL.md"
+  "skills/dl-security-review/SKILL.md"
+  "skills/dl-docs-update/SKILL.md"
+  "skills/dl-platform-update/SKILL.md"
+  "skills/dl-ops-hotfix/SKILL.md"
 )
 
 shared_hook_paths=(
@@ -200,7 +199,7 @@ required_paths=(
   "scripts/delorean/run-secret-checks.sh"
   "scripts/delorean/update-architecture-docs.sh"
   "scripts/delorean/update-from-template.sh"
-  "scripts/delorean/sync-codex-adapters.sh"
+  "scripts/delorean/check-codex-assets.sh"
   "docs/reference/first-tester-quickstart.md"
   "docs/reference"
   "docs/reference/openspec-lifecycle.md"
@@ -307,7 +306,7 @@ append_agent_config_requirements() {
     append_prefixed_paths "agent-configs/vscode" "${vscode_prompt_paths[@]}"
     append_prefixed_paths "agent-configs/vscode" "${vscode_agent_paths[@]}"
     append_prefixed_paths "agent-configs/codex" "${codex_agent_paths[@]}"
-    append_prefixed_paths "agent-configs/codex" "${codex_prompt_paths[@]}"
+    append_prefixed_paths "agent-configs/codex" "${codex_workflow_skill_paths[@]}"
     return 0
   fi
 
@@ -343,12 +342,10 @@ append_agent_config_requirements() {
     required_paths+=("AGENTS.md")
     if [ -d "${repo_root}/.agents/skills" ]; then
       append_prefixed_paths ".agents" "${shared_skill_paths[@]}"
+      append_prefixed_paths ".agents" "${codex_workflow_skill_paths[@]}"
     fi
     if [ -d "${repo_root}/.codex/agents" ]; then
       append_prefixed_paths ".codex" "${codex_agent_paths[@]}"
-    fi
-    if [ -d "${repo_root}/.codex/prompts" ]; then
-      append_prefixed_paths ".codex" "${codex_prompt_paths[@]}"
     fi
   fi
 
@@ -518,39 +515,31 @@ if [ -n "${codex_instructions_file}" ]; then
   fi
 fi
 
-codex_agent_dir=""
-codex_prompt_dir=""
-if [ -d "${repo_root}/agent-configs/codex/agents" ]; then
-  codex_agent_dir="${repo_root}/agent-configs/codex/agents"
-  codex_prompt_dir="${repo_root}/agent-configs/codex/prompts"
-elif [ -d "${repo_root}/.codex/agents" ] || [ -d "${repo_root}/.codex/prompts" ]; then
-  codex_agent_dir="${repo_root}/.codex/agents"
-  codex_prompt_dir="${repo_root}/.codex/prompts"
-fi
+for legacy_prompt_dir in \
+  "${repo_root}/agent-configs/codex/prompts" \
+  "${repo_root}/.codex/prompts"; do
+  if [ -d "${legacy_prompt_dir}" ] &&
+    [ -n "$(find "${legacy_prompt_dir}" -mindepth 1 -maxdepth 1 -print -quit)" ]; then
+    echo "Codex repository prompts are deprecated; use discoverable skills instead: ${legacy_prompt_dir#${repo_root}/}" >&2
+    status=1
+  fi
+done
 
-if [ -n "${codex_agent_dir}" ]; then
-  for codex_adapter_file in "${codex_agent_dir}"/*.md "${codex_prompt_dir}"/*.md; do
-    [ -e "${codex_adapter_file}" ] || continue
-
-    first_line="$(sed -n '1p' "${codex_adapter_file}")"
-    if [ "${first_line}" = "---" ]; then
-      echo "Codex adapter must not use VS Code frontmatter: ${codex_adapter_file#${repo_root}/}" >&2
-      status=1
-    fi
-
-    if grep -q 'agent/runSubagent\|^tools:\|^handoffs:' "${codex_adapter_file}"; then
-      echo "Codex adapter contains VS Code-specific agent syntax: ${codex_adapter_file#${repo_root}/}" >&2
-      status=1
-    fi
+for codex_agent_dir in \
+  "${repo_root}/agent-configs/codex/agents" \
+  "${repo_root}/.codex/agents"; do
+  [ -d "${codex_agent_dir}" ] || continue
+  for legacy_agent_file in "${codex_agent_dir}"/*.md; do
+    [ -e "${legacy_agent_file}" ] || continue
+    [ "$(basename -- "${legacy_agent_file}")" = "README.md" ] && continue
+    echo "Codex custom agents must be standalone TOML: ${legacy_agent_file#${repo_root}/}" >&2
+    status=1
   done
-fi
+done
 
-if [ -d "${repo_root}/agent-configs/vscode/agents" ] &&
-  [ -d "${repo_root}/agent-configs/vscode/prompts" ] &&
-  [ -d "${repo_root}/agent-configs/codex/agents" ] &&
-  [ -d "${repo_root}/agent-configs/codex/prompts" ] &&
-  [ -x "${repo_root}/scripts/delorean/sync-codex-adapters.sh" ]; then
-  if ! "${repo_root}/scripts/delorean/sync-codex-adapters.sh" --check; then
+if { [ -d "${repo_root}/.agents/skills" ] || [ -d "${repo_root}/.codex/agents" ]; } &&
+  [ -x "${repo_root}/scripts/delorean/check-codex-assets.sh" ]; then
+  if ! "${repo_root}/scripts/delorean/check-codex-assets.sh"; then
     status=1
   fi
 fi
@@ -745,8 +734,8 @@ done
 for requirements_archive_prompt in \
   "${repo_root}/agent-configs/vscode/prompts/dl-requirements-archive.prompt.md" \
   "${repo_root}/.github/prompts/dl-requirements-archive.prompt.md" \
-  "${repo_root}/agent-configs/codex/prompts/dl-requirements-archive.md" \
-  "${repo_root}/.codex/prompts/dl-requirements-archive.md"; do
+  "${repo_root}/agent-configs/codex/skills/dl-requirements-archive/SKILL.md" \
+  "${repo_root}/.agents/skills/dl-requirements-archive/SKILL.md"; do
   if [ -f "${requirements_archive_prompt}" ]; then
     if ! grep -q 'existing scenarios to preserve' "${requirements_archive_prompt}"; then
       echo "dl-requirements-archive prompt is missing modified-requirement scenario preservation guidance: ${requirements_archive_prompt#${repo_root}/}" >&2

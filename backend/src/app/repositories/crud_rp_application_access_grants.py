@@ -4,7 +4,7 @@ from ..models.rp_application_access_grant import RPApplicationAccessGrant
 from ..schemas.rp_application_access_grant import (
     RPApplicationAccessGrantCreateInternal,
     RPApplicationAccessGrantDelete,
-    RPApplicationAccessGrantRead,
+    RPApplicationAccessGrantReadInternal,
     RPApplicationAccessGrantUpdate,
     RPApplicationAccessGrantUpdateInternal,
 )
@@ -15,6 +15,6 @@ CRUDRPApplicationAccessGrant = FastCRUD[
     RPApplicationAccessGrantUpdate,
     RPApplicationAccessGrantUpdateInternal,
     RPApplicationAccessGrantDelete,
-    RPApplicationAccessGrantRead,
+    RPApplicationAccessGrantReadInternal,
 ]
 crud_rp_application_access_grants = CRUDRPApplicationAccessGrant(RPApplicationAccessGrant)

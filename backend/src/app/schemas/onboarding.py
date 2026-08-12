@@ -1,7 +1,7 @@
 from datetime import datetime
 from typing import Any, Literal
 
-from pydantic import BaseModel, ConfigDict, Field, field_serializer
+from pydantic import BaseModel, ConfigDict, Field, field_serializer, model_validator
 from pydantic.alias_generators import to_camel
 
 OnboardingState = Literal[
@@ -23,6 +23,19 @@ class OnboardingLifecycleTransitionRequest(BaseModel):
     )
 
     target_state: OnboardingState
+    expected_draft_version: int | None = Field(default=None, ge=0)
+
+
+class WorkspaceRPApplicationOnboardingLifecycleTransitionRequest(OnboardingLifecycleTransitionRequest):
+    """RP application transition input with concurrency protection on submit."""
+
+    @model_validator(mode="after")
+    def require_expected_draft_version_for_submission(
+        self,
+    ) -> "WorkspaceRPApplicationOnboardingLifecycleTransitionRequest":
+        if self.target_state == "submitted" and self.expected_draft_version is None:
+            raise ValueError("expected_draft_version is required when target_state is submitted")
+        return self
 
 
 class OnboardingLifecycleRead(BaseModel):

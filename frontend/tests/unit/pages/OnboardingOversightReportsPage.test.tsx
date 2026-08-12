@@ -3,7 +3,10 @@ import { fireEvent, render, screen } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 import { BadRequestError } from "@/fetch/errors";
 import { useOnboardingOversightReport } from "@/features/onboarding-oversight/hooks/use-onboarding-oversight-report";
-import { OnboardingOversightReportsPage } from "@/features/onboarding-oversight/pages/OnboardingOversightReportsPage";
+import {
+	AggregateReportsPageContent,
+	OnboardingOversightReportsPage,
+} from "@/features/onboarding-oversight/pages/OnboardingOversightReportsPage";
 
 const navigateMock = vi.fn();
 const useSearchMock = vi.fn(() => ({
@@ -20,16 +23,21 @@ vi.mock("react-i18next", () => ({
 		t: (key: string, options?: Record<string, unknown>): string => {
 			const translations: Record<string, string> = {
 				"onboardingOversight.reports.acceptedColumn": "Invitations accepted",
-				"onboardingOversight.reports.accessNoticeBody": "Aggregate-only onboarding reporting.",
-				"onboardingOversight.reports.accessNoticeTitle": "Reporting stays aggregate-only",
+				"onboardingOversight.reports.accessNoticeBody":
+					"Aggregate-only onboarding reporting.",
+				"onboardingOversight.reports.accessNoticeTitle":
+					"Reporting stays aggregate-only",
 				"onboardingOversight.reports.applyAction": "Apply report filters",
 				"onboardingOversight.reports.approvedColumn": "Approved",
 				"onboardingOversight.reports.bucketColumn": "Period",
-				"onboardingOversight.reports.compliantApplicationsColumn": "Compliant applications",
+				"onboardingOversight.reports.compliantApplicationsColumn":
+					"Compliant applications",
 				"onboardingOversight.reports.conversionRateColumn": "Conversion rate",
-				"onboardingOversight.reports.emptyBody": "No report rows were returned.",
+				"onboardingOversight.reports.emptyBody":
+					"No report rows were returned.",
 				"onboardingOversight.reports.emptyTitle": "No report data",
-				"onboardingOversight.reports.errorBody": "The report could not be loaded.",
+				"onboardingOversight.reports.errorBody":
+					"The report could not be loaded.",
 				"onboardingOversight.reports.errorTitle": "Unable to load the report",
 				"onboardingOversight.reports.exportAction": "Export CSV",
 				"onboardingOversight.reports.filtersEndDateLabel": "End date",
@@ -42,12 +50,17 @@ vi.mock("react-i18next", () => ({
 				"onboardingOversight.reports.groupByWeek": "Week",
 				"onboardingOversight.reports.hygieneRateColumn": "Hygiene rate",
 				"onboardingOversight.reports.launchedColumn": "Launched",
-				"onboardingOversight.reports.loadingBody": "Loading reporting aggregates.",
+				"onboardingOversight.reports.loadingBody":
+					"Loading reporting aggregates.",
 				"onboardingOversight.reports.loadingTitle": "Loading the reports",
-				"onboardingOversight.reports.metricInvitationConversion": "Invitation conversion",
-				"onboardingOversight.reports.metricOnboardingThroughput": "Onboarding throughput",
-				"onboardingOversight.reports.metricSecretRotationHygiene": "Secret rotation hygiene",
-				"onboardingOversight.reports.nonCompliantApplicationsColumn": "Non-compliant applications",
+				"onboardingOversight.reports.metricInvitationConversion":
+					"Invitation conversion",
+				"onboardingOversight.reports.metricOnboardingThroughput":
+					"Onboarding throughput",
+				"onboardingOversight.reports.metricSecretRotationHygiene":
+					"Secret rotation hygiene",
+				"onboardingOversight.reports.nonCompliantApplicationsColumn":
+					"Non-compliant applications",
 				"onboardingOversight.reports.pageTitle": "Onboarding reports",
 				"onboardingOversight.reports.policyWindowBody": `Recent rotation is measured over ${String(options?.["days"] ?? "0")} days.`,
 				"onboardingOversight.reports.policyWindowTitle": "Rotation window",
@@ -55,9 +68,11 @@ vi.mock("react-i18next", () => ({
 				"onboardingOversight.reports.resultsTitle": `${String(options?.["metric"] ?? "")} results`,
 				"onboardingOversight.reports.sentColumn": "Invitations sent",
 				"onboardingOversight.reports.submittedColumn": "Submitted",
-				"onboardingOversight.reports.summary": "Review onboarding throughput, invitation conversion, and secret hygiene from one reporting route.",
+				"onboardingOversight.reports.summary":
+					"Review onboarding throughput, invitation conversion, and secret hygiene from one reporting route.",
 				"onboardingOversight.reports.tableTitle": "Aggregate onboarding report",
-				"onboardingOversight.reports.totalApplicationsColumn": "Total applications",
+				"onboardingOversight.reports.totalApplicationsColumn":
+					"Total applications",
 			};
 
 			return translations[key] ?? key;
@@ -74,9 +89,20 @@ vi.mock("@/components/ui", () => ({
 	Button: ({
 		children,
 		href,
+		onGcdsClick,
 		type,
-	}: PropsWithChildren<{ href?: string; type: "link" | "submit" }>): ReactElement =>
-		type === "link" ? <a href={href}>{children}</a> : <button type="submit">{children}</button>,
+	}: PropsWithChildren<{
+		href?: string;
+		onGcdsClick?: () => void;
+		type: "button" | "link" | "submit";
+	}>): ReactElement =>
+		type === "link" ? (
+			<a href={href}>{children}</a>
+		) : (
+			<button onClick={onGcdsClick} type={type}>
+				{children}
+			</button>
+		),
 	DataTable: ({
 		columns,
 		rows,
@@ -115,10 +141,24 @@ vi.mock("@/components/ui", () => ({
 			/>
 		</label>
 	),
-	Grid: ({ children }: PropsWithChildren): ReactElement => <div>{children}</div>,
-	Heading: ({ children, tag }: PropsWithChildren<{ tag?: string }>): ReactElement =>
+	Grid: ({ children }: PropsWithChildren): ReactElement => (
+		<div>{children}</div>
+	),
+	Heading: ({
+		children,
+		tag,
+	}: PropsWithChildren<{ tag?: string }>): ReactElement =>
 		tag === "h2" ? <h2>{children}</h2> : <h1>{children}</h1>,
-	Notice: ({ children, noticeTitle }: PropsWithChildren<{ noticeTitle: string }>): ReactElement => (
+	Link: ({
+		children,
+		href,
+	}: PropsWithChildren<{ href: string }>): ReactElement => (
+		<a href={href}>{children}</a>
+	),
+	Notice: ({
+		children,
+		noticeTitle,
+	}: PropsWithChildren<{ noticeTitle: string }>): ReactElement => (
 		<section>
 			<h2>{noticeTitle}</h2>
 			{children}
@@ -157,6 +197,65 @@ vi.mock(
 );
 
 describe("OnboardingOversightReportsPage", () => {
+	it("binds shared report UI and export to the selected workspace", () => {
+		const filters = {
+			endDate: "2026-08-31",
+			groupBy: "week" as const,
+			metric: "onboarding_throughput" as const,
+			startDate: "2026-08-01",
+		};
+		vi.mocked(useOnboardingOversightReport).mockReturnValue({
+			error: null,
+			isLoading: false,
+			isRefetching: false,
+			refetch: vi.fn(),
+			report: {
+				appliedFilters: filters,
+				exportAvailable: true,
+				generatedAt: "2026-08-31T12:00:00Z",
+				metric: "onboarding_throughput",
+				rows: [],
+				summary: { approvedCount: 0, launchedCount: 0, submittedCount: 0 },
+				title: "Onboarding throughput",
+			},
+		});
+
+		render(
+			<AggregateReportsPageContent
+				accessNoticeBody="Only this workspace is included."
+				accessNoticeTitle="Selected workspace scope"
+				filters={filters}
+				onFilterSubmit={vi.fn()}
+				pageTitle="Reports — Benefits Workspace"
+				returnHref="/workspaces/workspace-uuid-1"
+				returnLabel="Back to workspace overview"
+				summary="Review aggregate workspace reports."
+				workspaceUuid="workspace-uuid-1"
+			/>
+		);
+
+		expect(useOnboardingOversightReport).toHaveBeenCalledWith(
+			filters,
+			"workspace-uuid-1"
+		);
+		expect(
+			screen.getByRole("heading", {
+				name: "Reports — Benefits Workspace",
+			})
+		).toBeTruthy();
+		expect(
+			(screen.getByRole("link", { name: /export csv/i }) as HTMLAnchorElement)
+				.href
+		).toContain(
+			"/api/v1/workspaces/workspace-uuid-1/reports/export?metric=onboarding_throughput"
+		);
+		expect(
+			screen
+				.getByRole("link", { name: "Back to workspace overview" })
+				.getAttribute("href")
+		).toBe("/workspaces/workspace-uuid-1");
+	});
+
 	it("submits report filters and renders KPI results with an export link", () => {
 		useSearchMock.mockReturnValue({
 			endDate: "2026-08-31",
@@ -168,6 +267,7 @@ describe("OnboardingOversightReportsPage", () => {
 			error: null,
 			isLoading: false,
 			isRefetching: false,
+			refetch: vi.fn(),
 			report: {
 				appliedFilters: {
 					endDate: "2026-08-31",
@@ -227,9 +327,9 @@ describe("OnboardingOversightReportsPage", () => {
 
 		expect(screen.getByText(/2026-08-25 to 2026-08-31/i)).toBeTruthy();
 		expect(
-			(screen.getByRole("link", { name: /export csv/i }) as HTMLAnchorElement).getAttribute(
-				"href"
-			)
+			(
+				screen.getByRole("link", { name: /export csv/i }) as HTMLAnchorElement
+			).getAttribute("href")
 		).toContain(
 			"/api/v1/onboarding-oversight/reports/export?metric=onboarding_throughput"
 		);
@@ -246,6 +346,7 @@ describe("OnboardingOversightReportsPage", () => {
 			error: null,
 			isLoading: false,
 			isRefetching: false,
+			refetch: vi.fn(),
 			report: {
 				appliedFilters: {
 					endDate: "2026-08-31",
@@ -290,6 +391,7 @@ describe("OnboardingOversightReportsPage", () => {
 			}),
 			isLoading: false,
 			isRefetching: false,
+			refetch: vi.fn(),
 			report: null,
 		});
 

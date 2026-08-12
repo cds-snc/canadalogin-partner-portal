@@ -33,12 +33,15 @@ frontend/coverage/
 frontend/storybook-static/
 frontend/test-results/
 .playwright-mcp/
+.pnpm-store/
 
 # General
 .DS_Store
 */.DS_Store
 __MACOSX/
 *.log
+*.log.*
+**/logs/
 .delorean/
 .gc-review/
 dist/

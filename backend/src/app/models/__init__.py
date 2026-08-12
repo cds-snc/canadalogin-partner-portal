@@ -1,8 +1,8 @@
 from .access_policy import AccessPolicy
 from .application_information import ApplicationInformation
+from .application_information_contact import ApplicationInformationContact
 from .application_information_review_checklist import ApplicationInformationReviewChecklist
 from .application_information_review_note import ApplicationInformationReviewNote
-from .application_information_contact import ApplicationInformationContact
 from .audit_log import AuditLog
 from .department import Department
 from .rate_limit import RateLimit
@@ -13,5 +13,6 @@ from .rp_application_developer_invitation import RPApplicationDeveloperInvitatio
 from .rp_application_promotion_request import RPApplicationPromotionRequest
 from .tier import Tier
 from .user import User
+from .user_role import UserRole
 from .workspace import Workspace
 from .workspace_member import WorkspaceMember

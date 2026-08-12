@@ -1,16 +1,15 @@
 from .audit_service import AuditService
 from .auth_service import AuthService
+from .authorization_service import AuthorizationService
 from .department_service import DepartmentService
 from .gc_notify_service import GCNotifyService
 from .health_service import HealthService
 from .ibm_sv_user_service import IBMVerifyUserService
 from .mau_service import MAUService
-from .onboarding_oversight_service import OnboardingOversightService
 from .oidc_logout_service import OidcLogoutService
 from .oidc_service import OidcService
-from .policy_service import PolicyService
+from .onboarding_oversight_service import OnboardingOversightService
 from .rate_limit_service import RateLimitService
-from .role_service import RoleService
 from .rp_application_developer_invitation_service import RPApplicationDeveloperInvitationService
 from .rp_application_service import RPApplicationService
 from .task_service import TaskService
@@ -20,6 +19,7 @@ from .workspace_service import WorkspaceService
 
 __all__ = [
     "AuditService",
+    "AuthorizationService",
     "AuthService",
     "DepartmentService",
     "GCNotifyService",
@@ -28,10 +28,8 @@ __all__ = [
     "OnboardingOversightService",
     "OidcService",
     "OidcLogoutService",
-    "PolicyService",
     "RateLimitService",
     "RPApplicationDeveloperInvitationService",
-    "RoleService",
     "RPApplicationService",
     "TaskService",
     "TierService",

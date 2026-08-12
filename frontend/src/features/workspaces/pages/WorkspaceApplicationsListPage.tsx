@@ -1,23 +1,13 @@
-import { useMemo } from "react";
-import { useNavigate, useParams, useSearch } from "@tanstack/react-router";
+import { useParams, useSearch } from "@tanstack/react-router";
 import { useTranslation } from "react-i18next";
 import type { FunctionComponent } from "@/common/types";
-import { Button, DataTable, Heading, Notice, Text } from "@/components/ui";
-import type { DataTableColumn } from "@/components/ui/DataTable";
+import { Button, Heading, Notice, Text } from "@/components/ui";
 import { getRequestErrorNotice } from "@/fetch";
-import { useWorkspaceApplicationInformationList } from "../hooks/use-workspace-application-information";
+import { hasCapability } from "@/features/auth/authorization";
+import { RPApplicationSummaryCard } from "@/features/rp-applications/components/RPApplicationSummaryCard";
+import { useSession } from "@/hooks";
 import { useWorkspace } from "../hooks/use-workspace";
 import { useWorkspaceRPApplications } from "../hooks/use-workspace-rp-applications";
-import { getWorkspaceOnboardingStateLabel } from "../onboarding-display";
-
-type RPApplicationRow = {
-	environment: string;
-	linkedApplicationInformation: string;
-	name: string;
-	onboardingState: string;
-	status: string;
-	uuid: string;
-};
 
 export const WorkspaceApplicationsListPage = (): FunctionComponent => {
 	const { t } = useTranslation() as unknown as {
@@ -26,7 +16,7 @@ export const WorkspaceApplicationsListPage = (): FunctionComponent => {
 			options?: Record<string, unknown>
 		) => string;
 	};
-	const navigate = useNavigate();
+	const { currentUser } = useSession();
 	const { workspaceUuid } = useParams({
 		from: "/workspaces/$workspaceUuid/applications",
 	});
@@ -34,63 +24,19 @@ export const WorkspaceApplicationsListPage = (): FunctionComponent => {
 		from: "/workspaces/$workspaceUuid/applications",
 	});
 	const { workspace } = useWorkspace(workspaceUuid);
-	const { applicationInformationRecords } =
-		useWorkspaceApplicationInformationList(workspaceUuid);
 	const { applications, error, isLoading } =
 		useWorkspaceRPApplications(workspaceUuid);
-	const applicationInformationById = useMemo(
-		() =>
-			new Map(
-				applicationInformationRecords.map((applicationInformation) => [
-					applicationInformation.id,
-					applicationInformation,
-				])
-			),
-		[applicationInformationRecords]
-	);
 	const errorNotice = getRequestErrorNotice(error, {
 		bodyKey: "workspaces.applicationsErrorBody",
 		titleKey: "workspaces.applicationsErrorTitle",
 	});
 	const successMessage =
 		search.deleted === "1" ? t("workspaces.applicationDeletedSuccess") : null;
-	const rows: Array<RPApplicationRow> = applications.map((application) => ({
-		environment:
-			application.canada_login_environment ?? t("common.notAvailable"),
-		linkedApplicationInformation:
-			(application.application_information_id
-				? applicationInformationById.get(application.application_information_id)
-						?.serviceNameEn
-				: null) ?? t("workspaces.applicationsNoLinkedInfo"),
-		name: application.dnr_app_name,
-		onboardingState: application.onboarding_state?.trim()
-			? getWorkspaceOnboardingStateLabel(t, application.onboarding_state)
-			: t("common.notAvailable"),
-		status: application.status ?? t("common.notAvailable"),
-		uuid: application.uuid,
-	}));
-	const columns: Array<DataTableColumn<RPApplicationRow>> = [
-		{
-			field: "name",
-			headerName: t("workspaces.applicationsNameColumn"),
-		},
-		{
-			field: "environment",
-			headerName: t("workspaces.applicationsEnvironmentColumn"),
-		},
-		{
-			field: "status",
-			headerName: t("workspaces.applicationsStatusColumn"),
-		},
-		{
-			field: "onboardingState",
-			headerName: t("workspaces.onboardingStateColumn"),
-		},
-		{
-			field: "linkedApplicationInformation",
-			headerName: t("workspaces.applicationsLinkedInfoColumn"),
-		},
-	];
+	const canCreateApplication = hasCapability(
+		currentUser?.authorizationContext,
+		"rp_configuration_write",
+		workspaceUuid
+	);
 
 	return (
 		<>
@@ -100,14 +46,16 @@ export const WorkspaceApplicationsListPage = (): FunctionComponent => {
 					: t("workspaces.applicationsSectionTitle")}
 			</Heading>
 			<Text>{t("workspaces.applicationsListSummary")}</Text>
-			<div>
-				<Button
-					href={`/workspaces/${workspaceUuid}/applications/new`}
-					type="link"
-				>
-					{t("workspaces.applicationsCreateAction")}
-				</Button>
-			</div>
+			{canCreateApplication ? (
+				<div>
+					<Button
+						href={`/workspaces/${workspaceUuid}/applications/new`}
+						type="link"
+					>
+						{t("workspaces.applicationsCreateAction")}
+					</Button>
+				</div>
+			) : null}
 
 			{successMessage ? (
 				<Notice
@@ -146,36 +94,28 @@ export const WorkspaceApplicationsListPage = (): FunctionComponent => {
 					noticeTitleTag="h2"
 				>
 					<Text>{t("workspaces.applicationsEmptyBody")}</Text>
-					<div className="mt-200">
-						<Button
-							href={`/workspaces/${workspaceUuid}/applications/new`}
-							type="link"
-						>
-							{t("workspaces.applicationsCreateAction")}
-						</Button>
-					</div>
+					{canCreateApplication ? (
+						<div className="mt-200">
+							<Button
+								href={`/workspaces/${workspaceUuid}/applications/new`}
+								type="link"
+							>
+								{t("workspaces.applicationsCreateAction")}
+							</Button>
+						</div>
+					) : null}
 				</Notice>
 			) : null}
 
 			{applications.length > 0 ? (
-				<DataTable
-					columns={columns}
-					getRowId={(row): string => row.uuid}
-					itemLabel="workspace RP applications"
-					pagination={false}
-					rows={rows}
-					title={t("workspaces.applicationsSectionTitle")}
-					action={{
-						buttonLabel: t("workspaces.applicationsViewAction"),
-						onAction: (row): void => {
-							void navigate({
-								params: { rpApplicationUuid: row.uuid, workspaceUuid },
-								to: "/workspaces/$workspaceUuid/applications/$rpApplicationUuid",
-							});
-						},
-						screenReaderLabel: (row): string => row.name,
-					}}
-				/>
+				<div className="flex flex-col gap-200">
+					{applications.map((application) => (
+						<RPApplicationSummaryCard
+							key={application.uuid}
+							application={application}
+						/>
+					))}
+				</div>
 			) : null}
 		</>
 	);

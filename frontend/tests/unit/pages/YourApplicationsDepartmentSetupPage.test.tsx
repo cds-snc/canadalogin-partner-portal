@@ -1,11 +1,19 @@
 import type { PropsWithChildren, ReactElement } from "react";
 import { render, screen, waitFor } from "@testing-library/react";
-import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from "vitest";
+import {
+	afterAll,
+	afterEach,
+	beforeAll,
+	describe,
+	expect,
+	it,
+	vi,
+} from "vitest";
 import { DepartmentSetupPage } from "@/features/your-applications/pages/DepartmentSetupPage";
 import { HttpRequestError } from "@/fetch/errors";
 import {
-	assignCurrentUserRPApplicationDepartment,
-	getCurrentUserRPApplicationDepartment,
+	assignAccessibleRPApplicationDepartment,
+	getAccessibleRPApplicationDepartment,
 } from "@/fetch/rp-applications";
 
 const replaceMock = vi.fn();
@@ -16,7 +24,8 @@ vi.mock("@tanstack/react-router", () => ({
 		rpApplicationUuid: "application-uuid-1",
 	}),
 	useSearch: (): { redirect?: string } => ({}),
-	useNavigate: (): (() => Promise<void>) => vi.fn().mockResolvedValue(undefined),
+	useNavigate: (): (() => Promise<void>) =>
+		vi.fn().mockResolvedValue(undefined),
 }));
 
 vi.mock("react-i18next", () => ({
@@ -53,8 +62,8 @@ vi.mock("@/fetch/rp-applications", async () => {
 	const actual = await vi.importActual("@/fetch/rp-applications");
 	return {
 		...actual,
-		getCurrentUserRPApplicationDepartment: vi.fn(),
-		assignCurrentUserRPApplicationDepartment: vi.fn(),
+		getAccessibleRPApplicationDepartment: vi.fn(),
+		assignAccessibleRPApplicationDepartment: vi.fn(),
 	};
 });
 
@@ -67,7 +76,9 @@ vi.mock("@/components/ui", () => ({
 			{children}
 		</button>
 	),
-	Heading: ({ children }: PropsWithChildren): ReactElement => <h1>{children}</h1>,
+	Heading: ({ children }: PropsWithChildren): ReactElement => (
+		<h1>{children}</h1>
+	),
 	Notice: ({
 		children,
 		noticeTitle,
@@ -77,25 +88,26 @@ vi.mock("@/components/ui", () => ({
 			{children}
 		</section>
 	),
-	Grid: ({ children }: PropsWithChildren): ReactElement => <div>{children}</div>,
-	Select: ({
-		children,
-	}: PropsWithChildren): ReactElement => (
+	Grid: ({ children }: PropsWithChildren): ReactElement => (
+		<div>{children}</div>
+	),
+	Select: ({ children }: PropsWithChildren): ReactElement => (
 		<select>{children}</select>
 	),
 	Text: ({ children }: PropsWithChildren): ReactElement => <p>{children}</p>,
 }));
 
-const mockedGetDepartment = vi.mocked(getCurrentUserRPApplicationDepartment);
-const mockedAssignDepartment = vi.mocked(assignCurrentUserRPApplicationDepartment);
+const mockedGetDepartment = vi.mocked(getAccessibleRPApplicationDepartment);
+const mockedAssignDepartment = vi.mocked(
+	assignAccessibleRPApplicationDepartment
+);
 
 describe("YourApplicationsDepartmentSetupPage", () => {
 	beforeAll(() => {
 		Object.defineProperty(globalThis, "location", {
 			configurable: true,
 			value: {
-				pathname:
-					"/your-applications/application-uuid-1/department-setup",
+				pathname: "/your-applications/application-uuid-1/department-setup",
 				replace: replaceMock,
 			} as Pick<Location, "pathname" | "replace">,
 		});

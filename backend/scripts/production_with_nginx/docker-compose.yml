@@ -62,8 +62,8 @@ services:
     depends_on:
       - web
 
-  #-------- uncomment to create first superuser --------
-  # create_superuser:
+  #-------- uncomment to create the initial CL Admin assignment --------
+  # create_initial_cl_admin:
   #   build: 
   #     context: .
   #     dockerfile: Dockerfile
@@ -72,7 +72,7 @@ services:
   #   depends_on:
   #     - db
   #     - web
-  #   command: python -m src.scripts.create_first_superuser
+  #   command: python -m src.scripts.create_initial_cl_admin
   #   volumes:
   #     - ./src:/code/src
 
@@ -98,7 +98,7 @@ services:
   #   env_file:
   #     - ./src/.env
   #   depends_on:
-  #     - create_superuser
+  #     - create_initial_cl_admin
   #     - db
   #     - web
   #   command: python -m src.scripts.create_first_tier

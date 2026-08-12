@@ -1,7 +1,13 @@
 from unittest.mock import AsyncMock, Mock, patch
+from uuid import UUID
 
 import pytest
 
+from src.app.core.authorization import (
+    CanonicalRoleCode,
+    ResourceScopeDecision,
+    ResourceScopeDecisionReason,
+)
 from src.app.core.exceptions.http_exceptions import (
     BadRequestException,
     CustomException,
@@ -9,12 +15,15 @@ from src.app.core.exceptions.http_exceptions import (
     ForbiddenException,
     NotFoundException,
 )
-from src.app.schemas.onboarding import OnboardingLifecycleTransitionRequest
 from src.app.schemas.application_information import (
     ApplicationInformationContactCreate,
     ApplicationInformationCreate,
     ApplicationInformationReviewChecklistSummaryWrite,
     ApplicationInformationReviewNoteCreate,
+)
+from src.app.schemas.onboarding import (
+    OnboardingLifecycleTransitionRequest,
+    WorkspaceRPApplicationOnboardingLifecycleTransitionRequest,
 )
 from src.app.schemas.rp_application import (
     WorkspaceRPApplicationRegistrationCreate,
@@ -25,8 +34,97 @@ from src.app.schemas.rp_application_promotion_request import (
     PromotionReviewUpdate,
 )
 from src.app.schemas.workspace import WorkspaceCreate, WorkspaceUpdate
-from src.app.schemas.workspace_member import WorkspaceMemberCreate, WorkspaceMemberUpdate
+from src.app.services.authorization_service import (
+    AUTHORIZATION_STATE_KEY,
+    ResolvedAuthorizationState,
+    ResolvedPartnerAccess,
+)
 from src.app.services.workspace_service import WorkspaceService
+
+WORKSPACE_UUID = UUID("018f6f83-0000-0000-0000-000000000201")
+SECOND_WORKSPACE_UUID = UUID("018f6f83-0000-0000-0000-000000000202")
+
+
+def _cl_admin(user_id: int = 1) -> dict:
+    return {
+        "id": user_id,
+        AUTHORIZATION_STATE_KEY: ResolvedAuthorizationState(global_role=CanonicalRoleCode.CL_ADMIN),
+    }
+
+
+def _partner(
+    role: CanonicalRoleCode = CanonicalRoleCode.RP_ADMIN,
+    *,
+    user_id: int = 42,
+    workspace_id: int = 9,
+    workspace_uuid: UUID = WORKSPACE_UUID,
+) -> dict:
+    return {
+        "id": user_id,
+        AUTHORIZATION_STATE_KEY: ResolvedAuthorizationState(
+            partner_access=(
+                ResolvedPartnerAccess(
+                    workspace_id=workspace_id,
+                    workspace_uuid=workspace_uuid,
+                    role=role,
+                ),
+            )
+        ),
+    }
+
+
+def _allowed_scope(
+    workspace: dict,
+    role: CanonicalRoleCode = CanonicalRoleCode.RP_ADMIN,
+) -> AsyncMock:
+    return AsyncMock(
+        return_value=(
+            workspace,
+            ResourceScopeDecision(
+                allowed=True,
+                reason=(
+                    ResourceScopeDecisionReason.ALLOWED_GLOBAL
+                    if role is CanonicalRoleCode.CL_ADMIN
+                    else ResourceScopeDecisionReason.ALLOWED_WORKSPACE
+                ),
+                role=role,
+                workspace_uuid=(None if role is CanonicalRoleCode.CL_ADMIN else UUID(str(workspace["uuid"]))),
+            ),
+        )
+    )
+
+
+def _complete_registration_answers() -> dict[str, object]:
+    return WorkspaceRPApplicationRegistrationCreate(
+        canada_login_environment="staging",
+        service_name_en="Benefits Portal",
+        service_name_fr="Portail des prestations",
+        application_environment_url_en="https://benefits.canada.ca",
+        application_environment_url_fr="https://prestations.canada.ca",
+        redirect_uris=["https://benefits.canada.ca/callback"],
+        post_logout_redirect_uris=["https://benefits.canada.ca/logout-complete"],
+        logout_mode="front_channel",
+        logout_uri="https://benefits.canada.ca/logout",
+        client_type="confidential",
+        supports_authorization_code_flow=True,
+        client_auth_method="client_secret_basic",
+        requested_scopes=["openid", "profile"],
+        sector_identifier="https://benefits.canada.ca",
+        shares_pairwise_identifiers=False,
+        pkce_supported=True,
+        pkce_algorithms=["S256"],
+        request_signing_supported=False,
+        request_signing_roadmap=False,
+        signature_validation_supported=True,
+        signature_validation_targets=["id_token"],
+        signature_validation_algorithms=["RS256"],
+        request_encryption_supported=False,
+        request_encryption_roadmap=False,
+        message_decryption_supported=True,
+        message_decryption_targets=["id_token"],
+        message_decryption_key_management_algorithms=["RSA-OAEP-256"],
+        message_decryption_content_algorithms=["A256GCM"],
+    ).model_dump(mode="json", exclude_none=True)
 
 
 class TestWorkspaceService:
@@ -44,7 +142,7 @@ class TestWorkspaceService:
                         name="Benefits Workspace",
                         department_uuid="018f6f83-0000-0000-0000-000000000101",
                     ),
-                    current_user={"id": 42},
+                    current_user=_cl_admin(42),
                 )
 
     @pytest.mark.asyncio
@@ -54,7 +152,6 @@ class TestWorkspaceService:
         with (
             patch("src.app.services.workspace_service.crud_departments") as mock_departments,
             patch("src.app.services.workspace_service.crud_workspaces") as mock_workspaces,
-            patch("src.app.services.workspace_service.crud_workspace_members") as mock_workspace_members,
         ):
             mock_departments.get = AsyncMock(return_value={"id": 7})
             mock_workspaces.get = AsyncMock(return_value=None)
@@ -73,8 +170,6 @@ class TestWorkspaceService:
                     "is_deleted": False,
                 }
             )
-            mock_workspace_members.create = AsyncMock(return_value={"id": 1})
-
             result = await service.create_workspace(
                 db=mock_db,
                 workspace=WorkspaceCreate(
@@ -82,7 +177,7 @@ class TestWorkspaceService:
                     description="Primary workspace",
                     department_uuid="018f6f83-0000-0000-0000-000000000101",
                 ),
-                current_user={"id": 42},
+                current_user=_cl_admin(42),
             )
 
         assert result["slug"] == "benefits-workspace"
@@ -91,12 +186,7 @@ class TestWorkspaceService:
         assert create_kwargs["object"].department_id == 7
         assert create_kwargs["object"].created_by == 42
         assert create_kwargs["object"].slug == "benefits-workspace"
-        mock_workspace_members.create.assert_awaited_once()
-        membership_kwargs = mock_workspace_members.create.await_args.kwargs
-        assert membership_kwargs["object"].workspace_id == 9
-        assert membership_kwargs["object"].user_id == 42
-        assert membership_kwargs["object"].invited_by == 42
-        assert membership_kwargs["object"].role == "workspace_admin"
+        assert "crud_workspace_members" not in service.create_workspace.__globals__
 
     @pytest.mark.asyncio
     async def test_create_workspace_rejects_duplicate_slug(self, mock_db) -> None:
@@ -117,7 +207,7 @@ class TestWorkspaceService:
                         slug="benefits-workspace",
                         department_uuid="018f6f83-0000-0000-0000-000000000101",
                     ),
-                    current_user={"id": 42},
+                    current_user=_cl_admin(42),
                 )
 
     @pytest.mark.asyncio
@@ -135,7 +225,10 @@ class TestWorkspaceService:
                 }
             )
 
-            result = await service.list_workspaces(db=mock_db)
+            result = await service.list_workspaces(
+                db=mock_db,
+                current_user=_cl_admin(),
+            )
 
         assert result == []
         mock_workspaces.get_multi.assert_awaited_once_with(
@@ -145,22 +238,10 @@ class TestWorkspaceService:
         )
 
     @pytest.mark.asyncio
-    async def test_list_current_user_workspaces_filters_to_active_memberships(self, mock_db) -> None:
+    async def test_list_current_user_workspaces_uses_only_canonical_grants(self, mock_db) -> None:
         service = WorkspaceService()
 
-        with (
-            patch("src.app.services.workspace_service.crud_workspace_members") as mock_workspace_members,
-            patch("src.app.services.workspace_service.crud_workspaces") as mock_workspaces,
-        ):
-            mock_workspace_members.get_multi = AsyncMock(
-                return_value={
-                    "data": [
-                        {"workspace_id": 9},
-                        {"workspace_id": 11},
-                        {"workspace_id": 9},
-                    ]
-                }
-            )
+        with patch("src.app.services.workspace_service.crud_workspaces") as mock_workspaces:
             mock_workspaces.get = AsyncMock(
                 side_effect=[
                     {
@@ -194,16 +275,26 @@ class TestWorkspaceService:
 
             result = await service.list_current_user_workspaces(
                 db=mock_db,
-                current_user={"id": 42, "is_superuser": False},
+                current_user={
+                    "id": 42,
+                    AUTHORIZATION_STATE_KEY: ResolvedAuthorizationState(
+                        partner_access=(
+                            ResolvedPartnerAccess(
+                                workspace_id=9,
+                                workspace_uuid=WORKSPACE_UUID,
+                                role=CanonicalRoleCode.RP_ADMIN,
+                            ),
+                            ResolvedPartnerAccess(
+                                workspace_id=11,
+                                workspace_uuid=SECOND_WORKSPACE_UUID,
+                                role=CanonicalRoleCode.READ_ONLY,
+                            ),
+                        )
+                    ),
+                },
             )
 
         assert [workspace["id"] for workspace in result] == [9, 11]
-        mock_workspace_members.get_multi.assert_awaited_once_with(
-            db=mock_db,
-            user_id=42,
-            is_deleted=False,
-            schema_to_select=service.list_current_user_workspaces.__globals__["WorkspaceMemberRead"],
-        )
         assert mock_workspaces.get.await_count == 2
 
     @pytest.mark.asyncio
@@ -214,11 +305,14 @@ class TestWorkspaceService:
         with patch.object(service, "list_workspaces", AsyncMock(return_value=all_workspaces)) as mock_list_workspaces:
             result = await service.list_current_user_workspaces(
                 db=mock_db,
-                current_user={"id": 42, "is_superuser": True},
+                current_user=_cl_admin(42),
             )
 
         assert result == all_workspaces
-        mock_list_workspaces.assert_awaited_once_with(db=mock_db)
+        mock_list_workspaces.assert_awaited_once_with(
+            db=mock_db,
+            current_user=_cl_admin(42),
+        )
 
     @pytest.mark.asyncio
     async def test_get_workspace_by_uuid_raises_when_missing(self, mock_db) -> None:
@@ -231,40 +325,22 @@ class TestWorkspaceService:
                 await service.get_workspace_by_uuid(
                     db=mock_db,
                     workspace_uuid="018f6f83-0000-0000-0000-000000000201",
+                    current_user=_cl_admin(),
                 )
 
         mock_workspaces.get.assert_awaited_once_with(
             db=mock_db,
-            uuid="018f6f83-0000-0000-0000-000000000201",
+            uuid=WORKSPACE_UUID,
             is_deleted=False,
             schema_to_select=service.get_workspace_by_uuid.__globals__["WorkspaceRead"],
         )
 
     @pytest.mark.asyncio
-    async def test_get_workspace_by_uuid_hides_workspace_when_current_user_is_not_a_member(self, mock_db) -> None:
+    async def test_get_workspace_by_uuid_hides_workspace_without_canonical_scope(self, mock_db) -> None:
         service = WorkspaceService()
 
-        with (
-            patch("src.app.services.workspace_service.crud_workspaces") as mock_workspaces,
-            patch("src.app.services.workspace_service.crud_workspace_members") as mock_workspace_members,
-        ):
-            mock_workspaces.get = AsyncMock(
-                return_value={
-                    "id": 9,
-                    "uuid": "018f6f83-0000-0000-0000-000000000201",
-                    "name": "Benefits Workspace",
-                    "slug": "benefits-workspace",
-                    "department_id": 7,
-                    "description": "Primary workspace",
-                    "created_by": 42,
-                    "created_at": "2026-07-30T12:00:00",
-                    "updated_at": None,
-                    "deleted_at": None,
-                    "is_deleted": False,
-                }
-            )
-            mock_workspace_members.get = AsyncMock(return_value=None)
-
+        with patch("src.app.services.workspace_service.crud_workspaces") as mock_workspaces:
+            mock_workspaces.get = AsyncMock()
             with pytest.raises(NotFoundException, match="Workspace not found"):
                 await service.get_workspace_by_uuid(
                     db=mock_db,
@@ -272,12 +348,7 @@ class TestWorkspaceService:
                     current_user={"id": 55, "is_superuser": False},
                 )
 
-        mock_workspace_members.get.assert_awaited_once_with(
-            db=mock_db,
-            workspace_id=9,
-            user_id=55,
-            is_deleted=False,
-        )
+        mock_workspaces.get.assert_not_awaited()
 
     @pytest.mark.asyncio
     async def test_update_workspace_updates_department_and_regenerated_slug(self, mock_db) -> None:
@@ -331,6 +402,7 @@ class TestWorkspaceService:
                     description="Updated workspace",
                     department_uuid="018f6f83-0000-0000-0000-000000000301",
                 ),
+                current_user=_partner(),
             )
 
         assert result["department_id"] == 11
@@ -350,7 +422,7 @@ class TestWorkspaceService:
     async def test_transition_workspace_onboarding_state_submits_draft_for_workspace_admin(self, mock_db) -> None:
         service = WorkspaceService()
         workspace_uuid = "018f6f83-0000-0000-0000-000000000201"
-        current_user = {"id": 42, "is_superuser": False}
+        current_user = _partner()
         existing_workspace = {
             "id": 9,
             "uuid": workspace_uuid,
@@ -374,10 +446,14 @@ class TestWorkspaceService:
         with (
             patch.object(
                 service,
-                "get_workspace_by_uuid",
-                AsyncMock(side_effect=[existing_workspace, updated_workspace]),
-            ) as mock_get_workspace,
-            patch.object(service, "_require_workspace_admin_access", AsyncMock()) as mock_require_admin,
+                "_require_workspace_capability",
+                _allowed_scope(existing_workspace),
+            ) as require_scope,
+            patch.object(
+                service,
+                "_get_workspace_record",
+                AsyncMock(return_value=updated_workspace),
+            ) as get_workspace_record,
             patch("src.app.services.workspace_service.crud_workspaces") as mock_workspaces,
         ):
             mock_workspaces.update = AsyncMock(return_value=None)
@@ -390,11 +466,7 @@ class TestWorkspaceService:
             )
 
         assert result["onboarding_state"] == "submitted"
-        mock_require_admin.assert_awaited_once_with(
-            db=mock_db,
-            workspace_id=9,
-            current_user=current_user,
-        )
+        require_scope.assert_awaited_once()
         mock_workspaces.update.assert_awaited_once()
         update_kwargs = mock_workspaces.update.await_args.kwargs
         assert update_kwargs["db"] is mock_db
@@ -403,7 +475,7 @@ class TestWorkspaceService:
         assert update_kwargs["object"]["updated_at"] is not None
         assert update_kwargs["object"]["submitted_at"] is not None
         assert "under_review_at" not in update_kwargs["object"]
-        assert mock_get_workspace.await_count == 2
+        get_workspace_record.assert_awaited_once()
 
     @pytest.mark.asyncio
     async def test_transition_workspace_onboarding_state_allows_platform_admin_review_transition(self, mock_db) -> None:
@@ -433,10 +505,14 @@ class TestWorkspaceService:
         with (
             patch.object(
                 service,
-                "get_workspace_by_uuid",
-                AsyncMock(side_effect=[existing_workspace, updated_workspace]),
-            ) as mock_get_workspace,
-            patch.object(service, "_require_workspace_admin_access", AsyncMock()) as mock_require_admin,
+                "_require_workspace_capability",
+                _allowed_scope(existing_workspace, CanonicalRoleCode.CL_ADMIN),
+            ),
+            patch.object(
+                service,
+                "_get_workspace_record",
+                AsyncMock(return_value=updated_workspace),
+            ) as get_workspace_record,
             patch("src.app.services.workspace_service.crud_workspaces") as mock_workspaces,
         ):
             mock_workspaces.update = AsyncMock(return_value=None)
@@ -445,39 +521,21 @@ class TestWorkspaceService:
                 db=mock_db,
                 workspace_uuid=workspace_uuid,
                 payload=OnboardingLifecycleTransitionRequest(target_state="under_review"),
-                current_user={"id": 1, "is_superuser": True},
+                current_user=_cl_admin(),
             )
 
         assert result["onboarding_state"] == "under_review"
-        mock_require_admin.assert_not_called()
         update_kwargs = mock_workspaces.update.await_args.kwargs
         assert update_kwargs["object"]["onboarding_state"] == "under_review"
         assert update_kwargs["object"]["under_review_at"] is not None
-        assert mock_get_workspace.await_count == 2
+        get_workspace_record.assert_awaited_once()
 
     @pytest.mark.asyncio
     async def test_transition_workspace_onboarding_state_rejects_review_only_state_for_workspace_admin(self, mock_db) -> None:
         service = WorkspaceService()
         workspace_uuid = "018f6f83-0000-0000-0000-000000000201"
-        existing_workspace = {
-            "id": 9,
-            "uuid": workspace_uuid,
-            "name": "Benefits Workspace",
-            "slug": "benefits-workspace",
-            "department_id": 7,
-            "description": "Primary workspace",
-            "created_by": 42,
-            "created_at": "2026-07-30T12:00:00",
-            "updated_at": None,
-            "deleted_at": None,
-            "is_deleted": False,
-            "onboarding_state": "submitted",
-        }
 
-        with (
-            patch.object(service, "get_workspace_by_uuid", AsyncMock(return_value=existing_workspace)),
-            patch("src.app.services.workspace_service.crud_workspaces") as mock_workspaces,
-        ):
+        with patch("src.app.services.workspace_service.crud_workspaces") as mock_workspaces:
             mock_workspaces.update = AsyncMock(return_value=None)
 
             with pytest.raises(ForbiddenException, match="You do not have enough privileges."):
@@ -485,7 +543,7 @@ class TestWorkspaceService:
                     db=mock_db,
                     workspace_uuid=workspace_uuid,
                     payload=OnboardingLifecycleTransitionRequest(target_state="approved"),
-                    current_user={"id": 42, "is_superuser": False},
+                    current_user=_partner(),
                 )
 
         mock_workspaces.update.assert_not_called()
@@ -510,7 +568,11 @@ class TestWorkspaceService:
         }
 
         with (
-            patch.object(service, "get_workspace_by_uuid", AsyncMock(return_value=existing_workspace)),
+            patch.object(
+                service,
+                "_require_workspace_capability",
+                _allowed_scope(existing_workspace, CanonicalRoleCode.CL_ADMIN),
+            ),
             patch("src.app.services.workspace_service.crud_workspaces") as mock_workspaces,
         ):
             mock_workspaces.update = AsyncMock(return_value=None)
@@ -523,7 +585,7 @@ class TestWorkspaceService:
                     db=mock_db,
                     workspace_uuid=workspace_uuid,
                     payload=OnboardingLifecycleTransitionRequest(target_state="under_review"),
-                    current_user={"id": 1, "is_superuser": True},
+                    current_user=_cl_admin(),
                 )
 
         mock_workspaces.update.assert_not_called()
@@ -563,13 +625,16 @@ class TestWorkspaceService:
         }
 
         with (
-            patch.object(service, "get_workspace_by_uuid", AsyncMock(return_value=workspace)),
+            patch.object(
+                service,
+                "_require_workspace_capability",
+                _allowed_scope(workspace),
+            ) as require_scope,
             patch.object(
                 service,
                 "_get_workspace_application_information",
                 AsyncMock(side_effect=[existing_record, updated_record]),
             ) as mock_get_record,
-            patch.object(service, "_require_onboarding_transition_access", AsyncMock()) as mock_require_access,
             patch("src.app.services.workspace_service.crud_application_information") as mock_application_information,
         ):
             mock_application_information.update = AsyncMock(return_value=None)
@@ -579,16 +644,11 @@ class TestWorkspaceService:
                 workspace_uuid=workspace_uuid,
                 application_information_uuid=application_information_uuid,
                 payload=OnboardingLifecycleTransitionRequest(target_state="submitted"),
-                current_user={"id": 42, "is_superuser": False},
+                current_user=_partner(),
             )
 
         assert result["onboarding_state"] == "submitted"
-        mock_require_access.assert_awaited_once_with(
-            db=mock_db,
-            workspace_id=9,
-            current_user={"id": 42, "is_superuser": False},
-            target_state="submitted",
-        )
+        require_scope.assert_awaited_once()
         mock_application_information.update.assert_awaited_once()
         update_kwargs = mock_application_information.update.await_args.kwargs
         assert update_kwargs["db"] is mock_db
@@ -622,47 +682,59 @@ class TestWorkspaceService:
             "deleted_at": None,
             "is_deleted": False,
             "onboarding_state": None,
+            "registration_draft_version": 4,
+            "registration_last_completed_step": "encryption",
+            "oidc_registration_payload": _complete_registration_answers(),
         }
         updated_record = {
             **existing_record,
             "onboarding_state": "submitted",
             "submitted_at": "2026-08-11T12:00:00+00:00",
+            "registration_draft_version": 5,
         }
 
         with (
-            patch.object(service, "get_workspace_by_uuid", AsyncMock(return_value=workspace)),
+            patch.object(
+                service,
+                "_require_workspace_capability",
+                _allowed_scope(workspace),
+            ) as require_scope,
             patch.object(
                 service,
                 "_get_workspace_rp_application",
-                AsyncMock(side_effect=[existing_record, updated_record]),
+                AsyncMock(return_value=existing_record),
             ) as mock_get_record,
-            patch.object(service, "_require_onboarding_transition_access", AsyncMock()) as mock_require_access,
             patch("src.app.services.workspace_service.crud_rp_applications") as mock_rp_applications,
         ):
-            mock_rp_applications.update = AsyncMock(return_value=None)
+            mock_rp_applications.update = AsyncMock(return_value=updated_record)
 
             result = await service.transition_workspace_rp_application_onboarding_state(
                 db=mock_db,
                 workspace_uuid=workspace_uuid,
                 rp_application_uuid=rp_application_uuid,
-                payload=OnboardingLifecycleTransitionRequest(target_state="submitted"),
-                current_user={"id": 42, "is_superuser": False},
+                payload=WorkspaceRPApplicationOnboardingLifecycleTransitionRequest(
+                    target_state="submitted",
+                    expected_draft_version=4,
+                ),
+                current_user=_partner(),
             )
 
         assert result["onboarding_state"] == "submitted"
-        mock_require_access.assert_awaited_once_with(
-            db=mock_db,
-            workspace_id=9,
-            current_user={"id": 42, "is_superuser": False},
-            target_state="submitted",
-        )
+        assert result["rp_application_uuid"] == rp_application_uuid
+        assert "oidc_registration_payload" not in result
+        require_scope.assert_awaited_once()
         mock_rp_applications.update.assert_awaited_once()
         update_kwargs = mock_rp_applications.update.await_args.kwargs
         assert update_kwargs["db"] is mock_db
         assert update_kwargs["uuid"] == rp_application_uuid
+        assert update_kwargs["workspace_id"] == 9
+        assert update_kwargs["onboarding_state"] == "draft"
+        assert update_kwargs["registration_draft_version"] == 4
         assert update_kwargs["object"]["onboarding_state"] == "submitted"
         assert update_kwargs["object"]["submitted_at"] is not None
-        assert mock_get_record.await_count == 2
+        assert update_kwargs["object"]["registration_draft_version"] == 5
+        assert update_kwargs["object"]["registration_last_completed_step"] == "encryption"
+        assert mock_get_record.await_count == 1
 
     @pytest.mark.asyncio
     async def test_transition_workspace_rp_application_onboarding_state_rejects_production_approval_without_promotion_request(self, mock_db) -> None:
@@ -693,9 +765,12 @@ class TestWorkspaceService:
         }
 
         with (
-            patch.object(service, "get_workspace_by_uuid", AsyncMock(return_value=workspace)),
+            patch.object(
+                service,
+                "_require_workspace_capability",
+                _allowed_scope(workspace, CanonicalRoleCode.CL_ADMIN),
+            ) as require_scope,
             patch.object(service, "_get_workspace_rp_application", AsyncMock(return_value=existing_record)),
-            patch.object(service, "_require_onboarding_transition_access", AsyncMock()) as mock_require_access,
             patch("src.app.services.workspace_service.crud_rp_application_promotion_requests") as mock_promotion_requests,
             patch("src.app.services.workspace_service.crud_rp_applications") as mock_rp_applications,
         ):
@@ -711,19 +786,17 @@ class TestWorkspaceService:
                     workspace_uuid=workspace_uuid,
                     rp_application_uuid=rp_application_uuid,
                     payload=OnboardingLifecycleTransitionRequest(target_state="approved"),
-                    current_user={"id": 1, "is_superuser": True},
+                    current_user=_cl_admin(),
                 )
 
-        mock_require_access.assert_awaited_once_with(
-            db=mock_db,
-            workspace_id=9,
-            current_user={"id": 1, "is_superuser": True},
-            target_state="approved",
-        )
+        require_scope.assert_awaited_once()
         mock_rp_applications.update.assert_not_called()
 
     @pytest.mark.asyncio
-    async def test_transition_workspace_rp_application_onboarding_state_allows_production_approval_with_reviewed_promotion_request(self, mock_db) -> None:
+    async def test_transition_workspace_rp_application_onboarding_state_allows_production_approval_with_reviewed_promotion_request(
+        self,
+        mock_db,
+    ) -> None:
         service = WorkspaceService()
         workspace_uuid = "018f6f83-0000-0000-0000-000000000201"
         rp_application_uuid = "018f6f83-0000-0000-0000-000000000701"
@@ -768,13 +841,16 @@ class TestWorkspaceService:
         }
 
         with (
-            patch.object(service, "get_workspace_by_uuid", AsyncMock(return_value=workspace)),
+            patch.object(
+                service,
+                "_require_workspace_capability",
+                _allowed_scope(workspace, CanonicalRoleCode.CL_ADMIN),
+            ) as require_scope,
             patch.object(
                 service,
                 "_get_workspace_rp_application",
                 AsyncMock(side_effect=[existing_record, updated_record]),
             ) as mock_get_record,
-            patch.object(service, "_require_onboarding_transition_access", AsyncMock()) as mock_require_access,
             patch("src.app.services.workspace_service.crud_rp_application_promotion_requests") as mock_promotion_requests,
             patch("src.app.services.workspace_service.crud_rp_applications") as mock_rp_applications,
         ):
@@ -786,16 +862,11 @@ class TestWorkspaceService:
                 workspace_uuid=workspace_uuid,
                 rp_application_uuid=rp_application_uuid,
                 payload=OnboardingLifecycleTransitionRequest(target_state="approved"),
-                current_user={"id": 1, "is_superuser": True},
+                current_user=_cl_admin(),
             )
 
         assert result["onboarding_state"] == "approved"
-        mock_require_access.assert_awaited_once_with(
-            db=mock_db,
-            workspace_id=9,
-            current_user={"id": 1, "is_superuser": True},
-            target_state="approved",
-        )
+        require_scope.assert_awaited_once()
         mock_promotion_requests.get.assert_awaited_once_with(
             db=mock_db,
             rp_application_id=33,
@@ -840,7 +911,11 @@ class TestWorkspaceService:
         }
 
         with (
-            patch.object(service, "require_workspace_admin_access", AsyncMock(return_value=workspace)),
+            patch.object(
+                service,
+                "_require_workspace_capability",
+                _allowed_scope(workspace),
+            ),
             patch.object(
                 service,
                 "_get_workspace_rp_application",
@@ -856,7 +931,7 @@ class TestWorkspaceService:
                 workspace_uuid=workspace_uuid,
                 rp_application_uuid=rp_application_uuid,
                 payload=PromotionRequestUpsert(external_reference="CAB-123"),
-                current_user={"id": 42, "is_superuser": False},
+                current_user=_partner(),
             )
 
         assert result["promotion_status"] == "review_tracked"
@@ -918,7 +993,11 @@ class TestWorkspaceService:
         }
 
         with (
-            patch.object(service, "get_workspace_by_uuid", AsyncMock(return_value=workspace)),
+            patch.object(
+                service,
+                "_require_workspace_capability",
+                _allowed_scope(workspace, CanonicalRoleCode.CL_ADMIN),
+            ),
             patch.object(
                 service,
                 "_get_workspace_rp_application",
@@ -938,7 +1017,7 @@ class TestWorkspaceService:
                     external_reference="CAB-123",
                     reviewed_by_team="CanadaLogin",
                 ),
-                current_user={"id": 1, "is_superuser": True},
+                current_user=_cl_admin(),
             )
 
         assert result["promotion_status"] == "approved"
@@ -953,280 +1032,16 @@ class TestWorkspaceService:
         assert update_kwargs["object"]["reviewed_at"] is not None
         assert update_kwargs["object"]["decided_at"] is not None
 
-    @pytest.mark.asyncio
-    async def test_list_workspace_members_rejects_non_admin_members(self, mock_db) -> None:
+    def test_workspace_member_crud_methods_are_retired(self) -> None:
         service = WorkspaceService()
 
-        with (
-            patch("src.app.services.workspace_service.crud_workspaces") as mock_workspaces,
-            patch("src.app.services.workspace_service.crud_workspace_members") as mock_workspace_members,
+        for method_name in (
+            "list_workspace_members",
+            "add_workspace_member",
+            "update_workspace_member_role",
+            "remove_workspace_member",
         ):
-            mock_workspaces.get = AsyncMock(
-                return_value={
-                    "id": 9,
-                    "uuid": "018f6f83-0000-0000-0000-000000000201",
-                    "name": "Benefits Workspace",
-                    "slug": "benefits-workspace",
-                    "department_id": 7,
-                    "description": "Primary workspace",
-                    "created_by": 42,
-                    "created_at": "2026-07-30T12:00:00",
-                    "updated_at": None,
-                    "deleted_at": None,
-                    "is_deleted": False,
-                }
-            )
-            mock_workspace_members.get = AsyncMock(return_value=None)
-
-            with pytest.raises(ForbiddenException, match="You do not have enough privileges"):
-                await service.list_workspace_members(
-                    db=mock_db,
-                    workspace_uuid="018f6f83-0000-0000-0000-000000000201",
-                    current_user={"id": 55, "is_superuser": False},
-                )
-
-    @pytest.mark.asyncio
-    async def test_add_workspace_member_rejects_duplicate_membership(self, mock_db) -> None:
-        service = WorkspaceService()
-
-        with (
-            patch("src.app.services.workspace_service.crud_workspaces") as mock_workspaces,
-            patch("src.app.services.workspace_service.crud_workspace_members") as mock_workspace_members,
-            patch("src.app.services.workspace_service.crud_users") as mock_users,
-        ):
-            mock_workspaces.get = AsyncMock(
-                return_value={
-                    "id": 9,
-                    "uuid": "018f6f83-0000-0000-0000-000000000201",
-                    "name": "Benefits Workspace",
-                    "slug": "benefits-workspace",
-                    "department_id": 7,
-                    "description": "Primary workspace",
-                    "created_by": 42,
-                    "created_at": "2026-07-30T12:00:00",
-                    "updated_at": None,
-                    "deleted_at": None,
-                    "is_deleted": False,
-                }
-            )
-            mock_workspace_members.get = AsyncMock(
-                side_effect=[
-                    {"role": "workspace_admin"},
-                    {"uuid": "018f6f83-0000-0000-0000-000000000401"},
-                ]
-            )
-            mock_users.get = AsyncMock(return_value={"id": 99, "uuid": "018f6f83-0000-0000-0000-000000000301"})
-
-            with pytest.raises(DuplicateValueException, match="User is already a workspace member"):
-                await service.add_workspace_member(
-                    db=mock_db,
-                    workspace_uuid="018f6f83-0000-0000-0000-000000000201",
-                    payload=WorkspaceMemberCreate(
-                        user_uuid="018f6f83-0000-0000-0000-000000000301",
-                        role="workspace_member",
-                    ),
-                    current_user={"id": 42, "is_superuser": False},
-                )
-
-    @pytest.mark.asyncio
-    async def test_add_workspace_member_creates_membership_with_user_details(self, mock_db) -> None:
-        service = WorkspaceService()
-
-        with (
-            patch("src.app.services.workspace_service.crud_workspaces") as mock_workspaces,
-            patch("src.app.services.workspace_service.crud_workspace_members") as mock_workspace_members,
-            patch("src.app.services.workspace_service.crud_users") as mock_users,
-        ):
-            mock_workspaces.get = AsyncMock(
-                return_value={
-                    "id": 9,
-                    "uuid": "018f6f83-0000-0000-0000-000000000201",
-                    "name": "Benefits Workspace",
-                    "slug": "benefits-workspace",
-                    "department_id": 7,
-                    "description": "Primary workspace",
-                    "created_by": 42,
-                    "created_at": "2026-07-30T12:00:00",
-                    "updated_at": None,
-                    "deleted_at": None,
-                    "is_deleted": False,
-                }
-            )
-            mock_workspace_members.get = AsyncMock(side_effect=[{"role": "workspace_admin"}, None])
-            mock_workspace_members.create = AsyncMock(
-                return_value={
-                    "id": 12,
-                    "uuid": "018f6f83-0000-0000-0000-000000000402",
-                    "workspace_id": 9,
-                    "user_id": 99,
-                    "role": "workspace_member",
-                    "created_at": "2026-07-30T14:00:00",
-                    "deleted_at": None,
-                    "is_deleted": False,
-                }
-            )
-            mock_users.get = AsyncMock(
-                side_effect=[
-                    {
-                        "id": 99,
-                        "uuid": "018f6f83-0000-0000-0000-000000000301",
-                        "email": "member@example.gc.ca",
-                        "name": "Member User",
-                    },
-                    {
-                        "id": 99,
-                        "uuid": "018f6f83-0000-0000-0000-000000000301",
-                        "email": "member@example.gc.ca",
-                        "name": "Member User",
-                    },
-                ]
-            )
-
-            result = await service.add_workspace_member(
-                db=mock_db,
-                workspace_uuid="018f6f83-0000-0000-0000-000000000201",
-                payload=WorkspaceMemberCreate(
-                    user_uuid="018f6f83-0000-0000-0000-000000000301",
-                    role="workspace_member",
-                ),
-                current_user={"id": 42, "is_superuser": False},
-            )
-
-        assert result["user_email"] == "member@example.gc.ca"
-        assert result["user_name"] == "Member User"
-        assert result["role"] == "workspace_member"
-
-    @pytest.mark.asyncio
-    async def test_update_workspace_member_role_changes_role(self, mock_db) -> None:
-        service = WorkspaceService()
-
-        with (
-            patch("src.app.services.workspace_service.crud_workspaces") as mock_workspaces,
-            patch("src.app.services.workspace_service.crud_workspace_members") as mock_workspace_members,
-            patch("src.app.services.workspace_service.crud_users") as mock_users,
-        ):
-            mock_workspaces.get = AsyncMock(
-                return_value={
-                    "id": 9,
-                    "uuid": "018f6f83-0000-0000-0000-000000000201",
-                    "name": "Benefits Workspace",
-                    "slug": "benefits-workspace",
-                    "department_id": 7,
-                    "description": "Primary workspace",
-                    "created_by": 42,
-                    "created_at": "2026-07-30T12:00:00",
-                    "updated_at": None,
-                    "deleted_at": None,
-                    "is_deleted": False,
-                }
-            )
-            mock_workspace_members.get = AsyncMock(
-                side_effect=[
-                    {"role": "workspace_admin"},
-                    {
-                        "id": 12,
-                        "uuid": "018f6f83-0000-0000-0000-000000000402",
-                        "workspace_id": 9,
-                        "user_id": 99,
-                        "role": "workspace_member",
-                        "created_at": "2026-07-30T14:00:00",
-                        "deleted_at": None,
-                        "is_deleted": False,
-                    },
-                    {
-                        "id": 12,
-                        "uuid": "018f6f83-0000-0000-0000-000000000402",
-                        "workspace_id": 9,
-                        "user_id": 99,
-                        "role": "workspace_admin",
-                        "created_at": "2026-07-30T14:00:00",
-                        "deleted_at": None,
-                        "is_deleted": False,
-                    },
-                ]
-            )
-            mock_workspace_members.update = AsyncMock(return_value=None)
-            mock_users.get = AsyncMock(
-                side_effect=[
-                    {"id": 99, "uuid": "018f6f83-0000-0000-0000-000000000301"},
-                    {
-                        "id": 99,
-                        "uuid": "018f6f83-0000-0000-0000-000000000301",
-                        "email": "member@example.gc.ca",
-                        "name": "Member User",
-                    },
-                ]
-            )
-
-            result = await service.update_workspace_member_role(
-                db=mock_db,
-                workspace_uuid="018f6f83-0000-0000-0000-000000000201",
-                user_uuid="018f6f83-0000-0000-0000-000000000301",
-                payload=WorkspaceMemberUpdate(role="workspace_admin"),
-                current_user={"id": 42, "is_superuser": False},
-            )
-
-        assert result["role"] == "workspace_admin"
-        mock_workspace_members.update.assert_awaited_once_with(
-            db=mock_db,
-            object={"role": "workspace_admin"},
-            uuid="018f6f83-0000-0000-0000-000000000402",
-        )
-
-    @pytest.mark.asyncio
-    async def test_remove_workspace_member_soft_deletes_membership(self, mock_db) -> None:
-        service = WorkspaceService()
-
-        with (
-            patch("src.app.services.workspace_service.crud_workspaces") as mock_workspaces,
-            patch("src.app.services.workspace_service.crud_workspace_members") as mock_workspace_members,
-            patch("src.app.services.workspace_service.crud_users") as mock_users,
-        ):
-            mock_workspaces.get = AsyncMock(
-                return_value={
-                    "id": 9,
-                    "uuid": "018f6f83-0000-0000-0000-000000000201",
-                    "name": "Benefits Workspace",
-                    "slug": "benefits-workspace",
-                    "department_id": 7,
-                    "description": "Primary workspace",
-                    "created_by": 42,
-                    "created_at": "2026-07-30T12:00:00",
-                    "updated_at": None,
-                    "deleted_at": None,
-                    "is_deleted": False,
-                }
-            )
-            mock_workspace_members.get = AsyncMock(
-                side_effect=[
-                    {"role": "workspace_admin"},
-                    {
-                        "id": 12,
-                        "uuid": "018f6f83-0000-0000-0000-000000000402",
-                        "workspace_id": 9,
-                        "user_id": 99,
-                        "role": "workspace_member",
-                        "created_at": "2026-07-30T14:00:00",
-                        "deleted_at": None,
-                        "is_deleted": False,
-                    },
-                ]
-            )
-            mock_workspace_members.delete = AsyncMock(return_value=None)
-            mock_users.get = AsyncMock(return_value={"id": 99, "uuid": "018f6f83-0000-0000-0000-000000000301"})
-
-            result = await service.remove_workspace_member(
-                db=mock_db,
-                workspace_uuid="018f6f83-0000-0000-0000-000000000201",
-                user_uuid="018f6f83-0000-0000-0000-000000000301",
-                current_user={"id": 42, "is_superuser": False},
-            )
-
-        assert result == {"message": "Workspace member removed"}
-        mock_workspace_members.delete.assert_awaited_once_with(
-            db=mock_db,
-            uuid="018f6f83-0000-0000-0000-000000000402",
-        )
+            assert not hasattr(service, method_name)
 
     @pytest.mark.asyncio
     async def test_create_workspace_application_information_sets_workspace_and_creator(self, mock_db) -> None:
@@ -1234,7 +1049,7 @@ class TestWorkspaceService:
 
         with (
             patch("src.app.services.workspace_service.crud_workspaces") as mock_workspaces,
-            patch("src.app.services.workspace_service.crud_workspace_members") as mock_workspace_members,
+            patch("src.app.services.workspace_service.crud_workspace_members", create=True) as mock_workspace_members,
             patch("src.app.services.workspace_service.crud_application_information") as mock_application_information,
         ):
             mock_workspaces.get = AsyncMock(
@@ -1285,7 +1100,7 @@ class TestWorkspaceService:
                     usage="Usage",
                     migration_or_transition_plan="Plan",
                 ),
-                current_user={"id": 42, "is_superuser": False},
+                current_user=_partner(),
             )
 
         assert result["workspace_id"] == 9
@@ -1301,9 +1116,8 @@ class TestWorkspaceService:
 
         with (
             patch("src.app.services.workspace_service.crud_workspaces") as mock_workspaces,
-            patch("src.app.services.workspace_service.crud_workspace_members") as mock_workspace_members,
+            patch("src.app.services.workspace_service.crud_workspace_members", create=True) as mock_workspace_members,
             patch("src.app.services.workspace_service.crud_application_information") as mock_application_information,
-            patch("src.app.services.workspace_service.crud_rp_application_access_grants") as mock_access_grants,
             patch("src.app.services.workspace_service.crud_rp_applications") as mock_rp_applications,
         ):
             mock_workspaces.get = AsyncMock(
@@ -1351,7 +1165,7 @@ class TestWorkspaceService:
                     db=mock_db,
                     workspace_uuid="018f6f83-0000-0000-0000-000000000201",
                     application_information_uuid="018f6f83-0000-0000-0000-000000000501",
-                    current_user={"id": 42, "is_superuser": False},
+                    current_user=_partner(),
                 )
 
         mock_rp_applications.exists.assert_awaited_once_with(
@@ -1366,7 +1180,7 @@ class TestWorkspaceService:
 
         with (
             patch("src.app.services.workspace_service.crud_workspaces") as mock_workspaces,
-            patch("src.app.services.workspace_service.crud_workspace_members") as mock_workspace_members,
+            patch("src.app.services.workspace_service.crud_workspace_members", create=True) as mock_workspace_members,
             patch("src.app.services.workspace_service.crud_application_information") as mock_application_information,
             patch("src.app.services.workspace_service.crud_application_information_contacts") as mock_contacts,
         ):
@@ -1436,7 +1250,7 @@ class TestWorkspaceService:
                     email="jane.doe@example.gc.ca",
                     phone_number="555-555-5555",
                 ),
-                current_user={"id": 42, "is_superuser": False},
+                current_user=_partner(),
             )
 
         assert result["application_information_id"] == 17
@@ -1452,8 +1266,11 @@ class TestWorkspaceService:
         with (
             patch.object(
                 service,
-                "get_workspace_by_uuid",
-                AsyncMock(return_value={"id": 9, "uuid": "018f6f83-0000-0000-0000-000000000201"}),
+                "_require_workspace_capability",
+                _allowed_scope(
+                    {"id": 9, "uuid": str(WORKSPACE_UUID)},
+                    CanonicalRoleCode.CL_ADMIN,
+                ),
             ),
             patch.object(
                 service,
@@ -1532,7 +1349,7 @@ class TestWorkspaceService:
                 db=mock_db,
                 workspace_uuid="018f6f83-0000-0000-0000-000000000201",
                 application_information_uuid="018f6f83-0000-0000-0000-000000000501",
-                current_user={"id": 1, "is_superuser": True},
+                current_user=_cl_admin(),
             )
 
         assert result["notes"][0]["body"] == "Newest note"
@@ -1547,8 +1364,11 @@ class TestWorkspaceService:
         with (
             patch.object(
                 service,
-                "get_workspace_by_uuid",
-                AsyncMock(return_value={"id": 9, "uuid": "018f6f83-0000-0000-0000-000000000201"}),
+                "_require_workspace_capability",
+                _allowed_scope(
+                    {"id": 9, "uuid": str(WORKSPACE_UUID)},
+                    CanonicalRoleCode.CL_ADMIN,
+                ),
             ),
             patch.object(
                 service,
@@ -1591,10 +1411,8 @@ class TestWorkspaceService:
                 db=mock_db,
                 workspace_uuid="018f6f83-0000-0000-0000-000000000201",
                 application_information_uuid="018f6f83-0000-0000-0000-000000000501",
-                payload=ApplicationInformationReviewNoteCreate(
-                    body="Needs a production evidence reference"
-                ),
-                current_user={"id": 1, "is_superuser": True},
+                payload=ApplicationInformationReviewNoteCreate(body="Needs a production evidence reference"),
+                current_user=_cl_admin(),
             )
 
         assert result["body"] == "Needs a production evidence reference"
@@ -1610,8 +1428,11 @@ class TestWorkspaceService:
         with (
             patch.object(
                 service,
-                "get_workspace_by_uuid",
-                AsyncMock(return_value={"id": 9, "uuid": "018f6f83-0000-0000-0000-000000000201"}),
+                "_require_workspace_capability",
+                _allowed_scope(
+                    {"id": 9, "uuid": str(WORKSPACE_UUID)},
+                    CanonicalRoleCode.CL_ADMIN,
+                ),
             ),
             patch.object(
                 service,
@@ -1706,7 +1527,7 @@ class TestWorkspaceService:
                     process_links_status="complete",
                     rationale="Ready for external review once evidence is linked",
                 ),
-                current_user={"id": 1, "is_superuser": True},
+                current_user=_cl_admin(),
             )
 
         assert result["review_disposition"] == "ready_for_next_step"
@@ -1721,9 +1542,9 @@ class TestWorkspaceService:
 
         with (
             patch("src.app.services.workspace_service.crud_workspaces") as mock_workspaces,
-            patch("src.app.services.workspace_service.crud_workspace_members") as mock_workspace_members,
+            patch("src.app.services.workspace_service.crud_workspace_members", create=True) as mock_workspace_members,
             patch("src.app.services.workspace_service.crud_application_information") as mock_application_information,
-            patch("src.app.services.workspace_service.crud_rp_application_access_grants") as mock_access_grants,
+            patch("src.app.services.workspace_service.crud_rp_application_access_grants", create=True) as mock_access_grants,
             patch("src.app.services.workspace_service.crud_rp_applications") as mock_rp_applications,
         ):
             mock_workspaces.get = AsyncMock(
@@ -1824,7 +1645,7 @@ class TestWorkspaceService:
                     message_decryption_key_management_algorithms=["RSA-OAEP-256"],
                     message_decryption_content_algorithms=["A256GCM"],
                 ),
-                current_user={"id": 42, "is_superuser": False},
+                current_user=_partner(),
             )
 
         assert result["workspace_id"] == 9
@@ -1835,20 +1656,19 @@ class TestWorkspaceService:
         assert create_kwargs["object"].dnr_app_name == "Benefits Portal"
         assert create_kwargs["object"].canada_login_environment == "staging"
         assert create_kwargs["object"].oidc_registration_payload["client_type"] == "confidential"
-        access_grant_kwargs = mock_access_grants.create.await_args.kwargs
-        assert access_grant_kwargs["object"].workspace_id == 9
-        assert access_grant_kwargs["object"].user_id == 42
-        assert access_grant_kwargs["object"].role == "RP User (Edit)"
+        mock_access_grants.get.assert_not_awaited()
+        mock_access_grants.create.assert_not_awaited()
+        mock_workspace_members.get.assert_not_awaited()
 
     @pytest.mark.asyncio
-    async def test_create_workspace_rp_application_promotes_read_only_access_grant_for_creator(self, mock_db) -> None:
+    async def test_create_workspace_rp_application_does_not_promote_legacy_access_rows(self, mock_db) -> None:
         service = WorkspaceService()
 
         with (
             patch("src.app.services.workspace_service.crud_workspaces") as mock_workspaces,
-            patch("src.app.services.workspace_service.crud_workspace_members") as mock_workspace_members,
+            patch("src.app.services.workspace_service.crud_workspace_members", create=True) as mock_workspace_members,
             patch("src.app.services.workspace_service.crud_application_information") as mock_application_information,
-            patch("src.app.services.workspace_service.crud_rp_application_access_grants") as mock_access_grants,
+            patch("src.app.services.workspace_service.crud_rp_application_access_grants", create=True) as mock_access_grants,
             patch("src.app.services.workspace_service.crud_rp_applications") as mock_rp_applications,
         ):
             mock_workspaces.get = AsyncMock(
@@ -1950,13 +1770,13 @@ class TestWorkspaceService:
                     message_decryption_key_management_algorithms=["RSA-OAEP-256"],
                     message_decryption_content_algorithms=["A256GCM"],
                 ),
-                current_user={"id": 42, "is_superuser": False},
+                current_user=_partner(),
             )
 
         mock_access_grants.create.assert_not_awaited()
-        update_kwargs = mock_access_grants.update.await_args.kwargs
-        assert update_kwargs["uuid"] == "018f6f83-0000-0000-0000-000000000702"
-        assert update_kwargs["object"]["role"] == "RP User (Edit)"
+        mock_access_grants.get.assert_not_awaited()
+        mock_access_grants.update.assert_not_awaited()
+        mock_workspace_members.get.assert_not_awaited()
 
     @pytest.mark.asyncio
     async def test_update_workspace_rp_application_merges_questionnaire_payload(self, mock_db) -> None:
@@ -1964,7 +1784,7 @@ class TestWorkspaceService:
 
         with (
             patch("src.app.services.workspace_service.crud_workspaces") as mock_workspaces,
-            patch("src.app.services.workspace_service.crud_workspace_members") as mock_workspace_members,
+            patch("src.app.services.workspace_service.crud_workspace_members", create=True) as mock_workspace_members,
             patch("src.app.services.workspace_service.crud_rp_applications") as mock_rp_applications,
         ):
             mock_workspaces.get = AsyncMock(
@@ -2039,7 +1859,7 @@ class TestWorkspaceService:
                     service_name_en="Benefits Portal Updated",
                     requested_scopes=["openid", "profile", "email"],
                 ),
-                current_user={"id": 42, "is_superuser": False},
+                current_user=_partner(),
             )
 
         assert result["dnr_app_name"] == "Benefits Portal Updated"
@@ -2058,13 +1878,11 @@ class TestWorkspaceService:
     ) -> None:
         service = WorkspaceService()
         mock_ibm_sv_admin_service = Mock()
-        mock_ibm_sv_admin_service.get_application_total_logins = AsyncMock(
-            return_value={"response": {"total": 11, "successful": 9, "failed": 2}}
-        )
+        mock_ibm_sv_admin_service.get_application_total_logins = AsyncMock(return_value={"response": {"total": 11, "successful": 9, "failed": 2}})
 
         with (
             patch("src.app.services.workspace_service.crud_workspaces") as mock_workspaces,
-            patch("src.app.services.workspace_service.crud_workspace_members") as mock_workspace_members,
+            patch("src.app.services.workspace_service.crud_workspace_members", create=True) as mock_workspace_members,
             patch("src.app.services.workspace_service.crud_rp_applications") as mock_rp_applications,
         ):
             mock_workspaces.get = AsyncMock(
@@ -2107,7 +1925,7 @@ class TestWorkspaceService:
                 db=mock_db,
                 workspace_uuid="018f6f83-0000-0000-0000-000000000201",
                 rp_application_uuid="018f6f83-0000-0000-0000-000000000701",
-                current_user={"id": 42, "is_superuser": False},
+                current_user=_partner(),
                 ibm_sv_admin_service=mock_ibm_sv_admin_service,
                 selected_date="1775692800000",
             )
@@ -2126,13 +1944,11 @@ class TestWorkspaceService:
     ) -> None:
         service = WorkspaceService()
         mock_ibm_sv_admin_service = Mock()
-        mock_ibm_sv_admin_service.get_application_audit_trail_search_after = AsyncMock(
-            return_value={"events": [], "next": None, "total": 20}
-        )
+        mock_ibm_sv_admin_service.get_application_audit_trail_search_after = AsyncMock(return_value={"events": [], "next": None, "total": 20})
 
         with (
             patch("src.app.services.workspace_service.crud_workspaces") as mock_workspaces,
-            patch("src.app.services.workspace_service.crud_workspace_members") as mock_workspace_members,
+            patch("src.app.services.workspace_service.crud_workspace_members", create=True) as mock_workspace_members,
             patch("src.app.services.workspace_service.crud_rp_applications") as mock_rp_applications,
         ):
             mock_workspaces.get = AsyncMock(
@@ -2175,7 +1991,7 @@ class TestWorkspaceService:
                 db=mock_db,
                 workspace_uuid="018f6f83-0000-0000-0000-000000000201",
                 rp_application_uuid="018f6f83-0000-0000-0000-000000000701",
-                current_user={"id": 42, "is_superuser": False},
+                current_user=_partner(),
                 ibm_sv_admin_service=mock_ibm_sv_admin_service,
                 selected_date="1775692800000",
                 size=25,
@@ -2202,7 +2018,7 @@ class TestWorkspaceService:
 
         with (
             patch("src.app.services.workspace_service.crud_workspaces") as mock_workspaces,
-            patch("src.app.services.workspace_service.crud_workspace_members") as mock_workspace_members,
+            patch("src.app.services.workspace_service.crud_workspace_members", create=True) as mock_workspace_members,
             patch("src.app.services.workspace_service.crud_rp_applications") as mock_rp_applications,
         ):
             mock_workspaces.get = AsyncMock(
@@ -2246,7 +2062,7 @@ class TestWorkspaceService:
                     db=mock_db,
                     workspace_uuid="018f6f83-0000-0000-0000-000000000201",
                     rp_application_uuid="018f6f83-0000-0000-0000-000000000701",
-                    current_user={"id": 42, "is_superuser": False},
+                    current_user=_partner(),
                     ibm_sv_admin_service=mock_ibm_sv_admin_service,
                 )
 

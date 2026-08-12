@@ -1,306 +1,382 @@
 import uuid as uuid_pkg
 from datetime import date, timedelta
-from typing import Annotated, Any
+from typing import Annotated
 
 from fastapi import APIRouter, Depends, Query, Request
-from fastcrud import PaginatedListResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from ...api.dependencies import (
-    get_audit_service,
     get_current_user,
-    get_ibm_sv_user_service,
     get_mau_service,
+    get_rp_application_adoption_metadata_provider,
     get_rp_application_service,
 )
-from ...core.access_control import casbin_guard
 from ...core.db.database import async_get_db
 from ...core.exceptions.http_exceptions import BadRequestException
 from ...core.exceptions.openapi import error_responses
 from ...repositories.crud_departments import crud_departments
-from ...repositories.dependencies import get_ibm_sv_admin_client
-from ...repositories.ibm_sv_admin import IBMVerifyAdminClient
+from ...repositories.dependencies import (
+    IBMVerifyAdminClientFactory,
+    get_ibm_sv_admin_client_factory,
+)
 from ...schemas.mau import MAUReportItem, MAUReportResponse
 from ...schemas.rp_application import (
-    CurrentUserRPApplicationDepartmentAssignRequest,
-    CurrentUserRPApplicationSummaryRead,
+    AccessibleRPApplicationDepartmentAssignRequest,
+    AccessibleRPApplicationOAuthSetupRead,
+    AccessibleRPApplicationRead,
+    AccessibleRPApplicationSummaryRead,
     RPApplicationClientCredentialsRead,
     RPApplicationClientRotatedSecretCreateRequest,
+    RPApplicationClientRotatedSecretDeleteRequest,
     RPApplicationClientRotatedSecretRead,
     RPApplicationClientSecretRotateRequest,
-    RPApplicationCreate,
-    RPApplicationCurrentUserOAuthSetupRead,
-    RPApplicationCurrentUserRead,
-    RPApplicationRead,
-    RPApplicationUpdate,
+    RPApplicationSummaryRead,
 )
-from ...services.audit_service import AuditService
-from ...services.ibm_sv_user_service import IBMVerifyUserService
+from ...schemas.rp_application_adoption import (
+    RPApplicationAdoptionCandidateListRead,
+    RPApplicationAdoptionCandidatePreviewRead,
+    RPApplicationWorkspaceAdoptionRead,
+    RPApplicationWorkspaceLinkWrite,
+)
 from ...services.mau_service import MAUService
+from ...services.rp_application_adoption_metadata_provider import (
+    RPApplicationAdoptionMetadataProvider,
+)
 from ...services.rp_application_service import RPApplicationService
 
 router = APIRouter(tags=["rp-applications"])
 
 
-@router.post("/rp-application", response_model=RPApplicationRead, status_code=201)
-@casbin_guard.require_permission("rp_applications", "write")
-async def write_rp_application(
-    request: Request,
-    rp_application: RPApplicationCreate,
-    db: Annotated[AsyncSession, Depends(async_get_db)],
-    service: Annotated[RPApplicationService, Depends(get_rp_application_service)],
-    current_user: Annotated[dict, Depends(get_current_user)],
-) -> dict[str, Any]:
-    return await service.create_rp_application(
-        db=db,
-        rp_application=rp_application,
-        current_user=current_user,
-        created_by=current_user.get("id"),
-    )
-
-
-@router.get("/rp-applications", response_model=PaginatedListResponse[RPApplicationRead])
-@casbin_guard.require_permission("rp_applications", "read")
-async def read_rp_applications(
-    request: Request,
-    db: Annotated[AsyncSession, Depends(async_get_db)],
-    service: Annotated[RPApplicationService, Depends(get_rp_application_service)],
-    page: int = 1,
-    items_per_page: int = 10,
-) -> dict[str, Any]:
-    return await service.list_rp_applications(
-        db=db,
-        page=page,
-        items_per_page=items_per_page,
-    )
-
-
-@router.get("/rp-applications/mine", response_model=list[RPApplicationCurrentUserRead])
-async def read_current_user_rp_applications(
+@router.get(
+    "/rp-applications/workspace-adoption-candidates",
+    response_model=RPApplicationAdoptionCandidateListRead,
+    responses=error_responses(401, 403, 500),
+)
+async def read_rp_application_adoption_candidates(
     request: Request,
     db: Annotated[AsyncSession, Depends(async_get_db)],
     current_user: Annotated[dict, Depends(get_current_user)],
     service: Annotated[RPApplicationService, Depends(get_rp_application_service)],
-    ibm_user_service: Annotated[IBMVerifyUserService, Depends(get_ibm_sv_user_service)],
-) -> list[RPApplicationCurrentUserRead]:
-    applications = await service.list_current_user_rp_applications(
+) -> RPApplicationAdoptionCandidateListRead:
+    del request
+    candidates = await service.list_rp_application_adoption_candidates(
         db=db,
         current_user=current_user,
-        ibm_user_service=ibm_user_service,
     )
-    return [RPApplicationCurrentUserRead.model_validate(application) for application in applications]
+    return RPApplicationAdoptionCandidateListRead.model_validate(candidates)
 
 
 @router.get(
-    "/rp-applications/mine/{rp_application_uuid}/department",
-    response_model=CurrentUserRPApplicationSummaryRead,
-    responses=error_responses(403, 404, 500),
+    "/rp-applications/workspace-adoption-candidates/{rp_application_uuid}",
+    response_model=RPApplicationAdoptionCandidatePreviewRead,
+    responses=error_responses(401, 403, 404, 500, 503),
 )
-async def read_current_user_rp_application_department(
+async def read_rp_application_adoption_candidate_preview(
     request: Request,
     rp_application_uuid: uuid_pkg.UUID,
     db: Annotated[AsyncSession, Depends(async_get_db)],
     current_user: Annotated[dict, Depends(get_current_user)],
     service: Annotated[RPApplicationService, Depends(get_rp_application_service)],
-) -> CurrentUserRPApplicationSummaryRead:
-    preflight = await service.get_current_user_rp_application_department_preflight(
+    metadata_provider: Annotated[
+        RPApplicationAdoptionMetadataProvider,
+        Depends(get_rp_application_adoption_metadata_provider),
+    ],
+) -> RPApplicationAdoptionCandidatePreviewRead:
+    del request
+    preview = await service.preview_rp_application_adoption_candidate(
+        db=db,
+        current_user=current_user,
+        rp_application_uuid=rp_application_uuid,
+        metadata_provider=metadata_provider,
+    )
+    return RPApplicationAdoptionCandidatePreviewRead.model_validate(preview)
+
+
+@router.put(
+    "/rp-applications/{rp_application_uuid}/workspace-link",
+    response_model=RPApplicationWorkspaceAdoptionRead,
+    responses=error_responses(400, 401, 403, 404, 409, 500, 503),
+)
+async def link_rp_application_to_workspace(
+    request: Request,
+    rp_application_uuid: uuid_pkg.UUID,
+    payload: RPApplicationWorkspaceLinkWrite,
+    db: Annotated[AsyncSession, Depends(async_get_db)],
+    current_user: Annotated[dict, Depends(get_current_user)],
+    service: Annotated[RPApplicationService, Depends(get_rp_application_service)],
+    metadata_provider: Annotated[
+        RPApplicationAdoptionMetadataProvider,
+        Depends(get_rp_application_adoption_metadata_provider),
+    ],
+) -> RPApplicationWorkspaceAdoptionRead:
+    correlation_id = str(getattr(request.state, "request_id", None) or request.headers.get("X-Request-ID") or "unavailable")
+    adopted = await service.link_rp_application_to_workspace(
+        db=db,
+        current_user=current_user,
+        rp_application_uuid=rp_application_uuid,
+        payload=payload,
+        metadata_provider=metadata_provider,
+        correlation_id=correlation_id,
+    )
+    return RPApplicationWorkspaceAdoptionRead.model_validate(adopted)
+
+
+@router.get(
+    "/rp-applications/accessible",
+    response_model=list[RPApplicationSummaryRead],
+)
+async def read_accessible_rp_applications(
+    request: Request,
+    db: Annotated[AsyncSession, Depends(async_get_db)],
+    current_user: Annotated[dict, Depends(get_current_user)],
+    service: Annotated[RPApplicationService, Depends(get_rp_application_service)],
+) -> list[RPApplicationSummaryRead]:
+    applications = await service.list_accessible_rp_applications(
+        db=db,
+        current_user=current_user,
+    )
+    return [RPApplicationSummaryRead.model_validate(application) for application in applications]
+
+
+@router.get(
+    "/rp-applications/accessible/{rp_application_uuid}",
+    response_model=AccessibleRPApplicationRead,
+    responses=error_responses(401, 403, 404, 500),
+)
+async def read_accessible_rp_application(
+    request: Request,
+    rp_application_uuid: uuid_pkg.UUID,
+    db: Annotated[AsyncSession, Depends(async_get_db)],
+    current_user: Annotated[dict, Depends(get_current_user)],
+    service: Annotated[RPApplicationService, Depends(get_rp_application_service)],
+) -> AccessibleRPApplicationRead:
+    application = await service.get_accessible_rp_application_by_uuid(
+        db=db,
+        current_user=current_user,
+        rp_application_uuid=rp_application_uuid,
+    )
+    return AccessibleRPApplicationRead.model_validate(application)
+
+
+@router.get(
+    "/rp-applications/accessible/{rp_application_uuid}/department",
+    response_model=AccessibleRPApplicationSummaryRead,
+    responses=error_responses(403, 404, 500),
+)
+async def read_accessible_rp_application_department(
+    request: Request,
+    rp_application_uuid: uuid_pkg.UUID,
+    db: Annotated[AsyncSession, Depends(async_get_db)],
+    current_user: Annotated[dict, Depends(get_current_user)],
+    service: Annotated[RPApplicationService, Depends(get_rp_application_service)],
+) -> AccessibleRPApplicationSummaryRead:
+    preflight = await service.get_accessible_rp_application_department_preflight(
         db=db,
         rp_application_uuid=rp_application_uuid,
         current_user=current_user,
     )
-    return CurrentUserRPApplicationSummaryRead.model_validate(preflight)
+    return AccessibleRPApplicationSummaryRead.model_validate(preflight)
 
 
 @router.patch(
-    "/rp-applications/mine/{rp_application_uuid}/department",
-    response_model=CurrentUserRPApplicationSummaryRead,
+    "/rp-applications/accessible/{rp_application_uuid}/department",
+    response_model=AccessibleRPApplicationSummaryRead,
     responses=error_responses(403, 404, 409, 500),
 )
-async def assign_current_user_rp_application_department(
+async def assign_accessible_rp_application_department(
     request: Request,
     rp_application_uuid: uuid_pkg.UUID,
-    payload: CurrentUserRPApplicationDepartmentAssignRequest,
+    payload: AccessibleRPApplicationDepartmentAssignRequest,
     db: Annotated[AsyncSession, Depends(async_get_db)],
     current_user: Annotated[dict, Depends(get_current_user)],
     service: Annotated[RPApplicationService, Depends(get_rp_application_service)],
-) -> CurrentUserRPApplicationSummaryRead:
-    result = await service.assign_current_user_rp_application_department(
+) -> AccessibleRPApplicationSummaryRead:
+    result = await service.assign_accessible_rp_application_department(
         db=db,
         rp_application_uuid=rp_application_uuid,
         current_user=current_user,
         payload=payload,
     )
-    return CurrentUserRPApplicationSummaryRead.model_validate(result)
+    return AccessibleRPApplicationSummaryRead.model_validate(result)
 
 
 @router.get(
-    "/rp-applications/mine/{rp_application_uuid}/oauth-setup",
-    response_model=RPApplicationCurrentUserOAuthSetupRead,
-    responses=error_responses(403, 404, 409, 500),
+    "/rp-applications/accessible/{rp_application_uuid}/oauth-setup",
+    response_model=AccessibleRPApplicationOAuthSetupRead,
+    responses=error_responses(403, 404, 409, 500, 503),
+    deprecated=True,
 )
-async def read_current_user_rp_application_oauth_setup(
+async def read_accessible_rp_application_oauth_setup(
     request: Request,
     rp_application_uuid: uuid_pkg.UUID,
     db: Annotated[AsyncSession, Depends(async_get_db)],
     current_user: Annotated[dict, Depends(get_current_user)],
     service: Annotated[RPApplicationService, Depends(get_rp_application_service)],
-    ibm_admin_client: Annotated[
-        IBMVerifyAdminClient, Depends(get_ibm_sv_admin_client)
+    ibm_admin_client_factory: Annotated[
+        IBMVerifyAdminClientFactory,
+        Depends(get_ibm_sv_admin_client_factory),
     ],
-) -> RPApplicationCurrentUserOAuthSetupRead:
-    oauth_setup = await service.get_current_user_rp_application_oauth_setup(
+) -> AccessibleRPApplicationOAuthSetupRead:
+    oauth_setup = await service.get_accessible_rp_application_oauth_setup(
         db=db,
         rp_application_uuid=rp_application_uuid,
         current_user=current_user,
-        ibm_admin_client=ibm_admin_client,
+        ibm_admin_client_factory=ibm_admin_client_factory,
     )
-    return RPApplicationCurrentUserOAuthSetupRead.model_validate(oauth_setup)
+    return AccessibleRPApplicationOAuthSetupRead.model_validate(oauth_setup)
 
 
 @router.get(
-    "/rp-applications/mine/{rp_application_uuid}/client",
+    "/rp-applications/accessible/{rp_application_uuid}/client",
     response_model=RPApplicationClientCredentialsRead,
-    responses=error_responses(403, 404, 500),
+    responses=error_responses(403, 404, 500, 503),
 )
-async def read_current_user_rp_application_client_credentials(
+async def read_accessible_rp_application_client_credentials(
     request: Request,
     rp_application_uuid: uuid_pkg.UUID,
     db: Annotated[AsyncSession, Depends(async_get_db)],
     current_user: Annotated[dict, Depends(get_current_user)],
     service: Annotated[RPApplicationService, Depends(get_rp_application_service)],
-    audit_service: Annotated[AuditService, Depends(get_audit_service)],
-    ibm_admin_client: Annotated[
-        IBMVerifyAdminClient, Depends(get_ibm_sv_admin_client)
+    ibm_admin_client_factory: Annotated[
+        IBMVerifyAdminClientFactory,
+        Depends(get_ibm_sv_admin_client_factory),
     ],
+    workspace_uuid: Annotated[uuid_pkg.UUID | None, Query(alias="workspaceUuid")] = None,
 ) -> RPApplicationClientCredentialsRead:
-    credentials = await service.get_current_user_rp_application_client_credentials(
+    credentials = await service.get_accessible_rp_application_client_credentials(
         db=db,
         rp_application_uuid=rp_application_uuid,
         current_user=current_user,
-        ibm_admin_client=ibm_admin_client,
+        ibm_admin_client_factory=ibm_admin_client_factory,
+        **({"expected_workspace_uuid": workspace_uuid} if workspace_uuid is not None else {}),
     )
     return RPApplicationClientCredentialsRead.model_validate(credentials)
 
 
 @router.get(
-    "/rp-applications/mine/{rp_application_uuid}/client/rotated-secrets",
+    "/rp-applications/accessible/{rp_application_uuid}/client/rotated-secrets",
     response_model=list[RPApplicationClientRotatedSecretRead],
-    responses=error_responses(403, 404, 500),
+    responses=error_responses(403, 404, 500, 503),
 )
-async def read_current_user_rp_application_rotated_secrets(
+async def read_accessible_rp_application_rotated_secrets(
     request: Request,
     rp_application_uuid: uuid_pkg.UUID,
     db: Annotated[AsyncSession, Depends(async_get_db)],
     current_user: Annotated[dict, Depends(get_current_user)],
     service: Annotated[RPApplicationService, Depends(get_rp_application_service)],
-    ibm_admin_client: Annotated[
-        IBMVerifyAdminClient, Depends(get_ibm_sv_admin_client)
+    ibm_admin_client_factory: Annotated[
+        IBMVerifyAdminClientFactory,
+        Depends(get_ibm_sv_admin_client_factory),
     ],
+    workspace_uuid: Annotated[uuid_pkg.UUID | None, Query(alias="workspaceUuid")] = None,
 ) -> list[RPApplicationClientRotatedSecretRead]:
-    rotated_secrets = await service.list_current_user_rp_application_rotated_secrets(
+    rotated_secrets = await service.list_accessible_rp_application_rotated_secrets(
         db=db,
         rp_application_uuid=rp_application_uuid,
         current_user=current_user,
-        ibm_admin_client=ibm_admin_client,
+        ibm_admin_client_factory=ibm_admin_client_factory,
+        **({"expected_workspace_uuid": workspace_uuid} if workspace_uuid is not None else {}),
     )
-    return [
-        RPApplicationClientRotatedSecretRead.model_validate(secret)
-        for secret in rotated_secrets
-    ]
+    return [RPApplicationClientRotatedSecretRead.model_validate(secret) for secret in rotated_secrets]
 
 
 @router.post(
-    "/rp-applications/mine/{rp_application_uuid}/client/rotate-secret",
+    "/rp-applications/accessible/{rp_application_uuid}/client/rotate-secret",
     response_model=RPApplicationClientCredentialsRead,
-    responses=error_responses(400, 403, 404, 500),
+    responses=error_responses(400, 403, 404, 500, 503),
 )
-async def rotate_current_user_rp_application_client_secret(
+async def rotate_accessible_rp_application_client_secret(
     request: Request,
     rp_application_uuid: uuid_pkg.UUID,
     payload: RPApplicationClientSecretRotateRequest,
     db: Annotated[AsyncSession, Depends(async_get_db)],
     current_user: Annotated[dict, Depends(get_current_user)],
     service: Annotated[RPApplicationService, Depends(get_rp_application_service)],
-    ibm_admin_client: Annotated[
-        IBMVerifyAdminClient, Depends(get_ibm_sv_admin_client)
+    ibm_admin_client_factory: Annotated[
+        IBMVerifyAdminClientFactory,
+        Depends(get_ibm_sv_admin_client_factory),
     ],
+    workspace_uuid: Annotated[uuid_pkg.UUID | None, Query(alias="workspaceUuid")] = None,
 ) -> RPApplicationClientCredentialsRead:
-    credentials = await service.rotate_current_user_rp_application_client_secret(
+    credentials = await service.rotate_accessible_rp_application_client_secret(
         db=db,
         rp_application_uuid=rp_application_uuid,
         current_user=current_user,
         payload=payload,
-        ibm_admin_client=ibm_admin_client,
+        ibm_admin_client_factory=ibm_admin_client_factory,
+        **({"expected_workspace_uuid": workspace_uuid} if workspace_uuid is not None else {}),
     )
     return RPApplicationClientCredentialsRead.model_validate(credentials)
 
 
 @router.post(
-    "/rp-applications/mine/{rp_application_uuid}/client/rotated-secrets",
+    "/rp-applications/accessible/{rp_application_uuid}/client/rotated-secrets",
     response_model=list[RPApplicationClientRotatedSecretRead],
-    responses=error_responses(400, 403, 404, 500),
+    responses=error_responses(400, 403, 404, 500, 503),
 )
-async def create_current_user_rp_application_rotated_secret(
+async def create_accessible_rp_application_rotated_secret(
     request: Request,
     rp_application_uuid: uuid_pkg.UUID,
     payload: RPApplicationClientRotatedSecretCreateRequest,
     db: Annotated[AsyncSession, Depends(async_get_db)],
     current_user: Annotated[dict, Depends(get_current_user)],
     service: Annotated[RPApplicationService, Depends(get_rp_application_service)],
-    ibm_admin_client: Annotated[
-        IBMVerifyAdminClient, Depends(get_ibm_sv_admin_client)
+    ibm_admin_client_factory: Annotated[
+        IBMVerifyAdminClientFactory,
+        Depends(get_ibm_sv_admin_client_factory),
     ],
+    workspace_uuid: Annotated[uuid_pkg.UUID | None, Query(alias="workspaceUuid")] = None,
 ) -> list[RPApplicationClientRotatedSecretRead]:
-    rotated_secrets = await service.create_current_user_rp_application_rotated_secret(
+    rotated_secrets = await service.create_accessible_rp_application_rotated_secret(
         db=db,
         rp_application_uuid=rp_application_uuid,
         current_user=current_user,
         payload=payload,
-        ibm_admin_client=ibm_admin_client,
+        ibm_admin_client_factory=ibm_admin_client_factory,
+        **({"expected_workspace_uuid": workspace_uuid} if workspace_uuid is not None else {}),
     )
-    return [
-        RPApplicationClientRotatedSecretRead.model_validate(secret)
-        for secret in rotated_secrets
-    ]
+    return [RPApplicationClientRotatedSecretRead.model_validate(secret) for secret in rotated_secrets]
 
 
 @router.delete(
-    "/rp-applications/mine/{rp_application_uuid}/client/rotated-secrets/{value}",
-    responses=error_responses(403, 404, 500),
+    "/rp-applications/accessible/{rp_application_uuid}/client/rotated-secrets",
+    responses=error_responses(403, 404, 500, 503),
 )
-async def delete_current_user_rp_application_rotated_secret(
+async def delete_accessible_rp_application_rotated_secret(
     request: Request,
     rp_application_uuid: uuid_pkg.UUID,
-    value: str,
+    payload: RPApplicationClientRotatedSecretDeleteRequest,
     db: Annotated[AsyncSession, Depends(async_get_db)],
     current_user: Annotated[dict, Depends(get_current_user)],
     service: Annotated[RPApplicationService, Depends(get_rp_application_service)],
-    ibm_admin_client: Annotated[
-        IBMVerifyAdminClient, Depends(get_ibm_sv_admin_client)
+    ibm_admin_client_factory: Annotated[
+        IBMVerifyAdminClientFactory,
+        Depends(get_ibm_sv_admin_client_factory),
     ],
+    workspace_uuid: Annotated[uuid_pkg.UUID | None, Query(alias="workspaceUuid")] = None,
 ) -> dict[str, str]:
-    await service.delete_current_user_rp_application_rotated_secret(
+    await service.delete_accessible_rp_application_rotated_secret(
         db=db,
         rp_application_uuid=rp_application_uuid,
         current_user=current_user,
-        value=value,
-        ibm_admin_client=ibm_admin_client,
+        secret_id=payload.secret_id,
+        ibm_admin_client_factory=ibm_admin_client_factory,
+        **({"expected_workspace_uuid": workspace_uuid} if workspace_uuid is not None else {}),
     )
     return {"message": "Rotated client secret deleted"}
 
 
 @router.get(
-    "/rp-applications/mine/{rp_application_uuid}/mau-report",
+    "/rp-applications/accessible/{rp_application_uuid}/mau-report",
     response_model=MAUReportResponse,
     responses=error_responses(400, 403, 404, 409, 500),
 )
-async def read_current_user_rp_application_mau_report(
+async def read_accessible_rp_application_mau_report(
     request: Request,
     rp_application_uuid: uuid_pkg.UUID,
     db: Annotated[AsyncSession, Depends(async_get_db)],
     current_user: Annotated[dict, Depends(get_current_user)],
     service: Annotated[RPApplicationService, Depends(get_rp_application_service)],
-    ibm_user_service: Annotated[IBMVerifyUserService, Depends(get_ibm_sv_user_service)],
     mau_service: Annotated[MAUService, Depends(get_mau_service)],
     start_date: date | None = Query(
         None,
@@ -310,12 +386,13 @@ async def read_current_user_rp_application_mau_report(
         None,
         description="End date (YYYY-MM-DD), defaults to today",
     ),
+    workspace_uuid: Annotated[uuid_pkg.UUID | None, Query(alias="workspaceUuid")] = None,
 ) -> MAUReportResponse:
-    application = await service.get_current_user_rp_application_by_uuid(
+    application = await service.get_accessible_rp_application_department_preflight(
         db=db,
-        current_user=current_user,
         rp_application_uuid=rp_application_uuid,
-        ibm_user_service=ibm_user_service,
+        current_user=current_user,
+        **({"expected_workspace_uuid": workspace_uuid} if workspace_uuid is not None else {}),
     )
 
     await service._require_rp_application_department(application)
@@ -323,9 +400,7 @@ async def read_current_user_rp_application_mau_report(
     application_name = application.get("dnr_app_name")
     if not isinstance(application_name, str) or application_name.strip() == "":
         # Keep a clear user-facing failure when data is incomplete.
-        raise BadRequestException(
-            "RP application does not have a mapped MAU application name"
-        )
+        raise BadRequestException("RP application does not have a mapped MAU application name")
 
     department_name: str | None = None
     department_id = application.get("department_id")
@@ -359,52 +434,4 @@ async def read_current_user_rp_application_mau_report(
             )
             for record in records
         ],
-    )
-
-
-@router.get("/rp-application/{rp_application_uuid}", response_model=RPApplicationRead)
-@casbin_guard.require_permission("rp_applications", "read")
-async def read_rp_application(
-    request: Request,
-    rp_application_uuid: uuid_pkg.UUID,
-    db: Annotated[AsyncSession, Depends(async_get_db)],
-    service: Annotated[RPApplicationService, Depends(get_rp_application_service)],
-) -> dict[str, Any]:
-    return await service.get_rp_application_by_uuid(
-        db=db,
-        rp_application_uuid=rp_application_uuid,
-    )
-
-
-@router.patch("/rp-application/{rp_application_uuid}")
-@casbin_guard.require_permission("rp_applications", "write")
-async def patch_rp_application(
-    request: Request,
-    rp_application_uuid: uuid_pkg.UUID,
-    values: RPApplicationUpdate,
-    db: Annotated[AsyncSession, Depends(async_get_db)],
-    service: Annotated[RPApplicationService, Depends(get_rp_application_service)],
-    current_user: Annotated[dict, Depends(get_current_user)],
-) -> dict[str, str]:
-    return await service.update_rp_application(
-        db=db,
-        rp_application_uuid=rp_application_uuid,
-        values=values,
-        current_user=current_user,
-    )
-
-
-@router.delete("/rp-application/{rp_application_uuid}")
-@casbin_guard.require_permission("rp_applications", "write")
-async def erase_rp_application(
-    request: Request,
-    rp_application_uuid: uuid_pkg.UUID,
-    db: Annotated[AsyncSession, Depends(async_get_db)],
-    service: Annotated[RPApplicationService, Depends(get_rp_application_service)],
-    current_user: Annotated[dict, Depends(get_current_user)],
-) -> dict[str, str]:
-    return await service.delete_rp_application(
-        db=db,
-        rp_application_uuid=rp_application_uuid,
-        current_user=current_user,
     )

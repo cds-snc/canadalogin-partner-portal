@@ -2,12 +2,14 @@ import { Outlet, createFileRoute, redirect } from "@tanstack/react-router";
 import i18n from "@/common/i18n";
 import type { RouteBackLinkContext } from "@/types/route-breadcrumbs";
 import { HttpRequestError } from "@/fetch/errors";
-import { getCurrentUserRPApplicationDepartment } from "@/fetch/rp-applications";
-import { requireAuthenticatedUser } from "../../features/auth/auth-routing";
+import {
+	getAccessibleRPApplication,
+} from "@/fetch/rp-applications";
+import { requirePartnerAccess } from "../../features/auth/auth-routing";
 
 export const Route = createFileRoute("/your-applications/$rpApplicationUuid")({
 	beforeLoad: async ({ params, location }) => {
-		await requireAuthenticatedUser(
+		await requirePartnerAccess(
 			`/your-applications/${params.rpApplicationUuid}`
 		);
 
@@ -15,27 +17,26 @@ export const Route = createFileRoute("/your-applications/$rpApplicationUuid")({
 		const isDepartmentSetup = location.pathname === departmentSetupPath;
 
 		let rpApplicationName: string | null = null;
+		let rpApplicationRole: string | null = null;
+		let workspaceUuid: string | null = null;
 
 		if (!isDepartmentSetup) {
 			try {
-				const preflight = await getCurrentUserRPApplicationDepartment(
+				const application = await getAccessibleRPApplication(
 					params.rpApplicationUuid
 				);
-				rpApplicationName = preflight.dnrAppName ?? null;
-				if (preflight.departmentId === null) {
-					throw redirect({
-						replace: true,
-						to: "/your-applications/$rpApplicationUuid/department-setup",
-						params: { rpApplicationUuid: params.rpApplicationUuid },
-						search: { redirect: location.href },
-					}) as unknown as Error;
-				}
+				rpApplicationName = application.dnrAppName;
+				rpApplicationRole = application.role;
+				workspaceUuid = application.workspaceUuid;
 			} catch (err) {
 				if (
 					err instanceof HttpRequestError &&
 					(err.status === 403 || err.status === 404)
 				) {
-					// Let child routes handle 403/404 in their own error handling
+					throw redirect({
+						href: "/error?kind=not_found",
+						replace: true,
+					}) as unknown as Error;
 				} else {
 					throw err;
 				}
@@ -48,7 +49,13 @@ export const Route = createFileRoute("/your-applications/$rpApplicationUuid")({
 				label: i18n.t("nav.dashboard"),
 			},
 			rpApplicationName,
-		} satisfies RouteBackLinkContext & { rpApplicationName: string | null };
+			rpApplicationRole,
+			workspaceUuid,
+		} satisfies RouteBackLinkContext & {
+			rpApplicationName: string | null;
+			rpApplicationRole: string | null;
+			workspaceUuid: string | null;
+		};
 	},
 	component: Outlet,
 });

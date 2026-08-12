@@ -3,6 +3,7 @@ import {
 	buildLoginLocation,
 	type LoginRedirectSearch,
 	parseLoginReason,
+	sanitizeAppPath,
 } from "@/features/auth/login-search";
 
 describe("login-search", () => {
@@ -23,7 +24,7 @@ describe("login-search", () => {
 				reason: "unauthorized",
 				redirect: "/your-applications",
 			},
-			to: "/login",
+			to: "/",
 		});
 	});
 
@@ -33,6 +34,31 @@ describe("login-search", () => {
 			redirect: "https://evil.example",
 		} satisfies LoginRedirectSearch);
 
-		expect(location.search.redirect).toBe("/your-applications");
+		expect(location.search.redirect).toBe("/");
+	});
+
+	it.each([
+		"//evil.example/path",
+		"/\\evil.example/path",
+		"javascript:alert(1)",
+		"/unknown-product-route",
+	])("rejects unsafe or unknown intended destination %s", (target) => {
+		expect(sanitizeAppPath(target, "/support")).toBe("/support");
+	});
+
+	it("keeps an allowlisted dynamic path while dropping client-authored query state", () => {
+		expect(
+			sanitizeAppPath(
+				"/workspaces/workspace-uuid/settings?role=cl_admin&token=secret"
+			)
+		).toBe("/workspaces/workspace-uuid/settings");
+	});
+
+	it("preserves a tokenized invitation path without copying extra query state", () => {
+		expect(
+			sanitizeAppPath(
+				"/invitations/rp-applications/token-123?capability=platform_governance"
+			)
+		).toBe("/invitations/rp-applications/token-123");
 	});
 });

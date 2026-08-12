@@ -169,6 +169,7 @@ describe("MAUReportPage", () => {
 	beforeEach(() => {
 		mockedUseParams.mockReturnValue({
 			rpApplicationUuid: "application-uuid-1",
+			workspaceUuid: "workspace-uuid-1",
 		});
 		mockUseQuery.mockReset();
 		mockMAUDailyTrendLineChart.mockReset();
@@ -416,7 +417,7 @@ describe("MAUReportPage", () => {
 		Object.defineProperty(globalThis, "location", {
 			configurable: true,
 			value: {
-				pathname: "/your-applications/application-uuid-1/mau-report",
+				pathname: "/workspaces/workspace-uuid-1/applications/application-uuid-1/usage",
 				replace: replaceMock,
 			} as Pick<Location, "pathname" | "replace">,
 		});
@@ -436,7 +437,7 @@ describe("MAUReportPage", () => {
 
 		await waitFor(() => {
 			expect(replaceMock).toHaveBeenCalledWith(
-					"/your-applications/application-uuid-1/department-setup"
+					"/your-applications/application-uuid-1/department-setup?redirect=%2Fworkspaces%2Fworkspace-uuid-1%2Fapplications%2Fapplication-uuid-1%2Fusage"
 			);
 		});
 

@@ -7,6 +7,9 @@ documentation for the CanadaLogin Partner Portal.
 
 - [Solution architecture](architecture/README.md) describes the current
   codebase and durable cross-cutting decisions.
+- [End-of-MVP 2 Product Requirements and Design](design/partner-portal-mvp2-product-design-requirements.md)
+  consolidates the OpenSpec baseline and selected active changes into one
+  target-state product and architecture summary.
 - [Development conventions](repo-guidance/development-conventions.md) contains
   repository-specific implementation and verification guidance.
 - [Planning material](plans/) contains product, MVP, infrastructure, and

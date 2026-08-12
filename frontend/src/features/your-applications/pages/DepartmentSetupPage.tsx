@@ -4,8 +4,8 @@ import { useTranslation } from "react-i18next";
 import { Button, Grid, Heading, Notice, Select, Text } from "@/components/ui";
 import { HttpRequestError } from "@/fetch/errors";
 import {
-	assignCurrentUserRPApplicationDepartment,
-	getCurrentUserRPApplicationDepartment,
+	assignAccessibleRPApplicationDepartment,
+	getAccessibleRPApplicationDepartment,
 } from "@/fetch/rp-applications";
 import { useDepartments } from "@/features/departments/hooks/use-departments";
 
@@ -32,7 +32,7 @@ export const DepartmentSetupPage = (): ReactElement => {
 		const loadContext = async (): Promise<void> => {
 			try {
 				const preflight =
-					await getCurrentUserRPApplicationDepartment(rpApplicationUuid);
+					await getAccessibleRPApplicationDepartment(rpApplicationUuid);
 				if (!isMounted) return;
 				setApplicationName(preflight.dnrAppName);
 				setIsContextLoading(false);
@@ -76,7 +76,7 @@ export const DepartmentSetupPage = (): ReactElement => {
 		setSubmitError(null);
 		try {
 			setIsSubmitting(true);
-			await assignCurrentUserRPApplicationDepartment(rpApplicationUuid, {
+			await assignAccessibleRPApplicationDepartment(rpApplicationUuid, {
 				departmentUuid: selected,
 			});
 			const redirectTarget =

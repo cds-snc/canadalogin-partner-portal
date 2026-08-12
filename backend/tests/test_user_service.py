@@ -1,21 +1,360 @@
-from unittest.mock import AsyncMock, patch
+from datetime import UTC, datetime, timedelta
+from types import SimpleNamespace
+from unittest.mock import AsyncMock, Mock, patch
+from uuid import uuid4
 
 import pytest
 
+from src.app.core.authorization import CanonicalRoleCode
 from src.app.core.exceptions.http_exceptions import DuplicateValueException, ForbiddenException, NotFoundException
 from src.app.schemas.user import (
-    UserAddRole,
     UserCreate,
     UserDepartmentUpdate,
     UserReadInternal,
-    UserRemoveRole,
     UserTierUpdate,
     UserUpdate,
+)
+from src.app.services.authorization_service import (
+    AUTHORIZATION_STATE_KEY,
+    ResolvedAuthorizationState,
+    ResolvedPartnerAccess,
 )
 from src.app.services.user_service import UserService
 
 
+def _cl_admin_user(*, user_id: int = 1, user_uuid: object | None = None) -> dict:
+    return {
+        "id": user_id,
+        "uuid": user_uuid,
+        "name": "CL Admin",
+        AUTHORIZATION_STATE_KEY: ResolvedAuthorizationState(global_role=CanonicalRoleCode.CL_ADMIN),
+    }
+
+
 class TestUserService:
+    @pytest.mark.asyncio
+    async def test_pending_invitation_directory_projects_minimum_fields(
+        self,
+        mock_db,
+    ) -> None:
+        now = datetime.now(UTC)
+        invitation_uuid = uuid4()
+        workspace_uuid = uuid4()
+        mock_db.scalar = AsyncMock(return_value=1)
+        query_result = Mock()
+        query_result.all.return_value = [
+            SimpleNamespace(
+                invitation_uuid=invitation_uuid,
+                invited_email="invitee@example.gc.ca",
+                workspace_uuid=workspace_uuid,
+                workspace_name="Benefits partner",
+                role=CanonicalRoleCode.READ_ONLY.value,
+                status="pending",
+                invite_expires_at=now + timedelta(days=7),
+                created_at=now,
+            )
+        ]
+        mock_db.execute = AsyncMock(return_value=query_result)
+
+        result = await UserService().list_pending_invitations(
+            db=mock_db,
+            page=1,
+            items_per_page=10,
+            current_user=_cl_admin_user(),
+        )
+
+        payload = result["data"][0].model_dump(mode="json", by_alias=True)
+        assert payload == {
+            "createdAt": now.isoformat().replace("+00:00", "Z"),
+            "invitationUuid": str(invitation_uuid),
+            "inviteExpiresAt": (now + timedelta(days=7)).isoformat().replace("+00:00", "Z"),
+            "invitedEmail": "invitee@example.gc.ca",
+            "role": "read_only",
+            "status": "pending",
+            "workspaceName": "Benefits partner",
+            "workspaceUuid": str(workspace_uuid),
+        }
+        assert result["total_count"] == 1
+        assert result["has_more"] is False
+        assert set(mock_db.execute.await_args.args[0].selected_columns.keys()) == {
+            "created_at",
+            "invitation_uuid",
+            "invite_expires_at",
+            "invited_email",
+            "role",
+            "status",
+            "workspace_name",
+            "workspace_uuid",
+        }
+
+    @pytest.mark.asyncio
+    async def test_pending_invitation_directory_denies_partner_before_query(
+        self,
+        mock_db,
+    ) -> None:
+        workspace_uuid = uuid4()
+        partner_actor = {
+            "id": 51,
+            AUTHORIZATION_STATE_KEY: ResolvedAuthorizationState(
+                partner_access=(
+                    ResolvedPartnerAccess(
+                        workspace_id=17,
+                        workspace_uuid=workspace_uuid,
+                        role=CanonicalRoleCode.RP_ADMIN,
+                    ),
+                )
+            ),
+        }
+        mock_db.scalar = AsyncMock()
+        mock_db.execute = AsyncMock()
+
+        with pytest.raises(ForbiddenException):
+            await UserService().list_pending_invitations(
+                db=mock_db,
+                page=1,
+                items_per_page=10,
+                current_user=partner_actor,
+            )
+
+        mock_db.scalar.assert_not_awaited()
+        mock_db.execute.assert_not_awaited()
+
+    @pytest.mark.asyncio
+    async def test_user_directory_access_projection_uses_two_bulk_queries(
+        self,
+        mock_db,
+    ) -> None:
+        service = UserService()
+        global_user_uuid = uuid4()
+        partner_user_uuid = uuid4()
+        workspace_uuid = uuid4()
+        global_result = Mock()
+        global_result.all.return_value = [SimpleNamespace(user_id=10)]
+        partner_result = Mock()
+        partner_result.all.return_value = [
+            SimpleNamespace(
+                user_id=11,
+                workspace_uuid=workspace_uuid,
+                workspace_name="Benefits partner",
+                role=CanonicalRoleCode.RP_ADMIN.value,
+            )
+        ]
+        mock_db.execute = AsyncMock(side_effect=[global_result, partner_result])
+
+        result = await service._build_user_access_directory_entries(
+            db=mock_db,
+            users=[
+                {
+                    "id": 10,
+                    "uuid": global_user_uuid,
+                    "name": "CL Admin",
+                    "email": "admin@example.gc.ca",
+                    "enabled": True,
+                    "auth_provider": "canada_login",
+                },
+                {
+                    "id": 11,
+                    "uuid": partner_user_uuid,
+                    "name": "Partner Admin",
+                    "email": "partner@example.gc.ca",
+                    "enabled": True,
+                    "auth_provider": "canada_login",
+                },
+            ],
+        )
+
+        assert mock_db.execute.await_count == 2
+        partner_statement = mock_db.execute.await_args_list[1].args[0]
+        assert set(partner_statement.selected_columns.keys()) == {
+            "role",
+            "user_id",
+            "workspace_name",
+            "workspace_uuid",
+        }
+        assert result[0]["globalRole"] == "cl_admin"
+        assert result[0]["workspaceAssignments"] == ()
+        assert result[1]["globalRole"] is None
+        assert result[1]["workspaceAssignments"][0]["workspaceUuid"] == (workspace_uuid)
+        assert "authProvider" not in result[0]
+
+    @pytest.mark.asyncio
+    @pytest.mark.parametrize(
+        ("rows", "expected_outcome", "returns_user_uuid"),
+        [
+            ([], "new_identity", False),
+            (
+                [
+                    SimpleNamespace(
+                        uuid=uuid4(),
+                        enabled=False,
+                        is_deleted=False,
+                    )
+                ],
+                "ineligible_identity",
+                False,
+            ),
+            (
+                [
+                    SimpleNamespace(
+                        uuid=uuid4(),
+                        enabled=True,
+                        is_deleted=False,
+                    )
+                ],
+                "existing_identity",
+                True,
+            ),
+        ],
+    )
+    async def test_resolve_invitation_target_returns_safe_outcome(
+        self,
+        mock_db,
+        rows,
+        expected_outcome,
+        returns_user_uuid,
+    ) -> None:
+        query_result = Mock()
+        query_result.all.return_value = rows
+        mock_db.execute = AsyncMock(return_value=query_result)
+
+        result = await UserService().resolve_invitation_target(
+            db=mock_db,
+            invited_email=" Invitee@Example.GC.CA ",
+            current_user=_cl_admin_user(),
+        )
+
+        assert result.outcome.value == expected_outcome
+        assert (result.user_uuid is not None) is returns_user_uuid
+
+    @pytest.mark.asyncio
+    async def test_user_access_administration_projects_canonical_access_only(
+        self,
+        mock_db,
+    ) -> None:
+        service = UserService()
+        user_uuid = uuid4()
+        workspace_uuid = uuid4()
+        assignment_uuid = uuid4()
+        invitation_uuid = uuid4()
+        now = datetime.now(UTC)
+        db_user = {
+            "id": 51,
+            "uuid": user_uuid,
+            "name": "Partner user",
+            "email": "partner@example.gc.ca",
+            "username": "partner@example.gc.ca",
+            "enabled": True,
+            "auth_provider": "canada_login",
+            "auth_subject": "provider-subject",
+        }
+        global_result = Mock()
+        global_result.one_or_none.return_value = None
+        workspace_result = Mock()
+        workspace_result.all.return_value = [
+            SimpleNamespace(
+                assignment_uuid=assignment_uuid,
+                workspace_uuid=workspace_uuid,
+                workspace_name="Benefits partner",
+                role=CanonicalRoleCode.RP_USER_EDIT.value,
+                assigned_at=now,
+            )
+        ]
+        invitation_result = Mock()
+        invitation_result.all.return_value = [
+            SimpleNamespace(
+                invitation_uuid=invitation_uuid,
+                workspace_uuid=workspace_uuid,
+                workspace_name="Benefits partner",
+                role=CanonicalRoleCode.READ_ONLY.value,
+                status="pending",
+                invite_expires_at=now + timedelta(days=2),
+                created_at=now,
+            )
+        ]
+        mock_db.execute = AsyncMock(side_effect=[global_result, workspace_result, invitation_result])
+
+        with (
+            patch("src.app.services.user_service.crud_users") as mock_users,
+            patch(
+                "src.app.services.user_service.AuthorizationService.resolve_for_user",
+                new=AsyncMock(
+                    return_value=ResolvedAuthorizationState(
+                        partner_access=(
+                            ResolvedPartnerAccess(
+                                workspace_id=17,
+                                workspace_uuid=workspace_uuid,
+                                role=CanonicalRoleCode.RP_USER_EDIT,
+                            ),
+                        )
+                    )
+                ),
+            ),
+        ):
+            mock_users.get = AsyncMock(return_value=db_user)
+            result = await service.get_user_access_administration(
+                db=mock_db,
+                user_uuid=user_uuid,
+                current_user=_cl_admin_user(),
+            )
+
+        payload = result.model_dump(mode="json", by_alias=True)
+        assert set(mock_db.execute.await_args_list[0].args[0].selected_columns.keys()) == {
+            "assigned_at",
+            "assignment_uuid",
+        }
+        assert set(mock_db.execute.await_args_list[1].args[0].selected_columns.keys()) == {
+            "assigned_at",
+            "assignment_uuid",
+            "role",
+            "workspace_name",
+            "workspace_uuid",
+        }
+        assert set(mock_db.execute.await_args_list[2].args[0].selected_columns.keys()) == {
+            "created_at",
+            "invitation_uuid",
+            "invite_expires_at",
+            "role",
+            "status",
+            "workspace_name",
+            "workspace_uuid",
+        }
+        assert payload["user"]["uuid"] == str(user_uuid)
+        assert payload["workspaceAssignments"][0]["role"] == "rp_user_edit"
+        assert payload["pendingInvitations"][0]["invitationUuid"] == str(invitation_uuid)
+        assert "authProvider" not in payload["user"]
+        assert "authSubject" not in payload["user"]
+
+    @pytest.mark.asyncio
+    async def test_user_access_administration_denies_partner_actor_before_lookup(
+        self,
+        mock_db,
+    ) -> None:
+        service = UserService()
+        workspace_uuid = uuid4()
+        partner_actor = {
+            "id": 51,
+            AUTHORIZATION_STATE_KEY: ResolvedAuthorizationState(
+                partner_access=(
+                    ResolvedPartnerAccess(
+                        workspace_id=17,
+                        workspace_uuid=workspace_uuid,
+                        role=CanonicalRoleCode.RP_ADMIN,
+                    ),
+                )
+            ),
+        }
+
+        with patch("src.app.services.user_service.crud_users") as mock_users:
+            mock_users.get = AsyncMock()
+            with pytest.raises(ForbiddenException):
+                await service.get_user_access_administration(
+                    db=mock_db,
+                    user_uuid=uuid4(),
+                    current_user=partner_actor,
+                )
+
+        mock_users.get.assert_not_awaited()
+
     @pytest.mark.asyncio
     async def test_create_user_rejects_duplicate_email(self, mock_db, sample_user_data) -> None:
         service = UserService()
@@ -42,10 +381,11 @@ class TestUserService:
         created_user = mock_users.create.call_args.kwargs["object"]
         assert created_user.username == user.email
         assert created_user.email == user.email
+        assert created_user.enabled is True
         mock_users.create.assert_awaited_once()
 
     @pytest.mark.asyncio
-    async def test_update_user_rejects_non_owner(self, mock_db, sample_user_read) -> None:
+    async def test_update_user_rejects_partner_actor(self, mock_db, sample_user_read) -> None:
         service = UserService()
         db_user = sample_user_read.model_dump()
         db_user["username"] = "different-user"
@@ -58,9 +398,11 @@ class TestUserService:
                 await service.update_user(
                     db=mock_db,
                     user_uuid=user_uuid,
-                    current_user={"username": "owner", "id": 1, "is_superuser": False},
+                    current_user={"username": "owner", "id": 1},
                     values=UserUpdate(name="Updated"),
                 )
+
+        mock_users.get.assert_not_awaited()
 
     @pytest.mark.asyncio
     async def test_get_user_by_uuid_returns_user(self, mock_db, sample_user_read) -> None:
@@ -73,25 +415,24 @@ class TestUserService:
         }
         expected_user = {
             **sample_user_read.model_dump(),
-            "has_partner_access_grant": False,
-            "role_uuids": ["role-uuid-3"],
             "tier_uuid": "tier-uuid-2",
         }
 
         with patch("src.app.services.user_service.crud_users") as mock_users:
             mock_users.get = AsyncMock(return_value=db_user)
 
-            with patch("src.app.services.user_service.crud_roles") as mock_roles:
-                mock_roles.get = AsyncMock(return_value={"uuid": "role-uuid-3"})
+            with patch("src.app.services.user_service.crud_tiers") as mock_tiers:
+                mock_tiers.get = AsyncMock(return_value={"uuid": "tier-uuid-2"})
 
-                with patch("src.app.services.user_service.crud_tiers") as mock_tiers:
-                    mock_tiers.get = AsyncMock(return_value={"uuid": "tier-uuid-2"})
-
-                    result = await service.get_user_by_uuid(db=mock_db, user_uuid=user_uuid)
+                result = await service.get_user_by_uuid(db=mock_db, user_uuid=user_uuid)
 
         assert result == expected_user
         assert "role_ids" not in result
         assert "tier_id" not in result
+        assert "role_uuids" not in result
+        assert "is_superuser" not in result
+        assert "has_partner_access_grant" not in result
+        assert "auth_subject" not in result
         mock_users.get.assert_awaited_once_with(
             db=mock_db,
             uuid=user_uuid,
@@ -100,7 +441,7 @@ class TestUserService:
         )
 
     @pytest.mark.asyncio
-    async def test_get_user_by_uuid_marks_partner_access_when_active_grant_exists(self, mock_db, sample_user_read) -> None:
+    async def test_get_user_by_uuid_does_not_expose_legacy_partner_access_boolean(self, mock_db, sample_user_read) -> None:
         service = UserService()
         user_uuid = str(sample_user_read.uuid)
         db_user = {
@@ -113,138 +454,211 @@ class TestUserService:
         with patch("src.app.services.user_service.crud_users") as mock_users:
             mock_users.get = AsyncMock(return_value=db_user)
 
-            with patch("src.app.services.user_service.crud_rp_application_access_grants") as mock_grants:
-                mock_grants.get = AsyncMock(return_value={"uuid": "grant-uuid"})
+            result = await service.get_user_by_uuid(db=mock_db, user_uuid=user_uuid)
 
-                result = await service.get_user_by_uuid(db=mock_db, user_uuid=user_uuid)
-
-        assert result["has_partner_access_grant"] is True
+        assert "has_partner_access_grant" not in result
 
     @pytest.mark.asyncio
     async def test_delete_user_blacklists_token_after_delete(self, mock_db, sample_user_read) -> None:
         service = UserService()
         user_uuid = str(sample_user_read.uuid)
+        db_user = {
+            **sample_user_read.model_dump(),
+            "id": 9,
+            "enabled": True,
+        }
 
-        with patch("src.app.services.user_service.crud_users") as mock_users:
-            mock_users.get = AsyncMock(return_value=sample_user_read.model_dump())
+        with (
+            patch("src.app.services.user_service.crud_users") as mock_users,
+            patch("src.app.services.user_service.crud_audit_log") as mock_audit,
+            patch.object(
+                service,
+                "_revoke_authorization_for_deactivation",
+                new=AsyncMock(),
+            ) as revoke_authorization,
+        ):
+            mock_users.get = AsyncMock(return_value=db_user)
             mock_users.delete = AsyncMock(return_value=None)
+            mock_audit.create = AsyncMock(return_value=None)
 
             with patch("src.app.services.user_service.blacklist_token", new_callable=AsyncMock) as mock_blacklist:
                 result = await service.delete_user(
                     db=mock_db,
                     user_uuid=user_uuid,
-                    current_user={"username": sample_user_read.username, "id": 1, "is_superuser": False},
+                    current_user=_cl_admin_user(
+                        user_uuid=sample_user_read.uuid,
+                    ),
                     token="token-value",
                 )
 
         assert result == {"message": "User deleted"}
+        revoke_authorization.assert_awaited_once_with(
+            db=mock_db,
+            target_user_id=9,
+            actor_user_id=1,
+        )
         mock_blacklist.assert_awaited_once_with(token="token-value", db=mock_db)
 
     @pytest.mark.asyncio
-    async def test_get_user_roles_returns_empty_list_when_role_missing(self, mock_db, sample_user_read) -> None:
+    async def test_delete_user_allows_cookie_session_without_blacklist_token(
+        self,
+        mock_db,
+        sample_user_read,
+    ) -> None:
         service = UserService()
-        db_user = sample_user_read.model_dump()
-        db_user["role_ids"] = None
         user_uuid = str(sample_user_read.uuid)
+        db_user = {
+            **sample_user_read.model_dump(),
+            "id": 9,
+            "enabled": True,
+        }
 
-        with patch("src.app.services.user_service.crud_users") as mock_users:
+        with (
+            patch("src.app.services.user_service.crud_users") as mock_users,
+            patch("src.app.services.user_service.crud_audit_log") as mock_audit,
+            patch.object(
+                service,
+                "_revoke_authorization_for_deactivation",
+                new=AsyncMock(),
+            ),
+            patch(
+                "src.app.services.user_service.blacklist_token",
+                new_callable=AsyncMock,
+            ) as mock_blacklist,
+        ):
             mock_users.get = AsyncMock(return_value=db_user)
+            mock_users.delete = AsyncMock(return_value=None)
+            mock_audit.create = AsyncMock(return_value=None)
 
-            result = await service.get_user_roles(db=mock_db, user_uuid=user_uuid)
+            result = await service.delete_user(
+                db=mock_db,
+                user_uuid=user_uuid,
+                current_user=_cl_admin_user(user_uuid=sample_user_read.uuid),
+                token=None,
+            )
 
-        assert result == []
+        assert result == {"message": "User deleted"}
+        mock_blacklist.assert_not_awaited()
 
     @pytest.mark.asyncio
-    async def test_get_user_roles_returns_roles_in_assignment_order(self, mock_db, sample_user_read) -> None:
+    async def test_cl_admin_can_update_another_active_user(
+        self,
+        mock_db,
+        sample_user_read,
+    ) -> None:
         service = UserService()
-        db_user = sample_user_read.model_dump()
-        db_user["role_ids"] = [7, 9]
-        user_uuid = str(sample_user_read.uuid)
+        db_user = {
+            **sample_user_read.model_dump(),
+            "id": 9,
+            "enabled": True,
+        }
 
-        with patch("src.app.services.user_service.crud_users") as mock_users:
+        with (
+            patch("src.app.services.user_service.crud_users") as mock_users,
+            patch("src.app.services.user_service.crud_audit_log") as mock_audit,
+        ):
             mock_users.get = AsyncMock(return_value=db_user)
+            mock_users.update = AsyncMock(return_value=None)
+            mock_audit.create = AsyncMock(return_value=None)
 
-            with patch("src.app.services.user_service.crud_roles") as mock_roles:
-                mock_roles.get = AsyncMock(
-                    side_effect=[
-                        {"uuid": "role-uuid-7", "name": "editor", "created_at": "2026-03-17T00:00:00Z"},
-                        {"uuid": "role-uuid-9", "name": "reviewer", "created_at": "2026-03-18T00:00:00Z"},
-                    ]
+            result = await service.update_user(
+                db=mock_db,
+                user_uuid=sample_user_read.uuid,
+                current_user=_cl_admin_user(user_id=1),
+                values=UserUpdate(name="Updated User"),
+            )
+
+        assert result == {"message": "User updated"}
+        mock_users.update.assert_awaited_once_with(
+            db=mock_db,
+            object={"name": "Updated User"},
+            uuid=sample_user_read.uuid,
+        )
+        mock_audit.create.assert_awaited_once()
+
+    @pytest.mark.asyncio
+    async def test_disabling_user_revokes_authorization_before_update(
+        self,
+        mock_db,
+        sample_user_read,
+    ) -> None:
+        service = UserService()
+        db_user = {
+            **sample_user_read.model_dump(),
+            "id": 9,
+            "enabled": True,
+        }
+
+        with (
+            patch("src.app.services.user_service.crud_users") as mock_users,
+            patch("src.app.services.user_service.crud_audit_log") as mock_audit,
+            patch.object(
+                service,
+                "_revoke_authorization_for_deactivation",
+                new=AsyncMock(),
+            ) as revoke_authorization,
+        ):
+            mock_users.get = AsyncMock(return_value=db_user)
+            mock_users.update = AsyncMock(return_value=None)
+            mock_audit.create = AsyncMock(return_value=None)
+
+            await service.update_user(
+                db=mock_db,
+                user_uuid=sample_user_read.uuid,
+                current_user=_cl_admin_user(user_id=1),
+                values=UserUpdate(enabled=False),
+            )
+
+        revoke_authorization.assert_awaited_once_with(
+            db=mock_db,
+            target_user_id=9,
+            actor_user_id=1,
+        )
+        mock_users.update.assert_awaited_once_with(
+            db=mock_db,
+            object={"enabled": False},
+            uuid=sample_user_read.uuid,
+        )
+
+    @pytest.mark.asyncio
+    async def test_last_cl_admin_delete_is_blocked_before_user_deletion(
+        self,
+        mock_db,
+        sample_user_read,
+    ) -> None:
+        service = UserService()
+        authorization_service = Mock()
+        authorization_service.resolve_for_user = AsyncMock(return_value=ResolvedAuthorizationState(global_role=CanonicalRoleCode.CL_ADMIN))
+        authorization_service.revoke_cl_admin = AsyncMock(side_effect=ForbiddenException("The last active CL Admin cannot be revoked."))
+        db_user = {
+            **sample_user_read.model_dump(),
+            "id": 1,
+            "enabled": True,
+        }
+
+        with (
+            patch("src.app.services.user_service.crud_users") as mock_users,
+            patch(
+                "src.app.services.user_service.AuthorizationService",
+                return_value=authorization_service,
+            ),
+        ):
+            mock_users.get = AsyncMock(return_value=db_user)
+            mock_users.delete = AsyncMock(return_value=None)
+
+            with pytest.raises(ForbiddenException, match="last active CL Admin"):
+                await service.delete_user(
+                    db=mock_db,
+                    user_uuid=sample_user_read.uuid,
+                    current_user=_cl_admin_user(
+                        user_id=1,
+                        user_uuid=sample_user_read.uuid,
+                    ),
+                    token="token-value",
                 )
 
-                result = await service.get_user_roles(db=mock_db, user_uuid=user_uuid)
-
-        assert result == [
-            {"uuid": "role-uuid-7", "name": "editor", "created_at": "2026-03-17T00:00:00Z"},
-            {"uuid": "role-uuid-9", "name": "reviewer", "created_at": "2026-03-18T00:00:00Z"},
-        ]
-
-    @pytest.mark.asyncio
-    async def test_add_role_to_user_rejects_missing_role(self, mock_db, sample_user_read) -> None:
-        service = UserService()
-        user_uuid = str(sample_user_read.uuid)
-        role_uuid = "018f6f83-0f2b-7b0f-b2fb-96c4d8a4b301"
-
-        with patch("src.app.services.user_service.crud_users") as mock_users:
-            mock_users.get = AsyncMock(return_value=sample_user_read.model_dump())
-
-            with patch("src.app.services.user_service.crud_roles") as mock_roles:
-                mock_roles.get = AsyncMock(return_value=None)
-
-                with pytest.raises(NotFoundException, match="Role not found"):
-                    await service.add_role_to_user(
-                        db=mock_db,
-                        user_uuid=user_uuid,
-                        values=UserAddRole(role_uuid=role_uuid),
-                    )
-
-    @pytest.mark.asyncio
-    async def test_add_role_to_user_rejects_duplicate_role_assignment(self, mock_db, sample_user_read) -> None:
-        service = UserService()
-        user_uuid = str(sample_user_read.uuid)
-        role_uuid = "018f6f83-0f2b-7b0f-b2fb-96c4d8a4b301"
-        db_user = sample_user_read.model_dump()
-        db_user["role_ids"] = [9]
-
-        with patch("src.app.services.user_service.crud_users") as mock_users:
-            mock_users.get = AsyncMock(return_value=db_user)
-            mock_users.update = AsyncMock(return_value=None)
-
-            with patch("src.app.services.user_service.crud_roles") as mock_roles:
-                mock_roles.get = AsyncMock(return_value={"id": 9, "uuid": role_uuid, "name": "editor"})
-
-                with pytest.raises(DuplicateValueException, match="User already has this role"):
-                    await service.add_role_to_user(
-                        db=mock_db,
-                        user_uuid=user_uuid,
-                        values=UserAddRole(role_uuid=role_uuid),
-                    )
-
-        mock_users.update.assert_not_awaited()
-
-    @pytest.mark.asyncio
-    async def test_remove_role_from_user_rejects_unassigned_role(self, mock_db, sample_user_read) -> None:
-        service = UserService()
-        user_uuid = str(sample_user_read.uuid)
-        role_uuid = "018f6f83-0f2b-7b0f-b2fb-96c4d8a4b301"
-        db_user = sample_user_read.model_dump()
-        db_user["role_ids"] = [7]
-
-        with patch("src.app.services.user_service.crud_users") as mock_users:
-            mock_users.get = AsyncMock(return_value=db_user)
-            mock_users.update = AsyncMock(return_value=None)
-
-            with patch("src.app.services.user_service.crud_roles") as mock_roles:
-                mock_roles.get = AsyncMock(return_value={"id": 9, "uuid": role_uuid, "name": "editor"})
-
-                with pytest.raises(NotFoundException, match="User does not have this role"):
-                    await service.remove_role_from_user(
-                        db=mock_db,
-                        user_uuid=user_uuid,
-                        values=UserRemoveRole(role_uuid=role_uuid),
-                    )
-
-        mock_users.update.assert_not_awaited()
+        authorization_service.revoke_cl_admin.assert_awaited_once()
+        mock_users.delete.assert_not_awaited()
 
     @pytest.mark.asyncio
     async def test_update_user_tier_rejects_missing_tier(self, mock_db, sample_user_read) -> None:

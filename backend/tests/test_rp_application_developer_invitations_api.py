@@ -19,10 +19,11 @@ def sample_accept_response() -> dict[str, object]:
             "invited_email": "invitee@example.gc.ca",
             "invite_expires_at": datetime(2026, 8, 20, 12, 0, tzinfo=UTC).isoformat(),
             "invited_by": 42,
-            "role": "Read Only",
+            "role": "read_only",
             "status": "accepted",
             "accepted_at": datetime(2026, 8, 10, 12, 15, tzinfo=UTC).isoformat(),
             "revoked_at": None,
+            "revocation_actor_source": None,
             "gc_notify_notification_id": None,
             "delegated_by_grant_uuid": None,
             "created_at": datetime(2026, 8, 10, 12, 0, tzinfo=UTC).isoformat(),
@@ -35,7 +36,7 @@ def sample_accept_response() -> dict[str, object]:
             "uuid": "018f6f83-0000-0000-0000-000000000901",
             "workspace_id": 9,
             "user_id": 42,
-            "role": "Read Only",
+            "role": "read_only",
             "status": "active",
             "source_invitation_uuid": "018f6f83-0000-0000-0000-000000000801",
             "created_at": datetime(2026, 8, 10, 12, 15, tzinfo=UTC).isoformat(),
@@ -43,6 +44,7 @@ def sample_accept_response() -> dict[str, object]:
             "deleted_at": None,
             "is_deleted": False,
         },
+        "next_destination": "/workspaces/018f6f83-0000-0000-0000-000000000201",
     }
 
 
@@ -72,19 +74,71 @@ class TestRPApplicationDeveloperInvitationApi:
             app.dependency_overrides.clear()
 
         assert response.status_code == 200
-        assert response.json()["invitation"]["status"] == "accepted"
-        assert response.json()["accessGrant"]["workspaceId"] == 9
+        body = response.json()
+        assert body["invitation"]["status"] == "accepted"
+        assert body["accessGrant"]["uuid"] == "018f6f83-0000-0000-0000-000000000901"
+        assert body["nextDestination"] == ("/workspaces/018f6f83-0000-0000-0000-000000000201")
+        assert {
+            "id",
+            "workspaceId",
+            "rpApplicationId",
+            "invitedBy",
+            "revokedByUserId",
+            "revocationActorSource",
+            "gcNotifyNotificationId",
+            "isDeleted",
+            "deletedAt",
+        }.isdisjoint(body["invitation"])
+        assert {
+            "id",
+            "workspaceId",
+            "userId",
+            "revokedByUserId",
+            "isDeleted",
+            "deletedAt",
+        }.isdisjoint(body["accessGrant"])
         service.accept_developer_invitation.assert_awaited_once_with(
             db=db,
             token="raw-token-value",
             current_user=current_user,
         )
 
+    def test_openapi_publishes_only_public_invitation_and_grant_fields(self) -> None:
+        schemas = app.openapi()["components"]["schemas"]
+        invitation_properties = set(schemas["RPApplicationDeveloperInvitationRead"]["properties"])
+        grant_properties = set(schemas["RPApplicationAccessGrantRead"]["properties"])
+        create_properties = set(schemas["RPApplicationDeveloperInvitationCreate"]["properties"])
+        reissue_properties = set(schemas["RPApplicationDeveloperInvitationReissue"]["properties"])
+
+        assert invitation_properties == {
+            "acceptedAt",
+            "createdAt",
+            "delegatedByGrantUuid",
+            "invitedEmail",
+            "inviteExpiresAt",
+            "replacedByInvitationUuid",
+            "revocationReason",
+            "revokedAt",
+            "role",
+            "status",
+            "updatedAt",
+            "uuid",
+        }
+        assert grant_properties == {
+            "createdAt",
+            "revokedAt",
+            "role",
+            "sourceInvitationUuid",
+            "status",
+            "updatedAt",
+            "uuid",
+        }
+        assert create_properties == {"inviteExpiresAt", "invitedEmail", "role"}
+        assert reissue_properties == {"inviteExpiresAt"}
+
     def test_accept_invitation_route_surfaces_forbidden(self) -> None:
         service = Mock()
-        service.accept_developer_invitation = AsyncMock(
-            side_effect=ForbiddenException("Signed-in email does not match this invitation")
-        )
+        service.accept_developer_invitation = AsyncMock(side_effect=ForbiddenException("Signed-in email does not match this invitation"))
 
         app.dependency_overrides[get_current_user] = lambda: {
             "id": 42,
@@ -109,9 +163,7 @@ class TestRPApplicationDeveloperInvitationApi:
 
     def test_accept_invitation_route_surfaces_not_found(self) -> None:
         service = Mock()
-        service.accept_developer_invitation = AsyncMock(
-            side_effect=NotFoundException("Developer invitation not found")
-        )
+        service.accept_developer_invitation = AsyncMock(side_effect=NotFoundException("Developer invitation not found"))
 
         app.dependency_overrides[get_current_user] = lambda: {
             "id": 42,

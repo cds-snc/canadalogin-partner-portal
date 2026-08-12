@@ -9,13 +9,20 @@ Learn how the backend authenticates Partner Portal users with OIDC and server-si
 
 ## Authentication Overview
 
-The only login path is OIDC. After a successful callback, the backend stores the authenticated user in a server-side Redis session and resolves the user from that session on protected routes. The browser cookie only carries the session identifier.
+The normal login path is OIDC. After a successful callback, the backend stores
+the authenticated user in a server-side Redis session and resolves the user
+from that session on protected routes. The browser cookie only carries the
+session identifier. An allowlisted local persona adapter is available only
+under the exact local-development gate documented in the repository README.
 
 When the frontend and backend run on different origins in development, configure `OIDC_POST_LOGIN_REDIRECT` as an absolute frontend URL such as `http://localhost:3000/auth-complete`. A backend-relative path like `/auth-complete` would keep the browser on the backend origin.
 
 If your identity provider returns `redirect_uri` mismatch errors (for example `CSIAQ0167E`), set `OIDC_REDIRECT_URI` in backend configuration to the exact callback URL registered for your OAuth client, including scheme, host, port, and path.
 
-The OIDC callback also enforces a group-based access gate before the backend creates a session. A successful sign-in at the identity provider is not enough on its own.
+OIDC establishes identity and account linkage only. Before the backend creates
+a session, it verifies that the enabled local user has a current canonical
+assignment or an eligible pending invitation. Upstream group claims never
+grant a portal role.
 
 ```python
 @router.get("/auth/oidc/login")
@@ -32,54 +39,23 @@ async def oidc_callback(request: Request, db: AsyncSession):
     return RedirectResponse(url=settings.OIDC_POST_LOGIN_REDIRECT)
 ```
 
-### OIDC Group Mapping
+### Canonical Role Assignment
 
-During `sync_oidc_user`, the backend reads the configured claim in `OIDC_GROUP_CLAIM_KEY` and normalizes its values case-insensitively. The claim may be a list, tuple, set, a single string, or a comma-separated string.
+The portal owns four fixed role codes: `cl_admin`, `rp_admin`,
+`rp_user_edit`, and `read_only`. The backend resolves active assignments on
+each protected request, including workspace scope, so revocation takes effect
+on the next request.
 
-- `OIDC_ADMIN_GROUP_NAME` grants the local `CLPP_ADMIN_ROLE_NAME` role
-- `OIDC_APPLICATION_OWNERS_GROUP_NAME` grants the local `CLPP_APPLICATION_OWNERS_ROLE_NAME` role
-- If neither configured group is present, the callback returns access denied and no session is created
-- If the mapped local role records do not exist in the database, the callback also returns access denied
-
-This means local development must use either:
-
-- an identity provider that emits one of the expected group values for your test user, or
-- backend configuration that points `OIDC_GROUP_CLAIM_KEY`, `OIDC_ADMIN_GROUP_NAME`, and `OIDC_APPLICATION_OWNERS_GROUP_NAME` at claim values your test user already has
-
-For local-only development, the backend does not require `OIDC_GROUP_CLAIM_KEY` to point to a real group claim. It only reads a claim value and compares strings. If your provider does not emit groups, you can temporarily point it at a stable scalar claim such as `email` and match your own address.
-
-Example local-only workaround:
-
-```env
-OIDC_GROUP_CLAIM_KEY="email"
-OIDC_ADMIN_GROUP_NAME="developer@example.ca"
-OIDC_APPLICATION_OWNERS_GROUP_NAME="unused-local-value"
-CLPP_ADMIN_ROLE_NAME="admin"
-CLPP_APPLICATION_OWNERS_ROLE_NAME="application owners"
-```
-
-With this setup, a login whose `email` claim equals `developer@example.ca` is treated as an admin login. Keep this kind of claim repurposing limited to local development.
-
-Example:
-
-```env
-OIDC_GROUP_CLAIM_KEY="groups"
-OIDC_ADMIN_GROUP_NAME="clpp-admin"
-OIDC_APPLICATION_OWNERS_GROUP_NAME="clpp-app-owners"
-CLPP_ADMIN_ROLE_NAME="admin"
-CLPP_APPLICATION_OWNERS_ROLE_NAME="application owners"
-```
-
-OIDC groups control portal-wide role assignment at login time. Workspace membership roles such as `workspace_admin` and `workspace_member` are separate application records and are not inferred directly from IdP groups.
+Bootstrap the first CL Admin through the explicitly invoked, idempotent
+`create_initial_cl_admin` script with `INITIAL_CL_ADMIN_EMAIL` set for that
+invocation. Manage later assignments through the authorized role-assignment
+API. Do not repurpose identity claims as application roles.
 
 ### Authorization Overview
 
-Authorization for admin-heavy routes uses `casbin-fastapi-decorator` with per-route `PermissionGuard` decorators. Superusers map to the Casbin subject `admin`, and additional policies are loaded from the `access_policy` table.
-
-Minimal RBAC is split into two Casbin resources:
-
-- `roles`: create, list, update, and soft-delete role definitions
-- `users_admin`: assign roles to users, manage tiers, and perform broader user administration
+Coarse permission checks use code-owned Casbin policies keyed by canonical
+role codes. Backend services enforce workspace and object scope. Mutable legacy
+policy rows and user-specific subjects do not grant runtime authority.
 
 ```python
 @router.get("/tiers")
@@ -101,8 +77,8 @@ async def read_tiers(...):
 
 ### Permission System
 - Casbin decorators: Route-level authorization via `PermissionGuard`
-- Superuser mapping: Superusers map to the Casbin subject `admin`
-- Dedicated role policies: Role CRUD uses the `roles` Casbin resource instead of reusing `users_admin`
+- Canonical subjects: Only the four fixed role codes enter policy evaluation
+- Current assignments: Role and workspace scope are resolved on each request
 - Resource ownership: User-specific data access
 - User tiers: Subscription-based feature access
 - Rate limiting: Per-user and per-tier API limits
@@ -124,7 +100,8 @@ async def public_endpoint(user: dict | None = Depends(get_optional_user)):
     return {"premium_content": False}
 
 
-@router.get("/admin", dependencies=[Depends(get_current_superuser)])
+@router.get("/admin")
+@casbin_guard.require_permission("users_admin", "read")
 async def admin_endpoint():
     return {"admin_data": "sensitive"}
 ```
@@ -155,12 +132,10 @@ OIDC_ENABLED=true
 OIDC_SERVER_METADATA_URL="https://your-idp/.well-known/openid-configuration"
 OIDC_CLIENT_ID="your-client-id"
 OIDC_CLIENT_SECRET="your-client-secret"
-OIDC_GROUP_CLAIM_KEY="groupIds"
-OIDC_ADMIN_GROUP_NAME="admin"
-OIDC_APPLICATION_OWNERS_GROUP_NAME="application owners"
-CLPP_ADMIN_ROLE_NAME="admin"
-CLPP_APPLICATION_OWNERS_ROLE_NAME="application owners"
 ```
+
+Set `INITIAL_CL_ADMIN_EMAIL` only during the explicit initial-assignment
+bootstrap; do not keep it in long-lived runtime configuration.
 
 For local development without Docker, run a Redis server before starting the backend. If you already use Redis locally for caching, queues, or rate limiting, you can reuse it and isolate session data with `REDIS_SESSION_DB`.
 

@@ -1,21 +1,9 @@
-import { createFileRoute } from "@tanstack/react-router";
-import { lazy } from "react";
-import i18n from "@/common/i18n";
-import type { RouteBackLinkContext } from "@/types/route-breadcrumbs";
-import { requireSuperuser } from "../features/auth/auth-routing";
-
-const PoliciesPage = lazy(async () => ({
-	default: (await import("../features/policies/pages/PoliciesPage"))
-		.PoliciesPage,
-}));
+import { createFileRoute, redirect } from "@tanstack/react-router";
+import { requireCapability } from "../features/auth/auth-routing";
 
 export const Route = createFileRoute("/policies")({
 	beforeLoad: async () => {
-		await requireSuperuser("/policies");
-
-		return {
-			backLink: { href: "/", label: i18n.t("nav.home") },
-		} satisfies RouteBackLinkContext;
+		await requireCapability("/policies", "platform_governance");
+		throw redirect({ replace: true, to: "/roles" }) as unknown as Error;
 	},
-	component: PoliciesPage,
 });

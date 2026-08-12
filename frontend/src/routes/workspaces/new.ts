@@ -2,7 +2,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { lazy } from "react";
 import i18n from "@/common/i18n";
 import type { RouteBackLinkContext } from "@/types/route-breadcrumbs";
-import { requireAuthenticatedUser } from "../../features/auth/auth-routing";
+import { requireCapability } from "../../features/auth/auth-routing";
 
 const WorkspaceCreatePage = lazy(async () => ({
 	default: (await import("../../features/workspaces/pages/WorkspaceCreatePage"))
@@ -11,7 +11,7 @@ const WorkspaceCreatePage = lazy(async () => ({
 
 export const Route = createFileRoute("/workspaces/new")({
 	beforeLoad: async () => {
-		await requireAuthenticatedUser("/workspaces/new");
+		await requireCapability("/workspaces/new", "partner_bootstrap");
 
 		return {
 			backLink: { href: "/workspaces", label: i18n.t("nav.workspaces") },

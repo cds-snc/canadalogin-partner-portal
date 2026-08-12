@@ -4,14 +4,18 @@ from fastapi import APIRouter, Depends, Query
 from fastapi.responses import Response
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from ...api.dependencies import get_current_superuser, get_onboarding_oversight_service
+from ...api.dependencies import (
+    get_current_cl_admin,
+    get_current_user,
+    get_onboarding_oversight_service,
+)
 from ...core.db.database import async_get_db
 from ...core.exceptions.openapi import error_responses
 from ...schemas.onboarding import OnboardingState
 from ...schemas.onboarding_oversight import (
-    OnboardingOversightReportRead,
     OnboardingOversightQueueRowRead,
     OnboardingOversightRecordType,
+    OnboardingOversightReportRead,
 )
 from ...schemas.rp_application import CanadaLoginEnvironment
 from ...schemas.rp_application_promotion_request import PromotionRequestStatus
@@ -27,7 +31,7 @@ async def get_onboarding_oversight_queue(
         OnboardingOversightService,
         Depends(get_onboarding_oversight_service),
     ],
-    _: Annotated[dict, Depends(get_current_superuser)],
+    _: Annotated[dict, Depends(get_current_cl_admin)],
     onboarding_state: Annotated[OnboardingState | None, Query()] = None,
     record_type: Annotated[OnboardingOversightRecordType | None, Query()] = None,
     department: Annotated[str | None, Query()] = None,
@@ -57,12 +61,15 @@ async def get_onboarding_oversight_report(
         OnboardingOversightService,
         Depends(get_onboarding_oversight_service),
     ],
-    _: Annotated[dict, Depends(get_current_superuser)],
+    current_user: Annotated[dict, Depends(get_current_user)],
     metric: Annotated[str, Query(description="Report metric identifier")],
     start_date: Annotated[str, Query(description="Start date (YYYY-MM-DD)")],
     end_date: Annotated[str, Query(description="End date (YYYY-MM-DD)")],
     group_by: Annotated[str | None, Query(description="Optional grouping: day, week, month")] = None,
-    workspace_uuid: Annotated[str | None, Query(description="First-release unsupported scope filter")] = None,
+    workspace_uuid: Annotated[
+        str | None,
+        Query(description="Required active workspace scope for partner readers"),
+    ] = None,
     department_id: Annotated[str | None, Query(description="First-release unsupported scope filter")] = None,
     environment: Annotated[str | None, Query(description="First-release unsupported scope filter")] = None,
 ) -> dict[str, object]:
@@ -75,6 +82,7 @@ async def get_onboarding_oversight_report(
         workspace_uuid=workspace_uuid,
         department_id=department_id,
         environment=environment,
+        current_user=current_user,
     )
 
 
@@ -88,12 +96,15 @@ async def export_onboarding_oversight_report(
         OnboardingOversightService,
         Depends(get_onboarding_oversight_service),
     ],
-    _: Annotated[dict, Depends(get_current_superuser)],
+    current_user: Annotated[dict, Depends(get_current_user)],
     metric: Annotated[str, Query(description="Report metric identifier")],
     start_date: Annotated[str, Query(description="Start date (YYYY-MM-DD)")],
     end_date: Annotated[str, Query(description="End date (YYYY-MM-DD)")],
     group_by: Annotated[str | None, Query(description="Optional grouping: day, week, month")] = None,
-    workspace_uuid: Annotated[str | None, Query(description="First-release unsupported scope filter")] = None,
+    workspace_uuid: Annotated[
+        str | None,
+        Query(description="Required active workspace scope for partner readers"),
+    ] = None,
     department_id: Annotated[str | None, Query(description="First-release unsupported scope filter")] = None,
     environment: Annotated[str | None, Query(description="First-release unsupported scope filter")] = None,
 ) -> Response:
@@ -106,6 +117,7 @@ async def export_onboarding_oversight_report(
         workspace_uuid=workspace_uuid,
         department_id=department_id,
         environment=environment,
+        current_user=current_user,
     )
     return Response(
         content=csv_content,

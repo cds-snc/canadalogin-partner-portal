@@ -21,11 +21,13 @@ export type MAUReportResponseRead = {
 type MAUReportQuery = {
 	endDate?: string;
 	startDate?: string;
+	workspaceUuid?: string;
 };
 
 const buildMauReportQuery = ({
 	endDate,
 	startDate,
+	workspaceUuid,
 }: MAUReportQuery): string => {
 	const params = new URLSearchParams();
 
@@ -37,17 +39,21 @@ const buildMauReportQuery = ({
 		params.set("end_date", endDate);
 	}
 
+	if (workspaceUuid && workspaceUuid.trim().length > 0) {
+		params.set("workspaceUuid", workspaceUuid);
+	}
+
 	const query = params.toString();
 	return query.length > 0 ? `?${query}` : "";
 };
 
-export const getCurrentUserRPApplicationMauReport = async (
+export const getAccessibleRPApplicationMauReport = async (
 	rpApplicationUuid: string,
 	query: MAUReportQuery
 ): Promise<MAUReportResponseRead> => {
 	const queryString = buildMauReportQuery(query);
 	const result = await requestJson<MAUReportResponseRead | null>(
-		`/api/v1/rp-applications/mine/${encodeURIComponent(rpApplicationUuid)}/mau-report${queryString}`,
+		`/api/v1/rp-applications/accessible/${encodeURIComponent(rpApplicationUuid)}/mau-report${queryString}`,
 		{
 			cache: "no-store",
 			method: "GET",

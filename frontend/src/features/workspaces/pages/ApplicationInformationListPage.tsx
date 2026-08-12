@@ -4,6 +4,8 @@ import type { FunctionComponent } from "@/common/types";
 import { Button, DataTable, Heading, Notice, Text } from "@/components/ui";
 import type { DataTableColumn } from "@/components/ui/DataTable";
 import { getRequestErrorNotice } from "@/fetch";
+import { hasCapability } from "@/features/auth/authorization";
+import { useSession } from "@/hooks";
 import { useWorkspace } from "../hooks/use-workspace";
 import { useWorkspaceApplicationInformationList } from "../hooks/use-workspace-application-information";
 import { getWorkspaceOnboardingStateLabel } from "../onboarding-display";
@@ -23,6 +25,7 @@ export const ApplicationInformationListPage = (): FunctionComponent => {
 		) => string;
 	};
 	const navigate = useNavigate();
+	const { currentUser } = useSession();
 	const { workspaceUuid } = useParams({
 		from: "/workspaces/$workspaceUuid/application-information",
 	});
@@ -30,21 +33,26 @@ export const ApplicationInformationListPage = (): FunctionComponent => {
 		from: "/workspaces/$workspaceUuid/application-information",
 	});
 	const { workspace } = useWorkspace(workspaceUuid);
-	const {
-		applicationInformationRecords,
-		error,
-		isLoading,
-	} = useWorkspaceApplicationInformationList(workspaceUuid);
+	const { applicationInformationRecords, error, isLoading } =
+		useWorkspaceApplicationInformationList(workspaceUuid);
 	const errorNotice = getRequestErrorNotice(error, {
 		bodyKey: "workspaces.appInfoErrorBody",
 		titleKey: "workspaces.appInfoErrorTitle",
 	});
 	const successMessage =
 		search.deleted === "1" ? t("workspaces.appInfoDeletedSuccess") : null;
+	const canCreateApplicationInformation = hasCapability(
+		currentUser?.authorizationContext,
+		"application_information_write",
+		workspaceUuid
+	);
 	const rows: Array<ApplicationInformationRow> =
 		applicationInformationRecords.map((applicationInformation) => ({
 			onboardingState: applicationInformation.onboardingState?.trim()
-				? getWorkspaceOnboardingStateLabel(t, applicationInformation.onboardingState)
+				? getWorkspaceOnboardingStateLabel(
+						t,
+						applicationInformation.onboardingState
+					)
 				: t("common.notAvailable"),
 			serviceNameEn: applicationInformation.serviceNameEn,
 			serviceNameFr: applicationInformation.serviceNameFr,
@@ -111,22 +119,23 @@ export const ApplicationInformationListPage = (): FunctionComponent => {
 					noticeTitleTag="h2"
 				>
 					<Text>{t("workspaces.appInfoEmptyBody")}</Text>
-					<div className="mt-200">
-						<Button
-							href={`/workspaces/${workspaceUuid}/application-information/new`}
-							type="link"
-						>
-							{t("workspaces.appInfoCreateButton")}
-						</Button>
-					</div>
+					{canCreateApplicationInformation ? (
+						<div className="mt-200">
+							<Button
+								href={`/workspaces/${workspaceUuid}/application-information/new`}
+								type="link"
+							>
+								{t("workspaces.appInfoCreateButton")}
+							</Button>
+						</div>
+					) : null}
 				</Notice>
 			) : null}
 
 			{applicationInformationRecords.length > 0 ? (
 				<DataTable
 					columns={columns}
-					getRowId={(row): string => row.uuid}
-					itemLabel="application information records"
+					itemLabel={t("workspaces.applicationInformationItemLabel")}
 					rows={rows}
 					title={t("workspaces.appInfoSectionTitle")}
 					action={{
@@ -142,15 +151,19 @@ export const ApplicationInformationListPage = (): FunctionComponent => {
 						},
 						screenReaderLabel: (row): string => row.serviceNameEn,
 					}}
-					primaryAction={{
-						buttonLabel: t("workspaces.appInfoCreateButton"),
-						onAction: (): void => {
-							void navigate({
-								params: { workspaceUuid },
-								to: "/workspaces/$workspaceUuid/application-information/new",
-							});
-						},
-					}}
+					primaryAction={
+						canCreateApplicationInformation
+							? {
+									buttonLabel: t("workspaces.appInfoCreateButton"),
+									onAction: (): void => {
+										void navigate({
+											params: { workspaceUuid },
+											to: "/workspaces/$workspaceUuid/application-information/new",
+										});
+									},
+								}
+							: undefined
+					}
 				/>
 			) : null}
 		</>

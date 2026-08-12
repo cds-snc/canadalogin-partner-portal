@@ -222,7 +222,7 @@ migrations/
 
 ```text
 scripts/
-├── create_first_superuser.py  # Create initial admin user
+├── create_initial_cl_admin.py # Create the initial canonical CL Admin assignment
 └── create_first_tier.py       # Create initial user tier
 ```
 
@@ -335,4 +335,4 @@ Request → API Endpoint → Dependencies → Service → Repository → Model/C
 Response ← API Response ← Schema ← Service ← Repository Result ← Database or External API
 ```
 
-This structure provides a solid foundation for building scalable, maintainable APIs while keeping the codebase organized and easy to navigate. 
+This structure provides a solid foundation for building scalable, maintainable APIs while keeping the codebase organized and easy to navigate.

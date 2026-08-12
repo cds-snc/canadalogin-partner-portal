@@ -1,12 +1,6 @@
 import { requestJson } from "@/fetch";
 import type { ApiMessageResponse } from "./api-types";
 
-export type UserRead = {
-	uuid: string;
-	name: string;
-	email: string;
-};
-
 export type WorkspaceCreate = {
 	departmentUuid: string;
 	name: string;
@@ -38,29 +32,6 @@ export type WorkspaceRead = {
 	deletedAt: string | null;
 	isDeleted: boolean;
 	createdBy: number | null;
-};
-
-export type WorkspaceMemberCreate = {
-	userUuid: string;
-	role: string;
-};
-
-export type WorkspaceMemberUpdate = {
-	role: string;
-};
-
-export type WorkspaceMemberRead = {
-	id: number;
-	uuid: string;
-	workspaceId: number;
-	userId: number;
-	role: string;
-	createdAt: string;
-	deletedAt: string | null;
-	isDeleted: boolean;
-	userEmail?: string;
-	userName?: string;
-	userUuid?: string;
 };
 
 export type ApplicationInformationCreate = {
@@ -142,14 +113,10 @@ export type ApplicationInformationContactRead = {
 };
 
 export type ApplicationInformationReviewChecklistStatus =
-	| "not_started"
-	| "incomplete"
-	| "complete";
+	"not_started" | "incomplete" | "complete";
 
 export type ApplicationInformationReviewDisposition =
-	| "pending"
-	| "changes_requested"
-	| "ready_for_next_step";
+	"pending" | "changes_requested" | "ready_for_next_step";
 
 export type ApplicationInformationReviewNoteCreate = {
 	body: string;
@@ -286,85 +253,6 @@ export const getWorkspace = async (
 	return result;
 };
 
-export const addWorkspaceMember = async (
-	workspaceUuid: string,
-	payload: WorkspaceMemberCreate
-): Promise<WorkspaceMemberRead> => {
-	const result = await requestJson<WorkspaceMemberRead | null>(
-		`/api/v1/workspaces/${encodeURIComponent(workspaceUuid)}/members`,
-		{
-			body: JSON.stringify(payload),
-			method: "POST",
-		}
-	);
-	if (!result) {
-		throw new Error("Failed to add member");
-	}
-	return result;
-};
-
-export const removeWorkspaceMember = async (
-	workspaceUuid: string,
-	userUuid: string
-): Promise<ApiMessageResponse> => {
-	const result = await requestJson<ApiMessageResponse | null>(
-		`/api/v1/workspaces/${encodeURIComponent(workspaceUuid)}/members/${encodeURIComponent(userUuid)}`,
-		{
-			method: "DELETE",
-		}
-	);
-	if (!result) {
-		throw new Error("Failed to remove member");
-	}
-	return result;
-};
-
-export const updateWorkspaceMember = async (
-	workspaceUuid: string,
-	userUuid: string,
-	payload: WorkspaceMemberUpdate
-): Promise<WorkspaceMemberRead> => {
-	const result = await requestJson<WorkspaceMemberRead | null>(
-		`/api/v1/workspaces/${encodeURIComponent(workspaceUuid)}/members/${encodeURIComponent(userUuid)}`,
-		{
-			body: JSON.stringify(payload),
-			method: "PATCH",
-		}
-	);
-	if (!result) {
-		throw new Error("Failed to update workspace member");
-	}
-	return result;
-};
-
-export const getWorkspaceMembers = async (
-	workspaceUuid: string
-): Promise<Array<WorkspaceMemberRead>> => {
-	const result = await requestJson<Array<WorkspaceMemberRead> | null>(
-		`/api/v1/workspaces/${encodeURIComponent(workspaceUuid)}/members`,
-		{
-			cache: "no-store",
-			method: "GET",
-		}
-	);
-	return result ?? [];
-};
-
-export const searchUsers = async (
-	query: string,
-	workspaceUuid?: string
-): Promise<Array<UserRead>> => {
-	let url = `/api/v1/users/search?q=${encodeURIComponent(query)}`;
-	if (workspaceUuid) {
-		url += `&workspace_uuid=${encodeURIComponent(workspaceUuid)}`;
-	}
-
-	const result = await requestJson<Array<UserRead> | null>(url, {
-		method: "GET",
-	});
-	return result ?? [];
-};
-
 export const getApplicationInformationList = async (
 	workspaceUuid: string
 ): Promise<Array<ApplicationInformationRead>> => {
@@ -450,15 +338,14 @@ export const getApplicationInformationContacts = async (
 	workspaceUuid: string,
 	applicationInformationUuid: string
 ): Promise<Array<ApplicationInformationContactRead>> => {
-	const result = await requestJson<
-		Array<ApplicationInformationContactRead> | null
-	>(
-		`/api/v1/workspaces/${encodeURIComponent(workspaceUuid)}/application-information/${encodeURIComponent(applicationInformationUuid)}/contacts`,
-		{
-			cache: "no-store",
-			method: "GET",
-		}
-	);
+	const result =
+		await requestJson<Array<ApplicationInformationContactRead> | null>(
+			`/api/v1/workspaces/${encodeURIComponent(workspaceUuid)}/application-information/${encodeURIComponent(applicationInformationUuid)}/contacts`,
+			{
+				cache: "no-store",
+				method: "GET",
+			}
+		);
 	return result ?? [];
 };
 
@@ -520,13 +407,14 @@ export const getApplicationInformationReviewContext = async (
 	workspaceUuid: string,
 	applicationInformationUuid: string
 ): Promise<ApplicationInformationReviewContextRead> => {
-	const result = await requestJson<ApplicationInformationReviewContextRead | null>(
-		`/api/v1/workspaces/${encodeURIComponent(workspaceUuid)}/application-information/${encodeURIComponent(applicationInformationUuid)}/review`,
-		{
-			cache: "no-store",
-			method: "GET",
-		}
-	);
+	const result =
+		await requestJson<ApplicationInformationReviewContextRead | null>(
+			`/api/v1/workspaces/${encodeURIComponent(workspaceUuid)}/application-information/${encodeURIComponent(applicationInformationUuid)}/review`,
+			{
+				cache: "no-store",
+				method: "GET",
+			}
+		);
 	if (!result) {
 		throw new Error("Failed to load application information review context");
 	}

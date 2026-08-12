@@ -1,4 +1,5 @@
 import React from "react";
+import { useTranslation } from "react-i18next";
 import { GcdsDateInput } from "@gcds-core/components-react";
 
 interface InputProps {
@@ -32,23 +33,28 @@ const Input: React.FC<InputProps> = React.memo(
 		format,
 		min,
 		max,
-	}) => (
-		<GcdsDateInput
-			className={className}
-			errorMessage={errorMessage}
-			format={format}
-			hint={hint}
-			lang={lang}
-			legend={legend}
-			max={max}
-			min={min}
-			name={name}
-			required={required}
-			validateOn={validateOn}
-			value={value}
-			onInput={onInput}
-		></GcdsDateInput>
-	)
+	}) => {
+		const { i18n } = useTranslation();
+		const languageKey = i18n.language?.startsWith("fr") ? "fr" : "en";
+
+		return (
+			<GcdsDateInput
+				className={className}
+				errorMessage={errorMessage}
+				format={format}
+				hint={hint}
+				lang={lang ?? languageKey}
+				legend={legend}
+				max={max}
+				min={min}
+				name={name}
+				required={required}
+				validateOn={validateOn}
+				value={value}
+				onInput={onInput}
+			></GcdsDateInput>
+		);
+	}
 );
 
 export default Input;

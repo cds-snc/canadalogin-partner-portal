@@ -35,7 +35,8 @@ export type WorkspaceRPApplicationDeveloperInvitationsState = {
 
 export const useWorkspaceRPApplicationDeveloperInvitations = (
 	workspaceUuid: string,
-	rpApplicationUuid: string
+	rpApplicationUuid: string,
+	enabled = true
 ): WorkspaceRPApplicationDeveloperInvitationsState => {
 	const queryClient = useQueryClient();
 	const queryKey = workspaceRPApplicationDeveloperInvitationsQueryKey(
@@ -43,7 +44,8 @@ export const useWorkspaceRPApplicationDeveloperInvitations = (
 		rpApplicationUuid
 	);
 	const query = useQuery<Array<RPApplicationDeveloperInvitationRead>, Error>({
-		enabled: workspaceUuid.length > 0 && rpApplicationUuid.length > 0,
+		enabled:
+			enabled && workspaceUuid.length > 0 && rpApplicationUuid.length > 0,
 		queryFn: () =>
 			getWorkspaceRPApplicationDeveloperInvitations(
 				workspaceUuid,
@@ -53,7 +55,12 @@ export const useWorkspaceRPApplicationDeveloperInvitations = (
 	});
 
 	const refreshInvitations = async (): Promise<void> => {
-		await queryClient.invalidateQueries({ queryKey });
+		await Promise.all([
+			queryClient.invalidateQueries({ queryKey }),
+			queryClient.invalidateQueries({
+				queryKey: ["user-pending-invitations"],
+			}),
+		]);
 	};
 
 	const createMutation = useMutation({
@@ -81,8 +88,7 @@ export const useWorkspaceRPApplicationDeveloperInvitations = (
 			payload: RPApplicationDeveloperInvitationCreate
 		): Promise<RPApplicationDeveloperInvitationWriteResponse> =>
 			createMutation.mutateAsync(payload),
-		error:
-			createMutation.error ?? revokeMutation.error ?? query.error ?? null,
+		error: createMutation.error ?? revokeMutation.error ?? query.error ?? null,
 		invitations: query.data ?? [],
 		isCreating: createMutation.isPending,
 		isLoading: query.isLoading,

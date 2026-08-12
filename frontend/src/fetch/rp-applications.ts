@@ -1,5 +1,9 @@
 import { requestJson } from "@/fetch";
+import type { CanonicalRole, PartnerRole } from "@/features/auth/authorization";
 import type { ApiMessageResponse } from "./api-types";
+import { HttpRequestError } from "./errors";
+
+export type { ApiMessageResponse } from "./api-types";
 
 export type RPApplicationSettings = {
 	application_url?: string;
@@ -13,6 +17,69 @@ export type RPApplicationSettings = {
 };
 
 export type CanadaLoginEnvironment = "test" | "staging" | "production";
+export type RPApplicationAdoptionFieldName =
+	| "displayName"
+	| "providerApplicationState"
+	| "applicationUrl"
+	| "redirectUris"
+	| "logoutUri"
+	| "logoutRedirectUris"
+	| "pkceEnabled"
+	| "clientType"
+	| "clientAuthMethod";
+export type RPApplicationAdoptionFieldStatus =
+	"missing" | "fillable" | "preserved" | "conflict";
+export type RPApplicationAdoptionFieldValue =
+	string | boolean | Array<string> | null;
+
+export type RPApplicationAdoptionCandidateRead = {
+	rpApplicationUuid: string;
+	name: string;
+	ibmApplicationId: string;
+	metadataCompleteness: "complete" | "incomplete";
+	missingFieldNames: Array<RPApplicationAdoptionFieldName>;
+	updatedAt: string | null;
+};
+
+export type RPApplicationAdoptionCandidateListRead = {
+	items: Array<RPApplicationAdoptionCandidateRead>;
+};
+
+export type RPApplicationAdoptionFieldComparisonRead = {
+	fieldName: RPApplicationAdoptionFieldName;
+	status: RPApplicationAdoptionFieldStatus;
+	localValue: RPApplicationAdoptionFieldValue;
+	providerValue: RPApplicationAdoptionFieldValue;
+};
+
+export type RPApplicationAdoptionCandidatePreviewRead = {
+	candidate: RPApplicationAdoptionCandidateRead;
+	canadaLoginEnvironment: CanadaLoginEnvironment | null;
+	fields: Array<RPApplicationAdoptionFieldComparisonRead>;
+	fillableFieldNames: Array<RPApplicationAdoptionFieldName>;
+	preservedLocalFieldNames: Array<RPApplicationAdoptionFieldName>;
+	conflictingFieldNames: Array<RPApplicationAdoptionFieldName>;
+};
+
+export type RPApplicationWorkspaceLinkWrite = {
+	workspaceUuid: string;
+	applicationInformationUuid?: string | null;
+	canadaLoginEnvironment?: CanadaLoginEnvironment | null;
+};
+
+export type RPApplicationWorkspaceAdoptionRead = {
+	rpApplicationUuid: string;
+	workspaceUuid: string;
+	departmentUuid: string;
+	applicationInformationUuid: string | null;
+	ibmApplicationId: string;
+	name: string;
+	canadaLoginEnvironment: CanadaLoginEnvironment;
+	filledFieldNames: Array<RPApplicationAdoptionFieldName>;
+	preservedLocalFieldNames: Array<RPApplicationAdoptionFieldName>;
+	conflictingFieldNames: Array<RPApplicationAdoptionFieldName>;
+	idempotentReplay: boolean;
+};
 export type LogoutMode = "back_channel" | "front_channel";
 export type ClientType = "confidential" | "public";
 export type ClientAuthMethod =
@@ -41,142 +108,199 @@ export type MessageDecryptionTarget =
 export type KeyManagementAlgorithm = "RSA-OAEP-256" | "RSA-OAEP" | "other";
 export type ContentEncryptionAlgorithm =
 	"A128GCM" | "A192GCM" | "A256GCM" | "other";
+export type RegistrationDataStep =
+	"basics" | "endpoints" | "client-and-access" | "signing" | "encryption";
+export type RegistrationSaveMode = "partial" | "completeStep";
 
-export type WorkspaceRPApplicationRegistrationBase = {
-	application_information_uuid?: string | null;
-	canada_login_environment?: CanadaLoginEnvironment;
-	service_name_en?: string;
-	service_name_fr?: string;
-	application_environment_url_en?: string;
-	application_environment_url_fr?: string;
-	redirect_uris?: Array<string>;
-	post_logout_redirect_uris?: Array<string>;
-	logout_mode?: LogoutMode;
-	logout_uri?: string;
-	client_type?: ClientType;
-	supports_authorization_code_flow?: boolean;
-	client_auth_method?: ClientAuthMethod;
-	private_key_distribution_method?: PrivateKeyDistributionMethod;
-	jwks_uri?: string;
-	offline_jwk_or_certificate?: string;
-	requested_scopes?: Array<RequestedScope>;
-	sector_identifier?: string;
-	shares_pairwise_identifiers?: boolean;
-	migration_sector_identifier_url?: string;
-	pkce_supported?: boolean;
-	pkce_algorithms?: Array<PKCEAlgorithm>;
-	pkce_other_algorithm?: string;
-	request_signing_supported?: boolean;
-	request_signing_targets?: Array<SigningTarget>;
-	request_signing_algorithms?: Array<SignatureAlgorithm>;
-	request_signing_other_algorithm?: string;
-	request_signing_roadmap?: boolean;
-	request_signing_revisit_on?: string;
-	signature_validation_supported?: boolean;
-	signature_validation_targets?: Array<SignatureValidationTarget>;
-	signature_validation_algorithms?: Array<SignatureAlgorithm>;
-	signature_validation_other_algorithm?: string;
-	signature_validation_roadmap?: boolean;
-	signature_validation_revisit_on?: string;
-	request_encryption_supported?: boolean;
-	request_encryption_targets?: Array<RequestEncryptionTarget>;
-	request_encryption_key_management_algorithms?: Array<KeyManagementAlgorithm>;
-	request_encryption_other_key_management_algorithm?: string;
-	request_encryption_content_algorithms?: Array<ContentEncryptionAlgorithm>;
-	request_encryption_other_content_algorithm?: string;
-	request_encryption_roadmap?: boolean;
-	request_encryption_revisit_on?: string;
-	message_decryption_supported?: boolean;
-	message_decryption_targets?: Array<MessageDecryptionTarget>;
-	message_decryption_key_management_algorithms?: Array<KeyManagementAlgorithm>;
-	message_decryption_other_key_management_algorithm?: string;
-	message_decryption_content_algorithms?: Array<ContentEncryptionAlgorithm>;
-	message_decryption_other_content_algorithm?: string;
-	message_decryption_roadmap?: boolean;
-	message_decryption_revisit_on?: string;
+type WorkspaceRPApplicationRegistrationAnswerValues = {
+	applicationInformationUuid?: string | null;
+	canadaLoginEnvironment?: CanadaLoginEnvironment;
+	serviceNameEn?: string;
+	serviceNameFr?: string;
+	applicationEnvironmentUrlEn?: string;
+	applicationEnvironmentUrlFr?: string;
+	redirectUris?: Array<string>;
+	postLogoutRedirectUris?: Array<string>;
+	logoutMode?: LogoutMode;
+	logoutUri?: string;
+	clientType?: ClientType;
+	supportsAuthorizationCodeFlow?: boolean;
+	clientAuthMethod?: ClientAuthMethod;
+	privateKeyDistributionMethod?: PrivateKeyDistributionMethod;
+	jwksUri?: string;
+	offlineJwkOrCertificate?: string;
+	requestedScopes?: Array<RequestedScope>;
+	sectorIdentifier?: string;
+	sharesPairwiseIdentifiers?: boolean;
+	migrationSectorIdentifierUrl?: string;
+	pkceSupported?: boolean;
+	pkceAlgorithms?: Array<PKCEAlgorithm>;
+	pkceOtherAlgorithm?: string;
+	requestSigningSupported?: boolean;
+	requestSigningTargets?: Array<SigningTarget>;
+	requestSigningAlgorithms?: Array<SignatureAlgorithm>;
+	requestSigningOtherAlgorithm?: string;
+	requestSigningRoadmap?: boolean;
+	requestSigningRevisitOn?: string;
+	signatureValidationSupported?: boolean;
+	signatureValidationTargets?: Array<SignatureValidationTarget>;
+	signatureValidationAlgorithms?: Array<SignatureAlgorithm>;
+	signatureValidationOtherAlgorithm?: string;
+	signatureValidationRoadmap?: boolean;
+	signatureValidationRevisitOn?: string;
+	requestEncryptionSupported?: boolean;
+	requestEncryptionTargets?: Array<RequestEncryptionTarget>;
+	requestEncryptionKeyManagementAlgorithms?: Array<KeyManagementAlgorithm>;
+	requestEncryptionOtherKeyManagementAlgorithm?: string;
+	requestEncryptionContentAlgorithms?: Array<ContentEncryptionAlgorithm>;
+	requestEncryptionOtherContentAlgorithm?: string;
+	requestEncryptionRoadmap?: boolean;
+	requestEncryptionRevisitOn?: string;
+	messageDecryptionSupported?: boolean;
+	messageDecryptionTargets?: Array<MessageDecryptionTarget>;
+	messageDecryptionKeyManagementAlgorithms?: Array<KeyManagementAlgorithm>;
+	messageDecryptionOtherKeyManagementAlgorithm?: string;
+	messageDecryptionContentAlgorithms?: Array<ContentEncryptionAlgorithm>;
+	messageDecryptionOtherContentAlgorithm?: string;
+	messageDecryptionRoadmap?: boolean;
+	messageDecryptionRevisitOn?: string;
 };
 
-export type RPApplicationCreate = WorkspaceRPApplicationRegistrationBase & {
-	canada_login_environment: CanadaLoginEnvironment;
-	service_name_en: string;
-	service_name_fr: string;
-	application_environment_url_en: string;
-	application_environment_url_fr: string;
-	redirect_uris: Array<string>;
-	logout_mode: LogoutMode;
-	logout_uri: string;
-	client_type: ClientType;
-	supports_authorization_code_flow: boolean;
-	client_auth_method: ClientAuthMethod;
-	requested_scopes: Array<RequestedScope>;
-	sector_identifier: string;
-	shares_pairwise_identifiers: boolean;
-	pkce_supported: boolean;
-	request_signing_supported: boolean;
-	signature_validation_supported: boolean;
-	request_encryption_supported: boolean;
-	message_decryption_supported: boolean;
+export type WorkspaceRPApplicationRegistrationAnswers = {
+	[K in keyof WorkspaceRPApplicationRegistrationAnswerValues]?: Exclude<
+		WorkspaceRPApplicationRegistrationAnswerValues[K],
+		undefined
+	> | null;
 };
 
-export type RPApplicationUpdate = WorkspaceRPApplicationRegistrationBase;
+export type WorkspaceRPApplicationRegistrationDraftCreate =
+	WorkspaceRPApplicationRegistrationAnswers & {
+		canadaLoginEnvironment: CanadaLoginEnvironment;
+		serviceNameEn: string;
+		serviceNameFr: string;
+	};
+
+export type WorkspaceRPApplicationRegistrationDraftPatch = {
+	expectedDraftVersion: number;
+	registrationAnswers: WorkspaceRPApplicationRegistrationAnswers;
+	saveMode: RegistrationSaveMode;
+	stepId: RegistrationDataStep;
+};
+
+type ValidationErrorDetail = {
+	loc?: unknown;
+};
+
+export const isWorkspaceRPRegistrationValidationError = (
+	error: Error | null | undefined
+): error is HttpRequestError =>
+	error instanceof HttpRequestError &&
+	error.status === 422 &&
+	error.code === "validation_error";
+
+export const getWorkspaceRPRegistrationValidationFieldNames = (
+	error: Error | null | undefined
+): Array<string> => {
+	if (
+		!isWorkspaceRPRegistrationValidationError(error) ||
+		!Array.isArray(error.details)
+	) {
+		return [];
+	}
+
+	const fieldNames = new Set<string>();
+	for (const detail of error.details as Array<ValidationErrorDetail>) {
+		if (!Array.isArray(detail.loc)) continue;
+		const registrationAnswersIndex = detail.loc.indexOf("registrationAnswers");
+		const fieldName = detail.loc[registrationAnswersIndex + 1];
+		if (registrationAnswersIndex >= 0 && typeof fieldName === "string") {
+			fieldNames.add(fieldName);
+		}
+	}
+	return [...fieldNames];
+};
+
+export type WorkspaceRPApplicationRegistrationDraftRead = {
+	onboardingState: "draft";
+	registrationAnswers: WorkspaceRPApplicationRegistrationAnswers;
+	registrationDraftVersion: number;
+	registrationLastCompletedStep?: RegistrationDataStep | null;
+	rpApplicationUuid: string;
+	workspaceUuid: string;
+};
+
+export type WorkspaceRPApplicationRegistrationSubmissionRead = {
+	onboardingState: "submitted";
+	registrationDraftVersion: number;
+	rpApplicationUuid: string;
+	serviceNameEn: string;
+	serviceNameFr: string;
+	workspaceUuid: string;
+};
+
+export type RPApplicationUpdate = WorkspaceRPApplicationRegistrationAnswers;
 
 export type RPApplicationRead = {
 	id: number;
 	uuid: string;
-	workspace_id: number | null;
-	department_id?: number | null;
-	application_information_id?: number | null;
-	dnr_app_name: string;
-	oidc_registration_payload?: Record<string, unknown> | null;
-	onboarding_state?: string | null;
-	submitted_at?: string | null;
-	under_review_at?: string | null;
-	approved_at?: string | null;
-	launched_at?: string | null;
-	promotion_status?: string | null;
-	promotion_requested_at?: string | null;
-	status: string | null;
-	created_by: number | null;
-	created_at: string;
-	is_deleted: boolean;
-	canada_login_environment?: string | null;
-	ibm_sv_application_id?: string | null;
-	application_owner?: {
-		owners: Array<{ email: string }>;
-	} | null;
-};
-
-export type CurrentUserRPApplicationRead = {
-	id: number;
-	uuid: string;
-	dnrAppName?: string;
-	name?: string;
-	status?: string;
-	settings?: RPApplicationSettings | null;
-	ibm_sv_application_id?: string | null;
+	workspaceId: number | null;
 	departmentId?: number | null;
-	canadaLoginEnvironment?: string | null;
+	applicationInformationId?: number | null;
+	dnrAppName: string;
+	oidcRegistrationPayload?: Record<string, unknown> | null;
 	onboardingState?: string | null;
+	submittedAt?: string | null;
+	underReviewAt?: string | null;
+	approvedAt?: string | null;
+	launchedAt?: string | null;
 	promotionStatus?: string | null;
-	applicationOwner?: {
-		owners: Array<{ email: string }>;
-	} | null;
+	promotionRequestedAt?: string | null;
+	status: string | null;
+	createdBy: number | null;
+	createdAt: string;
+	isDeleted: boolean;
+	canadaLoginEnvironment?: string | null;
+	ibmSvApplicationId?: string | null;
 };
 
-export type CurrentUserRPOAuthSetupRead = {
-	rpApplicationName: string;
-	status: string;
+export type AccessibleRPApplicationRead = {
+	uuid: string;
+	dnrAppName: string;
+	ibmSvApplicationId?: string | null;
+	departmentUuid?: string | null;
 	canadaLoginEnvironment?: string | null;
 	onboardingState?: string | null;
 	promotionStatus?: string | null;
-	applicationUrl?: string | null;
-	discoveryEndpoint?: string | null;
-	departmentName?: string | null;
-	departmentNameFr?: string | null;
-	pkceEnabled?: boolean | null;
-	redirectUris: Array<string>;
-	logoutUri?: string | null;
-	logoutRedirectUris: Array<string>;
+	role: PartnerRole;
+	workspaceUuid: string;
+};
+
+export type RPApplicationSummaryRead = {
+	canadaLoginEnvironment?: string | null;
+	onboardingState?: string | null;
+	promotionStatus?: string | null;
+	registrationLastCompletedStep?: RegistrationDataStep | null;
+	resumeTaskPath?: string | null;
+	role?: CanonicalRole | null;
+	serviceNameEn: string;
+	serviceNameFr: string;
+	uuid: string;
+	workspaceName: string;
+	workspaceUuid: string;
+};
+
+export type WorkspaceRPApplicationConfigurationRead = {
+	canadaLoginEnvironment?: CanadaLoginEnvironment | null;
+	offlinePublicKeyProvided: boolean;
+	onboardingState?: string | null;
+	promotionStatus?: string | null;
+	registrationAnswers: WorkspaceRPApplicationRegistrationAnswers;
+	registrationDraftVersion: number;
+	registrationLastCompletedStep?: RegistrationDataStep | null;
+	rpApplicationUuid: string;
+	serviceNameEn: string;
+	serviceNameFr: string;
+	workspaceUuid: string;
 };
 
 export type RPApplicationClientCredentialsRead = {
@@ -211,14 +335,14 @@ export type RPApplicationUsageSummaryRead = {
 	total: number;
 };
 
-export type CurrentUserRPApplicationSummaryRead = {
+export type AccessibleRPApplicationSummaryRead = {
 	id: number;
 	uuid: string;
 	dnrAppName: string;
 	departmentId: number | null;
 };
 
-export type CurrentUserRPApplicationDepartmentAssignRequest = {
+export type AccessibleRPApplicationDepartmentAssignRequest = {
 	departmentUuid: string;
 };
 
@@ -273,11 +397,58 @@ const toUsageSelectedDateTimestamp = (selectedDate: string): string => {
 	return String(timestamp);
 };
 
-export const getCurrentUserRPApplications = async (): Promise<
-	Array<CurrentUserRPApplicationRead>
+export const getRPApplicationAdoptionCandidates =
+	async (): Promise<RPApplicationAdoptionCandidateListRead> => {
+		const result =
+			await requestJson<RPApplicationAdoptionCandidateListRead | null>(
+				"/api/v1/rp-applications/workspace-adoption-candidates",
+				{
+					cache: "no-store",
+					method: "GET",
+				}
+			);
+		return result ?? { items: [] };
+	};
+
+export const getRPApplicationAdoptionCandidatePreview = async (
+	rpApplicationUuid: string
+): Promise<RPApplicationAdoptionCandidatePreviewRead> => {
+	const result =
+		await requestJson<RPApplicationAdoptionCandidatePreviewRead | null>(
+			`/api/v1/rp-applications/workspace-adoption-candidates/${encodeURIComponent(rpApplicationUuid)}`,
+			{
+				cache: "no-store",
+				method: "GET",
+			}
+		);
+	if (!result) {
+		throw new Error("Failed to load RP application adoption candidate");
+	}
+	return result;
+};
+
+export const linkRPApplicationToWorkspace = async (
+	rpApplicationUuid: string,
+	payload: RPApplicationWorkspaceLinkWrite
+): Promise<RPApplicationWorkspaceAdoptionRead> => {
+	const result = await requestJson<RPApplicationWorkspaceAdoptionRead | null>(
+		`/api/v1/rp-applications/${encodeURIComponent(rpApplicationUuid)}/workspace-link`,
+		{
+			body: JSON.stringify(payload),
+			method: "PUT",
+		}
+	);
+	if (!result) {
+		throw new Error("Failed to link RP application to workspace");
+	}
+	return result;
+};
+
+export const getAccessibleRPApplications = async (): Promise<
+	Array<RPApplicationSummaryRead>
 > => {
-	const result = await requestJson<Array<CurrentUserRPApplicationRead> | null>(
-		"/api/v1/rp-applications/mine",
+	const result = await requestJson<Array<RPApplicationSummaryRead> | null>(
+		"/api/v1/rp-applications/accessible",
 		{
 			cache: "no-store",
 			method: "GET",
@@ -286,11 +457,11 @@ export const getCurrentUserRPApplications = async (): Promise<
 	return result ?? [];
 };
 
-export const getCurrentUserRPApplication = async (
+export const getAccessibleRPApplication = async (
 	rpApplicationUuid: string
-): Promise<CurrentUserRPApplicationRead> => {
-	const result = await requestJson<CurrentUserRPApplicationRead | null>(
-		`/api/v1/rp-applications/mine/${encodeURIComponent(rpApplicationUuid)}`,
+): Promise<AccessibleRPApplicationRead> => {
+	const result = await requestJson<AccessibleRPApplicationRead | null>(
+		`/api/v1/rp-applications/accessible/${encodeURIComponent(rpApplicationUuid)}`,
 		{
 			cache: "no-store",
 			method: "GET",
@@ -302,27 +473,11 @@ export const getCurrentUserRPApplication = async (
 	return result;
 };
 
-export const getCurrentUserRPOAuthSetup = async (
+export const getAccessibleRPApplicationDepartment = async (
 	rpApplicationUuid: string
-): Promise<CurrentUserRPOAuthSetupRead> => {
-	const result = await requestJson<CurrentUserRPOAuthSetupRead | null>(
-		`/api/v1/rp-applications/mine/${encodeURIComponent(rpApplicationUuid)}/oauth-setup`,
-		{
-			cache: "no-store",
-			method: "GET",
-		}
-	);
-	if (!result) {
-		throw new Error("Failed to load RP OAuth setup");
-	}
-	return result;
-};
-
-export const getCurrentUserRPApplicationDepartment = async (
-	rpApplicationUuid: string
-): Promise<CurrentUserRPApplicationSummaryRead> => {
-	const result = await requestJson<CurrentUserRPApplicationSummaryRead | null>(
-		`/api/v1/rp-applications/mine/${encodeURIComponent(rpApplicationUuid)}/department`,
+): Promise<AccessibleRPApplicationSummaryRead> => {
+	const result = await requestJson<AccessibleRPApplicationSummaryRead | null>(
+		`/api/v1/rp-applications/accessible/${encodeURIComponent(rpApplicationUuid)}/department`,
 		{
 			cache: "no-store",
 			method: "GET",
@@ -334,12 +489,12 @@ export const getCurrentUserRPApplicationDepartment = async (
 	return result;
 };
 
-export const assignCurrentUserRPApplicationDepartment = async (
+export const assignAccessibleRPApplicationDepartment = async (
 	rpApplicationUuid: string,
-	payload: CurrentUserRPApplicationDepartmentAssignRequest
-): Promise<CurrentUserRPApplicationSummaryRead> => {
-	const result = await requestJson<CurrentUserRPApplicationSummaryRead | null>(
-		`/api/v1/rp-applications/mine/${encodeURIComponent(rpApplicationUuid)}/department`,
+	payload: AccessibleRPApplicationDepartmentAssignRequest
+): Promise<AccessibleRPApplicationSummaryRead> => {
+	const result = await requestJson<AccessibleRPApplicationSummaryRead | null>(
+		`/api/v1/rp-applications/accessible/${encodeURIComponent(rpApplicationUuid)}/department`,
 		{
 			body: JSON.stringify(payload),
 			method: "PATCH",
@@ -351,27 +506,10 @@ export const assignCurrentUserRPApplicationDepartment = async (
 	return result;
 };
 
-export const updateCurrentUserRPApplication = async (
-	rpApplicationUuid: string,
-	payload: RPApplicationUpdate
-): Promise<CurrentUserRPApplicationRead> => {
-	const result = await requestJson<CurrentUserRPApplicationRead | null>(
-		`/api/v1/rp-applications/mine/${encodeURIComponent(rpApplicationUuid)}`,
-		{
-			body: JSON.stringify(payload),
-			method: "PATCH",
-		}
-	);
-	if (!result) {
-		throw new Error("Failed to update RP application");
-	}
-	return result;
-};
-
 export const getRPApplications = async (
 	workspaceUuid: string
-): Promise<Array<RPApplicationRead>> => {
-	const result = await requestJson<Array<RPApplicationRead> | null>(
+): Promise<Array<RPApplicationSummaryRead>> => {
+	const result = await requestJson<Array<RPApplicationSummaryRead> | null>(
 		`/api/v1/workspaces/${encodeURIComponent(workspaceUuid)}/applications`,
 		{
 			cache: "no-store",
@@ -379,6 +517,21 @@ export const getRPApplications = async (
 		}
 	);
 	return result ?? [];
+};
+
+export const getWorkspaceRPApplicationConfiguration = async (
+	workspaceUuid: string,
+	rpApplicationUuid: string
+): Promise<WorkspaceRPApplicationConfigurationRead> => {
+	const result =
+		await requestJson<WorkspaceRPApplicationConfigurationRead | null>(
+			`/api/v1/workspaces/${encodeURIComponent(workspaceUuid)}/applications/${encodeURIComponent(rpApplicationUuid)}/configuration`,
+			{ cache: "no-store", method: "GET" }
+		);
+	if (!result) {
+		throw new Error("Failed to load RP application configuration");
+	}
+	return result;
 };
 
 export const getRPApplication = async (
@@ -398,19 +551,75 @@ export const getRPApplication = async (
 	return result;
 };
 
-export const createRPApplication = async (
+export const createWorkspaceRPApplicationRegistrationDraft = async (
 	workspaceUuid: string,
-	payload: RPApplicationCreate
-): Promise<RPApplicationRead> => {
-	const result = await requestJson<RPApplicationRead | null>(
-		`/api/v1/workspaces/${encodeURIComponent(workspaceUuid)}/applications`,
-		{
-			body: JSON.stringify(payload),
-			method: "POST",
-		}
-	);
+	payload: WorkspaceRPApplicationRegistrationDraftCreate,
+	registrationCreationKey: string
+): Promise<WorkspaceRPApplicationRegistrationDraftRead> => {
+	const result =
+		await requestJson<WorkspaceRPApplicationRegistrationDraftRead | null>(
+			`/api/v1/workspaces/${encodeURIComponent(workspaceUuid)}/applications`,
+			{
+				body: JSON.stringify(payload),
+				headers: { "Idempotency-Key": registrationCreationKey },
+				method: "POST",
+			}
+		);
 	if (!result) {
-		throw new Error("Failed to create application");
+		throw new Error("Failed to create registration draft");
+	}
+	return result;
+};
+
+export const getWorkspaceRPApplicationRegistrationDraft = async (
+	workspaceUuid: string,
+	rpApplicationUuid: string
+): Promise<WorkspaceRPApplicationRegistrationDraftRead> => {
+	const result =
+		await requestJson<WorkspaceRPApplicationRegistrationDraftRead | null>(
+			`/api/v1/workspaces/${encodeURIComponent(workspaceUuid)}/applications/${encodeURIComponent(rpApplicationUuid)}/registration-draft`,
+			{ cache: "no-store", method: "GET" }
+		);
+	if (!result) {
+		throw new Error("Failed to load registration draft");
+	}
+	return result;
+};
+
+export const updateWorkspaceRPApplicationRegistrationDraft = async (
+	workspaceUuid: string,
+	rpApplicationUuid: string,
+	payload: WorkspaceRPApplicationRegistrationDraftPatch
+): Promise<WorkspaceRPApplicationRegistrationDraftRead> => {
+	const result =
+		await requestJson<WorkspaceRPApplicationRegistrationDraftRead | null>(
+			`/api/v1/workspaces/${encodeURIComponent(workspaceUuid)}/applications/${encodeURIComponent(rpApplicationUuid)}/registration-draft`,
+			{ body: JSON.stringify(payload), method: "PATCH" }
+		);
+	if (!result) {
+		throw new Error("Failed to update registration draft");
+	}
+	return result;
+};
+
+export const submitWorkspaceRPApplicationRegistration = async (
+	workspaceUuid: string,
+	rpApplicationUuid: string,
+	expectedDraftVersion: number
+): Promise<WorkspaceRPApplicationRegistrationSubmissionRead> => {
+	const result =
+		await requestJson<WorkspaceRPApplicationRegistrationSubmissionRead | null>(
+			`/api/v1/workspaces/${encodeURIComponent(workspaceUuid)}/applications/${encodeURIComponent(rpApplicationUuid)}/onboarding-state`,
+			{
+				body: JSON.stringify({
+					expectedDraftVersion,
+					targetState: "submitted",
+				}),
+				method: "POST",
+			}
+		);
+	if (!result) {
+		throw new Error("Failed to submit registration");
 	}
 	return result;
 };
@@ -449,11 +658,15 @@ export const deleteRPApplication = async (
 	return result;
 };
 
-export const getCurrentUserRPApplicationClientCredentials = async (
-	rpApplicationUuid: string
+export const getAccessibleRPApplicationClientCredentials = async (
+	rpApplicationUuid: string,
+	workspaceUuid?: string
 ): Promise<RPApplicationClientCredentialsRead> => {
+	const workspaceQuery = workspaceUuid
+		? `?workspaceUuid=${encodeURIComponent(workspaceUuid)}`
+		: "";
 	const result = await requestJson<RPApplicationClientCredentialsRead | null>(
-		`/api/v1/rp-applications/mine/${encodeURIComponent(rpApplicationUuid)}/client`,
+		`/api/v1/rp-applications/accessible/${encodeURIComponent(rpApplicationUuid)}/client${workspaceQuery}`,
 		{
 			cache: "no-store",
 			method: "GET",
@@ -465,12 +678,16 @@ export const getCurrentUserRPApplicationClientCredentials = async (
 	return result;
 };
 
-export const getCurrentUserRPApplicationRotatedClientSecrets = async (
-	rpApplicationUuid: string
+export const getAccessibleRPApplicationRotatedClientSecrets = async (
+	rpApplicationUuid: string,
+	workspaceUuid?: string
 ): Promise<Array<RPApplicationRotatedSecretRead>> => {
+	const workspaceQuery = workspaceUuid
+		? `?workspaceUuid=${encodeURIComponent(workspaceUuid)}`
+		: "";
 	const result =
 		await requestJson<Array<RPApplicationRotatedSecretRead> | null>(
-			`/api/v1/rp-applications/mine/${encodeURIComponent(rpApplicationUuid)}/client/rotated-secrets`,
+			`/api/v1/rp-applications/accessible/${encodeURIComponent(rpApplicationUuid)}/client/rotated-secrets${workspaceQuery}`,
 			{
 				cache: "no-store",
 				method: "GET",
@@ -479,13 +696,17 @@ export const getCurrentUserRPApplicationRotatedClientSecrets = async (
 	return result ?? [];
 };
 
-export const createCurrentUserRPApplicationRotatedClientSecret = async (
+export const createAccessibleRPApplicationRotatedClientSecret = async (
 	rpApplicationUuid: string,
-	payload: RPApplicationRotatedSecretCreateRequest
+	payload: RPApplicationRotatedSecretCreateRequest,
+	workspaceUuid?: string
 ): Promise<Array<RPApplicationRotatedSecretRead>> => {
+	const workspaceQuery = workspaceUuid
+		? `?workspaceUuid=${encodeURIComponent(workspaceUuid)}`
+		: "";
 	const result =
 		await requestJson<Array<RPApplicationRotatedSecretRead> | null>(
-			`/api/v1/rp-applications/mine/${encodeURIComponent(rpApplicationUuid)}/client/rotated-secrets`,
+			`/api/v1/rp-applications/accessible/${encodeURIComponent(rpApplicationUuid)}/client/rotated-secrets${workspaceQuery}`,
 			{
 				body: JSON.stringify(payload),
 				method: "POST",
@@ -494,13 +715,18 @@ export const createCurrentUserRPApplicationRotatedClientSecret = async (
 	return result ?? [];
 };
 
-export const deleteCurrentUserRPApplicationRotatedClientSecret = async (
+export const deleteAccessibleRPApplicationRotatedClientSecret = async (
 	rpApplicationUuid: string,
-	value: string
+	secretId: string,
+	workspaceUuid?: string
 ): Promise<ApiMessageResponse> => {
+	const workspaceQuery = workspaceUuid
+		? `?workspaceUuid=${encodeURIComponent(workspaceUuid)}`
+		: "";
 	const result = await requestJson<ApiMessageResponse | null>(
-		`/api/v1/rp-applications/mine/${encodeURIComponent(rpApplicationUuid)}/client/rotated-secrets/${encodeURIComponent(value)}`,
+		`/api/v1/rp-applications/accessible/${encodeURIComponent(rpApplicationUuid)}/client/rotated-secrets${workspaceQuery}`,
 		{
+			body: JSON.stringify({ secretId }),
 			method: "DELETE",
 		}
 	);
@@ -510,17 +736,21 @@ export const deleteCurrentUserRPApplicationRotatedClientSecret = async (
 	return result;
 };
 
-export const rotateCurrentUserRPApplicationClientSecret = async (
+export const rotateAccessibleRPApplicationClientSecret = async (
 	rpApplicationUuid: string,
-	payload?: RPApplicationClientSecretRotateRequest
+	payload?: RPApplicationClientSecretRotateRequest,
+	workspaceUuid?: string
 ): Promise<RPApplicationClientCredentialsRead> => {
+	const workspaceQuery = workspaceUuid
+		? `?workspaceUuid=${encodeURIComponent(workspaceUuid)}`
+		: "";
 	const requestPayload: RPApplicationClientSecretRotateRequest = payload ?? {
 		deleteRotatedSecrets: false,
 		description: "",
 		rotatedSecretExpiredAt: 0,
 	};
 	const result = await requestJson<RPApplicationClientCredentialsRead | null>(
-		`/api/v1/rp-applications/mine/${encodeURIComponent(rpApplicationUuid)}/client/rotate-secret`,
+		`/api/v1/rp-applications/accessible/${encodeURIComponent(rpApplicationUuid)}/client/rotate-secret${workspaceQuery}`,
 		{
 			body: JSON.stringify(requestPayload),
 			method: "POST",

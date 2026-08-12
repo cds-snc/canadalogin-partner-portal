@@ -571,7 +571,7 @@ class Role(str, Enum):
     USER = "user"
     MODERATOR = "moderator" 
     ADMIN = "admin"
-    SUPERUSER = "superuser"
+    PLATFORM_ADMIN = "platform_admin"
 
 # Permission checking
 def has_role(user: dict, required_role: Role) -> bool:
@@ -580,7 +580,7 @@ def has_role(user: dict, required_role: Role) -> bool:
         Role.USER: 0,
         Role.MODERATOR: 1,
         Role.ADMIN: 2,
-        Role.SUPERUSER: 3
+        Role.PLATFORM_ADMIN: 3
     }
     
     user_role = Role(user.get("role", "user"))

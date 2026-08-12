@@ -104,13 +104,13 @@ Some legacy routes cross these boundaries. They are not templates for new work.
   returning ad hoc error payloads.
 - Keep request validation in Pydantic schemas when practical.
 - Add a Casbin decorator only with a defined resource/action vocabulary,
-  deployed policy provisioning, and allow/deny tests.
-- Ensure intended grants can be provisioned idempotently in target environments
-  and are covered by tests. Existing feature grants use data migrations, while
-  proposed [ADR-003](../architecture/adrs/adr-003-casbin-authorization-model.md)
-  will settle the authoritative provisioning mechanism.
-- Do not add another policy source that increases the current migration/seeder
-  drift while ADR-003 remains proposed.
+  code-owned canonical policy, and allow/deny tests.
+- Keep canonical role-to-capability policy immutable and idempotent, using
+  stable machine role keys as subjects. Accepted
+  [ADR-003](../architecture/adrs/adr-003-casbin-authorization-model.md)
+  defines the authoritative policy and assignment model.
+- Do not add mutable policy CRUD, direct-user policy subjects, or another
+  authorization source outside the ADR-003 model.
 - Keep object ownership and domain authorization in services even when a
   Casbin route guard succeeds.
 - Invalidate affected caches on write paths.

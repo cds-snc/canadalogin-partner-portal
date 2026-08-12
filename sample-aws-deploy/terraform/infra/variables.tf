@@ -187,36 +187,6 @@ variable "oidc_access_denied_redirect" {
   default     = "/access-denied"
 }
 
-variable "oidc_group_claim_key" {
-  description = "JWT claim key for group membership"
-  type        = string
-  default     = "groupIds"
-}
-
-variable "oidc_admin_group_name" {
-  description = "Group name for admin role"
-  type        = string
-  default     = "admin"
-}
-
-variable "oidc_application_owners_group_name" {
-  description = "Group name for application owners"
-  type        = string
-  default     = "application owners"
-}
-
-variable "clpp_admin_role_name" {
-  description = "Admin role name in app"
-  type        = string
-  default     = "admin"
-}
-
-variable "clpp_application_owners_role_name" {
-  description = "Application owners role name in app"
-  type        = string
-  default     = "application owners"
-}
-
 # ----- IBM Security Verify -----
 
 variable "ibm_sv_admin_base_url" {
@@ -341,13 +311,13 @@ variable "cors_origins" {
 variable "cors_methods" {
   description = "Allowed CORS methods"
   type        = string
-  default     = "[\"*\"]"
+  default     = "[\"GET\",\"POST\",\"PUT\",\"PATCH\",\"DELETE\",\"OPTIONS\"]"
 }
 
 variable "cors_headers" {
   description = "Allowed CORS headers"
   type        = string
-  default     = "[\"*\"]"
+  default     = "[\"Accept\",\"Content-Type\",\"X-Request-ID\"]"
 }
 
 # ----- S3 MAU -----

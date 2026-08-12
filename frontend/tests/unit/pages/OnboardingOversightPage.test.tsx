@@ -12,20 +12,30 @@ vi.mock("react-i18next", () => ({
 		i18n: { resolvedLanguage: "en" },
 		t: (key: string, options?: Record<string, unknown>): string => {
 			const translations: Record<string, string> = {
-				"onboardingOversight.overview.accessNoticeBody": "Metadata-only overview body",
-				"onboardingOversight.overview.accessNoticeTitle": "Oversight access is metadata-only",
-				"onboardingOversight.overview.emptyBody": "No onboarding work is currently waiting for oversight review.",
+				"onboardingOversight.overview.accessNoticeBody":
+					"Metadata-only overview body",
+				"onboardingOversight.overview.accessNoticeTitle":
+					"Oversight access is metadata-only",
+				"onboardingOversight.overview.emptyBody":
+					"No onboarding work is currently waiting for oversight review.",
 				"onboardingOversight.overview.emptyTitle": "No oversight work",
-				"onboardingOversight.overview.errorBody": "The onboarding oversight overview could not be loaded for this session.",
-				"onboardingOversight.overview.errorTitle": "Unable to load the oversight overview",
-				"onboardingOversight.overview.loadingBody": "Loading onboarding oversight signals across workspaces.",
-				"onboardingOversight.overview.loadingTitle": "Loading the oversight overview",
-				"onboardingOversight.overview.openFilteredQueueAction": "Open filtered queue",
+				"onboardingOversight.overview.errorBody":
+					"The onboarding oversight overview could not be loaded for this session.",
+				"onboardingOversight.overview.errorTitle":
+					"Unable to load the oversight overview",
+				"onboardingOversight.overview.loadingBody":
+					"Loading onboarding oversight signals across workspaces.",
+				"onboardingOversight.overview.loadingTitle":
+					"Loading the oversight overview",
+				"onboardingOversight.overview.openFilteredQueueAction":
+					"Open filtered queue",
 				"onboardingOversight.overview.openQueueAction": "Open queue",
 				"onboardingOversight.overview.pageTitle": "Onboarding oversight",
-				"onboardingOversight.overview.recentActivityBody": "Review the most recently updated onboarding records.",
+				"onboardingOversight.overview.recentActivityBody":
+					"Review the most recently updated onboarding records.",
 				"onboardingOversight.overview.recentActivityTitle": "Recent activity",
-				"onboardingOversight.overview.summary": "Review the current onboarding workload before opening the full queue.",
+				"onboardingOversight.overview.summary":
+					"Review the current onboarding workload before opening the full queue.",
 				"onboardingOversight.overview.workspaceCoverageBody": `Backlog currently spans ${String(options?.["count"] ?? "0")} workspaces.`,
 				"onboardingOversight.overview.workspaceCoverageTitle": `Workspaces in backlog: ${String(options?.["count"] ?? "0")}`,
 				"onboardingOversight.overview.submittedBody": `There are ${String(options?.["count"] ?? "0")} submitted records waiting for first review.`,
@@ -45,13 +55,24 @@ vi.mock("react-i18next", () => ({
 }));
 
 vi.mock("@/components/ui", () => ({
-	Button: ({ children, href }: PropsWithChildren<{ href?: string }>): ReactElement => (
+	Button: ({
+		children,
+		href,
+	}: PropsWithChildren<{ href?: string }>): ReactElement => (
 		<a href={href}>{children}</a>
 	),
-	Grid: ({ children }: PropsWithChildren): ReactElement => <div>{children}</div>,
-	Heading: ({ children, tag }: PropsWithChildren<{ tag?: string }>): ReactElement =>
+	Grid: ({ children }: PropsWithChildren): ReactElement => (
+		<div>{children}</div>
+	),
+	Heading: ({
+		children,
+		tag,
+	}: PropsWithChildren<{ tag?: string }>): ReactElement =>
 		tag === "h2" ? <h2>{children}</h2> : <h1>{children}</h1>,
-	Notice: ({ children, noticeTitle }: PropsWithChildren<{ noticeTitle: string }>): ReactElement => (
+	Notice: ({
+		children,
+		noticeTitle,
+	}: PropsWithChildren<{ noticeTitle: string }>): ReactElement => (
 		<section>
 			<h2>{noticeTitle}</h2>
 			{children}
@@ -60,9 +81,12 @@ vi.mock("@/components/ui", () => ({
 	Text: ({ children }: PropsWithChildren): ReactElement => <p>{children}</p>,
 }));
 
-vi.mock("@/features/onboarding-oversight/hooks/use-onboarding-oversight-queue", () => ({
-	useOnboardingOversightQueue: vi.fn(),
-}));
+vi.mock(
+	"@/features/onboarding-oversight/hooks/use-onboarding-oversight-queue",
+	() => ({
+		useOnboardingOversightQueue: vi.fn(),
+	})
+);
 
 describe("OnboardingOversightPage", () => {
 	it("renders the empty state when no oversight rows exist", () => {
@@ -106,7 +130,8 @@ describe("OnboardingOversightPage", () => {
 					currentEnvironment: "production",
 					departmentName: "Employment",
 					departmentUuid: "department-uuid-1",
-					detailPath: "/workspaces/workspace-uuid-1/applications/rp-application-uuid-1",
+					detailPath:
+						"/workspaces/workspace-uuid-1/applications/rp-application-uuid-1",
 					externalReviewReference: "EXT-123",
 					lastActivityAt: "2026-08-12T12:00:00Z",
 					onboardingState: "under_review",
@@ -127,11 +152,10 @@ describe("OnboardingOversightPage", () => {
 		expect(screen.getByText(/under review: 1/i)).toBeTruthy();
 		expect(screen.getByText(/production progression: 1/i)).toBeTruthy();
 		expect(
-			screen.getByRole("link", { name: /benefits portal/i })
-		).toHaveAttribute(
-			"href",
-			"/workspaces/workspace-uuid-1/applications/rp-application-uuid-1"
-		);
+			screen
+				.getByRole("link", { name: /benefits portal/i })
+				.getAttribute("href")
+		).toBe("/workspaces/workspace-uuid-1/applications/rp-application-uuid-1");
 	});
 
 	it("renders the load failure notice", () => {

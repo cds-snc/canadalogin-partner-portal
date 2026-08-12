@@ -1,26 +1,14 @@
-import { useState } from "react";
+import { useEffect } from "react";
 import { useNavigate, useParams } from "@tanstack/react-router";
 import { useTranslation } from "react-i18next";
 import type { FunctionComponent } from "@/common/types";
-import { Heading, Notice, Text } from "@/components/ui";
-import { getRequestErrorNotice } from "@/fetch";
-import { WorkspaceRPApplicationForm } from "../components/WorkspaceRPApplicationForm";
-import { useWorkspaceApplicationInformationList } from "../hooks/use-workspace-application-information";
-import { useWorkspaceRPApplicationManagement } from "../hooks/use-workspace-rp-application-management";
+import { Button, Heading, Notice, Text } from "@/components/ui";
 import { useWorkspaceRPApplication } from "../hooks/use-workspace-rp-applications";
+import { useWorkspaceRPRegistrationDraft } from "../hooks/use-workspace-rp-registration";
 import {
-	createEmptyWorkspaceRPApplicationForm,
-	toRPApplicationUpdatePayload,
-	toWorkspaceRPApplicationFormState,
-	validateWorkspaceRPApplicationForm,
-	type WorkspaceRPApplicationFormState,
-	type WorkspaceRPApplicationValidationMessageKey,
-} from "../workspace-rp-application-form";
-
-type WorkspaceApplicationFormDraft = {
-	sourceUuid: string;
-	values: Partial<WorkspaceRPApplicationFormState>;
-};
+	getEarliestIncompleteRegistrationStep,
+	getWorkspaceRPRegistrationStepPath,
+} from "../workspace-rp-registration-flow";
 
 export const WorkspaceApplicationEditPage = (): FunctionComponent => {
 	const { t } = useTranslation() as unknown as {
@@ -33,157 +21,78 @@ export const WorkspaceApplicationEditPage = (): FunctionComponent => {
 	const { rpApplicationUuid, workspaceUuid } = useParams({
 		from: "/workspaces/$workspaceUuid/applications/$rpApplicationUuid/edit",
 	});
+	const { application, error, isLoading } = useWorkspaceRPApplication(
+		workspaceUuid,
+		rpApplicationUuid
+	);
+	const state = application?.onboardingState?.trim() || "draft";
 	const {
-		application,
-		error: loadError,
-		isLoading,
-	} = useWorkspaceRPApplication(workspaceUuid, rpApplicationUuid);
-	const { applicationInformationRecords } =
-		useWorkspaceApplicationInformationList(workspaceUuid);
-	const { isUpdating, updateRPApplication } =
-		useWorkspaceRPApplicationManagement();
-	const [formDraft, setFormDraft] =
-		useState<WorkspaceApplicationFormDraft | null>(null);
-	const [validationMessageKeys, setValidationMessageKeys] = useState<
-		Array<WorkspaceRPApplicationValidationMessageKey>
-	>([]);
-	const [submitError, setSubmitError] = useState<Error | null>(null);
-	const linkedApplicationInformationUuid =
-		application?.application_information_id
-			? (applicationInformationRecords.find(
-					(applicationInformation) =>
-						applicationInformation.id === application.application_information_id
-				)?.uuid ?? null)
-			: null;
-	const formSourceUuid = application?.uuid ?? rpApplicationUuid;
-	const formOverrides =
-		formDraft?.sourceUuid === formSourceUuid ? formDraft.values : {};
-	const form: WorkspaceRPApplicationFormState = {
-		...createEmptyWorkspaceRPApplicationForm(),
-		...(application
-			? toWorkspaceRPApplicationFormState(
-					application,
-					linkedApplicationInformationUuid
-				)
-			: {}),
-		...formOverrides,
-	};
-	const errorNotice = getRequestErrorNotice(submitError ?? loadError, {
-		bodyKey: "workspaces.applicationsErrorBody",
-		titleKey: "workspaces.applicationsErrorTitle",
-	});
+		draft,
+		error: draftError,
+		isLoading: isDraftLoading,
+	} = useWorkspaceRPRegistrationDraft(
+		state === "draft" ? workspaceUuid : "",
+		state === "draft" ? rpApplicationUuid : ""
+	);
 
-	const updateFormField = (
-		field: keyof WorkspaceRPApplicationFormState,
-		value: string | Array<string>
-	): void => {
-		setValidationMessageKeys([]);
-		setFormDraft((currentDraft) => ({
-			sourceUuid: formSourceUuid,
-			values: {
-				...(currentDraft?.sourceUuid === formSourceUuid
-					? currentDraft.values
-					: {}),
-				[field]: value,
-			},
-		}));
-	};
-
-	const handleUpdateApplication = async (): Promise<void> => {
-		setSubmitError(null);
-		const validationErrors = validateWorkspaceRPApplicationForm(form);
-		if (validationErrors.length > 0) {
-			setValidationMessageKeys(validationErrors);
-			return;
-		}
-
-		try {
-			const updatedApplication = await updateRPApplication(
+	useEffect(() => {
+		if (!draft) return;
+		void navigate({
+			href: getWorkspaceRPRegistrationStepPath(
 				workspaceUuid,
 				rpApplicationUuid,
-				toRPApplicationUpdatePayload(form)
-			);
-
-			await navigate({
-				params: {
-					rpApplicationUuid: updatedApplication.uuid,
-					workspaceUuid,
-				},
-				replace: true,
-				search: { updated: "1" },
-				to: "/workspaces/$workspaceUuid/applications/$rpApplicationUuid",
-			});
-		} catch (requestError) {
-			setSubmitError(requestError as Error);
-		}
-	};
+				getEarliestIncompleteRegistrationStep(
+					draft.registrationLastCompletedStep ?? null
+				)
+			),
+			replace: true,
+		});
+	}, [draft, navigate, rpApplicationUuid, workspaceUuid]);
 
 	return (
 		<>
 			<Heading tag="h1">
-				{application
-					? t("workspaces.applicationsEditPageTitle", {
-							name: application.dnr_app_name,
-						})
-					: t("workspaces.applicationsSectionTitle")}
+				{t("workspaces.applicationsEditPageTitle", {
+					name:
+						application?.dnrAppName ?? t("workspaces.applicationsSectionTitle"),
+				})}
 			</Heading>
-			<Text>{t("workspaces.applicationsEditSummary")}</Text>
-
-			{validationMessageKeys.length > 0 ? (
-				<Notice
-					noticeRole="danger"
-					noticeTitle={t("workspaces.applicationsValidationErrorTitle")}
-					noticeTitleTag="h2"
-				>
-					<ul className="list-disc pl-300">
-						{validationMessageKeys.map((messageKey) => (
-							<li key={messageKey}>{t(messageKey)}</li>
-						))}
-					</ul>
-				</Notice>
-			) : null}
-
-			{isLoading ? (
+			{isLoading || (state === "draft" && isDraftLoading) ? (
 				<Notice
 					noticeRole="info"
-					noticeTitle={t("workspaces.applicationsLoadingTitle")}
+					noticeTitle={t("workspaces.registration.loadingTitle")}
 					noticeTitleTag="h2"
 				>
-					<Text>{t("workspaces.applicationsLoadingBody")}</Text>
+					<Text>{t("workspaces.registration.loadingBody")}</Text>
 				</Notice>
 			) : null}
-
-			{errorNotice ? (
+			{error || draftError ? (
 				<Notice
-					noticeRole={errorNotice.noticeRole}
-					noticeTitle={t(errorNotice.titleKey)}
+					noticeRole="danger"
+					noticeTitle={t("workspaces.registration.errorTitle")}
 					noticeTitleTag="h2"
 				>
-					<Text>{errorNotice.bodyText ?? t(errorNotice.bodyKey)}</Text>
+					<Text>{t("workspaces.registration.errorBody")}</Text>
 				</Notice>
 			) : null}
-
-			{application ? (
-				<WorkspaceRPApplicationForm
-					cancelHref={`/workspaces/${workspaceUuid}/applications/${rpApplicationUuid}`}
-					form={form}
-					isSubmitting={isUpdating}
-					applicationInformationOptions={applicationInformationRecords.map(
-						(applicationInformation) => ({
-							label: applicationInformation.serviceNameEn,
-							value: applicationInformation.uuid,
-						})
-					)}
-					submitLabel={
-						isUpdating
-							? t("workspaces.applicationsSavingAction")
-							: t("workspaces.applicationsSaveAction")
-					}
-					onChange={updateFormField}
-					onSubmit={() => {
-						void handleUpdateApplication();
-					}}
-				/>
+			{application && state !== "draft" ? (
+				<div className="grid gap-300">
+					<Notice
+						noticeRole="info"
+						noticeTitle={t("workspaces.registration.lockedTitle")}
+						noticeTitleTag="h2"
+					>
+						<Text>
+							{t("workspaces.registration.lockedBody", { status: state })}
+						</Text>
+					</Notice>
+					<Button
+						href={`/workspaces/${workspaceUuid}/applications/${rpApplicationUuid}`}
+						type="link"
+					>
+						{t("workspaces.applicationsBackToDetail")}
+					</Button>
+				</div>
 			) : null}
 		</>
 	);
