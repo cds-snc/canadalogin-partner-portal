@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.2.1](https://github.com/cds-snc/canadalogin-partner-portal/compare/v1.2.0...v1.2.1) (2026-08-11)
+
+
+### Bug Fixes
+
+* **ci/cd:** Resolve docker tagging issue with CI/CD pipeline ([#151](https://github.com/cds-snc/canadalogin-partner-portal/issues/151)) ([f14a516](https://github.com/cds-snc/canadalogin-partner-portal/commit/f14a516df81a23773d823c29bb135c330384a697))
+
 ## [1.2.0](https://github.com/cds-snc/canadalogin-partner-portal/compare/v1.1.0...v1.2.0) (2026-08-10)
 
 
