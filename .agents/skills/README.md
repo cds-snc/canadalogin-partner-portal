@@ -17,8 +17,8 @@ repo instruction file first.
 Each local skill lives in its own folder:
 
 ```text
-.github/skills/<skill-name>/SKILL.md
-.github/skills/<skill-name>/references.md
+.agents/skills/<skill-name>/SKILL.md
+.agents/skills/<skill-name>/references.md
 ```
 
 Each `SKILL.md` starts with YAML front matter containing `name` and `description`.
@@ -27,7 +27,7 @@ Keep `SKILL.md` focused on the procedure and expected outputs. Put local docs, t
 
 ## Skill Model
 
-Delorean skills are grouped into three layers.
+Delorean skills are grouped into four layers.
 
 ### 1. Phase skills
 
@@ -46,7 +46,7 @@ Focus skills help with a specific kind of work that may happen across phases.
 
 Recommended focus skills:
 
-- `delorean-question-resolution`: resolve spec, design, planning, standards, and evidence questions from repo guidance before asking humans. `dl-requirements-answer-questions` is the user-facing prompt when OpenSpec open questions need a focused human-feedback loop.
+- `delorean-question-resolution`: resolve spec, design, planning, standards, and evidence questions from repo guidance before asking humans. `$dl-requirements-answer-questions` is the user-facing workflow skill when OpenSpec open questions need a focused human-feedback loop.
 - `delorean-openspec`: refine requirements, scenarios, slices, tasks, lifecycle state, OpenSpec validation readiness, and archive follow-through.
 - `delorean-design`: refine technical approach, design gaps, design decisions, impacted artifacts, and slice sequencing.
 - `delorean-ui`: refine user-facing UI, page pattern decisions, route structure, GC Design System component mapping, accessibility, bilingual behaviour, screenshots, and UI evidence.
@@ -54,21 +54,42 @@ Recommended focus skills:
 - `aws-topology-diagrams`: create or refine AWS topology and deployment architecture diagrams with clear account, region, VPC, subnet, service, identity, and external-system boundaries.
 - `c4-architecture-diagrams`: create or refine C4 context, container, component, deployment, dynamic, and sequence diagrams without overloading one diagram.
 
-### 3. Standards overlay skills
+### 3. Codex workflow skills
+
+Codex workflow skills are discoverable entrypoints for repeatable Delorean work.
+They preserve the cross-tool `dl-*` workflow names while using the repository
+skill location Codex scans automatically.
+
+- `dl-requirements-*`: shape, start, refine, answer questions, and archive
+  OpenSpec work.
+- `dl-plan-*` and `dl-delivery-autopilot`: refine designs and orchestrate
+  delivery.
+- `dl-dev-*`: continue active changes, work queues, fix bugs, and change API
+  or data behavior.
+- `dl-ui-*`: build, refine, and review user-facing work.
+- `dl-qa-*`: verify, review, and check commit or push readiness.
+- `dl-docs-update`, `dl-platform-update`, `dl-security-review`, and
+  `dl-ops-hotfix`: handle targeted cross-cutting work.
+
+Invoke a workflow explicitly with its skill name, such as
+`$dl-dev-continue`. Each workflow skill records a recommended custom agent
+under `.codex/agents/`.
+
+### 4. Standards overlay skills
 
 Standards overlay skills check a specific Government of Canada or delivery concern.
 
-- [.github/skills/gc-standards/SKILL.md](gc-standards/SKILL.md): decide which Government of Canada standards may apply and which targeted overlay skills should run.
-- [.github/skills/gc-review-a11y/SKILL.md](gc-review-a11y/SKILL.md): review accessibility and WCAG risk.
-- [.github/skills/gc-review-branding/SKILL.md](gc-review-branding/SKILL.md): review GC Design System, Canada.ca layout, and FIP risk.
-- [.github/skills/gc-review-bilingual/SKILL.md](gc-review-bilingual/SKILL.md): review official-languages and i18n risk.
-- [.github/skills/gc-review-security/SKILL.md](gc-review-security/SKILL.md): review security, privacy, PII, and Protected B risk.
-- [.github/skills/gc-review-iam/SKILL.md](gc-review-iam/SKILL.md): review identity, authentication, authorization, sessions, tokens, scopes, and roles.
-- [.github/skills/gc-review-im/SKILL.md](gc-review-im/SKILL.md): review records, metadata, retention, disposition, and information-management risk.
+- [.agents/skills/gc-standards/SKILL.md](gc-standards/SKILL.md): decide which Government of Canada standards may apply and which targeted overlay skills should run.
+- [.agents/skills/gc-review-a11y/SKILL.md](gc-review-a11y/SKILL.md): review accessibility and WCAG risk.
+- [.agents/skills/gc-review-branding/SKILL.md](gc-review-branding/SKILL.md): review GC Design System, Canada.ca layout, and FIP risk.
+- [.agents/skills/gc-review-bilingual/SKILL.md](gc-review-bilingual/SKILL.md): review official-languages and i18n risk.
+- [.agents/skills/gc-review-security/SKILL.md](gc-review-security/SKILL.md): review security, privacy, PII, and Protected B risk.
+- [.agents/skills/gc-review-iam/SKILL.md](gc-review-iam/SKILL.md): review identity, authentication, authorization, sessions, tokens, scopes, and roles.
+- [.agents/skills/gc-review-im/SKILL.md](gc-review-im/SKILL.md): review records, metadata, retention, disposition, and information-management risk.
 
 These are not phases. They produce findings, evidence inputs, gate update suggestions, remediation tasks, waiver needs, or re-entry notes that flow back into Delorean planning, implementation, verification, evidence packaging, review, or release-readiness when those outputs are in scope.
 
-The targeted `gc-review-*` skills should not usually be the first user-facing prompt. Prompts such as `dl-ui-refine`, `dl-qa-check`, `dl-qa-review`, `dl-security-review`, or `dl-ui-review-accessibility` may route to them when needed.
+The targeted `gc-review-*` skills should not usually be the first user-facing workflow. Workflow skills such as `dl-ui-refine`, `dl-qa-check`, `dl-qa-review`, `dl-security-review`, or `dl-ui-review-accessibility` may route to them when needed.
 
 ## Shared Skill Output Contract
 
@@ -103,20 +124,20 @@ Skills may recommend task, evidence, gate, or change-state updates. The invoking
 
 ## Starter Skills
 
-- [.github/skills/delorean-planning/SKILL.md](delorean-planning/SKILL.md): shape the change before implementation.
-- [.github/skills/delorean-question-resolution/SKILL.md](delorean-question-resolution/SKILL.md): resolve spec, design, planning, standards, and evidence questions from repo guidance before asking humans.
-- [.github/skills/delorean-openspec/SKILL.md](delorean-openspec/SKILL.md): refine OpenSpec requirements, scenarios, slices, tasks, lifecycle state, validation readiness, archive follow-through, and next-task clarity.
-- [.github/skills/delorean-design/SKILL.md](delorean-design/SKILL.md): refine technical approach, design gaps, impacted artifacts, slice sequencing, ADR needs, and design blockers.
-- [.github/skills/delorean-ui/SKILL.md](delorean-ui/SKILL.md): refine user-facing UI, page patterns, routes, GC Design System alignment, accessibility, bilingual behaviour, and UI evidence.
-- [.github/skills/delorean-evidence/SKILL.md](delorean-evidence/SKILL.md): assemble or update the Evidence Bundle from existing evidence inputs.
-- [.github/skills/delorean-implementation/SKILL.md](delorean-implementation/SKILL.md): make the change correctly.
-- [.github/skills/delorean-review/SKILL.md](delorean-review/SKILL.md): check conformance and impacted artifacts.
-- [.github/skills/delorean-testing/SKILL.md](delorean-testing/SKILL.md): identify and add the highest-value tests.
-- [.github/skills/aws-topology-diagrams/SKILL.md](aws-topology-diagrams/SKILL.md): create or refine AWS topology and deployment architecture diagrams.
-- [.github/skills/c4-architecture-diagrams/SKILL.md](c4-architecture-diagrams/SKILL.md): create or refine C4 model diagrams.
-- [.github/skills/select-ui-page-pattern/SKILL.md](select-ui-page-pattern/SKILL.md): select the approved page pattern, page shell, home entry point, and shared menu before user-facing UI page implementation.
-- [.github/skills/review-gc-design-system-alignment/SKILL.md](review-gc-design-system-alignment/SKILL.md): review implemented UI against the recorded page pattern decision, page shell, shared menu, design-system check, and evidence.
-- [.github/skills/gc-standards/SKILL.md](gc-standards/SKILL.md): decide which Government of Canada standards and baseline controls apply before planning, implementation, review, or verification continues.
+- [.agents/skills/delorean-planning/SKILL.md](delorean-planning/SKILL.md): shape the change before implementation.
+- [.agents/skills/delorean-question-resolution/SKILL.md](delorean-question-resolution/SKILL.md): resolve spec, design, planning, standards, and evidence questions from repo guidance before asking humans.
+- [.agents/skills/delorean-openspec/SKILL.md](delorean-openspec/SKILL.md): refine OpenSpec requirements, scenarios, slices, tasks, lifecycle state, validation readiness, archive follow-through, and next-task clarity.
+- [.agents/skills/delorean-design/SKILL.md](delorean-design/SKILL.md): refine technical approach, design gaps, impacted artifacts, slice sequencing, ADR needs, and design blockers.
+- [.agents/skills/delorean-ui/SKILL.md](delorean-ui/SKILL.md): refine user-facing UI, page patterns, routes, GC Design System alignment, accessibility, bilingual behaviour, and UI evidence.
+- [.agents/skills/delorean-evidence/SKILL.md](delorean-evidence/SKILL.md): assemble or update the Evidence Bundle from existing evidence inputs.
+- [.agents/skills/delorean-implementation/SKILL.md](delorean-implementation/SKILL.md): make the change correctly.
+- [.agents/skills/delorean-review/SKILL.md](delorean-review/SKILL.md): check conformance and impacted artifacts.
+- [.agents/skills/delorean-testing/SKILL.md](delorean-testing/SKILL.md): identify and add the highest-value tests.
+- [.agents/skills/aws-topology-diagrams/SKILL.md](aws-topology-diagrams/SKILL.md): create or refine AWS topology and deployment architecture diagrams.
+- [.agents/skills/c4-architecture-diagrams/SKILL.md](c4-architecture-diagrams/SKILL.md): create or refine C4 model diagrams.
+- [.agents/skills/select-ui-page-pattern/SKILL.md](select-ui-page-pattern/SKILL.md): select the approved page pattern, page shell, home entry point, and shared menu before user-facing UI page implementation.
+- [.agents/skills/review-gc-design-system-alignment/SKILL.md](review-gc-design-system-alignment/SKILL.md): review implemented UI against the recorded page pattern decision, page shell, shared menu, design-system check, and evidence.
+- [.agents/skills/gc-standards/SKILL.md](gc-standards/SKILL.md): decide which Government of Canada standards and baseline controls apply before planning, implementation, review, or verification continues.
 
 ## Skill Selection Guide
 

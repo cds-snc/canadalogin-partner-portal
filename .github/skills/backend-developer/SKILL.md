@@ -96,24 +96,21 @@ For protected routes, follow the existing router pattern and use:
 
 Match the resource and action names to the domain you are protecting. Existing examples in the repo include:
 
-- `roles` with `read` and `write`
+- `roles` with `read`
 - `tiers` with `read` and `write`
 - `rate_limits` with `read` and `write`
-- `policies` with `read` and `write`
 - `users_admin` with `read` and `write`
-- `posts` with workflow-specific actions such as `approve` and `reject`
+- `workspace` with `read` and `write`
 
 Do not invent a second access-control mechanism for these routes. Reuse `casbin_guard` from `core/access_control.py`.
 
 ### 2b. Follow the repository's Casbin subject model
 
-This repo resolves the Casbin subject with the existing logic in `core/access_control.py`:
-
-- superusers map to subject `admin`
-- users with a `role_id` map to the corresponding role name
-- users without a mapped role fall back to their username
-
-When changing protected behavior, keep that subject resolution model intact. New policy design should fit this model instead of bypassing it.
+This repo resolves Casbin subjects from the server-computed authorization
+context in `core/access_control.py`. Only the four canonical role codes are
+eligible policy subjects. Legacy superuser flags, mutable role IDs, and
+usernames are ignored. Keep that fail-closed subject model intact when changing
+protected behavior.
 
 ### 3. Put business logic in services
 
@@ -236,23 +233,17 @@ When backend work touches OIDC onboarding, RP application access, or invitation 
 
 If you widen this behavior, update both backend and frontend contracts and add tests for the new authorization surface.
 
-### 9. Seed Casbin policies when you add protected resources or actions
+### 9. Update the code-owned Casbin policy when you add protected resources or actions
 
-If you add a new Casbin-protected resource or a new action on an existing resource, you must also seed the policy rows expected by the backend.
+If you add a new Casbin-protected resource or a new action on an existing resource, update the canonical policy boundary expected by the backend.
 
-In this repo, that means updating one or both of these layers as appropriate:
+In this repo, that means updating the code-owned policy tuple in
+`backend/src/app/core/access_control.py` and its focused allow/deny tests. The
+legacy `access_policy` table remains available for rollback and reconciliation,
+but active authorization does not load mutable policy rows.
 
-- runtime seed script under `backend/src/scripts/seed_access_policies.py`
-- Alembic seed migration under `backend/src/migrations/versions/` for durable environment setup
-
-Follow the existing migration pattern used for role permissions and reviewer permissions:
-
-- check whether `access_policy` exists before inserting
-- insert only when the `(subject, resource, action)` tuple does not already exist
-- respect soft-delete-aware checks where the migration pattern already does so
-- add matching downgrade cleanup when the migration is specifically seeding policies
-
-Do not add a `@casbin_guard.require_permission(...)` decorator without also ensuring the required policy rows can exist in target environments.
+Do not add a `@casbin_guard.require_permission(...)` decorator without also
+adding the required canonical policy and regression coverage.
 
 ## Coding Standard To Preserve
 

@@ -25,7 +25,7 @@ needs_shell=0
 needs_frontend=0
 needs_backend=0
 needs_secret=0
-needs_codex_sync=0
+needs_codex_assets=0
 format_files=()
 markdown_files=()
 
@@ -61,8 +61,8 @@ while IFS= read -r file; do
   esac
 
   case "${file}" in
-    agent-configs/vscode/agents/* | agent-configs/vscode/prompts/* | agent-configs/codex/agents/* | agent-configs/codex/prompts/* | scripts/delorean/sync-codex-adapters.sh)
-      needs_codex_sync=1
+    agent-configs/vscode/agents/* | agent-configs/vscode/prompts/* | agent-configs/codex/agents/* | agent-configs/codex/skills/* | .codex/agents/* | .codex/prompts/* | .agents/skills/* | scripts/delorean/check-codex-assets.sh)
+      needs_codex_assets=1
       ;;
   esac
 
@@ -117,8 +117,8 @@ if [ "${needs_secret}" -eq 1 ]; then
   run_check "secret checks" "${scripts_dir}/run-secret-checks.sh"
 fi
 
-if [ "${needs_codex_sync}" -eq 1 ] && [ -x "${scripts_dir}/sync-codex-adapters.sh" ]; then
-  run_check "Codex adapter sync check" "${scripts_dir}/sync-codex-adapters.sh" --check
+if [ "${needs_codex_assets}" -eq 1 ] && [ -x "${scripts_dir}/check-codex-assets.sh" ]; then
+  run_check "Codex asset discovery check" "${scripts_dir}/check-codex-assets.sh"
 fi
 
 if [ "${status}" -ne 0 ]; then
@@ -132,7 +132,7 @@ if [ "${needs_format}" -eq 0 ] &&
   [ "${needs_frontend}" -eq 0 ] &&
   [ "${needs_backend}" -eq 0 ] &&
   [ "${needs_secret}" -eq 0 ] &&
-  [ "${needs_codex_sync}" -eq 0 ]; then
+  [ "${needs_codex_assets}" -eq 0 ]; then
   echo "No lightweight pre-commit checks matched these files."
 fi
 
