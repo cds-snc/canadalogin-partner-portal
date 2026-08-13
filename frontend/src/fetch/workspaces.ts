@@ -79,18 +79,20 @@ export type ApplicationInformationRead = {
 
 export type ApplicationInformationContactCreate = {
 	email: string;
-	nameEn: string;
-	nameFr: string;
+	firstName: string;
+	lastName: string;
 	phoneNumber?: string | null;
+	alternatePhoneNumber?: string | null;
 	responsibilityEn: string;
 	responsibilityFr: string;
 };
 
 export type ApplicationInformationContactUpdate = {
 	email?: string;
-	nameEn?: string;
-	nameFr?: string;
+	firstName?: string;
+	lastName?: string;
 	phoneNumber?: string | null;
+	alternatePhoneNumber?: string | null;
 	responsibilityEn?: string;
 	responsibilityFr?: string;
 };
@@ -101,11 +103,17 @@ export type ApplicationInformationContactRead = {
 	applicationInformationId: number;
 	createdBy: number | null;
 	email: string;
-	nameEn: string;
-	nameFr: string;
+	nameEn: string | null;
+	nameFr: string | null;
+	firstName?: string | null;
+	lastName?: string | null;
 	phoneNumber: string | null;
+	alternatePhoneNumber?: string | null;
 	responsibilityEn: string;
 	responsibilityFr: string;
+	identityConfirmedAt?: string | null;
+	identityConfirmedByUserUuid?: string | null;
+	identityConfirmationRequired: boolean;
 	createdAt: string;
 	updatedAt: string | null;
 	deletedAt: string | null;

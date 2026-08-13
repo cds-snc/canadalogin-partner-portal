@@ -1,0 +1,303 @@
+import type { RegistrationDataStep } from "@/fetch/rp-applications";
+import type { WorkspaceRPApplicationFormState } from "./workspace-rp-application-form";
+
+export type WorkspaceRPApplicationFieldDefinition = {
+	controlId: string;
+	field: keyof WorkspaceRPApplicationFormState;
+	labelKey: string;
+};
+
+const defineField = (
+	field: keyof WorkspaceRPApplicationFormState,
+	controlId: string,
+	labelKey: string
+): WorkspaceRPApplicationFieldDefinition => ({ controlId, field, labelKey });
+
+export const WORKSPACE_RP_APPLICATION_FIELDS_BY_STEP: Record<
+	RegistrationDataStep,
+	Array<WorkspaceRPApplicationFieldDefinition>
+> = {
+	basics: [
+		defineField(
+			"applicationInformationUuid",
+			"workspace-rp-application-application-information",
+			"workspaces.applicationsApplicationInformationLabel"
+		),
+		defineField(
+			"configurationName",
+			"workspace-rp-application-configuration-name",
+			"workspaces.applicationsConfigurationNameLabel"
+		),
+		defineField(
+			"partnerEnvironment",
+			"workspace-rp-application-partner-environment",
+			"workspaces.applicationsPartnerEnvironmentLabel"
+		),
+		defineField(
+			"canadaLoginEnvironment",
+			"workspace-rp-application-environment",
+			"workspaces.applicationsEnvironmentLabel"
+		),
+		defineField(
+			"serviceNameEn",
+			"workspace-rp-application-service-name-en",
+			"workspaces.applicationsServiceNameEnLabel"
+		),
+		defineField(
+			"serviceNameFr",
+			"workspace-rp-application-service-name-fr",
+			"workspaces.applicationsServiceNameFrLabel"
+		),
+	],
+	endpoints: [
+		defineField(
+			"applicationEnvironmentUrlEn",
+			"workspace-rp-application-url-en",
+			"workspaces.applicationsUrlEnLabel"
+		),
+		defineField(
+			"applicationEnvironmentUrlFr",
+			"workspace-rp-application-url-fr",
+			"workspaces.applicationsUrlFrLabel"
+		),
+		defineField(
+			"redirectUris",
+			"workspace-rp-application-redirect-uris",
+			"workspaces.applicationsRedirectUrisLabel"
+		),
+		defineField(
+			"postLogoutRedirectUris",
+			"workspace-rp-application-post-logout-redirect-uris",
+			"workspaces.applicationsPostLogoutRedirectUrisLabel"
+		),
+		defineField(
+			"logoutMode",
+			"logoutMode",
+			"workspaces.applicationsLogoutModeLabel"
+		),
+		defineField(
+			"logoutUri",
+			"workspace-rp-application-logout-uri",
+			"workspaces.applicationsLogoutUriLabel"
+		),
+	],
+	"client-and-access": [
+		defineField(
+			"supportsAuthorizationCodeFlow",
+			"supportsAuthorizationCodeFlow",
+			"workspaces.applicationsAuthorizationCodeFlowLabel"
+		),
+		defineField(
+			"clientType",
+			"clientType",
+			"workspaces.applicationsClientTypeLabel"
+		),
+		defineField(
+			"clientAuthMethod",
+			"clientAuthMethod",
+			"workspaces.applicationsClientAuthMethodLabel"
+		),
+		defineField(
+			"privateKeyDistributionMethod",
+			"privateKeyDistributionMethod",
+			"workspaces.applicationsPrivateKeyDistributionLabel"
+		),
+		defineField(
+			"jwksUri",
+			"workspace-rp-application-jwks-uri",
+			"workspaces.applicationsJwksUriLabel"
+		),
+		defineField(
+			"offlineJwkOrCertificate",
+			"workspace-rp-application-offline-jwk-or-certificate",
+			"workspaces.applicationsOfflineJwkOrCertificateLabel"
+		),
+		defineField(
+			"requestedScopes",
+			"requestedScopes",
+			"workspaces.applicationsRequestedScopesLabel"
+		),
+		defineField(
+			"sectorIdentifier",
+			"workspace-rp-application-sector-identifier",
+			"workspaces.applicationsSectorIdentifierLabel"
+		),
+		defineField(
+			"sharesPairwiseIdentifiers",
+			"sharesPairwiseIdentifiers",
+			"workspaces.applicationsSharesPairwiseIdentifiersLabel"
+		),
+		defineField(
+			"migrationSectorIdentifierUrl",
+			"workspace-rp-application-migration-sector-identifier-url",
+			"workspaces.applicationsMigrationSectorIdentifierUrlLabel"
+		),
+		defineField(
+			"pkceSupported",
+			"pkceSupported",
+			"workspaces.applicationsPkceSupportedLabel"
+		),
+		defineField(
+			"pkceAlgorithms",
+			"pkceAlgorithms",
+			"workspaces.applicationsPkceAlgorithmsLabel"
+		),
+		defineField(
+			"pkceOtherAlgorithm",
+			"workspace-rp-application-pkce-other-algorithm",
+			"workspaces.applicationsPkceOtherAlgorithmLabel"
+		),
+	],
+	signing: [
+		defineField(
+			"requestSigningSupported",
+			"requestSigningSupported",
+			"workspaces.applicationsRequestSigningSupportedLabel"
+		),
+		defineField(
+			"requestSigningTargets",
+			"requestSigningTargets",
+			"workspaces.applicationsRequestSigningTargetsLabel"
+		),
+		defineField(
+			"requestSigningAlgorithms",
+			"requestSigningAlgorithms",
+			"workspaces.applicationsSignatureAlgorithmsLabel"
+		),
+		defineField(
+			"requestSigningOtherAlgorithm",
+			"workspace-rp-application-request-signing-other-algorithm",
+			"workspaces.applicationsRequestSigningOtherAlgorithmLabel"
+		),
+		defineField(
+			"requestSigningRoadmap",
+			"requestSigningRoadmap",
+			"workspaces.applicationsRoadmapLabel"
+		),
+		defineField(
+			"requestSigningRevisitOn",
+			"workspace-rp-application-request-signing-revisit-on",
+			"workspaces.applicationsRevisitOnLabel"
+		),
+		defineField(
+			"signatureValidationSupported",
+			"signatureValidationSupported",
+			"workspaces.applicationsSignatureValidationSupportedLabel"
+		),
+		defineField(
+			"signatureValidationTargets",
+			"signatureValidationTargets",
+			"workspaces.applicationsSignatureValidationTargetsLabel"
+		),
+		defineField(
+			"signatureValidationAlgorithms",
+			"signatureValidationAlgorithms",
+			"workspaces.applicationsSignatureAlgorithmsLabel"
+		),
+		defineField(
+			"signatureValidationOtherAlgorithm",
+			"workspace-rp-application-signature-validation-other-algorithm",
+			"workspaces.applicationsSignatureValidationOtherAlgorithmLabel"
+		),
+		defineField(
+			"signatureValidationRoadmap",
+			"signatureValidationRoadmap",
+			"workspaces.applicationsRoadmapLabel"
+		),
+		defineField(
+			"signatureValidationRevisitOn",
+			"workspace-rp-application-signature-validation-revisit-on",
+			"workspaces.applicationsRevisitOnLabel"
+		),
+	],
+	encryption: [
+		defineField(
+			"requestEncryptionSupported",
+			"requestEncryptionSupported",
+			"workspaces.applicationsRequestEncryptionSupportedLabel"
+		),
+		defineField(
+			"requestEncryptionTargets",
+			"requestEncryptionTargets",
+			"workspaces.applicationsRequestEncryptionTargetsLabel"
+		),
+		defineField(
+			"requestEncryptionKeyManagementAlgorithms",
+			"requestEncryptionKeyManagementAlgorithms",
+			"workspaces.applicationsKeyManagementAlgorithmsLabel"
+		),
+		defineField(
+			"requestEncryptionOtherKeyManagementAlgorithm",
+			"workspace-rp-application-request-encryption-other-key-management-algorithm",
+			"workspaces.applicationsOtherKeyManagementAlgorithmLabel"
+		),
+		defineField(
+			"requestEncryptionContentAlgorithms",
+			"requestEncryptionContentAlgorithms",
+			"workspaces.applicationsContentEncryptionAlgorithmsLabel"
+		),
+		defineField(
+			"requestEncryptionOtherContentAlgorithm",
+			"workspace-rp-application-request-encryption-other-content-algorithm",
+			"workspaces.applicationsOtherContentAlgorithmLabel"
+		),
+		defineField(
+			"requestEncryptionRoadmap",
+			"requestEncryptionRoadmap",
+			"workspaces.applicationsRoadmapLabel"
+		),
+		defineField(
+			"requestEncryptionRevisitOn",
+			"workspace-rp-application-request-encryption-revisit-on",
+			"workspaces.applicationsRevisitOnLabel"
+		),
+		defineField(
+			"messageDecryptionSupported",
+			"messageDecryptionSupported",
+			"workspaces.applicationsMessageDecryptionSupportedLabel"
+		),
+		defineField(
+			"messageDecryptionTargets",
+			"messageDecryptionTargets",
+			"workspaces.applicationsMessageDecryptionTargetsLabel"
+		),
+		defineField(
+			"messageDecryptionKeyManagementAlgorithms",
+			"messageDecryptionKeyManagementAlgorithms",
+			"workspaces.applicationsKeyManagementAlgorithmsLabel"
+		),
+		defineField(
+			"messageDecryptionOtherKeyManagementAlgorithm",
+			"workspace-rp-application-message-decryption-other-key-management-algorithm",
+			"workspaces.applicationsOtherKeyManagementAlgorithmLabel"
+		),
+		defineField(
+			"messageDecryptionContentAlgorithms",
+			"messageDecryptionContentAlgorithms",
+			"workspaces.applicationsContentEncryptionAlgorithmsLabel"
+		),
+		defineField(
+			"messageDecryptionOtherContentAlgorithm",
+			"workspace-rp-application-message-decryption-other-content-algorithm",
+			"workspaces.applicationsOtherContentAlgorithmLabel"
+		),
+		defineField(
+			"messageDecryptionRoadmap",
+			"messageDecryptionRoadmap",
+			"workspaces.applicationsRoadmapLabel"
+		),
+		defineField(
+			"messageDecryptionRevisitOn",
+			"workspace-rp-application-message-decryption-revisit-on",
+			"workspaces.applicationsRevisitOnLabel"
+		),
+	],
+};
+
+export const getWorkspaceRPApplicationFieldDefinition = (
+	step: RegistrationDataStep,
+	field: keyof WorkspaceRPApplicationFormState
+): WorkspaceRPApplicationFieldDefinition | undefined =>
+	WORKSPACE_RP_APPLICATION_FIELDS_BY_STEP[step].find(
+		(definition) => definition.field === field
+	);

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { Route } from "@/routes/workspaces/$workspaceUuid/application-information/$applicationInformationUuid";
+import { Route } from "@/routes/workspaces/$workspaceUuid/applications/$applicationInformationUuid";
 
 describe("application-information detail parent route", () => {
 	it("normalizes search flags for create and update success states", () => {

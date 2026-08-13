@@ -28,7 +28,7 @@ export const ApplicationInformationEditPage = (): FunctionComponent => {
 	};
 	const navigate = useNavigate();
 	const { applicationInformationUuid, workspaceUuid } = useParams({
-		from: "/workspaces/$workspaceUuid/application-information/$applicationInformationUuid/edit",
+		from: "/workspaces/$workspaceUuid/applications/$applicationInformationUuid/edit",
 	});
 	const {
 		applicationInformation,
@@ -91,7 +91,7 @@ export const ApplicationInformationEditPage = (): FunctionComponent => {
 				},
 				replace: true,
 				search: { updated: "1" },
-				to: "/workspaces/$workspaceUuid/application-information/$applicationInformationUuid",
+				to: "/workspaces/$workspaceUuid/applications/$applicationInformationUuid",
 			});
 		} catch (requestError) {
 			setSubmitError(requestError as Error);
@@ -131,7 +131,7 @@ export const ApplicationInformationEditPage = (): FunctionComponent => {
 
 			{applicationInformation ? (
 				<ApplicationInformationForm
-					cancelHref={`/workspaces/${workspaceUuid}/application-information/${applicationInformationUuid}`}
+					cancelHref={`/workspaces/${workspaceUuid}/applications/${applicationInformationUuid}`}
 					form={form}
 					isSubmitting={isUpdating}
 					submitLabel={

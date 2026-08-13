@@ -1,7 +1,6 @@
 from unittest.mock import AsyncMock, Mock
 
 from fastapi.testclient import TestClient
-
 from src.app.api.dependencies import (
     get_current_user,
     get_onboarding_oversight_service,
@@ -20,9 +19,7 @@ def _cl_admin() -> dict:
     return {
         "id": 1,
         "username": "admin@example.gc.ca",
-        AUTHORIZATION_STATE_KEY: ResolvedAuthorizationState(
-            global_role=CanonicalRoleCode.CL_ADMIN
-        ),
+        AUTHORIZATION_STATE_KEY: ResolvedAuthorizationState(global_role=CanonicalRoleCode.CL_ADMIN),
     }
 
 
@@ -56,7 +53,7 @@ class TestOnboardingOversightQueueRoute:
                 {
                     "record_type": "production_progression",
                     "record_uuid": "018f6f83-0000-0000-0000-000000000402",
-                    "primary_record_label": "Benefits production registration",
+                    "primary_record_label": "Benefits production",
                     "workspace_uuid": "018f6f83-0000-0000-0000-000000000201",
                     "workspace_name": "Benefits Workspace",
                     "department_uuid": "018f6f83-0000-0000-0000-000000000111",
@@ -67,7 +64,11 @@ class TestOnboardingOversightQueueRoute:
                     "promotion_status": "review_tracked",
                     "external_review_reference": "CAB-123",
                     "last_activity_at": "2026-08-11T12:30:00+00:00",
-                    "detail_path": "/workspaces/018f6f83-0000-0000-0000-000000000201/applications/018f6f83-0000-0000-0000-000000000402",
+                    "detail_path": (
+                        "/workspaces/018f6f83-0000-0000-0000-000000000201/"
+                        "applications/018f6f83-0000-0000-0000-000000000301/"
+                        "rp-configurations/018f6f83-0000-0000-0000-000000000402/production-review"
+                    ),
                 }
             ]
         )
@@ -98,7 +99,7 @@ class TestOnboardingOversightQueueRoute:
         assert len(body) == 1
         assert body[0]["recordType"] == "production_progression"
         assert body[0]["recordUuid"] == "018f6f83-0000-0000-0000-000000000402"
-        assert body[0]["primaryRecordLabel"] == "Benefits production registration"
+        assert body[0]["primaryRecordLabel"] == "Benefits production"
         assert body[0]["workspaceUuid"] == "018f6f83-0000-0000-0000-000000000201"
         assert body[0]["workspaceName"] == "Benefits Workspace"
         assert body[0]["departmentUuid"] == "018f6f83-0000-0000-0000-000000000111"
@@ -109,7 +110,11 @@ class TestOnboardingOversightQueueRoute:
         assert body[0]["promotionStatus"] == "review_tracked"
         assert body[0]["externalReviewReference"] == "CAB-123"
         assert body[0]["lastActivityAt"].startswith("2026-08-11T12:30:00")
-        assert body[0]["detailPath"] == "/workspaces/018f6f83-0000-0000-0000-000000000201/applications/018f6f83-0000-0000-0000-000000000402"
+        assert body[0]["detailPath"] == (
+            "/workspaces/018f6f83-0000-0000-0000-000000000201/"
+            "applications/018f6f83-0000-0000-0000-000000000301/"
+            "rp-configurations/018f6f83-0000-0000-0000-000000000402/production-review"
+        )
         service.list_queue.assert_awaited_once_with(
             db=db,
             onboarding_state="under_review",
@@ -268,9 +273,7 @@ class TestOnboardingOversightReportsRoute:
             app.dependency_overrides.clear()
 
         assert response.status_code == 200
-        assert response.headers["content-disposition"] == (
-            'attachment; filename="onboarding_throughput-2026-08-01-2026-08-31.csv"'
-        )
+        assert response.headers["content-disposition"] == ('attachment; filename="onboarding_throughput-2026-08-01-2026-08-31.csv"')
         assert "bucket_label,submitted_count" in response.text
         service.export_report_csv.assert_awaited_once_with(
             db=db,

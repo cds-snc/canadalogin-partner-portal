@@ -8,7 +8,6 @@ import os
 import pytest
 from sqlalchemy import delete, func, select
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
-
 from src.app.core.authorization import (
     CL_ADMIN_ROLE_UUID,
     AssignmentSource,
@@ -20,6 +19,7 @@ from src.app.core.local_persona_fixtures import (
     LOCAL_PERSONA_FIXTURES,
     LOCAL_WORKSPACE_FIXTURES,
 )
+from src.app.models.application_information import ApplicationInformation
 from src.app.models.department import Department
 from src.app.models.role import Role
 from src.app.models.rp_application import RPApplication
@@ -36,6 +36,7 @@ from src.app.services.local_persona_seed_service import (
     LocalPersonaSeedGate,
     LocalPersonaSeedService,
 )
+
 from tests.test_four_role_migrations_postgres import (
     TemporaryPostgresDatabase,
     _temporary_postgres_database,
@@ -61,6 +62,7 @@ async def _fixture_counts(db: AsyncSession) -> LocalPersonaRecordCounts:
     department_uuids = tuple(workspace.department.uuid for workspace in LOCAL_WORKSPACE_FIXTURES)
     user_uuids = tuple(fixture.user_uuid for fixture in LOCAL_PERSONA_FIXTURES)
     workspace_uuids = tuple(workspace.uuid for workspace in LOCAL_WORKSPACE_FIXTURES)
+    application_information_uuids = tuple(workspace.application_information.uuid for workspace in LOCAL_WORKSPACE_FIXTURES)
     application_uuids = tuple(application.uuid for workspace in LOCAL_WORKSPACE_FIXTURES for application in workspace.applications)
     assignment_uuids = tuple(fixture.global_assignment_uuid for fixture in LOCAL_PERSONA_FIXTURES if fixture.global_assignment_uuid is not None)
     grant_uuids = tuple(access.grant_uuid for fixture in LOCAL_PERSONA_FIXTURES for access in fixture.partner_access)
@@ -69,6 +71,12 @@ async def _fixture_counts(db: AsyncSession) -> LocalPersonaRecordCounts:
         departments=int(await db.scalar(select(func.count()).select_from(Department).where(Department.uuid.in_(department_uuids))) or 0),
         users=int(await db.scalar(select(func.count()).select_from(User).where(User.uuid.in_(user_uuids))) or 0),
         workspaces=int(await db.scalar(select(func.count()).select_from(Workspace).where(Workspace.uuid.in_(workspace_uuids))) or 0),
+        applications=int(
+            await db.scalar(
+                select(func.count()).select_from(ApplicationInformation).where(ApplicationInformation.uuid.in_(application_information_uuids))
+            )
+            or 0
+        ),
         rp_applications=int(await db.scalar(select(func.count()).select_from(RPApplication).where(RPApplication.uuid.in_(application_uuids))) or 0),
         user_roles=int(await db.scalar(select(func.count()).select_from(UserRole).where(UserRole.uuid.in_(assignment_uuids))) or 0),
         partner_grants=int(
@@ -106,6 +114,15 @@ async def _assert_seeded_authorization_and_records(
         workspaces = list(
             (await db.scalars(select(Workspace).where(Workspace.uuid.in_(tuple(workspace.uuid for workspace in LOCAL_WORKSPACE_FIXTURES))))).all()
         )
+        application_information = list(
+            (
+                await db.scalars(
+                    select(ApplicationInformation).where(
+                        ApplicationInformation.uuid.in_(tuple(workspace.application_information.uuid for workspace in LOCAL_WORKSPACE_FIXTURES))
+                    )
+                )
+            ).all()
+        )
         applications = list(
             (
                 await db.scalars(
@@ -119,11 +136,18 @@ async def _assert_seeded_authorization_and_records(
         )
         assert len(departments) == 2
         assert len(workspaces) == 2
+        assert len(application_information) == 2
         assert len(applications) == 2
         workspace_ids_by_uuid = {workspace.uuid: workspace.id for workspace in workspaces}
+        application_ids_by_uuid = {application.uuid: application.id for application in application_information}
         application_workspace_ids = {application.uuid: application.workspace_id for application in applications}
         assert application_workspace_ids == {
             application.uuid: workspace_ids_by_uuid[workspace.uuid]
+            for workspace in LOCAL_WORKSPACE_FIXTURES
+            for application in workspace.applications
+        }
+        assert {application.uuid: application.application_information_id for application in applications} == {
+            application.uuid: application_ids_by_uuid[workspace.application_information.uuid]
             for workspace in LOCAL_WORKSPACE_FIXTURES
             for application in workspace.applications
         }
@@ -240,6 +264,7 @@ async def _exercise_seed(database: TemporaryPostgresDatabase) -> None:
             departments=2,
             users=5,
             workspaces=2,
+            applications=2,
             rp_applications=2,
             user_roles=1,
             partner_grants=2,

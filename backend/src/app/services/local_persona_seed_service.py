@@ -28,6 +28,7 @@ from ..core.local_persona_fixtures import (
     LocalRPApplicationFixture,
     LocalWorkspaceFixture,
 )
+from ..models.application_information import ApplicationInformation
 from ..models.department import Department
 from ..models.role import Role
 from ..models.rp_application import RPApplication
@@ -74,6 +75,7 @@ class LocalPersonaRecordCounts:
     departments: int = 0
     users: int = 0
     workspaces: int = 0
+    applications: int = 0
     rp_applications: int = 0
     user_roles: int = 0
     partner_grants: int = 0
@@ -85,6 +87,7 @@ class LocalPersonaRecordCounts:
                 self.departments,
                 self.users,
                 self.workspaces,
+                self.applications,
                 self.rp_applications,
                 self.user_roles,
                 self.partner_grants,
@@ -96,6 +99,7 @@ class LocalPersonaRecordCounts:
             "departments": self.departments,
             "users": self.users,
             "workspaces": self.workspaces,
+            "applications": self.applications,
             "rpApplications": self.rp_applications,
             "userRoles": self.user_roles,
             "partnerGrants": self.partner_grants,
@@ -142,6 +146,7 @@ class _LoadedFixtureState:
     departments: list[Department]
     users: list[User]
     workspaces: list[Workspace]
+    applications: list[ApplicationInformation]
     rp_applications: list[RPApplication]
     user_roles: list[UserRole]
     partner_grants: list[RPApplicationAccessGrant]
@@ -153,6 +158,7 @@ class _LoadedFixtureState:
             departments=len(self.departments),
             users=len(self.users),
             workspaces=len(self.workspaces),
+            applications=len(self.applications),
             rp_applications=len(self.rp_applications),
             user_roles=len(self.user_roles),
             partner_grants=len(self.partner_grants),
@@ -164,6 +170,7 @@ def _expected_counts() -> LocalPersonaRecordCounts:
         departments=len(LOCAL_WORKSPACE_FIXTURES),
         users=len(LOCAL_PERSONA_FIXTURES),
         workspaces=len(LOCAL_WORKSPACE_FIXTURES),
+        applications=len(LOCAL_WORKSPACE_FIXTURES),
         rp_applications=sum(len(workspace.applications) for workspace in LOCAL_WORKSPACE_FIXTURES),
         user_roles=sum(fixture.global_assignment_uuid is not None for fixture in LOCAL_PERSONA_FIXTURES),
         partner_grants=sum(len(fixture.partner_access) for fixture in LOCAL_PERSONA_FIXTURES),
@@ -332,6 +339,21 @@ class LocalPersonaSeedService:
             ).all()
         )
 
+        expected_application_information_uuids = tuple(workspace.application_information.uuid for workspace in LOCAL_WORKSPACE_FIXTURES)
+        expected_application_information_names = tuple(workspace.application_information.service_name_en for workspace in LOCAL_WORKSPACE_FIXTURES)
+        applications = list(
+            (
+                await db.scalars(
+                    select(ApplicationInformation).where(
+                        or_(
+                            ApplicationInformation.uuid.in_(expected_application_information_uuids),
+                            ApplicationInformation.service_name_en.in_(expected_application_information_names),
+                        )
+                    )
+                )
+            ).all()
+        )
+
         expected_applications = _expected_applications()
         expected_application_uuids = tuple(application.uuid for _, application in expected_applications)
         expected_application_names = tuple(application.name for _, application in expected_applications)
@@ -377,6 +399,7 @@ class LocalPersonaSeedService:
             departments=departments,
             users=users,
             workspaces=workspaces,
+            applications=applications,
             rp_applications=rp_applications,
             user_roles=user_roles,
             partner_grants=partner_grants,
@@ -407,6 +430,12 @@ class LocalPersonaSeedService:
             state.workspaces,
             tuple(workspace.uuid for workspace in LOCAL_WORKSPACE_FIXTURES),
             "workspaces",
+            require_complete=require_complete,
+        )
+        self._assert_catalog_rows(
+            state.applications,
+            tuple(workspace.application_information.uuid for workspace in LOCAL_WORKSPACE_FIXTURES),
+            "Applications",
             require_complete=require_complete,
         )
         self._assert_catalog_rows(
@@ -516,20 +545,57 @@ class LocalPersonaSeedService:
                     "workspace",
                 )
 
-        applications_by_uuid = {application.uuid: application for application in state.rp_applications}
-        for workspace_fixture, application_fixture in _expected_applications():
-            application = applications_by_uuid.get(application_fixture.uuid)
+        application_information_by_uuid = {application.uuid: application for application in state.applications}
+        for workspace_fixture in LOCAL_WORKSPACE_FIXTURES:
+            application_fixture = workspace_fixture.application_information
+            application = application_information_by_uuid.get(application_fixture.uuid)
             workspace = workspaces_by_uuid.get(workspace_fixture.uuid)
-            department = departments_by_uuid.get(workspace_fixture.department.uuid)
             if application is not None:
                 self._require_fields(
                     application,
                     {
                         "workspace_id": workspace.id if workspace else None,
+                        "service_name_en": application_fixture.service_name_en,
+                        "service_name_fr": application_fixture.service_name_fr,
+                        "overview": application_fixture.overview,
+                        "technology_and_protocol": application_fixture.technology_and_protocol,
+                        "security_and_privacy": application_fixture.security_and_privacy,
+                        "usage": application_fixture.usage,
+                        "migration_or_transition_plan": application_fixture.migration_or_transition_plan,
+                        "created_by": cl_admin_user.id if cl_admin_user else None,
+                        "onboarding_state": "draft",
+                        "submitted_at": None,
+                        "under_review_at": None,
+                        "approved_at": None,
+                        "launched_at": None,
+                        "created_at": LOCAL_PERSONA_FIXTURE_TIMESTAMP,
+                        "updated_at": None,
+                        "deleted_at": None,
+                        "is_deleted": False,
+                    },
+                    "Application",
+                )
+
+        rp_applications_by_uuid = {application.uuid: application for application in state.rp_applications}
+        for workspace_fixture, rp_fixture in _expected_applications():
+            rp_application = rp_applications_by_uuid.get(rp_fixture.uuid)
+            workspace = workspaces_by_uuid.get(workspace_fixture.uuid)
+            department = departments_by_uuid.get(workspace_fixture.department.uuid)
+            if rp_application is not None:
+                self._require_fields(
+                    rp_application,
+                    {
+                        "workspace_id": workspace.id if workspace else None,
                         "department_id": department.id if department else None,
-                        "application_information_id": None,
-                        "dnr_app_name": application_fixture.name,
-                        "canada_login_environment": application_fixture.canada_login_environment,
+                        "application_information_id": (
+                            application_information_by_uuid[workspace_fixture.application_information.uuid].id
+                            if workspace_fixture.application_information.uuid in application_information_by_uuid
+                            else None
+                        ),
+                        "dnr_app_name": rp_fixture.name,
+                        "configuration_name": rp_fixture.configuration_name,
+                        "partner_environment": rp_fixture.partner_environment,
+                        "canada_login_environment": rp_fixture.canada_login_environment,
                         "status": "active",
                         "created_by": cl_admin_user.id if cl_admin_user else None,
                         "ibm_sv_application_id": None,
@@ -675,12 +741,41 @@ class LocalPersonaSeedService:
         db.add_all(list(workspaces.values()))
         await db.flush()
 
+        application_information = {
+            workspace_fixture.key: ApplicationInformation(
+                workspace_id=workspaces[workspace_fixture.key].id,
+                service_name_en=workspace_fixture.application_information.service_name_en,
+                service_name_fr=workspace_fixture.application_information.service_name_fr,
+                overview=workspace_fixture.application_information.overview,
+                technology_and_protocol=workspace_fixture.application_information.technology_and_protocol,
+                security_and_privacy=workspace_fixture.application_information.security_and_privacy,
+                usage=workspace_fixture.application_information.usage,
+                migration_or_transition_plan=workspace_fixture.application_information.migration_or_transition_plan,
+                created_by=cl_admin_user.id,
+                uuid=workspace_fixture.application_information.uuid,
+                onboarding_state="draft",
+                submitted_at=None,
+                under_review_at=None,
+                approved_at=None,
+                launched_at=None,
+                created_at=LOCAL_PERSONA_FIXTURE_TIMESTAMP,
+                updated_at=None,
+                deleted_at=None,
+                is_deleted=False,
+            )
+            for workspace_fixture in LOCAL_WORKSPACE_FIXTURES
+        }
+        db.add_all(list(application_information.values()))
+        await db.flush()
+
         applications = [
             RPApplication(
                 workspace_id=workspaces[workspace_fixture.key].id,
                 department_id=departments[workspace_fixture.key].id,
-                application_information_id=None,
+                application_information_id=application_information[workspace_fixture.key].id,
                 dnr_app_name=application_fixture.name,
+                configuration_name=application_fixture.configuration_name,
+                partner_environment=application_fixture.partner_environment,
                 canada_login_environment=application_fixture.canada_login_environment,
                 status="active",
                 created_by=cl_admin_user.id,
@@ -746,6 +841,7 @@ class LocalPersonaSeedService:
 
     async def _delete_fixtures(self, db: AsyncSession) -> None:
         expected_application_uuids = tuple(application.uuid for _, application in _expected_applications())
+        expected_application_information_uuids = tuple(workspace.application_information.uuid for workspace in LOCAL_WORKSPACE_FIXTURES)
         expected_workspace_uuids = tuple(workspace.uuid for workspace in LOCAL_WORKSPACE_FIXTURES)
         expected_user_uuids = tuple(fixture.user_uuid for fixture in LOCAL_PERSONA_FIXTURES)
         expected_department_uuids = tuple(workspace.department.uuid for workspace in LOCAL_WORKSPACE_FIXTURES)
@@ -757,6 +853,7 @@ class LocalPersonaSeedService:
         await db.execute(delete(RPApplicationAccessGrant).where(RPApplicationAccessGrant.uuid.in_(expected_grant_uuids)))
         await db.execute(delete(UserRole).where(UserRole.uuid.in_(expected_assignment_uuids)))
         await db.execute(delete(RPApplication).where(RPApplication.uuid.in_(expected_application_uuids)))
+        await db.execute(delete(ApplicationInformation).where(ApplicationInformation.uuid.in_(expected_application_information_uuids)))
         await db.execute(delete(Workspace).where(Workspace.uuid.in_(expected_workspace_uuids)))
         await db.execute(delete(User).where(User.uuid.in_(expected_user_uuids)))
         await db.execute(delete(Department).where(Department.uuid.in_(expected_department_uuids)))

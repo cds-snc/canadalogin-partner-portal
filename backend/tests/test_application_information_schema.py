@@ -1,6 +1,5 @@
 import pytest
 from pydantic import ValidationError
-
 from src.app.schemas.application_information import (
     ApplicationInformationContactCreate,
     ApplicationInformationCreate,
@@ -34,12 +33,34 @@ class TestApplicationInformationSchemas:
     def test_application_information_contact_rejects_invalid_email(self) -> None:
         with pytest.raises(ValidationError):
             ApplicationInformationContactCreate(
-                name_en="Jane Doe",
-                name_fr="Jeanne Doe",
+                first_name="Jane",
+                last_name="Doe",
                 responsibility_en="Product owner",
                 responsibility_fr="Responsable du produit",
                 email="not-an-email",
                 phone_number="555-555-5555",
+            )
+
+    def test_application_information_contact_create_rejects_legacy_bilingual_person_names(self) -> None:
+        with pytest.raises(ValidationError):
+            ApplicationInformationContactCreate.model_validate(
+                {
+                    "nameEn": "Jane Doe",
+                    "nameFr": "Jeanne Doe",
+                    "responsibilityEn": "Product owner",
+                    "responsibilityFr": "Responsable du produit",
+                    "email": "jane.doe@example.gc.ca",
+                }
+            )
+
+    def test_application_information_contact_create_rejects_blank_identity_fields(self) -> None:
+        with pytest.raises(ValidationError):
+            ApplicationInformationContactCreate(
+                first_name="   ",
+                last_name="Doe",
+                responsibility_en="Product owner",
+                responsibility_fr="Responsable du produit",
+                email="jane.doe@example.gc.ca",
             )
 
     def test_application_information_review_note_requires_non_empty_body(self) -> None:

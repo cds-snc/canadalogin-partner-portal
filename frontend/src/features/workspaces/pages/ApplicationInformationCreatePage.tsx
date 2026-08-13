@@ -21,7 +21,7 @@ export const ApplicationInformationCreatePage = (): FunctionComponent => {
 	};
 	const navigate = useNavigate();
 	const { workspaceUuid } = useParams({
-		from: "/workspaces/$workspaceUuid/application-information/new",
+		from: "/workspaces/$workspaceUuid/applications/new",
 	});
 	const { createApplicationInformation, isCreating } =
 		useApplicationInformationManagement();
@@ -57,7 +57,7 @@ export const ApplicationInformationCreatePage = (): FunctionComponent => {
 				},
 				replace: true,
 				search: { created: "1" },
-				to: "/workspaces/$workspaceUuid/application-information/$applicationInformationUuid",
+				to: "/workspaces/$workspaceUuid/applications/$applicationInformationUuid",
 			});
 		} catch (requestError) {
 			setError(requestError as Error);
@@ -80,7 +80,7 @@ export const ApplicationInformationCreatePage = (): FunctionComponent => {
 			) : null}
 
 			<ApplicationInformationForm
-				cancelHref={`/workspaces/${workspaceUuid}/application-information`}
+				cancelHref={`/workspaces/${workspaceUuid}/applications`}
 				form={form}
 				isSubmitting={isCreating}
 				submitLabel={

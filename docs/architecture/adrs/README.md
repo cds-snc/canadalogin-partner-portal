@@ -10,6 +10,7 @@ CanadaLogin Partner Portal.
 | [ADR-001](adr-001-bff-and-server-session-authority.md) | BFF and Server Session Authority | Accepted |
 | [ADR-002](adr-002-api-wire-and-error-contract.md) | API Wire and Error Contract | Proposed |
 | [ADR-003](adr-003-casbin-authorization-model.md) | Casbin Authorization Model | Accepted |
+| [ADR-004](adr-004-application-and-rp-configuration-hierarchy.md) | Application and RP Configuration Hierarchy | Accepted |
 
 Statuses:
 

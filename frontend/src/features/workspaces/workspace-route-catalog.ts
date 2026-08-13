@@ -1,6 +1,5 @@
 import {
 	canReadApplicationInformation,
-	canReadRPApplication,
 	canReadWorkspace,
 	hasCapability,
 	type AuthorizationContext,
@@ -10,7 +9,6 @@ import {
 export const WORKSPACE_ROUTE_IDS = [
 	"overview",
 	"applicationInformation",
-	"rpApplications",
 	"access",
 	"reports",
 	"settings",
@@ -25,7 +23,6 @@ export type WorkspaceRouteSurface = (typeof WORKSPACE_ROUTE_SURFACES)[number];
 type WorkspaceRouteVisibility =
 	| { kind: "applicationInformationRead" }
 	| { kind: "capability"; capability: Capability }
-	| { kind: "rpApplicationRead" }
 	| { kind: "workspaceRead" };
 
 export type WorkspaceRouteDefinition = {
@@ -61,12 +58,12 @@ export const WORKSPACE_ROUTE_CATALOG = {
 		},
 	},
 	applicationInformation: {
-		activePathSuffixes: ["/application-information"],
+		activePathSuffixes: ["/applications"],
 		breadcrumbRouteIds: ["overview"],
 		compatibilityPathSuffixes: [],
 		id: "applicationInformation",
-		labelKey: "workspaces.navigation.applicationInformation",
-		pathSuffix: "/application-information",
+		labelKey: "workspaces.navigation.applications",
+		pathSuffix: "/applications",
 		returnRouteId: "overview",
 		surfaces: allWorkspaceSurfaces,
 		visibility: { kind: "applicationInformationRead" },
@@ -95,17 +92,6 @@ export const WORKSPACE_ROUTE_CATALOG = {
 			capability: "aggregate_report_read",
 			kind: "capability",
 		},
-	},
-	rpApplications: {
-		activePathSuffixes: ["/applications"],
-		breadcrumbRouteIds: ["overview"],
-		compatibilityPathSuffixes: [],
-		id: "rpApplications",
-		labelKey: "workspaces.navigation.rpApplications",
-		pathSuffix: "/applications",
-		returnRouteId: "overview",
-		surfaces: allWorkspaceSurfaces,
-		visibility: { kind: "rpApplicationRead" },
 	},
 	settings: {
 		activePathSuffixes: ["/settings"],
@@ -167,8 +153,6 @@ export const isWorkspaceRouteVisible = (
 				route.visibility.capability,
 				workspaceUuid
 			);
-		case "rpApplicationRead":
-			return canReadRPApplication(authorizationContext, workspaceUuid);
 		case "workspaceRead":
 			return canReadWorkspace(authorizationContext, workspaceUuid);
 	}

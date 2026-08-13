@@ -44,7 +44,10 @@ describe("workspace RP registration API", () => {
 		const result = await createWorkspaceRPApplicationRegistrationDraft(
 			workspaceUuid,
 			{
+				applicationInformationUuid: "application-information-uuid-1",
 				canadaLoginEnvironment: "test",
+				configurationName: "Partner test integration",
+				partnerEnvironment: "Partner test",
 				serviceNameEn: "Benefits Portal",
 				serviceNameFr: "Portail des prestations",
 			},
@@ -58,7 +61,10 @@ describe("workspace RP registration API", () => {
 			})
 		);
 		expect(JSON.parse(String(request?.body))).toEqual({
+			applicationInformationUuid: "application-information-uuid-1",
 			canadaLoginEnvironment: "test",
+			configurationName: "Partner test integration",
+			partnerEnvironment: "Partner test",
 			serviceNameEn: "Benefits Portal",
 			serviceNameFr: "Portail des prestations",
 		});

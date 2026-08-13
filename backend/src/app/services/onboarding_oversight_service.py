@@ -2,7 +2,7 @@ import csv
 from calendar import monthrange
 from datetime import UTC, date, datetime, timedelta
 from io import StringIO
-from typing import Any
+from typing import Any, cast
 from uuid import UUID
 
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -75,11 +75,7 @@ class OnboardingOversightService:
         current_user: dict[str, Any] | None,
         workspace_uuid: str | None,
     ) -> tuple[int | None, UUID | None]:
-        state = (
-            get_resolved_authorization_state(current_user)
-            if current_user is not None
-            else None
-        )
+        state = get_resolved_authorization_state(current_user) if current_user is not None else None
         if state is None:
             raise NotFoundException("Report not found")
 
@@ -145,10 +141,7 @@ class OnboardingOversightService:
         if department_id or environment:
             raise OnboardingReportRequestException(
                 code="onboarding_report_unsupported_filter",
-                message=(
-                    "Department and environment filters are not available "
-                    "in the first onboarding reporting release."
-                ),
+                message=("Department and environment filters are not available in the first onboarding reporting release."),
             )
 
         workspace_scope_id, resolved_workspace_uuid = await self._resolve_report_workspace_scope(
@@ -158,16 +151,10 @@ class OnboardingOversightService:
         )
 
         resolved_group_by = self._parse_report_group_by(group_by)
-        if (
-            resolved_metric == "secret_rotation_hygiene"
-            and resolved_group_by is not None
-        ):
+        if resolved_metric == "secret_rotation_hygiene" and resolved_group_by is not None:
             raise OnboardingReportRequestException(
                 code="onboarding_report_invalid_filter_combination",
-                message=(
-                    "Grouping is not available for secret rotation hygiene in the "
-                    "first onboarding reporting release."
-                ),
+                message=("Grouping is not available for secret rotation hygiene in the first onboarding reporting release."),
             )
 
         if resolved_metric == "onboarding_throughput":
@@ -223,10 +210,7 @@ class OnboardingOversightService:
         )
         csv_content = self._serialize_report_csv(report)
         applied_filters = report["applied_filters"]
-        filename = (
-            f"{report['metric']}-{applied_filters['start_date']}-"
-            f"{applied_filters['end_date']}.csv"
-        )
+        filename = f"{report['metric']}-{applied_filters['start_date']}-{applied_filters['end_date']}.csv"
         return csv_content, filename
 
     async def list_queue(
@@ -244,17 +228,17 @@ class OnboardingOversightService:
         workspaces = await crud_workspaces.get_multi(
             db=db,
             is_deleted=False,
+            return_as_model=False,
             schema_to_select=WorkspaceRead,
         )
         workspace_rows = workspaces.get("data", [])
-        workspaces_by_id = {
-            workspace_row["id"]: workspace_row for workspace_row in workspace_rows
-        }
+        workspaces_by_id = {workspace_row["id"]: workspace_row for workspace_row in workspace_rows}
 
         queue_rows: list[dict[str, Any]] = []
         for workspace_row in workspace_rows:
             if not self._is_visible_queue_state(workspace_row.get("onboarding_state")):
                 continue
+            department_id = workspace_row.get("department_id")
             queue_rows.append(
                 self._build_queue_row(
                     record_type="workspace",
@@ -262,9 +246,7 @@ class OnboardingOversightService:
                     primary_record_label=workspace_row["name"],
                     workspace_uuid=workspace_row["uuid"],
                     workspace_name=workspace_row["name"],
-                    department=departments_by_id.get(
-                        workspace_row.get("department_id")
-                    ),
+                    department=departments_by_id.get(department_id) if isinstance(department_id, int) else None,
                     onboarding_state=workspace_row.get("onboarding_state"),
                     current_environment=None,
                     target_environment=None,
@@ -278,58 +260,61 @@ class OnboardingOversightService:
         application_information_records = await crud_application_information.get_multi(
             db=db,
             is_deleted=False,
+            return_as_model=False,
             schema_to_select=ApplicationInformationRead,
         )
-        for application_information_row in application_information_records.get(
-            "data", []
-        ):
-            if not self._is_visible_queue_state(
-                application_information_row.get("onboarding_state")
-            ):
+        application_information_rows = application_information_records.get("data", [])
+        application_information_by_id = {row["id"]: row for row in application_information_rows}
+        for application_information_row in application_information_rows:
+            if not self._is_visible_queue_state(application_information_row.get("onboarding_state")):
                 continue
 
-            workspace_row = workspaces_by_id.get(
-                application_information_row.get("workspace_id")
-            )
-            if workspace_row is None:
+            workspace_id = application_information_row.get("workspace_id")
+            parent_workspace = workspaces_by_id.get(workspace_id) if isinstance(workspace_id, int) else None
+            if parent_workspace is None:
                 continue
+            department_id = parent_workspace.get("department_id")
 
             queue_rows.append(
                 self._build_queue_row(
                     record_type="application_information",
                     record_uuid=application_information_row["uuid"],
                     primary_record_label=application_information_row["service_name_en"],
-                    workspace_uuid=workspace_row["uuid"],
-                    workspace_name=workspace_row["name"],
-                    department=departments_by_id.get(
-                        workspace_row.get("department_id")
-                    ),
-                    onboarding_state=application_information_row.get(
-                        "onboarding_state"
-                    ),
+                    workspace_uuid=parent_workspace["uuid"],
+                    workspace_name=parent_workspace["name"],
+                    department=departments_by_id.get(department_id) if isinstance(department_id, int) else None,
+                    onboarding_state=application_information_row.get("onboarding_state"),
                     current_environment=None,
                     target_environment=None,
                     promotion_status=None,
                     external_review_reference=None,
-                    last_activity_at=self._select_lifecycle_timestamp(
-                        application_information_row
-                    ),
-                    detail_path=(
-                        f"/workspaces/{workspace_row['uuid']}/application-information/"
-                        f"{application_information_row['uuid']}"
-                    ),
+                    last_activity_at=self._select_lifecycle_timestamp(application_information_row),
+                    detail_path=(f"/workspaces/{parent_workspace['uuid']}/applications/{application_information_row['uuid']}"),
                 )
             )
 
         rp_applications = await crud_rp_applications.get_multi(
             db=db,
             is_deleted=False,
+            return_as_model=False,
             schema_to_select=RPApplicationRead,
         )
         for rp_application_row in rp_applications.get("data", []):
-            workspace_row = workspaces_by_id.get(rp_application_row.get("workspace_id"))
-            if workspace_row is None:
+            workspace_id = rp_application_row.get("workspace_id")
+            parent_workspace = workspaces_by_id.get(workspace_id) if isinstance(workspace_id, int) else None
+            if parent_workspace is None:
                 continue
+            configuration_label = rp_application_row.get("configuration_name") or rp_application_row.get("dnr_app_name") or "RP configuration"
+            application_information_id = rp_application_row.get("application_information_id")
+            parent_application = (
+                application_information_by_id.get(application_information_id) if isinstance(application_information_id, int) else None
+            )
+            configuration_detail_path = (
+                f"/workspaces/{parent_workspace['uuid']}/applications/{parent_application['uuid']}/rp-configurations/{rp_application_row['uuid']}"
+                if parent_application is not None
+                else "/error?kind=not_found"
+            )
+            department_id = parent_workspace.get("department_id")
 
             promotion_request = await self._get_production_promotion_request(
                 db=db,
@@ -341,39 +326,20 @@ class OnboardingOversightService:
                     self._build_queue_row(
                         record_type="rp_application",
                         record_uuid=rp_application_row["uuid"],
-                        primary_record_label=rp_application_row["dnr_app_name"],
-                        workspace_uuid=workspace_row["uuid"],
-                        workspace_name=workspace_row["name"],
-                        department=departments_by_id.get(
-                            workspace_row.get("department_id")
-                        ),
+                        primary_record_label=configuration_label,
+                        workspace_uuid=parent_workspace["uuid"],
+                        workspace_name=parent_workspace["name"],
+                        department=departments_by_id.get(department_id) if isinstance(department_id, int) else None,
                         onboarding_state=rp_application_row.get("onboarding_state"),
-                        current_environment=rp_application_row.get(
-                            "canada_login_environment"
-                        ),
+                        current_environment=rp_application_row.get("canada_login_environment"),
                         target_environment=None,
-                        promotion_status=(
-                            promotion_request.get("status")
-                            if promotion_request
-                            else None
-                        ),
-                        external_review_reference=(
-                            promotion_request.get("external_reference")
-                            if promotion_request
-                            else None
-                        ),
+                        promotion_status=(promotion_request.get("status") if promotion_request else None),
+                        external_review_reference=(promotion_request.get("external_reference") if promotion_request else None),
                         last_activity_at=self._select_lifecycle_timestamp(
                             rp_application_row,
-                            fallback=(
-                                promotion_request.get("updated_at")
-                                if promotion_request
-                                else None
-                            ),
+                            fallback=(promotion_request.get("updated_at") if promotion_request else None),
                         ),
-                        detail_path=(
-                            f"/workspaces/{workspace_row['uuid']}/applications/"
-                            f"{rp_application_row['uuid']}"
-                        ),
+                        detail_path=configuration_detail_path,
                     )
                 )
 
@@ -384,27 +350,20 @@ class OnboardingOversightService:
                 self._build_queue_row(
                     record_type="production_progression",
                     record_uuid=rp_application_row["uuid"],
-                    primary_record_label=rp_application_row["dnr_app_name"],
-                    workspace_uuid=workspace_row["uuid"],
-                    workspace_name=workspace_row["name"],
-                    department=departments_by_id.get(workspace_row.get("department_id")),
+                    primary_record_label=configuration_label,
+                    workspace_uuid=parent_workspace["uuid"],
+                    workspace_name=parent_workspace["name"],
+                    department=departments_by_id.get(department_id) if isinstance(department_id, int) else None,
                     onboarding_state=rp_application_row.get("onboarding_state"),
-                    current_environment=rp_application_row.get(
-                        "canada_login_environment"
-                    ),
+                    current_environment=rp_application_row.get("canada_login_environment"),
                     target_environment=promotion_request.get("target_environment"),
                     promotion_status=promotion_request.get("status"),
-                    external_review_reference=promotion_request.get(
-                        "external_reference"
-                    ),
+                    external_review_reference=promotion_request.get("external_reference"),
                     last_activity_at=self._select_promotion_timestamp(
                         promotion_request=promotion_request,
                         fallback=rp_application_row.get("updated_at"),
                     ),
-                    detail_path=(
-                        f"/workspaces/{workspace_row['uuid']}/applications/"
-                        f"{rp_application_row['uuid']}"
-                    ),
+                    detail_path=(f"{configuration_detail_path}/production-review" if parent_application is not None else configuration_detail_path),
                 )
             )
 
@@ -434,23 +393,25 @@ class OnboardingOversightService:
         workspace_id: int | None,
         workspace_uuid: UUID | None,
     ) -> dict[str, Any]:
+        workspace_filter: dict[str, Any] = {"id": workspace_id} if workspace_id is not None else {}
+        child_filter: dict[str, Any] = {"workspace_id": workspace_id} if workspace_id is not None else {}
         workspaces = await crud_workspaces.get_multi(
             db=db,
             is_deleted=False,
             schema_to_select=WorkspaceRead,
-            **({"id": workspace_id} if workspace_id is not None else {}),
+            **workspace_filter,
         )
         application_information_records = await crud_application_information.get_multi(
             db=db,
             is_deleted=False,
             schema_to_select=ApplicationInformationRead,
-            **({"workspace_id": workspace_id} if workspace_id is not None else {}),
+            **child_filter,
         )
         rp_applications = await crud_rp_applications.get_multi(
             db=db,
             is_deleted=False,
             schema_to_select=RPApplicationRead,
-            **({"workspace_id": workspace_id} if workspace_id is not None else {}),
+            **child_filter,
         )
 
         grouped_rows: dict[tuple[date, date, str], dict[str, Any]] = {}
@@ -518,10 +479,12 @@ class OnboardingOversightService:
         workspace_id: int | None,
         workspace_uuid: UUID | None,
     ) -> dict[str, Any]:
+        workspace_filter: dict[str, Any] = {"workspace_id": workspace_id} if workspace_id is not None else {}
         invitations = await crud_rp_application_developer_invitations.get_multi(
             db=db,
             is_deleted=False,
-            **({"workspace_id": workspace_id} if workspace_id is not None else {}),
+            return_as_model=False,
+            **workspace_filter,
         )
 
         grouped_rows: dict[tuple[date, date, str], dict[str, Any]] = {}
@@ -598,11 +561,13 @@ class OnboardingOversightService:
         workspace_id: int | None,
         workspace_uuid: UUID | None,
     ) -> dict[str, Any]:
+        workspace_filter: dict[str, Any] = {"workspace_id": workspace_id} if workspace_id is not None else {}
         rp_applications = await crud_rp_applications.get_multi(
             db=db,
             is_deleted=False,
+            return_as_model=False,
             schema_to_select=RPApplicationRead,
-            **({"workspace_id": workspace_id} if workspace_id is not None else {}),
+            **workspace_filter,
         )
         audit_logs = await crud_audit_log.get_multi(
             db=db,
@@ -634,10 +599,7 @@ class OnboardingOversightService:
         for rp_application in rp_applications.get("data", []):
             total_rp_applications += 1
             rp_application_uuid = self._normalize_uuid(rp_application.get("uuid"))
-            if (
-                rp_application_uuid is not None
-                and rp_application_uuid in compliant_application_uuids
-            ):
+            if rp_application_uuid is not None and rp_application_uuid in compliant_application_uuids:
                 compliant_rp_applications += 1
 
         non_compliant_rp_applications = max(
@@ -719,20 +681,14 @@ class OnboardingOversightService:
             is_deleted=False,
             schema_to_select=DepartmentRead,
         )
-        return {
-            department_row["id"]: department_row
-            for department_row in departments.get("data", [])
-        }
+        return {department_row["id"]: department_row for department_row in departments.get("data", [])}
 
     async def _get_production_promotion_request(
         self,
         db: AsyncSession,
         rp_application: dict[str, Any],
     ) -> dict[str, Any] | None:
-        if (
-            self._normalize_environment(rp_application.get("canada_login_environment"))
-            != PRODUCTION_TARGET_ENVIRONMENT
-        ):
+        if self._normalize_environment(rp_application.get("canada_login_environment")) != PRODUCTION_TARGET_ENVIRONMENT:
             return None
 
         rp_application_id = rp_application.get("id")
@@ -775,9 +731,7 @@ class OnboardingOversightService:
             current_environment=self._normalize_environment(current_environment),
             target_environment=self._normalize_environment(target_environment),
             promotion_status=self._normalize_promotion_status(promotion_status),
-            external_review_reference=self._normalize_optional_text(
-                external_review_reference
-            ),
+            external_review_reference=self._normalize_optional_text(external_review_reference),
             last_activity_at=self._coerce_datetime(last_activity_at),
             detail_path=detail_path,
         ).model_dump()
@@ -801,10 +755,7 @@ class OnboardingOversightService:
         normalized_department_filter = self._normalize_filter_text(department)
         if normalized_department_filter is not None:
             department_name = self._normalize_filter_text(row.get("department_name"))
-            if (
-                department_name is None
-                or normalized_department_filter not in department_name
-            ):
+            if department_name is None or normalized_department_filter not in department_name:
                 return False
 
         normalized_workspace_filter = self._normalize_filter_text(workspace)
@@ -815,23 +766,13 @@ class OnboardingOversightService:
 
         normalized_environment_filter = self._normalize_environment(environment)
         if normalized_environment_filter is not None:
-            current_environment = self._normalize_environment(
-                row.get("current_environment")
-            )
+            current_environment = self._normalize_environment(row.get("current_environment"))
             target_environment = self._normalize_environment(row.get("target_environment"))
-            if (
-                current_environment != normalized_environment_filter
-                and target_environment != normalized_environment_filter
-            ):
+            if current_environment != normalized_environment_filter and target_environment != normalized_environment_filter:
                 return False
 
-        normalized_promotion_status = self._normalize_promotion_status(
-            promotion_status
-        )
-        if (
-            normalized_promotion_status is not None
-            and row.get("promotion_status") != normalized_promotion_status
-        ):
+        normalized_promotion_status = self._normalize_promotion_status(promotion_status)
+        if normalized_promotion_status is not None and row.get("promotion_status") != normalized_promotion_status:
             return False
 
         return True
@@ -981,7 +922,7 @@ class OnboardingOversightService:
                 code="onboarding_report_unsupported_filter",
                 message="Unsupported onboarding report metric.",
             )
-        return normalized_metric
+        return cast(OnboardingOversightReportMetric, normalized_metric)
 
     def _parse_report_group_by(
         self,
@@ -995,7 +936,7 @@ class OnboardingOversightService:
                 code="onboarding_report_unsupported_filter",
                 message="Unsupported onboarding report grouping.",
             )
-        return normalized_group_by
+        return cast(OnboardingOversightReportGroupBy, normalized_group_by)
 
     def _parse_report_date(self, value: str) -> date:
         normalized_value = self._normalize_optional_text(value)
@@ -1042,13 +983,13 @@ class OnboardingOversightService:
     def _normalize_onboarding_state(self, state: Any) -> OnboardingState:
         normalized_state = str(state or "draft").strip().lower()
         if normalized_state in {"submitted", "under_review", "approved", "launched"}:
-            return normalized_state
+            return cast(OnboardingState, normalized_state)
         return "draft"
 
     def _normalize_environment(self, value: Any) -> CanadaLoginEnvironment | None:
         normalized_value = self._normalize_optional_text(value)
         if normalized_value in {"test", "staging", "production"}:
-            return normalized_value
+            return cast(CanadaLoginEnvironment, normalized_value)
         return None
 
     def _normalize_promotion_status(self, value: Any) -> PromotionRequestStatus | None:
@@ -1059,7 +1000,7 @@ class OnboardingOversightService:
             "approved",
             "launched",
         }:
-            return normalized_value
+            return cast(PromotionRequestStatus, normalized_value)
         return None
 
     def _normalize_filter_text(self, value: Any) -> str | None:

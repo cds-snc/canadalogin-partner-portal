@@ -1,9 +1,12 @@
-import { createElement, type PropsWithChildren, type ReactElement } from "react";
+import {
+	createElement,
+	type PropsWithChildren,
+	type ReactElement,
+} from "react";
 import { render, screen } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { WorkspaceApplicationConfigurationPage } from "@/features/workspaces/pages/WorkspaceApplicationConfigurationPage";
-import { useWorkspaceRPApplicationManagement } from "@/features/workspaces/hooks/use-workspace-rp-application-management";
-import { useWorkspaceRPApplicationConfiguration } from "@/features/workspaces/hooks/use-workspace-rp-applications";
+import { useApplicationRPConfigurationConfiguration } from "@/features/workspaces/hooks/use-application-rp-configurations";
 import { useSession } from "@/hooks";
 
 vi.mock("react-i18next", () => ({
@@ -15,12 +18,16 @@ vi.mock("react-i18next", () => ({
 	}),
 }));
 
+const routeParams = vi.hoisted(() => ({
+	applicationInformationUuid: "application-information-uuid-1",
+	rpApplicationUuid: "",
+	rpConfigurationUuid: "rp-application-uuid-1",
+	workspaceUuid: "workspace-uuid-1",
+}));
+
 vi.mock("@tanstack/react-router", () => ({
 	useNavigate: () => vi.fn(),
-	useParams: () => ({
-		rpApplicationUuid: "rp-application-uuid-1",
-		workspaceUuid: "workspace-uuid-1",
-	}),
+	useParams: () => routeParams,
 }));
 
 vi.mock("@/components/ui", () => ({
@@ -28,16 +35,25 @@ vi.mock("@/components/ui", () => ({
 		children,
 		href,
 	}: PropsWithChildren<{ href?: string }>): ReactElement =>
-		href ? <a href={href}>{children}</a> : <button type="button">{children}</button>,
-	ConfirmDialog: (): null => null,
-	Grid: ({ children, tag = "div" }: PropsWithChildren<{ tag?: string }>): ReactElement =>
+		href ? (
+			<a href={href}>{children}</a>
+		) : (
+			<button type="button">{children}</button>
+		),
+	Grid: ({
+		children,
+		tag = "div",
+	}: PropsWithChildren<{ tag?: string }>): ReactElement =>
 		createElement(tag, undefined, children),
 	Heading: ({
 		children,
 		tag = "h1",
 	}: PropsWithChildren<{ tag?: string }>): ReactElement =>
 		createElement(tag, undefined, children),
-	Link: ({ children, href }: PropsWithChildren<{ href: string }>): ReactElement => (
+	Link: ({
+		children,
+		href,
+	}: PropsWithChildren<{ href: string }>): ReactElement => (
 		<a href={href}>{children}</a>
 	),
 	Notice: ({
@@ -53,16 +69,15 @@ vi.mock("@/components/ui", () => ({
 }));
 
 vi.mock("@/hooks", () => ({ useSession: vi.fn() }));
-vi.mock("@/features/workspaces/hooks/use-workspace-rp-applications", () => ({
-	useWorkspaceRPApplicationConfiguration: vi.fn(),
-}));
 vi.mock(
-	"@/features/workspaces/hooks/use-workspace-rp-application-management",
-	() => ({ useWorkspaceRPApplicationManagement: vi.fn() })
+	"@/features/workspaces/hooks/use-application-rp-configurations",
+	() => ({
+		useApplicationRPConfigurationConfiguration: vi.fn(),
+	})
 );
-
 const configuration = {
 	canadaLoginEnvironment: "staging" as const,
+	partnerEnvironment: "Partner staging",
 	offlinePublicKeyProvided: true,
 	onboardingState: "draft",
 	promotionStatus: null,
@@ -84,17 +99,18 @@ const configuration = {
 
 describe("WorkspaceApplicationConfigurationPage", () => {
 	beforeEach(() => {
-		vi.mocked(useWorkspaceRPApplicationConfiguration).mockReturnValue({
-			configuration,
+		routeParams.applicationInformationUuid = "application-information-uuid-1";
+		routeParams.rpApplicationUuid = "";
+		routeParams.rpConfigurationUuid = "rp-application-uuid-1";
+		vi.mocked(useApplicationRPConfigurationConfiguration).mockReturnValue({
+			configuration: {
+				...configuration,
+				applicationInformationUuid: "application-information-uuid-1",
+				configurationName: "Benefits Portal",
+			},
 			error: null,
 			isLoading: false,
 			refetch: vi.fn(async () => null),
-		});
-		vi.mocked(useWorkspaceRPApplicationManagement).mockReturnValue({
-			deleteRPApplication: vi.fn(),
-			isDeleting: false,
-			isUpdating: false,
-			updateRPApplication: vi.fn(),
 		});
 	});
 
@@ -112,15 +128,59 @@ describe("WorkspaceApplicationConfigurationPage", () => {
 
 		render(<WorkspaceApplicationConfigurationPage />);
 
-		expect(screen.getByRole("heading", { level: 1, name: "Configuration - Benefits Portal" })).toBeTruthy();
+		expect(
+			screen.getByRole("heading", {
+				level: 1,
+				name: "Configuration - Benefits Portal",
+			})
+		).toBeTruthy();
 		expect(screen.getByText("workspaces.environmentStaging")).toBeTruthy();
+		expect(screen.getByText("Partner staging")).toBeTruthy();
 		expect(screen.getByText("https://benefits.canada.ca")).toBeTruthy();
-		expect(screen.getByText("workspaces.rpConfigurationPublicKeyProvided")).toBeTruthy();
+		expect(
+			screen.getByText("workspaces.rpConfigurationPublicKeyProvided")
+		).toBeTruthy();
 		expect(document.body.textContent).not.toContain("BEGIN CERTIFICATE");
-		expect(screen.getByRole("link", { name: "workspaces.rpConfigurationResumeAction" }).getAttribute("href")).toBe(
-			"/workspaces/workspace-uuid-1/applications/rp-application-uuid-1/registration/client-and-access"
+		expect(
+			screen
+				.getByRole("link", { name: "workspaces.rpConfigurationResumeAction" })
+				.getAttribute("href")
+		).toBe(
+			"/workspaces/workspace-uuid-1/applications/application-information-uuid-1/rp-configurations/rp-application-uuid-1/registration/client-and-access"
 		);
-		expect(screen.getByRole("link", { name: "workspaces.applicationsEditAction" })).toBeTruthy();
+	});
+
+	it("localizes a missing retained Partner environment without blocking the view", () => {
+		vi.mocked(useApplicationRPConfigurationConfiguration).mockReturnValue({
+			configuration: {
+				...configuration,
+				applicationInformationUuid: "application-information-uuid-1",
+				configurationName: "Retained configuration",
+				partnerEnvironment: null,
+			},
+			error: null,
+			isLoading: false,
+			refetch: vi.fn(async () => null),
+		});
+		vi.mocked(useSession).mockReturnValue({
+			currentUser: {
+				authorizationContext: {
+					globalRole: null,
+					partnerAccess: [
+						{ role: "read_only", workspaceUuid: "workspace-uuid-1" },
+					],
+				},
+			},
+		} as unknown as ReturnType<typeof useSession>);
+
+		render(<WorkspaceApplicationConfigurationPage />);
+
+		expect(screen.getByText("common.notProvided")).toBeTruthy();
+		expect(
+			screen.queryByRole("link", {
+				name: "workspaces.rpConfigurationResumeAction",
+			})
+		).toBeNull();
 	});
 
 	it("keeps the same configuration read-only for Read Only", () => {
@@ -138,8 +198,58 @@ describe("WorkspaceApplicationConfigurationPage", () => {
 		render(<WorkspaceApplicationConfigurationPage />);
 
 		expect(screen.getByText("https://benefits.canada.ca")).toBeTruthy();
-		expect(screen.queryByRole("link", { name: "workspaces.rpConfigurationResumeAction" })).toBeNull();
-		expect(screen.queryByRole("link", { name: "workspaces.applicationsEditAction" })).toBeNull();
-		expect(screen.queryByRole("button", { name: "workspaces.deleteApplication" })).toBeNull();
+		expect(
+			screen.queryByRole("link", {
+				name: "workspaces.rpConfigurationResumeAction",
+			})
+		).toBeNull();
+	});
+
+	it("renders the nested Configuration view with Application ancestry", () => {
+		routeParams.applicationInformationUuid = "application-information-uuid-1";
+		routeParams.rpApplicationUuid = "";
+		routeParams.rpConfigurationUuid = "rp-application-uuid-1";
+		vi.mocked(useApplicationRPConfigurationConfiguration).mockReturnValue({
+			configuration: {
+				...configuration,
+				applicationInformationUuid: "application-information-uuid-1",
+				configurationName: "Partner staging A",
+			},
+			error: null,
+			isLoading: false,
+			refetch: vi.fn(async () => null),
+		});
+		vi.mocked(useSession).mockReturnValue({
+			currentUser: {
+				authorizationContext: {
+					globalRole: null,
+					partnerAccess: [
+						{ role: "rp_admin", workspaceUuid: "workspace-uuid-1" },
+					],
+				},
+			},
+		} as unknown as ReturnType<typeof useSession>);
+
+		render(<WorkspaceApplicationConfigurationPage />);
+
+		expect(
+			screen.getByRole("heading", {
+				level: 1,
+				name: "Configuration - Partner staging A",
+			})
+		).toBeTruthy();
+		expect(
+			screen
+				.getByRole("link", { name: "workspaces.manageApplicationInformation" })
+				.getAttribute("href")
+		).toBe(
+			"/workspaces/workspace-uuid-1/applications/application-information-uuid-1"
+		);
+		expect(
+			screen.queryByRole("link", { name: "workspaces.applicationsEditAction" })
+		).toBeNull();
+		expect(
+			screen.queryByRole("button", { name: "workspaces.deleteApplication" })
+		).toBeNull();
 	});
 });

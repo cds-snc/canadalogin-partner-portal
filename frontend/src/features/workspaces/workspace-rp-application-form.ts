@@ -44,6 +44,8 @@ export type WorkspaceRPApplicationFormState = {
 	applicationEnvironmentUrlFr: string;
 	applicationInformationUuid: string;
 	canadaLoginEnvironment: string;
+	configurationName: string;
+	partnerEnvironment: string;
 	clientAuthMethod: string;
 	clientType: string;
 	jwksUri: string;
@@ -190,7 +192,10 @@ export const validateWorkspaceRPApplicationForm = (
 ): Array<WorkspaceRPApplicationValidationMessageKey> => {
 	const errors = new Set<WorkspaceRPApplicationValidationMessageKey>();
 	const missingRequiredAnswers =
+		!hasValue(form.applicationInformationUuid) ||
 		!hasValue(form.canadaLoginEnvironment) ||
+		!hasValue(form.configurationName) ||
+		!hasValue(form.partnerEnvironment) ||
 		!hasValue(form.serviceNameEn) ||
 		!hasValue(form.serviceNameFr) ||
 		!hasValue(form.applicationEnvironmentUrlEn) ||
@@ -374,7 +379,10 @@ export const validateWorkspaceRPApplicationStep = (
 	const errors = new Set<WorkspaceRPApplicationValidationMessageKey>();
 	if (
 		step === "basics" &&
-		(!hasValue(form.canadaLoginEnvironment) ||
+		(!hasValue(form.applicationInformationUuid) ||
+			!hasValue(form.canadaLoginEnvironment) ||
+			!hasValue(form.configurationName) ||
+			!hasValue(form.partnerEnvironment) ||
 			!hasValue(form.serviceNameEn) ||
 			!hasValue(form.serviceNameFr))
 	) {
@@ -497,10 +505,14 @@ export const validateWorkspaceRPApplicationStep = (
 	return [...errors];
 };
 
+export type WorkspaceRPApplicationFieldErrorMessageKey =
+	| WorkspaceRPApplicationValidationMessageKey
+	| "workspaces.registration.validationFieldMessage";
+
 export type WorkspaceRPApplicationFieldErrorKeys = Partial<
 	Record<
 		keyof WorkspaceRPApplicationFormState,
-		WorkspaceRPApplicationValidationMessageKey
+		WorkspaceRPApplicationFieldErrorMessageKey
 	>
 >;
 
@@ -508,7 +520,14 @@ const REQUIRED_FIELDS_BY_STEP: Record<
 	RegistrationDataStep,
 	Array<keyof WorkspaceRPApplicationFormState>
 > = {
-	basics: ["canadaLoginEnvironment", "serviceNameEn", "serviceNameFr"],
+	basics: [
+		"applicationInformationUuid",
+		"canadaLoginEnvironment",
+		"configurationName",
+		"partnerEnvironment",
+		"serviceNameEn",
+		"serviceNameFr",
+	],
 	"client-and-access": [
 		"supportsAuthorizationCodeFlow",
 		"clientType",
@@ -540,7 +559,7 @@ export const getWorkspaceRPApplicationStepFieldErrorKeys = (
 	const fieldErrors: WorkspaceRPApplicationFieldErrorKeys = {};
 	const setError = (
 		field: keyof WorkspaceRPApplicationFormState,
-		messageKey: WorkspaceRPApplicationValidationMessageKey
+		messageKey: WorkspaceRPApplicationFieldErrorMessageKey
 	): void => {
 		fieldErrors[field] ??= messageKey;
 	};
@@ -1013,6 +1032,8 @@ export const createEmptyWorkspaceRPApplicationForm =
 		applicationEnvironmentUrlFr: "",
 		applicationInformationUuid: "",
 		canadaLoginEnvironment: "",
+		configurationName: "",
+		partnerEnvironment: "",
 		clientAuthMethod: "",
 		clientType: "",
 		jwksUri: "",
@@ -1079,6 +1100,8 @@ export const toWorkspaceRPApplicationFormState = (
 		),
 		applicationInformationUuid: applicationInformationUuid ?? "",
 		canadaLoginEnvironment: application.canadaLoginEnvironment ?? "",
+		configurationName: application.configurationName ?? "",
+		partnerEnvironment: application.partnerEnvironment ?? "",
 		clientAuthMethod: readString(payload, "client_auth_method"),
 		clientType: readString(payload, "client_type"),
 		jwksUri: readString(payload, "jwks_uri"),
@@ -1304,6 +1327,8 @@ export const toWorkspaceRPApplicationDraftFormState = (
 		{
 			canadaLoginEnvironment:
 				draft.registrationAnswers.canadaLoginEnvironment ?? null,
+			configurationName: draft.configurationName ?? "",
+			partnerEnvironment: draft.partnerEnvironment ?? null,
 			createdAt: "",
 			createdBy: null,
 			dnrAppName: draft.registrationAnswers.serviceNameEn ?? "",
@@ -1314,6 +1339,6 @@ export const toWorkspaceRPApplicationDraftFormState = (
 			uuid: draft.rpApplicationUuid,
 			workspaceId: null,
 		},
-		draft.registrationAnswers.applicationInformationUuid ?? null
+		draft.applicationInformationUuid
 	);
 };

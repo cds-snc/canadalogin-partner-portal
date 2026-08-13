@@ -1,16 +1,22 @@
 import type { PropsWithChildren, ReactElement } from "react";
 import { fireEvent, render, screen } from "@testing-library/react";
-import { describe, expect, it, vi } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import { ApplicationInformationListPage } from "@/features/workspaces/pages/ApplicationInformationListPage";
 import { useWorkspace } from "@/features/workspaces/hooks/use-workspace";
 import { useWorkspaceApplicationInformationList } from "@/features/workspaces/hooks/use-workspace-application-information";
 
 const navigateMock = vi.fn(() => Promise.resolve());
+const i18nState = vi.hoisted(() => ({ resolvedLanguage: "en" }));
 
 vi.mock("react-i18next", () => ({
 	useTranslation: (): {
+		i18n: { language: string; resolvedLanguage: string };
 		t: (key: string, options?: Record<string, unknown>) => string;
 	} => ({
+		i18n: {
+			language: i18nState.resolvedLanguage,
+			resolvedLanguage: i18nState.resolvedLanguage,
+		},
 		t: (key: string, options?: Record<string, unknown>): string => {
 			const translations: Record<string, string> = {
 				"common.notAvailable": "Not available",
@@ -20,11 +26,12 @@ vi.mock("react-i18next", () => ({
 				"workspaces.appInfoListSummary":
 					"Create, review, and update canonical bilingual application details for this workspace.",
 				"workspaces.appInfoSectionTitle": "Application Information",
-				"workspaces.appInfoServiceNameEnLabel": "Service name (English)",
-				"workspaces.appInfoServiceNameFrLabel": "Service name (French)",
+				"workspaces.appInfoServiceNameLabel":
+					i18nState.resolvedLanguage.startsWith("fr") ? "Nom" : "Name",
+				"workspaces.appInfoViewAction": "View application",
 				"workspaces.onboardingStateColumn": "Onboarding status",
 				"workspaces.onboardingStateUnderReview": "Under review",
-				"workspaces.viewAction": "View workspace",
+				"workspaces.rpConfigurationAddAction": "Add RP configuration",
 			};
 
 			if (key === "workspaces.appInfoListTitle") {
@@ -77,23 +84,29 @@ vi.mock("@/components/ui", () => ({
 		),
 	DataTable: ({
 		action,
+		columns,
 		primaryAction,
 		rows,
 	}: {
-		action: {
+		action: Array<{
 			buttonLabel: string;
+			isVisible?: () => boolean;
 			onAction: (row: {
+				name: string;
 				onboardingState: string;
-				serviceNameEn: string;
-				serviceNameFr: string;
 				uuid: string;
 			}) => void;
-		};
+			screenReaderLabel: (row: {
+				name: string;
+				onboardingState: string;
+				uuid: string;
+			}) => string;
+		}>;
+		columns: Array<{ field: string; headerName: string; rowHeader?: boolean }>;
 		primaryAction: { buttonLabel: string; onAction: () => void };
 		rows: Array<{
+			name: string;
 			onboardingState: string;
-			serviceNameEn: string;
-			serviceNameFr: string;
 			uuid: string;
 		}>;
 	}): ReactElement => (
@@ -101,15 +114,42 @@ vi.mock("@/components/ui", () => ({
 			<button onClick={primaryAction.onAction} type="button">
 				{primaryAction.buttonLabel}
 			</button>
-			{rows.map((row) => (
-				<div key={row.uuid}>
-					<span>{row.serviceNameEn}</span>
-					<span>{row.onboardingState}</span>
-					<button onClick={() => action.onAction(row)} type="button">
-						{action.buttonLabel}
-					</button>
-				</div>
-			))}
+			<table>
+				<thead>
+					<tr>
+						{columns.map((column) => (
+							<th key={column.field}>{column.headerName}</th>
+						))}
+					</tr>
+				</thead>
+				<tbody>
+					{rows.map((row) => (
+						<tr key={row.uuid}>
+							{columns.map((column) => (
+								<td key={column.field}>
+									{String(row[column.field as keyof typeof row])}
+								</td>
+							))}
+							<td>
+								{action
+									.filter((item) => !item.isVisible || item.isVisible())
+									.map((item) => (
+										<button
+											key={item.buttonLabel}
+											onClick={() => item.onAction(row)}
+											type="button"
+										>
+											{item.buttonLabel}{" "}
+											<span className="sr-only">
+												{item.screenReaderLabel(row)}
+											</span>
+										</button>
+									))}
+							</td>
+						</tr>
+					))}
+				</tbody>
+			</table>
 		</section>
 	),
 	Heading: ({ children }: PropsWithChildren): ReactElement => (
@@ -139,6 +179,11 @@ vi.mock(
 );
 
 describe("ApplicationInformationListPage", () => {
+	beforeEach(() => {
+		i18nState.resolvedLanguage = "en";
+		navigateMock.mockClear();
+	});
+
 	it("renders the delete success notice and navigates to detail and create routes", () => {
 		vi.mocked(useWorkspace).mockReturnValue({
 			error: null,
@@ -189,6 +234,11 @@ describe("ApplicationInformationListPage", () => {
 		});
 
 		render(<ApplicationInformationListPage />);
+		expect(screen.getByRole("cell", { name: "Example service" })).toBeTruthy();
+		expect(screen.queryByText("Service exemple")).toBeNull();
+		expect(screen.getAllByRole("columnheader")).toHaveLength(2);
+		expect(screen.getByRole("columnheader", { name: "Name" })).toBeTruthy();
+		expect(screen.queryAllByRole("rowheader")).toHaveLength(0);
 		expect(screen.getByText(/under review/i)).toBeTruthy();
 
 		expect(
@@ -197,13 +247,24 @@ describe("ApplicationInformationListPage", () => {
 			})
 		).toBeTruthy();
 
-		fireEvent.click(screen.getByRole("button", { name: /view workspace/i }));
+		fireEvent.click(screen.getByRole("button", { name: /view application/i }));
 		expect(navigateMock).toHaveBeenCalledWith({
 			params: {
 				applicationInformationUuid: "application-information-uuid-1",
 				workspaceUuid: "workspace-uuid-1",
 			},
-			to: "/workspaces/$workspaceUuid/application-information/$applicationInformationUuid",
+			to: "/workspaces/$workspaceUuid/applications/$applicationInformationUuid",
+		});
+
+		fireEvent.click(
+			screen.getByRole("button", { name: /add rp configuration/i })
+		);
+		expect(navigateMock).toHaveBeenCalledWith({
+			params: {
+				applicationInformationUuid: "application-information-uuid-1",
+				workspaceUuid: "workspace-uuid-1",
+			},
+			to: "/workspaces/$workspaceUuid/applications/$applicationInformationUuid/rp-configurations/new",
 		});
 
 		fireEvent.click(
@@ -211,7 +272,70 @@ describe("ApplicationInformationListPage", () => {
 		);
 		expect(navigateMock).toHaveBeenCalledWith({
 			params: { workspaceUuid: "workspace-uuid-1" },
-			to: "/workspaces/$workspaceUuid/application-information/new",
+			to: "/workspaces/$workspaceUuid/applications/new",
 		});
+	});
+
+	it("shows only the French Application name for a French interface", () => {
+		i18nState.resolvedLanguage = "fr-CA";
+		vi.mocked(useWorkspace).mockReturnValue({
+			error: null,
+			isLoading: false,
+			refetch: vi.fn((): Promise<unknown> => Promise.resolve()),
+			workspace: {
+				createdAt: "2026-07-30T12:00:00Z",
+				createdBy: 42,
+				deletedAt: null,
+				description: "Primary workspace",
+				departmentId: 7,
+				id: 9,
+				isDeleted: false,
+				name: "Benefits Workspace",
+				slug: "benefits-workspace",
+				updatedAt: null,
+				uuid: "workspace-uuid-1",
+			},
+		});
+		vi.mocked(useWorkspaceApplicationInformationList).mockReturnValue({
+			applicationInformationRecords: [
+				{
+					approvedAt: null,
+					createdAt: "2026-07-30T15:00:00Z",
+					createdBy: 42,
+					deletedAt: null,
+					id: 17,
+					isDeleted: false,
+					launchedAt: null,
+					migrationOrTransitionPlan: "Phased transition",
+					onboardingState: "under_review",
+					overview: "Overview text",
+					securityAndPrivacy: "Protected B controls apply",
+					serviceNameEn: "Example service",
+					serviceNameFr: "Service exemple",
+					submittedAt: null,
+					technologyAndProtocol: "OIDC with backend mediation",
+					underReviewAt: null,
+					updatedAt: null,
+					usage: "Partner onboarding usage",
+					uuid: "application-information-uuid-1",
+					workspaceId: 9,
+				},
+			],
+			error: null,
+			isLoading: false,
+			refetch: vi.fn((): Promise<unknown> => Promise.resolve()),
+		});
+
+		render(<ApplicationInformationListPage />);
+
+		expect(screen.getByRole("cell", { name: "Service exemple" })).toBeTruthy();
+		expect(screen.queryByText("Example service")).toBeNull();
+		expect(screen.getByRole("columnheader", { name: "Nom" })).toBeTruthy();
+		expect(screen.queryAllByRole("rowheader")).toHaveLength(0);
+		expect(
+			screen.getByRole("button", {
+				name: "View application Service exemple",
+			})
+		).toBeTruthy();
 	});
 });

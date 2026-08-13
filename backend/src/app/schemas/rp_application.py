@@ -6,8 +6,10 @@ from typing import Literal, Optional
 
 from pydantic import AnyHttpUrl, BaseModel, ConfigDict, Field, field_validator, model_validator
 from pydantic.alias_generators import to_camel
+from uuid6 import uuid7
 
 from ..core.authorization import CanonicalRoleCode
+from ..core.rp_configuration import normalize_configuration_name, normalize_partner_environment
 from ..core.schemas import PersistentDeletion, UUIDSchema
 from .authorization import AccessibleRPApplicationAuthorizationRead
 from .onboarding import OnboardingLifecycleRead, OnboardingState
@@ -82,6 +84,8 @@ class RPApplicationRead(RPApplicationBase, OnboardingLifecycleRead, UUIDSchema, 
     workspace_id: int | None = None
     department_id: int | None
     application_information_id: int | None = None
+    configuration_name: str = Field(..., min_length=1, max_length=128)
+    partner_environment: str | None = Field(default=None, min_length=1, max_length=128)
     created_by: int | None
     created_at: datetime
     canada_login_environment: str | None = None
@@ -104,7 +108,10 @@ class AccessibleRPApplicationRead(AccessibleRPApplicationAuthorizationRead):
     """Grant-derived projection without internal integer identifiers."""
 
     uuid: uuid_pkg.UUID
+    application_information_uuid: uuid_pkg.UUID | None = None
     dnr_app_name: str
+    configuration_name: str | None = Field(default=None, max_length=128)
+    partner_environment: str | None = Field(default=None, min_length=1, max_length=128)
     ibm_sv_application_id: str | None = None
     department_uuid: uuid_pkg.UUID | None = None
     canada_login_environment: str | None = None
@@ -130,12 +137,64 @@ class RPApplicationSummaryRead(BaseModel):
     workspace_name: str
     service_name_en: str
     service_name_fr: str
+    configuration_name: str | None = Field(default=None, max_length=128)
+    partner_environment: str | None = Field(default=None, min_length=1, max_length=128)
     canada_login_environment: str | None = None
     onboarding_state: OnboardingState | None = None
     promotion_status: str | None = None
     registration_last_completed_step: RegistrationDataStep | None = None
     resume_task_path: str | None = None
     role: CanonicalRoleCode | None = None
+
+
+class ApplicationRPConfigurationSummaryRead(RPApplicationSummaryRead):
+    """Secret-free RP configuration summary scoped to one Application."""
+
+    application_information_uuid: uuid_pkg.UUID
+    configuration_name: str = Field(..., min_length=1, max_length=128)
+
+
+class ApplicationRPConfigurationPartnerEnvironmentUpdate(BaseModel):
+    """Focused metadata update that cannot mutate registration or lifecycle state."""
+
+    model_config = ConfigDict(
+        extra="forbid",
+        validate_by_name=True,
+        validate_by_alias=True,
+        alias_generator=to_camel,
+        populate_by_name=True,
+    )
+
+    partner_environment: str = Field(..., min_length=1, max_length=128)
+
+    @field_validator("partner_environment", mode="before")
+    @classmethod
+    def normalize_partner_environment(cls, value: object) -> str:
+        if not isinstance(value, str):
+            raise ValueError("partner environment must be text")
+        normalized = normalize_partner_environment(value)
+        assert normalized is not None
+        return normalized
+
+
+class ApplicationRPConfigurationPartnerEnvironmentRead(BaseModel):
+    """Public result of the focused Partner-environment metadata update."""
+
+    model_config = ConfigDict(
+        extra="forbid",
+        frozen=True,
+        validate_by_name=True,
+        validate_by_alias=True,
+        alias_generator=to_camel,
+        populate_by_name=True,
+        serialize_by_alias=True,
+    )
+
+    workspace_uuid: uuid_pkg.UUID
+    application_information_uuid: uuid_pkg.UUID
+    rp_configuration_uuid: uuid_pkg.UUID
+    partner_environment: str = Field(..., min_length=1, max_length=128)
+    updated_at: datetime
 
 
 class AccessibleRPApplicationOAuthSetupRead(BaseModel):
@@ -372,6 +431,9 @@ class WorkspaceRPApplicationRegistrationBase(BaseModel):
 
 
 class WorkspaceRPApplicationRegistrationCreate(WorkspaceRPApplicationRegistrationBase):
+    application_information_uuid: uuid_pkg.UUID
+    configuration_name: str = Field(..., min_length=1, max_length=128)
+    partner_environment: str = Field(..., min_length=1, max_length=128)
     canada_login_environment: CanadaLoginEnvironment
     service_name_en: str = Field(..., min_length=1, max_length=128)
     service_name_fr: str = Field(..., min_length=1, max_length=128)
@@ -393,6 +455,24 @@ class WorkspaceRPApplicationRegistrationCreate(WorkspaceRPApplicationRegistratio
     request_encryption_supported: bool
     message_decryption_supported: bool
 
+    @field_validator("configuration_name", mode="before")
+    @classmethod
+    def normalize_configuration_name(cls, value: object) -> str:
+        if not isinstance(value, str):
+            raise ValueError("configuration name must be text")
+        normalized = normalize_configuration_name(value)
+        assert normalized is not None
+        return normalized
+
+    @field_validator("partner_environment", mode="before")
+    @classmethod
+    def normalize_partner_environment(cls, value: object) -> str:
+        if not isinstance(value, str):
+            raise ValueError("partner environment must be text")
+        normalized = normalize_partner_environment(value)
+        assert normalized is not None
+        return normalized
+
 
 class WorkspaceRPApplicationRegistrationUpdate(WorkspaceRPApplicationRegistrationBase):
     pass
@@ -407,9 +487,127 @@ class WorkspaceRPApplicationRegistrationAnswers(WorkspaceRPApplicationRegistrati
 
 
 class WorkspaceRPApplicationRegistrationDraftCreate(WorkspaceRPApplicationRegistrationAnswers):
+    application_information_uuid: uuid_pkg.UUID
+    configuration_name: str = Field(..., min_length=1, max_length=128)
+    partner_environment: str = Field(..., min_length=1, max_length=128)
     canada_login_environment: CanadaLoginEnvironment
     service_name_en: str = Field(..., min_length=1, max_length=128)
     service_name_fr: str = Field(..., min_length=1, max_length=128)
+
+    @field_validator("configuration_name", mode="before")
+    @classmethod
+    def normalize_configuration_name(cls, value: object) -> str:
+        if not isinstance(value, str):
+            raise ValueError("configuration name must be text")
+        normalized = normalize_configuration_name(value)
+        assert normalized is not None
+        return normalized
+
+    @field_validator("partner_environment", mode="before")
+    @classmethod
+    def normalize_partner_environment(cls, value: object) -> str:
+        if not isinstance(value, str):
+            raise ValueError("partner environment must be text")
+        normalized = normalize_partner_environment(value)
+        assert normalized is not None
+        return normalized
+
+
+class ApplicationRPConfigurationRegistrationDraftCreate(BaseModel):
+    """Minimum Basics payload for an Application-scoped RP configuration."""
+
+    model_config = ConfigDict(
+        extra="forbid",
+        validate_by_name=True,
+        validate_by_alias=True,
+        alias_generator=to_camel,
+        populate_by_name=True,
+    )
+
+    configuration_name: str = Field(..., min_length=1, max_length=128)
+    partner_environment: str = Field(..., min_length=1, max_length=128)
+    canada_login_environment: CanadaLoginEnvironment
+
+    @field_validator("configuration_name", mode="before")
+    @classmethod
+    def normalize_configuration_name(cls, value: object) -> str:
+        if not isinstance(value, str):
+            raise ValueError("configuration name must be text")
+        normalized = normalize_configuration_name(value)
+        assert normalized is not None
+        return normalized
+
+    @field_validator("partner_environment", mode="before")
+    @classmethod
+    def normalize_partner_environment(cls, value: object) -> str:
+        if not isinstance(value, str):
+            raise ValueError("partner environment must be text")
+        normalized = normalize_partner_environment(value)
+        assert normalized is not None
+        return normalized
+
+
+class ApplicationRPConfigurationProgressionCreate(BaseModel):
+    """Create one explicitly named target from one selected source."""
+
+    model_config = ConfigDict(
+        extra="forbid",
+        validate_by_name=True,
+        validate_by_alias=True,
+        alias_generator=to_camel,
+        populate_by_name=True,
+    )
+
+    target_configuration_name: str = Field(..., min_length=1, max_length=128)
+    target_partner_environment: str = Field(..., min_length=1, max_length=128)
+    target_environment: Literal["staging", "production"]
+
+    @field_validator("target_configuration_name", mode="before")
+    @classmethod
+    def normalize_target_configuration_name(cls, value: object) -> str:
+        if not isinstance(value, str):
+            raise ValueError("target configuration name must be text")
+        normalized = normalize_configuration_name(value)
+        assert normalized is not None
+        return normalized
+
+    @field_validator("target_partner_environment", mode="before")
+    @classmethod
+    def normalize_target_partner_environment(cls, value: object) -> str:
+        if not isinstance(value, str):
+            raise ValueError("target partner environment must be text")
+        normalized = normalize_partner_environment(value)
+        assert normalized is not None
+        return normalized
+
+
+class ApplicationRPConfigurationProgressionRead(BaseModel):
+    """Public source/target lineage for a newly created progression draft."""
+
+    model_config = ConfigDict(
+        extra="forbid",
+        frozen=True,
+        validate_by_name=True,
+        validate_by_alias=True,
+        alias_generator=to_camel,
+        populate_by_name=True,
+        serialize_by_alias=True,
+    )
+
+    workspace_uuid: uuid_pkg.UUID
+    application_information_uuid: uuid_pkg.UUID
+    source_rp_configuration_uuid: uuid_pkg.UUID
+    source_configuration_name: str
+    source_partner_environment: str | None = Field(default=None, min_length=1, max_length=128)
+    source_environment: CanadaLoginEnvironment
+    target_rp_configuration_uuid: uuid_pkg.UUID
+    target_configuration_name: str
+    target_partner_environment: str | None = Field(default=None, min_length=1, max_length=128)
+    target_environment: Literal["staging", "production"]
+    target_registration_draft_version: int = Field(..., ge=0)
+    target_registration_last_completed_step: RegistrationDataStep | None = None
+    self_serve: bool
+    promotion_status: str | None = None
 
 
 class WorkspaceRPApplicationRegistrationDraftPatch(BaseModel):
@@ -424,7 +622,25 @@ class WorkspaceRPApplicationRegistrationDraftPatch(BaseModel):
     step_id: RegistrationDataStep
     save_mode: RegistrationSaveMode
     expected_draft_version: int = Field(..., ge=0)
+    configuration_name: str | None = Field(default=None, min_length=1, max_length=128)
+    partner_environment: str | None = Field(default=None, min_length=1, max_length=128)
     registration_answers: WorkspaceRPApplicationRegistrationAnswers
+
+    @field_validator("configuration_name", mode="before")
+    @classmethod
+    def normalize_configuration_name(cls, value: object) -> str | None:
+        if value is None:
+            return None
+        if not isinstance(value, str):
+            raise ValueError("configuration name must be text")
+        return normalize_configuration_name(value)
+
+    @field_validator("partner_environment", mode="before")
+    @classmethod
+    def normalize_partner_environment(cls, value: object) -> str | None:
+        if value is not None and not isinstance(value, str):
+            raise ValueError("partner environment must be text")
+        return normalize_partner_environment(value)
 
 
 class WorkspaceRPApplicationRegistrationDraftRead(BaseModel):
@@ -440,7 +656,10 @@ class WorkspaceRPApplicationRegistrationDraftRead(BaseModel):
 
     workspace_uuid: uuid_pkg.UUID
     rp_application_uuid: uuid_pkg.UUID
+    application_information_uuid: uuid_pkg.UUID
     onboarding_state: Literal["draft"]
+    configuration_name: str = Field(..., min_length=1, max_length=128)
+    partner_environment: str | None = Field(default=None, min_length=1, max_length=128)
     registration_draft_version: int = Field(..., ge=0)
     registration_last_completed_step: RegistrationDataStep | None = None
     registration_answers: WorkspaceRPApplicationRegistrationAnswers
@@ -463,6 +682,8 @@ class WorkspaceRPApplicationConfigurationRead(BaseModel):
     rp_application_uuid: uuid_pkg.UUID
     service_name_en: str
     service_name_fr: str
+    configuration_name: str | None = Field(default=None, max_length=128)
+    partner_environment: str | None = Field(default=None, min_length=1, max_length=128)
     canada_login_environment: CanadaLoginEnvironment | None = None
     onboarding_state: OnboardingState | None = None
     promotion_status: str | None = None
@@ -470,6 +691,14 @@ class WorkspaceRPApplicationConfigurationRead(BaseModel):
     registration_last_completed_step: RegistrationDataStep | None = None
     registration_answers: WorkspaceRPApplicationRegistrationAnswers
     offline_public_key_provided: bool = False
+
+
+class ApplicationRPConfigurationRead(WorkspaceRPApplicationConfigurationRead):
+    """Secret-free Configuration view with public Application ancestry."""
+
+    application_information_uuid: uuid_pkg.UUID
+    configuration_name: str = Field(..., min_length=1, max_length=128)
+    partner_environment: str | None = Field(default=None, min_length=1, max_length=128)
 
 
 class WorkspaceRPApplicationRegistrationSubmissionRead(BaseModel):
@@ -521,10 +750,14 @@ class RPApplicationUpdate(BaseModel):
 
 class RPApplicationCreateInternal(BaseModel):
     model_config = ConfigDict(arbitrary_types_allowed=True)
+    uuid: uuid_pkg.UUID = Field(default_factory=uuid7)
     workspace_id: int | None = None
     department_id: int | None
     application_information_id: int | None = None
     dnr_app_name: str
+    configuration_name: str = Field(..., min_length=1, max_length=128)
+    partner_environment: str | None = Field(default=None, min_length=1, max_length=128)
+    source_rp_configuration_id: int | None = Field(default=None, ge=1)
     canada_login_environment: str | None = None
     status: str | None = None
     ibm_sv_application_id: str | None = None
@@ -534,6 +767,20 @@ class RPApplicationCreateInternal(BaseModel):
     registration_last_completed_step: RegistrationDataStep | None = None
     created_by: int | None = None
 
+    @field_validator("configuration_name", mode="before")
+    @classmethod
+    def normalize_configuration_name(cls, value: object) -> str | None:
+        if value is not None and not isinstance(value, str):
+            raise ValueError("configuration name must be text")
+        return normalize_configuration_name(value)
+
+    @field_validator("partner_environment", mode="before")
+    @classmethod
+    def normalize_partner_environment(cls, value: object) -> str | None:
+        if value is not None and not isinstance(value, str):
+            raise ValueError("partner environment must be text")
+        return normalize_partner_environment(value)
+
 
 class RPApplicationUpdateInternal(BaseModel):
     model_config = ConfigDict(arbitrary_types_allowed=True)
@@ -541,12 +788,29 @@ class RPApplicationUpdateInternal(BaseModel):
     dnr_app_name: str | None = None
     department_id: int | None = None
     application_information_id: int | None = None
+    configuration_name: str | None = Field(default=None, max_length=128)
+    partner_environment: str | None = Field(default=None, min_length=1, max_length=128)
+    source_rp_configuration_id: int | None = Field(default=None, ge=1)
     canada_login_environment: str | None = None
     status: str | None = None
     oidc_registration_payload: dict[str, object] | None = None
     registration_draft_version: int | None = Field(default=None, ge=0)
     registration_last_completed_step: RegistrationDataStep | None = None
     updated_at: datetime
+
+    @field_validator("configuration_name", mode="before")
+    @classmethod
+    def normalize_configuration_name(cls, value: object) -> str | None:
+        if value is not None and not isinstance(value, str):
+            raise ValueError("configuration name must be text")
+        return normalize_configuration_name(value)
+
+    @field_validator("partner_environment", mode="before")
+    @classmethod
+    def normalize_partner_environment(cls, value: object) -> str | None:
+        if value is not None and not isinstance(value, str):
+            raise ValueError("partner environment must be text")
+        return normalize_partner_environment(value)
 
 
 class RPApplicationDelete(PersistentDeletion):
@@ -645,6 +909,7 @@ class AccessibleRPApplicationSummaryRead(BaseModel):
     uuid: uuid_pkg.UUID
     dnr_app_name: str
     department_id: Optional[int] = None
+    partner_environment: str | None = Field(default=None, min_length=1, max_length=128)
 
 
 class AccessibleRPApplicationDepartmentAssignRequest(BaseModel):

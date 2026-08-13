@@ -63,6 +63,26 @@ describe("WorkspaceRPApplicationForm", () => {
 		expect(screen.getByLabelText("Service name (French)")).toBeTruthy();
 	});
 
+	it("shows parent Application context without recollecting public names", () => {
+		render(
+			<WorkspaceRPApplicationForm
+				applicationContextName="Benefits Portal"
+				applicationInformationOptions={[]}
+				cancelHref="/rp-configurations"
+				form={createEmptyWorkspaceRPApplicationForm()}
+				isSubmitting={false}
+				step="basics"
+				submitLabel="Continue"
+				onChange={vi.fn()}
+				onSubmit={vi.fn()}
+			/>
+		);
+
+		expect(screen.getByText(/Benefits Portal/)).toBeTruthy();
+		expect(screen.queryByLabelText("Service name (English)")).toBeNull();
+		expect(screen.queryByLabelText("Service name (French)")).toBeNull();
+	});
+
 	it("uses a semantic form submission path for keyboard-compatible continuation", () => {
 		const onSubmit = vi.fn();
 		render(

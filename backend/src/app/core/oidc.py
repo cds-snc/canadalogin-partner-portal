@@ -57,7 +57,7 @@ def get_oidc_server_metadata_url() -> str | None:
 
 async def load_oidc_server_metadata(client) -> dict[str, Any]:
     try:
-        return await client.load_server_metadata()
+        return dict(await client.load_server_metadata())
     except (httpx.HTTPError, JSONDecodeError, TypeError, ValueError) as exc:
         raise _build_oidc_configuration_error(_OIDC_DISCOVERY_ERROR_MESSAGE) from exc
 

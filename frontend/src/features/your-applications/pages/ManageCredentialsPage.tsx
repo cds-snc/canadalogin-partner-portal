@@ -20,9 +20,9 @@ import {
 	deleteAccessibleRPApplicationRotatedClientSecret,
 	getAccessibleRPApplicationClientCredentials,
 	getAccessibleRPApplicationRotatedClientSecrets,
-	getRPApplication,
+	getApplicationRPConfiguration,
 	rotateAccessibleRPApplicationClientSecret,
-	type RPApplicationRead,
+	type ApplicationRPConfigurationSummaryRead,
 	type RPApplicationClientCredentialsRead,
 	type RPApplicationRotatedSecretRead,
 } from "@/fetch/rp-applications";
@@ -69,15 +69,16 @@ const formatEpochForDisplay = (
 };
 
 export const ManageCredentialsPage = (): FunctionComponent => {
-	const { rpApplicationUuid, workspaceUuid } = useParams({
-		from: "/workspaces/$workspaceUuid/applications/$rpApplicationUuid/manage-credentials",
-	});
+	const params = useParams({ strict: false });
+	const applicationInformationUuid = params["applicationInformationUuid"] ?? "";
+	const rpApplicationUuid =
+		params["rpConfigurationUuid"] || params["rpApplicationUuid"] || "";
+	const workspaceUuid = params["workspaceUuid"] ?? "";
 	const { i18n, t } = useTranslation();
 	const toast = useToast();
 
-	const [application, setApplication] = useState<RPApplicationRead | null>(
-		null
-	);
+	const [application, setApplication] =
+		useState<ApplicationRPConfigurationSummaryRead | null>(null);
 	const [credentials, setCredentials] =
 		useState<RPApplicationClientCredentialsRead | null>(null);
 	const [rotatedSecrets, setRotatedSecrets] = useState<
@@ -104,8 +105,9 @@ export const ManageCredentialsPage = (): FunctionComponent => {
 
 		const loadClientData = async (): Promise<void> => {
 			try {
-				const applicationResponse = await getRPApplication(
+				const applicationResponse = await getApplicationRPConfiguration(
 					workspaceUuid,
+					applicationInformationUuid,
 					rpApplicationUuid
 				);
 				if (!isMounted) {
@@ -117,11 +119,13 @@ export const ManageCredentialsPage = (): FunctionComponent => {
 					[
 						getAccessibleRPApplicationClientCredentials(
 							rpApplicationUuid,
-							workspaceUuid
+							workspaceUuid,
+							applicationInformationUuid
 						),
 						getAccessibleRPApplicationRotatedClientSecrets(
 							rpApplicationUuid,
-							workspaceUuid
+							workspaceUuid,
+							applicationInformationUuid
 						),
 					]
 				);
@@ -156,7 +160,7 @@ export const ManageCredentialsPage = (): FunctionComponent => {
 		return () => {
 			isMounted = false;
 		};
-	}, [rpApplicationUuid, workspaceUuid]);
+	}, [applicationInformationUuid, rpApplicationUuid, workspaceUuid]);
 
 	const rotatedSecretCheckboxOptions = useMemo<
 		Array<RotatedSecretCheckboxOption>
@@ -205,7 +209,8 @@ export const ManageCredentialsPage = (): FunctionComponent => {
 			const nextCredentials = await rotateAccessibleRPApplicationClientSecret(
 				rpApplicationUuid,
 				undefined,
-				workspaceUuid
+				workspaceUuid,
+				applicationInformationUuid
 			);
 			setCredentials(nextCredentials);
 			setIsSecretVisible(true);
@@ -231,11 +236,13 @@ export const ManageCredentialsPage = (): FunctionComponent => {
 						description: normalizedName,
 						rotatedSecretExpiredAt: expiresAt,
 					},
-					workspaceUuid
+					workspaceUuid,
+					applicationInformationUuid
 				);
 			const nextCredentials = await getAccessibleRPApplicationClientCredentials(
 				rpApplicationUuid,
-				workspaceUuid
+				workspaceUuid,
+				applicationInformationUuid
 			);
 			setRotatedSecrets(nextRotatedSecrets);
 			setCredentials(nextCredentials);
@@ -274,7 +281,8 @@ export const ManageCredentialsPage = (): FunctionComponent => {
 			await deleteAccessibleRPApplicationRotatedClientSecret(
 				rpApplicationUuid,
 				deleteSecretId,
-				workspaceUuid
+				workspaceUuid,
+				applicationInformationUuid
 			);
 			setRotatedSecrets((current) =>
 				current.filter(
@@ -308,12 +316,16 @@ export const ManageCredentialsPage = (): FunctionComponent => {
 		);
 	}
 
+	const applicationName = application
+		? application.configurationName?.trim() ||
+			(lang === "fr" ? application.serviceNameFr : application.serviceNameEn)
+		: t("manageCredentials.clientCredentials");
+	const parentPath = `/workspaces/${workspaceUuid}/applications/${applicationInformationUuid}/rp-configurations/${rpApplicationUuid}`;
+
 	if (loadError) {
 		return (
 			<Grid columns="1fr" tag="div">
-				<Heading tag="h1">
-					{application?.dnrAppName ?? t("manageCredentials.clientCredentials")}
-				</Heading>
+				<Heading tag="h1">{applicationName}</Heading>
 				<Notice
 					noticeRole="danger"
 					noticeTitle={t("manageCredentials.applicationClientUnavailableTitle")}
@@ -321,10 +333,7 @@ export const ManageCredentialsPage = (): FunctionComponent => {
 				>
 					<Text>{t("manageCredentials.applicationClientUnavailableBody")}</Text>
 				</Notice>
-				<Button
-					href={`/workspaces/${workspaceUuid}/applications/${rpApplicationUuid}`}
-					type="link"
-				>
+				<Button href={parentPath} type="link">
 					{t("manageCredentials.applicationClientBackAction")}
 				</Button>
 			</Grid>
@@ -338,7 +347,7 @@ export const ManageCredentialsPage = (): FunctionComponent => {
 	return (
 		<Grid columns="1fr" tag="div">
 			<Heading marginBottom="0" tag="h1">
-				{application.dnrAppName}
+				{applicationName}
 			</Heading>
 
 			<Text>{t("manageCredentials.applicationClientHelp")}</Text>

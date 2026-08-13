@@ -47,7 +47,27 @@ class LocalRPApplicationFixture:
     key: str
     uuid: UUID
     name: str
+    partner_environment: str
     canada_login_environment: str
+
+    @property
+    def configuration_name(self) -> str:
+        """Match the stable label assigned to legacy local fixtures by 0028."""
+
+        return f"{self.name} [{str(self.uuid)[:8]}]"
+
+
+@dataclass(frozen=True, slots=True)
+class LocalApplicationInformationFixture:
+    key: str
+    uuid: UUID
+    service_name_en: str
+    service_name_fr: str
+    overview: str = "Fake local-only Application used for role-path verification."
+    technology_and_protocol: str = "OIDC"
+    security_and_privacy: str = "Local fake data only."
+    usage: str = "Local role-path verification."
+    migration_or_transition_plan: str = "No migration required for local fixtures."
 
 
 @dataclass(frozen=True, slots=True)
@@ -58,6 +78,7 @@ class LocalWorkspaceFixture:
     slug: str
     description: str
     department: LocalDepartmentFixture
+    application_information: LocalApplicationInformationFixture
     applications: tuple[LocalRPApplicationFixture, ...]
 
 
@@ -123,11 +144,18 @@ LOCAL_ALPHA_WORKSPACE: Final = LocalWorkspaceFixture(
     slug="local-partner-alpha",
     description="Fake local-only partner workspace used for allowed-scope verification.",
     department=LOCAL_ALPHA_DEPARTMENT,
+    application_information=LocalApplicationInformationFixture(
+        key="alpha",
+        uuid=local_persona_uuid("application-information", "alpha"),
+        service_name_en="Local Alpha Application",
+        service_name_fr="Application locale Alpha",
+    ),
     applications=(
         LocalRPApplicationFixture(
             key="alpha-primary",
             uuid=local_persona_uuid("rp-application", "alpha-primary"),
             name="Local Alpha Test RP Application",
+            partner_environment="Local Alpha QA",
             canada_login_environment="test",
         ),
     ),
@@ -139,11 +167,18 @@ LOCAL_BETA_WORKSPACE: Final = LocalWorkspaceFixture(
     slug="local-partner-beta",
     description="Fake local-only partner workspace used for cross-scope denial verification.",
     department=LOCAL_BETA_DEPARTMENT,
+    application_information=LocalApplicationInformationFixture(
+        key="beta",
+        uuid=local_persona_uuid("application-information", "beta"),
+        service_name_en="Local Beta Application",
+        service_name_fr="Application locale Bêta",
+    ),
     applications=(
         LocalRPApplicationFixture(
             key="beta-primary",
             uuid=local_persona_uuid("rp-application", "beta-primary"),
             name="Local Beta Test RP Application",
+            partner_environment="Local Beta QA",
             canada_login_environment="test",
         ),
     ),
@@ -245,6 +280,7 @@ __all__ = [
     "LOCAL_PERSONAS_BY_ID",
     "LOCAL_WORKSPACE_FIXTURES",
     "LOCAL_WORKSPACES_BY_KEY",
+    "LocalApplicationInformationFixture",
     "LocalDepartmentFixture",
     "LocalPersonaFixture",
     "LocalPersonaPartnerAccess",

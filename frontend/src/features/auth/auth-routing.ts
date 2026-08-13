@@ -51,6 +51,8 @@ const AUTHENTICATED_ONBOARDING_PATHS = [
 	"/profile/setup",
 ] as const;
 
+const AUTHENTICATED_COMPATIBILITY_PATHS = ["/your-applications"] as const;
+
 const isTokenizedInvitationPath = (path: string): boolean =>
 	path.startsWith("/invitations/rp-applications/");
 
@@ -76,6 +78,16 @@ export const getAuthorizedPostLoginPath = (
 		return isRouteVisible(route, currentUser.authorizationContext)
 			? sanitizedPath
 			: landingPath;
+	}
+
+	if (
+		AUTHENTICATED_COMPATIBILITY_PATHS.some(
+			(pathPrefix) =>
+				sanitizedPath === pathPrefix ||
+				sanitizedPath.startsWith(`${pathPrefix}/`)
+		)
+	) {
+		return sanitizedPath;
 	}
 
 	return AUTHENTICATED_ONBOARDING_PATHS.some(

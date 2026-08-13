@@ -44,6 +44,8 @@ class RPApplicationAdoptionContractModel(BaseModel):
 
 class RPApplicationAdoptionCandidateRead(RPApplicationAdoptionContractModel):
     rp_application_uuid: uuid_pkg.UUID
+    configuration_name: str = Field(min_length=1, max_length=128)
+    partner_environment: str | None = Field(default=None, min_length=1, max_length=128)
     name: str = Field(min_length=1, max_length=128)
     ibm_application_id: str = Field(min_length=1, max_length=128)
     metadata_completeness: Literal["complete", "incomplete"]
@@ -92,6 +94,7 @@ class RPApplicationAdoptionFieldComparisonRead(RPApplicationAdoptionContractMode
 
 class RPApplicationAdoptionCandidatePreviewRead(RPApplicationAdoptionContractModel):
     candidate: RPApplicationAdoptionCandidateRead
+    partner_environment: str | None = Field(default=None, min_length=1, max_length=128)
     canada_login_environment: Literal["test", "staging", "production"] | None = None
     fields: list[RPApplicationAdoptionFieldComparisonRead]
     fillable_field_names: list[RPApplicationAdoptionFieldName]
@@ -101,7 +104,7 @@ class RPApplicationAdoptionCandidatePreviewRead(RPApplicationAdoptionContractMod
 
 class RPApplicationWorkspaceLinkWrite(RPApplicationAdoptionContractModel):
     workspace_uuid: uuid_pkg.UUID
-    application_information_uuid: uuid_pkg.UUID | None = None
+    application_information_uuid: uuid_pkg.UUID
     canada_login_environment: Literal["test", "staging", "production"] | None = None
 
 
@@ -109,8 +112,10 @@ class RPApplicationWorkspaceAdoptionRead(RPApplicationAdoptionContractModel):
     rp_application_uuid: uuid_pkg.UUID
     workspace_uuid: uuid_pkg.UUID
     department_uuid: uuid_pkg.UUID
-    application_information_uuid: uuid_pkg.UUID | None = None
+    application_information_uuid: uuid_pkg.UUID
     ibm_application_id: str = Field(min_length=1, max_length=128)
+    configuration_name: str = Field(min_length=1, max_length=128)
+    partner_environment: str | None = Field(default=None, min_length=1, max_length=128)
     name: str = Field(min_length=1, max_length=128)
     canada_login_environment: Literal["test", "staging", "production"]
     filled_field_names: list[RPApplicationAdoptionFieldName]
@@ -126,6 +131,8 @@ class RPApplicationAdoptionAuditEvent(RPApplicationAdoptionContractModel):
     actor_uuid: uuid_pkg.UUID
     rp_application_uuid: uuid_pkg.UUID
     workspace_uuid: uuid_pkg.UUID
+    application_information_uuid: uuid_pkg.UUID | None = None
+    configuration_name: str | None = Field(default=None, min_length=1, max_length=128)
     result: Literal["succeeded", "failed"]
     correlation_id: str = Field(
         min_length=1,

@@ -1,19 +1,22 @@
-import { useEffect, useState } from "react";
-import { useNavigate, useParams } from "@tanstack/react-router";
+import { useCallback, useEffect, useState } from "react";
+import { useBlocker, useNavigate, useParams } from "@tanstack/react-router";
 import { useTranslation } from "react-i18next";
 import type { FunctionComponent } from "@/common/types";
 import { Button, ErrorSummary, Heading, Notice, Text } from "@/components/ui";
-import {
-	getRequestErrorNotice,
-	isBadRequestError,
-	isConflictRequestError,
-} from "@/fetch";
+import { getRequestErrorNotice, isConflictRequestError } from "@/fetch";
 import {
 	getWorkspaceRPRegistrationValidationFieldNames,
 	isWorkspaceRPRegistrationValidationError,
+	type RegistrationDataStep,
 	type WorkspaceRPApplicationRegistrationAnswers,
 } from "@/fetch/rp-applications";
 import { WorkspaceRPApplicationForm } from "../components/WorkspaceRPApplicationForm";
+import { WorkspaceRPRegistrationNavigation } from "../components/WorkspaceRPRegistrationNavigation";
+import {
+	allowNextPendingNavigation,
+	consumePendingNavigationAllowance,
+	registerPendingNavigationGuard,
+} from "@/features/navigation/pending-navigation-guard";
 import { useWorkspaceApplicationInformationList } from "../hooks/use-workspace-application-information";
 import {
 	useWorkspaceRPRegistrationActions,
@@ -24,16 +27,21 @@ import {
 	getWorkspaceRPApplicationStepFieldErrorKeys,
 	toWorkspaceRPApplicationDraftFormState,
 	toWorkspaceRPApplicationRegistrationAnswers,
-	validateWorkspaceRPApplicationForm,
 	validateWorkspaceRPApplicationStep,
+	type WorkspaceRPApplicationFieldErrorKeys,
 	type WorkspaceRPApplicationFormState,
-	type WorkspaceRPApplicationValidationMessageKey,
 } from "../workspace-rp-application-form";
+import { WORKSPACE_RP_APPLICATION_FIELDS_BY_STEP } from "../workspace-rp-application-fields";
+import {
+	clearPendingRegistrationValidationStep,
+	getPendingRegistrationValidation,
+	getPendingRegistrationValidationSteps,
+	setPendingRegistrationValidation,
+} from "../registration-validation-recovery";
 import {
 	getNextWorkspaceRPRegistrationStep,
 	getPreviousWorkspaceRPRegistrationStep,
 	getRecoverableWorkspaceRPRegistrationStep,
-	getWorkspaceRPRegistrationStepPath,
 	isRegistrationDataStep,
 	isWorkspaceRPRegistrationStep,
 	WORKSPACE_RP_REGISTRATION_STEPS,
@@ -51,15 +59,9 @@ type FailedSave = {
 	mode: "partial" | "completeStep";
 };
 
-const ENDPOINT_CONTROL_IDS: Partial<
-	Record<keyof WorkspaceRPApplicationFormState, string>
-> = {
-	applicationEnvironmentUrlEn: "workspace-rp-application-url-en",
-	applicationEnvironmentUrlFr: "workspace-rp-application-url-fr",
-	logoutMode: "logoutMode",
-	logoutUri: "workspace-rp-application-logout-uri",
-	postLogoutRedirectUris: "workspace-rp-application-post-logout-redirect-uris",
-	redirectUris: "workspace-rp-application-redirect-uris",
+type ClientFieldErrorState = {
+	contextKey: string;
+	errors: WorkspaceRPApplicationFieldErrorKeys;
 };
 
 const REVIEW_GROUPS: Array<{
@@ -142,52 +144,114 @@ const displayReviewValue = (
 };
 
 export const WorkspaceRPRegistrationStepPage = (): FunctionComponent => {
-	const { t } = useTranslation() as unknown as {
+	const { i18n, t } = useTranslation() as unknown as {
+		i18n?: { resolvedLanguage?: string };
 		t: (
 			key: string | Array<string>,
 			options?: Record<string, unknown>
 		) => string;
 	};
 	const navigate = useNavigate();
-	const {
-		rpApplicationUuid,
-		step: routeStep,
-		workspaceUuid,
-	} = useParams({
-		from: "/workspaces/$workspaceUuid/applications/$rpApplicationUuid/registration/$step",
-	});
+	const params = useParams({ strict: false });
+	const applicationInformationUuid = params["applicationInformationUuid"] ?? "";
+	const rpApplicationUuid =
+		params["rpConfigurationUuid"] || params["rpApplicationUuid"] || "";
+	const routeStep = params["step"] ?? "basics";
+	const workspaceUuid = params["workspaceUuid"] ?? "";
 	const step = isWorkspaceRPRegistrationStep(routeStep) ? routeStep : "basics";
+	const registrationStepPath = useCallback(
+		(targetStep: WorkspaceRPRegistrationStep | "confirmation"): string =>
+			`/workspaces/${encodeURIComponent(workspaceUuid)}/applications/${encodeURIComponent(applicationInformationUuid)}/rp-configurations/${encodeURIComponent(rpApplicationUuid)}/registration/${targetStep}`,
+		[applicationInformationUuid, rpApplicationUuid, workspaceUuid]
+	);
+	const configurationPath = `/workspaces/${encodeURIComponent(workspaceUuid)}/applications/${encodeURIComponent(applicationInformationUuid)}/rp-configurations/${encodeURIComponent(rpApplicationUuid)}`;
+	const draftKey = `${workspaceUuid}:${rpApplicationUuid}`;
 	const {
 		draft,
 		error: loadError,
 		isLoading,
 		refetch,
-	} = useWorkspaceRPRegistrationDraft(workspaceUuid, rpApplicationUuid);
+	} = useWorkspaceRPRegistrationDraft(
+		workspaceUuid,
+		rpApplicationUuid,
+		applicationInformationUuid
+	);
 	const { applicationInformationRecords } =
 		useWorkspaceApplicationInformationList(workspaceUuid);
+	const parentApplication = applicationInformationRecords.find(
+		(record) => record.uuid === applicationInformationUuid
+	);
+	const parentApplicationName = parentApplication
+		? i18n?.resolvedLanguage?.startsWith("fr")
+			? parentApplication.serviceNameFr
+			: parentApplication.serviceNameEn
+		: "";
 	const { isSaving, isSubmitting, saveDraft, submit } =
 		useWorkspaceRPRegistrationActions();
 	const [failedSave, setFailedSave] = useState<FailedSave | null>(null);
 	const [formDraft, setFormDraft] = useState<FormDraft | null>(null);
 	const [requestError, setRequestError] = useState<Error | null>(null);
-	const [validationMessageKeys, setValidationMessageKeys] = useState<
-		Array<WorkspaceRPApplicationValidationMessageKey>
-	>([]);
+	const validationContextKey = `${draftKey}:${step}`;
+	const pendingFieldErrorKeys = isRegistrationDataStep(step)
+		? getPendingRegistrationValidation(draftKey, step)
+		: {};
+	const [clientFieldErrorState, setClientFieldErrorState] =
+		useState<ClientFieldErrorState>({
+			contextKey: validationContextKey,
+			errors: pendingFieldErrorKeys,
+		});
+	const clientFieldErrorKeys =
+		clientFieldErrorState.contextKey === validationContextKey
+			? clientFieldErrorState.errors
+			: pendingFieldErrorKeys;
+	const replaceClientFieldErrorKeys = (
+		errors: WorkspaceRPApplicationFieldErrorKeys
+	): void => {
+		setClientFieldErrorState({ contextKey: validationContextKey, errors });
+	};
+	const updateClientFieldErrorKeys = (
+		update: (
+			current: WorkspaceRPApplicationFieldErrorKeys
+		) => WorkspaceRPApplicationFieldErrorKeys
+	): void => {
+		setClientFieldErrorState((current) => ({
+			contextKey: validationContextKey,
+			errors: update(
+				current.contextKey === validationContextKey
+					? current.errors
+					: pendingFieldErrorKeys
+			),
+		}));
+	};
+	const [serverFieldErrors, setServerFieldErrors] = useState<
+		Partial<Record<keyof WorkspaceRPApplicationFormState, true>>
+	>({});
 	const sourceVersion = draft?.registrationDraftVersion ?? -1;
 	const form: WorkspaceRPApplicationFormState = {
 		...createEmptyWorkspaceRPApplicationForm(),
 		...(draft ? toWorkspaceRPApplicationDraftFormState(draft) : {}),
 		...(formDraft?.sourceVersion === sourceVersion ? formDraft.values : {}),
 	};
+	const scopedForm: WorkspaceRPApplicationFormState = parentApplication
+		? {
+				...form,
+				applicationInformationUuid,
+				serviceNameEn: parentApplication.serviceNameEn,
+				serviceNameFr: parentApplication.serviceNameFr,
+			}
+		: form;
+	const isRenderedField = (
+		field: keyof WorkspaceRPApplicationFormState
+	): boolean =>
+		!parentApplication ||
+		(field !== "applicationInformationUuid" &&
+			field !== "serviceNameEn" &&
+			field !== "serviceNameFr");
 	const isDirty = Boolean(
 		formDraft?.sourceVersion === sourceVersion &&
 		Object.keys(formDraft.values).length > 0
 	);
-	const currentIndex = WORKSPACE_RP_REGISTRATION_STEPS.indexOf(step) + 1;
 	const previousStep = getPreviousWorkspaceRPRegistrationStep(step);
-	const isRequestValidationError =
-		isWorkspaceRPRegistrationValidationError(requestError) ||
-		isBadRequestError(requestError);
 	const loadNoticeBase = getRequestErrorNotice(loadError, {
 		bodyKey: "workspaces.registration.loadErrorBody",
 		titleKey: "workspaces.registration.loadErrorTitle",
@@ -200,13 +264,10 @@ export const WorkspaceRPRegistrationStepPage = (): FunctionComponent => {
 				titleKey: "workspaces.registration.loadErrorTitle",
 			}
 		: null;
-	const saveNoticeBase = getRequestErrorNotice(
-		isRequestValidationError ? null : requestError,
-		{
-			bodyKey: "workspaces.registration.saveErrorBody",
-			titleKey: "workspaces.registration.saveErrorTitle",
-		}
-	);
+	const saveNoticeBase = getRequestErrorNotice(requestError, {
+		bodyKey: "workspaces.registration.saveErrorBody",
+		titleKey: "workspaces.registration.saveErrorTitle",
+	});
 	const saveNotice = saveNoticeBase
 		? {
 				...saveNoticeBase,
@@ -220,87 +281,119 @@ export const WorkspaceRPRegistrationStepPage = (): FunctionComponent => {
 			}
 		: null;
 	const errorNotice = saveNotice ?? loadNotice;
-	const fieldErrorKeys = isRegistrationDataStep(step)
-		? getWorkspaceRPApplicationStepFieldErrorKeys(
-				form,
-				step,
-				validationMessageKeys
-			)
-		: {};
 	const fieldErrors: Partial<
 		Record<keyof WorkspaceRPApplicationFormState, string>
 	> = {};
-	for (const [field, messageKey] of Object.entries(fieldErrorKeys)) {
-		if (messageKey) {
-			fieldErrors[field as keyof WorkspaceRPApplicationFormState] =
-				t(messageKey);
+	const errorLinks: Record<string, string> = {};
+	if (isRegistrationDataStep(step)) {
+		for (const definition of WORKSPACE_RP_APPLICATION_FIELDS_BY_STEP[step]) {
+			if (!isRenderedField(definition.field)) continue;
+			const messageKey = clientFieldErrorKeys[definition.field];
+			const message = messageKey
+				? messageKey === "workspaces.registration.validationFieldMessage"
+					? t(messageKey, { field: t(definition.labelKey) })
+					: messageKey === "workspaces.applicationsValidationRequiredAnswers"
+						? t("workspaces.registration.requiredFieldMessage", {
+								field: t(definition.labelKey),
+							})
+						: t("workspaces.registration.fieldValidationMessage", {
+								field: t(definition.labelKey),
+								message: t(messageKey),
+							})
+				: serverFieldErrors[definition.field]
+					? t("workspaces.registration.validationFieldMessage", {
+							field: t(definition.labelKey),
+						})
+					: null;
+			if (!message) continue;
+			fieldErrors[definition.field] = message;
+			errorLinks[`#${definition.controlId}`] = message;
 		}
 	}
-	if (isWorkspaceRPRegistrationValidationError(requestError)) {
-		for (const fieldName of getWorkspaceRPRegistrationValidationFieldNames(
-			requestError
-		)) {
-			if (fieldName in ENDPOINT_CONTROL_IDS) {
-				fieldErrors[fieldName as keyof WorkspaceRPApplicationFormState] = t(
-					"workspaces.registration.validationFieldMessage"
-				);
-			}
-		}
-	}
-	const endpointErrorLinks: Record<string, string> = {};
-	if (step === "endpoints") {
-		for (const [field, message] of Object.entries(fieldErrors)) {
-			const controlId =
-				ENDPOINT_CONTROL_IDS[field as keyof WorkspaceRPApplicationFormState];
-			if (controlId && message) endpointErrorLinks[`#${controlId}`] = message;
-		}
-		if (
-			isRequestValidationError &&
-			Object.keys(endpointErrorLinks).length === 0
-		) {
-			endpointErrorLinks["#workspace-rp-application-url-en"] = t(
-				"workspaces.registration.validationGeneralMessage"
+	const showValidationSummary = Object.keys(errorLinks).length > 0;
+	const pendingValidationSteps =
+		getPendingRegistrationValidationSteps(draftKey);
+	const pendingValidationStepKey = pendingValidationSteps.join(":");
+
+	useBlocker({
+		disabled: !isDirty,
+		enableBeforeUnload: () => isDirty,
+		shouldBlockFn: () => {
+			if (consumePendingNavigationAllowance()) return false;
+			return !window.confirm(
+				t("workspaces.registration.discardChangesWarning")
 			);
-		}
-	}
-	const showValidationSummary =
-		validationMessageKeys.length > 0 || isRequestValidationError;
+		},
+	});
 
 	useEffect(() => {
-		const warnBeforeUnload = (event: BeforeUnloadEvent): void => {
-			if (isDirty) event.preventDefault();
-		};
-		window.addEventListener("beforeunload", warnBeforeUnload);
-		return (): void => {
-			window.removeEventListener("beforeunload", warnBeforeUnload);
-		};
-	}, [isDirty]);
+		if (!isDirty) return;
+		return registerPendingNavigationGuard(() =>
+			window.confirm(t("workspaces.registration.discardChangesWarning"))
+		);
+	}, [isDirty, t]);
 
 	useEffect(() => {
 		if (!draft) return;
-		const recoverable = getRecoverableWorkspaceRPRegistrationStep(
+		const currentPendingSteps = getPendingRegistrationValidationSteps(draftKey);
+		let recoverable = getRecoverableWorkspaceRPRegistrationStep(
 			step,
 			draft.registrationLastCompletedStep ?? null
 		);
+		const earliestPendingStep = WORKSPACE_RP_REGISTRATION_STEPS.find(
+			(candidate): candidate is (typeof currentPendingSteps)[number] =>
+				candidate !== "review" && currentPendingSteps.includes(candidate)
+		);
+		if (
+			earliestPendingStep &&
+			WORKSPACE_RP_REGISTRATION_STEPS.indexOf(recoverable) >
+				WORKSPACE_RP_REGISTRATION_STEPS.indexOf(earliestPendingStep)
+		) {
+			recoverable = earliestPendingStep;
+		}
 		if (recoverable !== step) {
 			void navigate({
-				href: getWorkspaceRPRegistrationStepPath(
-					workspaceUuid,
-					rpApplicationUuid,
-					recoverable
-				),
+				href: registrationStepPath(recoverable),
 				replace: true,
 			});
 		}
-	}, [draft, navigate, rpApplicationUuid, step, workspaceUuid]);
+	}, [
+		draft,
+		draftKey,
+		navigate,
+		pendingValidationStepKey,
+		registrationStepPath,
+		step,
+	]);
 
 	const updateFormField = (
 		field: keyof WorkspaceRPApplicationFormState,
 		value: string | Array<string>
 	): void => {
 		setFailedSave(null);
-		setRequestError(null);
-		setValidationMessageKeys([]);
+		const nextForm = { ...scopedForm, [field]: value };
+		updateClientFieldErrorKeys((current) => {
+			if (!isRegistrationDataStep(step)) return current;
+			const remainingErrors = getWorkspaceRPApplicationStepFieldErrorKeys(
+				nextForm,
+				step,
+				validateWorkspaceRPApplicationStep(nextForm, step)
+			);
+			const next: WorkspaceRPApplicationFieldErrorKeys = {};
+			for (const currentField of Object.keys(current)) {
+				const typedField =
+					currentField as keyof WorkspaceRPApplicationFormState;
+				const currentMessageKey = remainingErrors[typedField];
+				if (currentMessageKey) next[typedField] = currentMessageKey;
+			}
+			return next;
+		});
+		setServerFieldErrors((current) => {
+			if (!current[field]) return current;
+			const next = { ...current };
+			delete next[field];
+			return next;
+		});
 		setFormDraft((current) => ({
 			sourceVersion,
 			values: {
@@ -317,36 +410,75 @@ export const WorkspaceRPRegistrationStepPage = (): FunctionComponent => {
 		if (!draft || !isRegistrationDataStep(step)) return;
 		setFailedSave(null);
 		setRequestError(null);
+		replaceClientFieldErrorKeys({});
+		setServerFieldErrors({});
 		if (mode === "completeStep") {
-			const errors = validateWorkspaceRPApplicationStep(form, step);
+			const errors = validateWorkspaceRPApplicationStep(scopedForm, step);
 			if (errors.length > 0) {
-				setValidationMessageKeys(errors);
+				replaceClientFieldErrorKeys(
+					getWorkspaceRPApplicationStepFieldErrorKeys(scopedForm, step, errors)
+				);
 				return;
 			}
 		}
 		try {
-			const saved = await saveDraft(workspaceUuid, rpApplicationUuid, {
+			const payload = {
+				...(step === "basics"
+					? {
+							configurationName: scopedForm.configurationName,
+							partnerEnvironment: scopedForm.partnerEnvironment,
+						}
+					: {}),
 				expectedDraftVersion: draft.registrationDraftVersion,
 				registrationAnswers: toWorkspaceRPApplicationRegistrationAnswers(
-					form,
+					scopedForm,
 					step
 				),
 				saveMode: mode,
 				stepId: step,
-			});
+			} as const;
+			const saved = await saveDraft(
+				workspaceUuid,
+				rpApplicationUuid,
+				payload,
+				applicationInformationUuid
+			);
+			clearPendingRegistrationValidationStep(draftKey, step);
 			setFormDraft(null);
 			const destination = exitAfterSave
-				? `/workspaces/${encodeURIComponent(workspaceUuid)}/applications/${encodeURIComponent(rpApplicationUuid)}`
-				: getWorkspaceRPRegistrationStepPath(
-						workspaceUuid,
-						rpApplicationUuid,
-						getNextWorkspaceRPRegistrationStep(step)
-					);
-			await navigate({ href: destination });
+				? configurationPath
+				: registrationStepPath(getNextWorkspaceRPRegistrationStep(step));
+			const clearNavigationAllowance = allowNextPendingNavigation();
+			try {
+				await navigate({ href: destination });
+			} finally {
+				clearNavigationAllowance();
+			}
 			void saved;
 		} catch (error) {
 			setFailedSave({ exitAfterSave, mode });
-			setRequestError(error as Error);
+			const requestFailure = error as Error;
+			if (isWorkspaceRPRegistrationValidationError(requestFailure)) {
+				const stepFields = new Set(
+					WORKSPACE_RP_APPLICATION_FIELDS_BY_STEP[step]
+						.filter((definition) => isRenderedField(definition.field))
+						.map((definition) => definition.field)
+				);
+				const mappedErrors: Partial<
+					Record<keyof WorkspaceRPApplicationFormState, true>
+				> = {};
+				for (const fieldName of getWorkspaceRPRegistrationValidationFieldNames(
+					requestFailure
+				)) {
+					const field = fieldName as keyof WorkspaceRPApplicationFormState;
+					if (stepFields.has(field)) mappedErrors[field] = true;
+				}
+				if (Object.keys(mappedErrors).length > 0) {
+					setServerFieldErrors(mappedErrors);
+					return;
+				}
+			}
+			setRequestError(requestFailure);
 		}
 	};
 
@@ -367,39 +499,90 @@ export const WorkspaceRPRegistrationStepPage = (): FunctionComponent => {
 	const handleSubmit = async (): Promise<void> => {
 		if (!draft) return;
 		setRequestError(null);
-		const validationErrors = validateWorkspaceRPApplicationForm(form);
-		if (validationErrors.length > 0) {
-			setValidationMessageKeys(validationErrors);
+		const pendingValidation: Partial<
+			Record<RegistrationDataStep, WorkspaceRPApplicationFieldErrorKeys>
+		> = {};
+		for (const dataStep of WORKSPACE_RP_REGISTRATION_STEPS.filter(
+			(candidate): candidate is RegistrationDataStep => candidate !== "review"
+		)) {
+			const errors = validateWorkspaceRPApplicationStep(scopedForm, dataStep);
+			const fieldErrorKeys = getWorkspaceRPApplicationStepFieldErrorKeys(
+				scopedForm,
+				dataStep,
+				errors
+			);
+			if (Object.keys(fieldErrorKeys).length > 0) {
+				pendingValidation[dataStep] = fieldErrorKeys;
+			}
+		}
+		const earliestInvalidStep = WORKSPACE_RP_REGISTRATION_STEPS.find(
+			(candidate): candidate is RegistrationDataStep =>
+				candidate !== "review" && pendingValidation[candidate] !== undefined
+		);
+		if (earliestInvalidStep) {
+			setPendingRegistrationValidation(draftKey, pendingValidation);
+			await navigate({
+				href: registrationStepPath(earliestInvalidStep),
+				replace: true,
+			});
 			return;
 		}
 		try {
 			await submit(
 				workspaceUuid,
 				rpApplicationUuid,
-				draft.registrationDraftVersion
+				draft.registrationDraftVersion,
+				applicationInformationUuid
 			);
 			await navigate({
-				href: getWorkspaceRPRegistrationStepPath(
-					workspaceUuid,
-					rpApplicationUuid,
-					"confirmation"
-				),
+				href: registrationStepPath("confirmation"),
 				replace: true,
 			});
 		} catch (error) {
-			setRequestError(error as Error);
+			const requestFailure = error as Error;
+			if (isWorkspaceRPRegistrationValidationError(requestFailure)) {
+				const serverValidation: Partial<
+					Record<RegistrationDataStep, WorkspaceRPApplicationFieldErrorKeys>
+				> = {};
+				for (const fieldName of getWorkspaceRPRegistrationValidationFieldNames(
+					requestFailure
+				)) {
+					for (const dataStep of WORKSPACE_RP_REGISTRATION_STEPS.filter(
+						(candidate): candidate is RegistrationDataStep =>
+							candidate !== "review"
+					)) {
+						if (
+							WORKSPACE_RP_APPLICATION_FIELDS_BY_STEP[dataStep].some(
+								(definition) =>
+									definition.field === fieldName &&
+									isRenderedField(definition.field)
+							)
+						) {
+							serverValidation[dataStep] = {
+								...(serverValidation[dataStep] ?? {}),
+								[fieldName]: "workspaces.registration.validationFieldMessage",
+							};
+						}
+					}
+				}
+				const firstServerInvalidStep = WORKSPACE_RP_REGISTRATION_STEPS.find(
+					(candidate): candidate is RegistrationDataStep =>
+						candidate !== "review" && serverValidation[candidate] !== undefined
+				);
+				if (firstServerInvalidStep) {
+					setPendingRegistrationValidation(draftKey, serverValidation);
+					await navigate({
+						href: registrationStepPath(firstServerInvalidStep),
+						replace: true,
+					});
+					return;
+				}
+			}
+			setRequestError(requestFailure);
 		}
 	};
 
-	const navigateAway = (href: string, discardUnsaved: boolean): void => {
-		if (
-			discardUnsaved &&
-			isDirty &&
-			!window.confirm(t("workspaces.registration.discardChangesWarning"))
-		) {
-			return;
-		}
-		if (discardUnsaved) setFormDraft(null);
+	const navigateAway = (href: string): void => {
 		void navigate({ href });
 	};
 
@@ -410,24 +593,16 @@ export const WorkspaceRPRegistrationStepPage = (): FunctionComponent => {
 					step: t(WORKSPACE_RP_REGISTRATION_STEP_LABEL_KEYS[step]),
 				})}
 			</Heading>
-			<Text>
-				{t("workspaces.registration.stepCount", {
-					current: currentIndex,
-					total: WORKSPACE_RP_REGISTRATION_STEPS.length,
-				})}
-			</Text>
-
-			{showValidationSummary ? (
-				step === "endpoints" ? (
-					<ErrorSummary
-						focusOnRender
-						errorLinks={endpointErrorLinks}
-						heading={t("workspaces.registration.validationSummaryHeading")}
-						listen={false}
-					/>
-				) : (
-					<ErrorSummary listen />
-				)
+			{draft ? (
+				<WorkspaceRPRegistrationNavigation
+					currentStep={step}
+					lastCompletedStep={draft.registrationLastCompletedStep ?? null}
+					pendingSteps={pendingValidationSteps}
+					stepPath={registrationStepPath}
+					onNavigate={(targetStep) => {
+						navigateAway(registrationStepPath(targetStep));
+					}}
+				/>
 			) : null}
 
 			{isLoading ? (
@@ -472,9 +647,10 @@ export const WorkspaceRPRegistrationStepPage = (): FunctionComponent => {
 
 			{draft && isRegistrationDataStep(step) ? (
 				<WorkspaceRPApplicationForm
-					cancelHref={`/workspaces/${encodeURIComponent(workspaceUuid)}/applications/${encodeURIComponent(rpApplicationUuid)}`}
+					applicationContextName={parentApplicationName || undefined}
+					cancelHref={configurationPath}
 					fieldErrors={fieldErrors}
-					form={form}
+					form={scopedForm}
 					isSubmitting={isSaving}
 					saveAndExitLabel={t("workspaces.registration.saveAndExitAction")}
 					step={step}
@@ -482,13 +658,17 @@ export const WorkspaceRPRegistrationStepPage = (): FunctionComponent => {
 						(record) => ({ label: record.serviceNameEn, value: record.uuid })
 					)}
 					backHref={
-						previousStep
-							? getWorkspaceRPRegistrationStepPath(
-									workspaceUuid,
-									rpApplicationUuid,
-									previousStep
-								)
-							: undefined
+						previousStep ? registrationStepPath(previousStep) : undefined
+					}
+					errorSummary={
+							showValidationSummary ? (
+								<ErrorSummary
+									focusOnRender
+									errorLinks={errorLinks}
+									heading={t("workspaces.registration.validationSummaryHeading")}
+									listen={false}
+								/>
+						) : undefined
 					}
 					submitLabel={
 						isSaving
@@ -501,22 +681,12 @@ export const WorkspaceRPRegistrationStepPage = (): FunctionComponent => {
 					onBack={
 						previousStep
 							? (): void => {
-									navigateAway(
-										getWorkspaceRPRegistrationStepPath(
-											workspaceUuid,
-											rpApplicationUuid,
-											previousStep
-										),
-										false
-									);
+									navigateAway(registrationStepPath(previousStep));
 								}
 							: undefined
 					}
 					onCancel={(): void => {
-						navigateAway(
-							`/workspaces/${encodeURIComponent(workspaceUuid)}/applications/${encodeURIComponent(rpApplicationUuid)}`,
-							true
-						);
+						navigateAway(configurationPath);
 					}}
 				/>
 			) : null}
@@ -524,6 +694,22 @@ export const WorkspaceRPRegistrationStepPage = (): FunctionComponent => {
 			{draft && step === "review" ? (
 				<div className="grid gap-400">
 					<Text>{t("workspaces.registration.reviewSummary")}</Text>
+					{applicationInformationUuid ? (
+						<dl className="grid gap-200">
+							<div>
+								<dt className="font-semibold">
+									{t("workspaces.rpConfigurationsApplicationLabel")}
+								</dt>
+								<dd>{parentApplicationName}</dd>
+							</div>
+							<div>
+								<dt className="font-semibold">
+									{t("workspaces.applicationsConfigurationNameLabel")}
+								</dt>
+								<dd>{draft.configurationName}</dd>
+							</div>
+						</dl>
+					) : null}
 					{REVIEW_GROUPS.map((group) => (
 						<section key={group.step} className="grid gap-200">
 							<div className="flex flex-wrap items-center justify-between gap-200">
@@ -532,12 +718,8 @@ export const WorkspaceRPRegistrationStepPage = (): FunctionComponent => {
 								</Heading>
 								<Button
 									buttonRole="secondary"
+									href={registrationStepPath(group.step)}
 									type="link"
-									href={getWorkspaceRPRegistrationStepPath(
-										workspaceUuid,
-										rpApplicationUuid,
-										group.step
-									)}
 								>
 									{t("workspaces.registration.changeAction", {
 										section: t(
@@ -547,21 +729,27 @@ export const WorkspaceRPRegistrationStepPage = (): FunctionComponent => {
 								</Button>
 							</div>
 							<dl className="grid gap-200">
-								{group.fields.map((field) => (
-									<div key={field}>
-										<dt className="font-semibold">
-											{t(REVIEW_FIELD_LABEL_KEYS[field] ?? field)}
-										</dt>
-										<dd>
-											{displayReviewValue(
-												draft.registrationAnswers[field],
-												t("workspaces.optionYes"),
-												t("workspaces.optionNo"),
-												t("workspaces.registration.notProvided")
-											)}
-										</dd>
-									</div>
-								))}
+								{group.fields
+									.filter(
+										(field) =>
+											!applicationInformationUuid ||
+											(field !== "serviceNameEn" && field !== "serviceNameFr")
+									)
+									.map((field) => (
+										<div key={field}>
+											<dt className="font-semibold">
+												{t(REVIEW_FIELD_LABEL_KEYS[field] ?? field)}
+											</dt>
+											<dd>
+												{displayReviewValue(
+													draft.registrationAnswers[field],
+													t("workspaces.optionYes"),
+													t("workspaces.optionNo"),
+													t("workspaces.registration.notProvided")
+												)}
+											</dd>
+										</div>
+									))}
 							</dl>
 						</section>
 					))}
@@ -584,12 +772,8 @@ export const WorkspaceRPRegistrationStepPage = (): FunctionComponent => {
 						</Button>
 						<Button
 							buttonRole="secondary"
+							href={registrationStepPath("encryption")}
 							type="link"
-							href={getWorkspaceRPRegistrationStepPath(
-								workspaceUuid,
-								rpApplicationUuid,
-								"encryption"
-							)}
 						>
 							{t("workspaces.registration.backAction")}
 						</Button>

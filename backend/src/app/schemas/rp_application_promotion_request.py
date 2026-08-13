@@ -39,6 +39,15 @@ class RPApplicationPromotionRequestRead(BaseModel):
     updated_at: datetime | None = None
 
 
+class ApplicationRPConfigurationPromotionRequestRead(RPApplicationPromotionRequestRead):
+    """Promotion review context with public Application and lineage identifiers."""
+
+    application_information_uuid: uuid_pkg.UUID
+    source_rp_configuration_uuid: uuid_pkg.UUID | None = None
+    target_rp_configuration_uuid: uuid_pkg.UUID
+    target_configuration_name: str = Field(..., min_length=1, max_length=128)
+
+
 class PromotionRequestUpsert(BaseModel):
     model_config = ConfigDict(
         extra="forbid",

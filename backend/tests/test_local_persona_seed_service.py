@@ -8,7 +8,6 @@ from types import SimpleNamespace
 from unittest.mock import AsyncMock
 
 import pytest
-
 from src.app.core.local_persona_fixtures import LOCAL_ALPHA_WORKSPACE
 from src.app.models.department import Department
 from src.app.services.local_persona_seed_service import (
@@ -126,6 +125,7 @@ async def test_partial_state_is_rejected_without_seed_mutation(
         ],
         users=[],
         workspaces=[],
+        applications=[],
         rp_applications=[],
         user_roles=[],
         partner_grants=[],
@@ -160,11 +160,12 @@ def test_reports_have_stable_names_counts_and_namespace() -> None:
         departments=2,
         users=5,
         workspaces=2,
+        applications=2,
         rp_applications=2,
         user_roles=1,
         partner_grants=3,
     )
-    assert EXPECTED_LOCAL_PERSONA_COUNTS.total == 15
+    assert EXPECTED_LOCAL_PERSONA_COUNTS.total == 17
     assert LocalPersonaSeedReport(
         action="seed",
         outcome="unchanged",
@@ -177,6 +178,7 @@ def test_reports_have_stable_names_counts_and_namespace() -> None:
             "departments": 2,
             "users": 5,
             "workspaces": 2,
+            "applications": 2,
             "rpApplications": 2,
             "userRoles": 1,
             "partnerGrants": 3,

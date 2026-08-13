@@ -3,9 +3,8 @@ from uuid import UUID
 
 import casbin
 import pytest
-from fastapi.testclient import TestClient
-
 import src.app.services.rp_application_service as rp_application_module
+from fastapi.testclient import TestClient
 from src.app.api.dependencies import get_current_user, get_rp_application_service
 from src.app.core.access_control import CASBIN_MODEL_PATH, database_enforcer_provider
 from src.app.core.authorization import CanonicalRoleCode
@@ -487,6 +486,9 @@ class TestAccessibleRPOAuthSetupService:
             }
         )
         rp_application_module.crud_departments.get = AsyncMock(return_value={"id": 7, "name": "Benefits", "name_fr": "Prestations"})
+        service._get_effective_workspace_department = AsyncMock(  # type: ignore[method-assign]
+            return_value=(7, UUID("018f6f83-0000-0000-0000-000000000777"))
+        )
 
         try:
             result = await service.get_accessible_rp_application_oauth_setup(

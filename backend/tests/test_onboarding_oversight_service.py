@@ -1,7 +1,6 @@
 from unittest.mock import AsyncMock, patch
 
 import pytest
-
 from src.app.core.authorization import CanonicalRoleCode
 from src.app.core.exceptions.http_exceptions import OnboardingReportRequestException
 from src.app.services.authorization_service import (
@@ -97,7 +96,9 @@ class TestOnboardingOversightService:
                             "id": 33,
                             "uuid": "018f6f83-0000-0000-0000-000000000401",
                             "workspace_id": 9,
+                            "application_information_id": 17,
                             "dnr_app_name": "Benefits staging registration",
+                            "configuration_name": "Benefits staging",
                             "canada_login_environment": "staging",
                             "onboarding_state": "submitted",
                             "submitted_at": "2026-08-09T10:00:00+00:00",
@@ -111,7 +112,9 @@ class TestOnboardingOversightService:
                             "id": 34,
                             "uuid": "018f6f83-0000-0000-0000-000000000402",
                             "workspace_id": 9,
+                            "application_information_id": 17,
                             "dnr_app_name": "Benefits production registration",
+                            "configuration_name": "Benefits production",
                             "canada_login_environment": "production",
                             "onboarding_state": "under_review",
                             "submitted_at": "2026-08-10T11:00:00+00:00",
@@ -148,9 +151,14 @@ class TestOnboardingOversightService:
             "workspace",
             "rp_application",
         ]
-        assert result[0]["primary_record_label"] == "Benefits production registration"
+        assert result[0]["primary_record_label"] == "Benefits production"
         assert result[0]["promotion_status"] == "review_tracked"
         assert result[0]["external_review_reference"] == "CAB-123"
+        assert result[0]["detail_path"] == (
+            "/workspaces/018f6f83-0000-0000-0000-000000000201/"
+            "applications/018f6f83-0000-0000-0000-000000000301/"
+            "rp-configurations/018f6f83-0000-0000-0000-000000000402/production-review"
+        )
         assert all(row["workspace_name"] == "Benefits Workspace" for row in result)
         assert all(row["department_name"] == "Employment and Social Development Canada" for row in result)
         assert all(row["primary_record_label"] != "Draft Workspace" for row in result)
@@ -193,6 +201,7 @@ class TestOnboardingOversightService:
                             "uuid": "018f6f83-0000-0000-0000-000000000402",
                             "workspace_id": 9,
                             "dnr_app_name": "Benefits production registration",
+                            "configuration_name": "Benefits production",
                             "canada_login_environment": "production",
                             "onboarding_state": "under_review",
                             "submitted_at": "2026-08-10T11:00:00+00:00",
@@ -230,7 +239,7 @@ class TestOnboardingOversightService:
 
         assert len(filtered) == 1
         assert filtered[0]["record_type"] == "production_progression"
-        assert filtered[0]["detail_path"] == "/workspaces/018f6f83-0000-0000-0000-000000000201/applications/018f6f83-0000-0000-0000-000000000402"
+        assert filtered[0]["detail_path"] == "/error?kind=not_found"
 
     @pytest.mark.asyncio
     async def test_get_report_builds_throughput_report(self, mock_db) -> None:

@@ -163,6 +163,37 @@ vi.mock("@/hooks", () => ({
 }));
 
 describe("DepartmentsPage", () => {
+	it("keeps the create action available in the empty state", () => {
+		vi.mocked(useDepartmentManagement).mockReturnValue({
+			createDepartment: vi.fn((): Promise<void> => Promise.resolve()),
+			deleteDepartment: vi.fn((): Promise<void> => Promise.resolve()),
+			departments: [],
+			error: null,
+			isCreating: false,
+			isDeleting: false,
+			isLoading: false,
+			isUpdating: false,
+			itemsPerPage: 10,
+			page: 1,
+			refetch: vi.fn((): Promise<unknown> => Promise.resolve()),
+			response: {
+				data: [],
+				has_more: false,
+				items_per_page: 10,
+				page: 1,
+				total_count: 0,
+			},
+			updateDepartment: vi.fn((): Promise<void> => Promise.resolve()),
+		});
+
+		render(<DepartmentsPage />);
+		fireEvent.click(screen.getByRole("button", { name: "Create department" }));
+
+		expect(
+			screen.getByRole("heading", { name: "Create department" })
+		).toBeTruthy();
+	});
+
 	it("supports modal-driven department management", () => {
 		const department = {
 			abbreviation: "ENG",

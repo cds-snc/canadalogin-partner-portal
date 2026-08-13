@@ -223,7 +223,10 @@ describe("workspace-rp-application-form", () => {
 	it("validates only the active step before continuing", () => {
 		const form = {
 			...createEmptyWorkspaceRPApplicationForm(),
+			applicationInformationUuid: "application-information-1",
 			canadaLoginEnvironment: "test",
+			configurationName: "Partner test integration",
+			partnerEnvironment: "Partner test",
 			serviceNameEn: "Benefits Portal",
 			serviceNameFr: "Portail des prestations",
 		};
@@ -255,6 +258,8 @@ describe("workspace-rp-application-form", () => {
 
 	it("hydrates the fixed camelCase draft response without raw JSON assumptions", () => {
 		const form = toWorkspaceRPApplicationDraftFormState({
+			applicationInformationUuid: "application-information-uuid-1",
+			configurationName: "Staging integration A",
 			onboardingState: "draft",
 			registrationAnswers: {
 				canadaLoginEnvironment: "staging",
@@ -269,6 +274,10 @@ describe("workspace-rp-application-form", () => {
 		});
 
 		expect(form.canadaLoginEnvironment).toBe("staging");
+		expect(form.applicationInformationUuid).toBe(
+			"application-information-uuid-1"
+		);
+		expect(form.configurationName).toBe("Staging integration A");
 		expect(form.redirectUris).toBe("https://benefits.canada.ca/callback");
 		expect(form.serviceNameEn).toBe("Benefits Portal");
 	});

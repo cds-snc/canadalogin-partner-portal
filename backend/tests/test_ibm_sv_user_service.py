@@ -3,7 +3,6 @@ from uuid import UUID
 
 import pytest
 from ibm_verify_community_sdk.applications.models import Application, GetApplicationsResponse
-
 from src.app.core.authorization import CanonicalRoleCode
 from src.app.schemas.rp_application import RPApplicationRead
 from src.app.services.authorization_service import (
@@ -169,8 +168,10 @@ class TestRPApplicationServiceCurrentUserSync:
             "id": 5,
             "uuid": "018f6f83-0000-0000-0000-000000000105",
             "workspace_id": 23,
+            "application_information_id": 17,
             "department_id": 7,
             "dnr_app_name": "Workspace Granted App",
+            "configuration_name": "Production integration A",
             "created_by": 2,
             "ibm_sv_application_id": "app-workspace-grant",
             "canada_login_environment": "production",
@@ -196,6 +197,17 @@ class TestRPApplicationServiceCurrentUserSync:
                 ]
             },
         }
+        application_information_result = Mock()
+        application_information_result.mappings.return_value.all.return_value = [
+            {
+                "id": 17,
+                "uuid": UUID("018f6f83-0000-0000-0000-000000000301"),
+                "workspace_id": 23,
+                "service_name_en": "Benefits Portal",
+                "service_name_fr": "Portail des prestations",
+            }
+        ]
+        mock_db.execute = AsyncMock(return_value=application_information_result)
 
         with (
             patch("src.app.services.rp_application_service.crud_rp_applications") as mock_crud,
@@ -220,8 +232,10 @@ class TestRPApplicationServiceCurrentUserSync:
             )
 
         assert len(result) == 1
-        assert result[0]["serviceNameEn"] == "Workspace Granted App"
-        assert result[0]["serviceNameFr"] == "Workspace Granted App"
+        assert result[0]["applicationInformationUuid"] == UUID("018f6f83-0000-0000-0000-000000000301")
+        assert result[0]["serviceNameEn"] == "Benefits Portal"
+        assert result[0]["serviceNameFr"] == "Portail des prestations"
+        assert result[0]["configurationName"] == "Production integration A"
         assert result[0]["workspaceName"] == "Benefits Workspace"
         assert result[0]["canadaLoginEnvironment"] == "production"
         assert result[0]["onboardingState"] == "under_review"

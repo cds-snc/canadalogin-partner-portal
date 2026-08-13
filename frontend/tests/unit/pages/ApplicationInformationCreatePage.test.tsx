@@ -158,7 +158,7 @@ describe("ApplicationInformationCreatePage", () => {
 				},
 				replace: true,
 				search: { created: "1" },
-				to: "/workspaces/$workspaceUuid/application-information/$applicationInformationUuid",
+				to: "/workspaces/$workspaceUuid/applications/$applicationInformationUuid",
 			});
 		});
 	});

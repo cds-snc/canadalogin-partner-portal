@@ -14,17 +14,20 @@ export type MAUReportResponseRead = {
 	application_name: string;
 	department_name?: string | null;
 	end_date: string;
+	partner_environment?: string | null;
 	records: Array<MAUReportItemRead>;
 	start_date: string;
 };
 
 type MAUReportQuery = {
+	applicationInformationUuid?: string;
 	endDate?: string;
 	startDate?: string;
 	workspaceUuid?: string;
 };
 
 const buildMauReportQuery = ({
+	applicationInformationUuid,
 	endDate,
 	startDate,
 	workspaceUuid,
@@ -41,6 +44,13 @@ const buildMauReportQuery = ({
 
 	if (workspaceUuid && workspaceUuid.trim().length > 0) {
 		params.set("workspaceUuid", workspaceUuid);
+	}
+
+	if (
+		applicationInformationUuid &&
+		applicationInformationUuid.trim().length > 0
+	) {
+		params.set("applicationInformationUuid", applicationInformationUuid);
 	}
 
 	const query = params.toString();

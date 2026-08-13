@@ -2,6 +2,8 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import {
 	assignAccessibleRPApplicationDepartment,
 	createAccessibleRPApplicationRotatedClientSecret,
+	createApplicationRPConfigurationProgression,
+	createApplicationRPConfigurationRegistrationDraft,
 	deleteAccessibleRPApplicationRotatedClientSecret,
 	deleteRPApplication,
 	getAccessibleRPApplication,
@@ -9,6 +11,8 @@ import {
 	getAccessibleRPApplicationDepartment,
 	getAccessibleRPApplicationRotatedClientSecrets,
 	getAccessibleRPApplications,
+	getApplicationRPConfigurationRegistrationDraft,
+	getApplicationRPConfigurations,
 	getRPApplicationAdoptionCandidatePreview,
 	getRPApplicationAdoptionCandidates,
 	getRPApplication,
@@ -18,6 +22,7 @@ import {
 	linkRPApplicationToWorkspace,
 	rotateAccessibleRPApplicationClientSecret,
 	updateRPApplication,
+	updateApplicationRPConfigurationPartnerEnvironment,
 } from "@/fetch/rp-applications";
 
 describe("rp_application-api", () => {
@@ -120,6 +125,7 @@ describe("rp_application-api", () => {
 		} as Response);
 
 		const response = await linkRPApplicationToWorkspace(applicationUuid, {
+			applicationInformationUuid: "application-information-uuid-1",
 			canadaLoginEnvironment: "production",
 			workspaceUuid,
 		});
@@ -128,6 +134,7 @@ describe("rp_application-api", () => {
 			`http://localhost:8000/api/v1/rp-applications/${applicationUuid}/workspace-link`,
 			expect.objectContaining({
 				body: JSON.stringify({
+					applicationInformationUuid: "application-information-uuid-1",
 					canadaLoginEnvironment: "production",
 					workspaceUuid,
 				}),
@@ -281,6 +288,180 @@ describe("rp_application-api", () => {
 		});
 	});
 
+	it("lists RP configurations through the Application-scoped backend API", async () => {
+		const workspaceUuid = "workspace-uuid-1";
+		const applicationInformationUuid = "application-information-uuid-1";
+		const fetchMock = vi.spyOn(globalThis, "fetch").mockResolvedValue({
+			headers: new Headers({ "content-type": "application/json" }),
+			json: () =>
+				Promise.resolve([
+					{
+						applicationInformationUuid,
+						configurationName: "Partner staging A",
+						uuid: "rp-configuration-uuid-1",
+						workspaceUuid,
+					},
+				]),
+			ok: true,
+			status: 200,
+		} as Response);
+
+		const response = await getApplicationRPConfigurations(
+			workspaceUuid,
+			applicationInformationUuid
+		);
+
+		expect(fetchMock).toHaveBeenCalledWith(
+			`http://localhost:8000/api/v1/workspaces/${workspaceUuid}/application-information/${applicationInformationUuid}/rp-configurations`,
+			expect.objectContaining({
+				cache: "no-store",
+				credentials: "include",
+				method: "GET",
+			})
+		);
+		expect(response[0]?.configurationName).toBe("Partner staging A");
+	});
+
+	it("creates Application-scoped Basics without duplicate public names", async () => {
+		const workspaceUuid = "workspace-uuid-1";
+		const applicationInformationUuid = "application-information-uuid-1";
+		const creationKey = "018f6f83-0000-0000-0000-000000000901";
+		const fetchMock = vi.spyOn(globalThis, "fetch").mockResolvedValue({
+			headers: new Headers({ "content-type": "application/json" }),
+			json: () =>
+				Promise.resolve({
+					applicationInformationUuid,
+					configurationName: "Partner staging A",
+					onboardingState: "draft",
+					registrationAnswers: {},
+					registrationDraftVersion: 1,
+					registrationLastCompletedStep: "basics",
+					rpApplicationUuid: "rp-configuration-uuid-1",
+					workspaceUuid,
+				}),
+			ok: true,
+			status: 201,
+		} as Response);
+
+		await createApplicationRPConfigurationRegistrationDraft(
+			workspaceUuid,
+			applicationInformationUuid,
+			{
+				canadaLoginEnvironment: "staging",
+				configurationName: "Partner staging A",
+				partnerEnvironment: "Partner staging",
+			},
+			creationKey
+		);
+
+		expect(fetchMock).toHaveBeenCalledWith(
+			`http://localhost:8000/api/v1/workspaces/${workspaceUuid}/application-information/${applicationInformationUuid}/rp-configurations`,
+			expect.objectContaining({
+				body: JSON.stringify({
+					canadaLoginEnvironment: "staging",
+					configurationName: "Partner staging A",
+					partnerEnvironment: "Partner staging",
+				}),
+				credentials: "include",
+				headers: expect.objectContaining({ "Idempotency-Key": creationKey }),
+				method: "POST",
+			})
+		);
+	});
+
+	it("creates progression from one explicit source to one named target", async () => {
+		const workspaceUuid = "workspace-uuid-1";
+		const applicationInformationUuid = "application-information-uuid-1";
+		const sourceUuid = "rp-configuration-source-1";
+		const creationKey = "018f6f83-0000-0000-0000-000000000902";
+		const fetchMock = vi.spyOn(globalThis, "fetch").mockResolvedValue({
+			headers: new Headers({ "content-type": "application/json" }),
+			json: () =>
+				Promise.resolve({
+					applicationInformationUuid,
+					promotionStatus: "review_tracked",
+					selfServe: false,
+					sourceConfigurationName: "Partner staging A",
+					sourceEnvironment: "staging",
+					sourceRpConfigurationUuid: sourceUuid,
+					targetConfigurationName: "Partner production A",
+					targetEnvironment: "production",
+					targetRegistrationDraftVersion: 1,
+					targetRegistrationLastCompletedStep: "basics",
+					targetRpConfigurationUuid: "rp-configuration-target-1",
+					workspaceUuid,
+				}),
+			ok: true,
+			status: 201,
+		} as Response);
+
+		const response = await createApplicationRPConfigurationProgression(
+			workspaceUuid,
+			applicationInformationUuid,
+			sourceUuid,
+			{
+				targetConfigurationName: "Partner production A",
+				targetPartnerEnvironment: "Partner production",
+				targetEnvironment: "production",
+			},
+			creationKey
+		);
+
+		expect(fetchMock).toHaveBeenCalledWith(
+			`http://localhost:8000/api/v1/workspaces/${workspaceUuid}/application-information/${applicationInformationUuid}/rp-configurations/${sourceUuid}/progression`,
+			expect.objectContaining({
+				body: JSON.stringify({
+					targetConfigurationName: "Partner production A",
+					targetPartnerEnvironment: "Partner production",
+					targetEnvironment: "production",
+				}),
+				credentials: "include",
+				headers: expect.objectContaining({ "Idempotency-Key": creationKey }),
+				method: "POST",
+			})
+		);
+		expect(response.sourceRpConfigurationUuid).toBe(sourceUuid);
+		expect(response.targetRpConfigurationUuid).toBe(
+			"rp-configuration-target-1"
+		);
+	});
+
+	it("updates only the nested RP configuration Partner environment", async () => {
+		const workspaceUuid = "workspace-uuid-1";
+		const applicationInformationUuid = "application-information-uuid-1";
+		const rpConfigurationUuid = "rp-configuration-uuid-1";
+		const fetchMock = vi.spyOn(globalThis, "fetch").mockResolvedValue({
+			headers: new Headers({ "content-type": "application/json" }),
+			json: () =>
+				Promise.resolve({
+					applicationInformationUuid,
+					partnerEnvironment: "Partner QA 2",
+					rpConfigurationUuid,
+					updatedAt: "2026-08-13T15:00:00Z",
+					workspaceUuid,
+				}),
+			ok: true,
+			status: 200,
+		} as Response);
+
+		const response = await updateApplicationRPConfigurationPartnerEnvironment(
+			workspaceUuid,
+			applicationInformationUuid,
+			rpConfigurationUuid,
+			{ partnerEnvironment: "Partner QA 2" }
+		);
+
+		expect(fetchMock).toHaveBeenCalledWith(
+			`http://localhost:8000/api/v1/workspaces/${workspaceUuid}/application-information/${applicationInformationUuid}/rp-configurations/${rpConfigurationUuid}/partner-environment`,
+			expect.objectContaining({
+				body: JSON.stringify({ partnerEnvironment: "Partner QA 2" }),
+				credentials: "include",
+				method: "PATCH",
+			})
+		);
+		expect(response.partnerEnvironment).toBe("Partner QA 2");
+	});
+
 	it("gets an accessible RP application department through the backend API", async () => {
 		const applicationUuid = "application-uuid-1";
 		const fetchMock = vi.spyOn(globalThis, "fetch").mockResolvedValue({
@@ -389,6 +570,49 @@ describe("rp_application-api", () => {
 			})
 		);
 		expect(response.clientId).toBe("client-id-123");
+
+		await getAccessibleRPApplicationClientCredentials(
+			applicationUuid,
+			"workspace-uuid-1",
+			"application-information-uuid-1"
+		);
+		expect(fetchMock).toHaveBeenLastCalledWith(
+			`http://localhost:8000/api/v1/rp-applications/accessible/${applicationUuid}/client?workspaceUuid=workspace-uuid-1&applicationInformationUuid=application-information-uuid-1`,
+			expect.objectContaining({
+				cache: "no-store",
+				credentials: "include",
+				method: "GET",
+			})
+		);
+	});
+
+	it("loads a registration draft through complete Application ancestry", async () => {
+		const fetchMock = vi.spyOn(globalThis, "fetch").mockResolvedValue({
+			headers: new Headers({ "content-type": "application/json" }),
+			json: () =>
+				Promise.resolve({
+					applicationInformationUuid: "application-information-uuid-1",
+					rpApplicationUuid: "rp-configuration-uuid-1",
+					workspaceUuid: "workspace-uuid-1",
+				}),
+			ok: true,
+			status: 200,
+		} as Response);
+
+		await getApplicationRPConfigurationRegistrationDraft(
+			"workspace-uuid-1",
+			"application-information-uuid-1",
+			"rp-configuration-uuid-1"
+		);
+
+		expect(fetchMock).toHaveBeenCalledWith(
+			"http://localhost:8000/api/v1/workspaces/workspace-uuid-1/application-information/application-information-uuid-1/rp-configurations/rp-configuration-uuid-1/registration-draft",
+			expect.objectContaining({
+				cache: "no-store",
+				credentials: "include",
+				method: "GET",
+			})
+		);
 	});
 
 	it("lists accessible rotated client secrets through the backend API", async () => {

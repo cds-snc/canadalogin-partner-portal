@@ -9,11 +9,13 @@ export const mauReportQueryKey = (
 	workspaceUuid: string,
 	rpApplicationUuid: string,
 	startDate: string,
-	endDate: string
+	endDate: string,
+	applicationInformationUuid = ""
 ) =>
 	[
 		...accessibleRPApplicationsQueryKey,
 		workspaceUuid,
+		...(applicationInformationUuid ? [applicationInformationUuid] : []),
 		rpApplicationUuid,
 		"mau-report",
 		startDate,
@@ -24,13 +26,15 @@ export const useMauReport = (
 	workspaceUuid: string,
 	rpApplicationUuid: string,
 	startDate: string,
-	endDate: string
+	endDate: string,
+	applicationInformationUuid = ""
 ): UseQueryResult<MAUReportResponseRead, Error> =>
 	useQuery<MAUReportResponseRead, Error>({
 		enabled:
 			workspaceUuid.trim().length > 0 && rpApplicationUuid.trim().length > 0,
 		queryFn: () =>
 			getAccessibleRPApplicationMauReport(rpApplicationUuid, {
+				applicationInformationUuid,
 				endDate,
 				startDate,
 				workspaceUuid,
@@ -39,6 +43,7 @@ export const useMauReport = (
 			workspaceUuid,
 			rpApplicationUuid,
 			startDate,
-			endDate
+			endDate,
+			applicationInformationUuid
 		),
 	});

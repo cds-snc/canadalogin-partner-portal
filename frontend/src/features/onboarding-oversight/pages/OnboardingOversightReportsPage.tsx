@@ -549,6 +549,7 @@ export const AggregateReportsPageContent = ({
 			{displayedReport && tableRows.length > 0 ? (
 				<DataTable
 					columns={columns}
+					filter={false}
 					itemLabel={t("onboardingOversight.reports.tableTitle")}
 					pagination={false}
 					rows={tableRows}

@@ -62,21 +62,37 @@ import { Route as WorkspacesWorkspaceUuidApplicationInformationRouteImport } fro
 import { Route as WorkspacesWorkspaceUuidAccessRouteImport } from './routes/workspaces/$workspaceUuid/access'
 import { Route as InvitationsRpApplicationsTokenRouteImport } from './routes/invitations/rp-applications/$token'
 import { Route as WorkspacesWorkspaceUuidApplicationsIndexRouteImport } from './routes/workspaces/$workspaceUuid/applications/index'
-import { Route as WorkspacesWorkspaceUuidApplicationInformationIndexRouteImport } from './routes/workspaces/$workspaceUuid/application-information/index'
 import { Route as WorkspacesWorkspaceUuidApplicationsNewRouteImport } from './routes/workspaces/$workspaceUuid/applications/new'
-import { Route as WorkspacesWorkspaceUuidApplicationsRpApplicationUuidRouteImport } from './routes/workspaces/$workspaceUuid/applications/$rpApplicationUuid'
-import { Route as WorkspacesWorkspaceUuidApplicationInformationNewRouteImport } from './routes/workspaces/$workspaceUuid/application-information/new'
-import { Route as WorkspacesWorkspaceUuidApplicationInformationApplicationInformationUuidRouteImport } from './routes/workspaces/$workspaceUuid/application-information/$applicationInformationUuid'
-import { Route as WorkspacesWorkspaceUuidApplicationsRpApplicationUuidIndexRouteImport } from './routes/workspaces/$workspaceUuid/applications/$rpApplicationUuid/index'
-import { Route as WorkspacesWorkspaceUuidApplicationInformationApplicationInformationUuidIndexRouteImport } from './routes/workspaces/$workspaceUuid/application-information/$applicationInformationUuid/index'
-import { Route as WorkspacesWorkspaceUuidApplicationsRpApplicationUuidUsageRouteImport } from './routes/workspaces/$workspaceUuid/applications/$rpApplicationUuid/usage'
-import { Route as WorkspacesWorkspaceUuidApplicationsRpApplicationUuidManageCredentialsRouteImport } from './routes/workspaces/$workspaceUuid/applications/$rpApplicationUuid/manage-credentials'
-import { Route as WorkspacesWorkspaceUuidApplicationsRpApplicationUuidEditRouteImport } from './routes/workspaces/$workspaceUuid/applications/$rpApplicationUuid/edit'
-import { Route as WorkspacesWorkspaceUuidApplicationsRpApplicationUuidConfigurationRouteImport } from './routes/workspaces/$workspaceUuid/applications/$rpApplicationUuid/configuration'
-import { Route as WorkspacesWorkspaceUuidApplicationsRpApplicationUuidAuditRouteImport } from './routes/workspaces/$workspaceUuid/applications/$rpApplicationUuid/audit'
-import { Route as WorkspacesWorkspaceUuidApplicationInformationApplicationInformationUuidEditRouteImport } from './routes/workspaces/$workspaceUuid/application-information/$applicationInformationUuid/edit'
-import { Route as WorkspacesWorkspaceUuidApplicationsRpApplicationUuidRegistrationConfirmationRouteImport } from './routes/workspaces/$workspaceUuid/applications/$rpApplicationUuid/registration/confirmation'
-import { Route as WorkspacesWorkspaceUuidApplicationsRpApplicationUuidRegistrationStepRouteImport } from './routes/workspaces/$workspaceUuid/applications/$rpApplicationUuid/registration/$step'
+import { Route as WorkspacesWorkspaceUuidApplicationsApplicationInformationUuidRouteImport } from './routes/workspaces/$workspaceUuid/applications/$applicationInformationUuid'
+import { Route as WorkspacesWorkspaceUuidApplicationInformationSplatRouteImport } from './routes/workspaces/$workspaceUuid/application-information/$'
+import { Route as WorkspacesWorkspaceUuidApplicationsApplicationInformationUuidIndexRouteImport } from './routes/workspaces/$workspaceUuid/applications/$applicationInformationUuid/index'
+import { Route as WorkspacesWorkspaceUuidApplicationsApplicationInformationUuidSettingsRouteImport } from './routes/workspaces/$workspaceUuid/applications/$applicationInformationUuid/settings'
+import { Route as WorkspacesWorkspaceUuidApplicationsApplicationInformationUuidRpConfigurationsRouteImport } from './routes/workspaces/$workspaceUuid/applications/$applicationInformationUuid/rp-configurations'
+import { Route as WorkspacesWorkspaceUuidApplicationsApplicationInformationUuidReadinessRouteImport } from './routes/workspaces/$workspaceUuid/applications/$applicationInformationUuid/readiness'
+import { Route as WorkspacesWorkspaceUuidApplicationsApplicationInformationUuidInternalReviewRouteImport } from './routes/workspaces/$workspaceUuid/applications/$applicationInformationUuid/internal-review'
+import { Route as WorkspacesWorkspaceUuidApplicationsApplicationInformationUuidEditRouteImport } from './routes/workspaces/$workspaceUuid/applications/$applicationInformationUuid/edit'
+import { Route as WorkspacesWorkspaceUuidApplicationsApplicationInformationUuidDetailsRouteImport } from './routes/workspaces/$workspaceUuid/applications/$applicationInformationUuid/details'
+import { Route as WorkspacesWorkspaceUuidApplicationsApplicationInformationUuidDeleteRouteImport } from './routes/workspaces/$workspaceUuid/applications/$applicationInformationUuid/delete'
+import { Route as WorkspacesWorkspaceUuidApplicationsApplicationInformationUuidContactsRouteImport } from './routes/workspaces/$workspaceUuid/applications/$applicationInformationUuid/contacts'
+import { Route as WorkspacesWorkspaceUuidApplicationsApplicationInformationUuidSplatRouteImport } from './routes/workspaces/$workspaceUuid/applications/$applicationInformationUuid/$'
+import { Route as WorkspacesWorkspaceUuidApplicationsApplicationInformationUuidRpConfigurationsIndexRouteImport } from './routes/workspaces/$workspaceUuid/applications/$applicationInformationUuid/rp-configurations/index'
+import { Route as WorkspacesWorkspaceUuidApplicationsApplicationInformationUuidContactsIndexRouteImport } from './routes/workspaces/$workspaceUuid/applications/$applicationInformationUuid/contacts/index'
+import { Route as WorkspacesWorkspaceUuidApplicationsApplicationInformationUuidRpConfigurationsNewRouteImport } from './routes/workspaces/$workspaceUuid/applications/$applicationInformationUuid/rp-configurations/new'
+import { Route as WorkspacesWorkspaceUuidApplicationsApplicationInformationUuidRpConfigurationsRpConfigurationUuidRouteImport } from './routes/workspaces/$workspaceUuid/applications/$applicationInformationUuid/rp-configurations/$rpConfigurationUuid'
+import { Route as WorkspacesWorkspaceUuidApplicationsApplicationInformationUuidDetailsEditRouteImport } from './routes/workspaces/$workspaceUuid/applications/$applicationInformationUuid/details/edit'
+import { Route as WorkspacesWorkspaceUuidApplicationsApplicationInformationUuidContactsNewRouteImport } from './routes/workspaces/$workspaceUuid/applications/$applicationInformationUuid/contacts/new'
+import { Route as WorkspacesWorkspaceUuidApplicationsApplicationInformationUuidRpConfigurationsRpConfigurationUuidIndexRouteImport } from './routes/workspaces/$workspaceUuid/applications/$applicationInformationUuid/rp-configurations/$rpConfigurationUuid/index'
+import { Route as WorkspacesWorkspaceUuidApplicationsApplicationInformationUuidRpConfigurationsRpConfigurationUuidUsageRouteImport } from './routes/workspaces/$workspaceUuid/applications/$applicationInformationUuid/rp-configurations/$rpConfigurationUuid/usage'
+import { Route as WorkspacesWorkspaceUuidApplicationsApplicationInformationUuidRpConfigurationsRpConfigurationUuidSettingsRouteImport } from './routes/workspaces/$workspaceUuid/applications/$applicationInformationUuid/rp-configurations/$rpConfigurationUuid/settings'
+import { Route as WorkspacesWorkspaceUuidApplicationsApplicationInformationUuidRpConfigurationsRpConfigurationUuidProgressionRouteImport } from './routes/workspaces/$workspaceUuid/applications/$applicationInformationUuid/rp-configurations/$rpConfigurationUuid/progression'
+import { Route as WorkspacesWorkspaceUuidApplicationsApplicationInformationUuidRpConfigurationsRpConfigurationUuidProductionReviewRouteImport } from './routes/workspaces/$workspaceUuid/applications/$applicationInformationUuid/rp-configurations/$rpConfigurationUuid/production-review'
+import { Route as WorkspacesWorkspaceUuidApplicationsApplicationInformationUuidRpConfigurationsRpConfigurationUuidManageCredentialsRouteImport } from './routes/workspaces/$workspaceUuid/applications/$applicationInformationUuid/rp-configurations/$rpConfigurationUuid/manage-credentials'
+import { Route as WorkspacesWorkspaceUuidApplicationsApplicationInformationUuidRpConfigurationsRpConfigurationUuidConfigurationRouteImport } from './routes/workspaces/$workspaceUuid/applications/$applicationInformationUuid/rp-configurations/$rpConfigurationUuid/configuration'
+import { Route as WorkspacesWorkspaceUuidApplicationsApplicationInformationUuidRpConfigurationsRpConfigurationUuidAuditRouteImport } from './routes/workspaces/$workspaceUuid/applications/$applicationInformationUuid/rp-configurations/$rpConfigurationUuid/audit'
+import { Route as WorkspacesWorkspaceUuidApplicationsApplicationInformationUuidContactsContactUuidEditRouteImport } from './routes/workspaces/$workspaceUuid/applications/$applicationInformationUuid/contacts/$contactUuid/edit'
+import { Route as WorkspacesWorkspaceUuidApplicationsApplicationInformationUuidRpConfigurationsRpConfigurationUuidRegistrationConfirmationRouteImport } from './routes/workspaces/$workspaceUuid/applications/$applicationInformationUuid/rp-configurations/$rpConfigurationUuid/registration/confirmation'
+import { Route as WorkspacesWorkspaceUuidApplicationsApplicationInformationUuidRpConfigurationsRpConfigurationUuidRegistrationStepRouteImport } from './routes/workspaces/$workspaceUuid/applications/$applicationInformationUuid/rp-configurations/$rpConfigurationUuid/registration/$step'
+import { Route as WorkspacesWorkspaceUuidApplicationsApplicationInformationUuidRpConfigurationsRpConfigurationUuidPartnerEnvironmentEditRouteImport } from './routes/workspaces/$workspaceUuid/applications/$applicationInformationUuid/rp-configurations/$rpConfigurationUuid/partner-environment/edit'
 
 const YourApplicationsRoute = YourApplicationsRouteImport.update({
   id: '/your-applications',
@@ -365,118 +381,276 @@ const WorkspacesWorkspaceUuidApplicationsIndexRoute =
     path: '/',
     getParentRoute: () => WorkspacesWorkspaceUuidApplicationsRoute,
   } as any)
-const WorkspacesWorkspaceUuidApplicationInformationIndexRoute =
-  WorkspacesWorkspaceUuidApplicationInformationIndexRouteImport.update({
-    id: '/',
-    path: '/',
-    getParentRoute: () => WorkspacesWorkspaceUuidApplicationInformationRoute,
-  } as any)
 const WorkspacesWorkspaceUuidApplicationsNewRoute =
   WorkspacesWorkspaceUuidApplicationsNewRouteImport.update({
     id: '/new',
     path: '/new',
     getParentRoute: () => WorkspacesWorkspaceUuidApplicationsRoute,
   } as any)
-const WorkspacesWorkspaceUuidApplicationsRpApplicationUuidRoute =
-  WorkspacesWorkspaceUuidApplicationsRpApplicationUuidRouteImport.update({
-    id: '/$rpApplicationUuid',
-    path: '/$rpApplicationUuid',
-    getParentRoute: () => WorkspacesWorkspaceUuidApplicationsRoute,
-  } as any)
-const WorkspacesWorkspaceUuidApplicationInformationNewRoute =
-  WorkspacesWorkspaceUuidApplicationInformationNewRouteImport.update({
-    id: '/new',
-    path: '/new',
-    getParentRoute: () => WorkspacesWorkspaceUuidApplicationInformationRoute,
-  } as any)
-const WorkspacesWorkspaceUuidApplicationInformationApplicationInformationUuidRoute =
-  WorkspacesWorkspaceUuidApplicationInformationApplicationInformationUuidRouteImport.update(
+const WorkspacesWorkspaceUuidApplicationsApplicationInformationUuidRoute =
+  WorkspacesWorkspaceUuidApplicationsApplicationInformationUuidRouteImport.update(
     {
       id: '/$applicationInformationUuid',
       path: '/$applicationInformationUuid',
-      getParentRoute: () => WorkspacesWorkspaceUuidApplicationInformationRoute,
+      getParentRoute: () => WorkspacesWorkspaceUuidApplicationsRoute,
     } as any,
   )
-const WorkspacesWorkspaceUuidApplicationsRpApplicationUuidIndexRoute =
-  WorkspacesWorkspaceUuidApplicationsRpApplicationUuidIndexRouteImport.update({
-    id: '/',
-    path: '/',
-    getParentRoute: () =>
-      WorkspacesWorkspaceUuidApplicationsRpApplicationUuidRoute,
+const WorkspacesWorkspaceUuidApplicationInformationSplatRoute =
+  WorkspacesWorkspaceUuidApplicationInformationSplatRouteImport.update({
+    id: '/$',
+    path: '/$',
+    getParentRoute: () => WorkspacesWorkspaceUuidApplicationInformationRoute,
   } as any)
-const WorkspacesWorkspaceUuidApplicationInformationApplicationInformationUuidIndexRoute =
-  WorkspacesWorkspaceUuidApplicationInformationApplicationInformationUuidIndexRouteImport.update(
+const WorkspacesWorkspaceUuidApplicationsApplicationInformationUuidIndexRoute =
+  WorkspacesWorkspaceUuidApplicationsApplicationInformationUuidIndexRouteImport.update(
     {
       id: '/',
       path: '/',
       getParentRoute: () =>
-        WorkspacesWorkspaceUuidApplicationInformationApplicationInformationUuidRoute,
+        WorkspacesWorkspaceUuidApplicationsApplicationInformationUuidRoute,
     } as any,
   )
-const WorkspacesWorkspaceUuidApplicationsRpApplicationUuidUsageRoute =
-  WorkspacesWorkspaceUuidApplicationsRpApplicationUuidUsageRouteImport.update({
-    id: '/usage',
-    path: '/usage',
-    getParentRoute: () =>
-      WorkspacesWorkspaceUuidApplicationsRpApplicationUuidRoute,
-  } as any)
-const WorkspacesWorkspaceUuidApplicationsRpApplicationUuidManageCredentialsRoute =
-  WorkspacesWorkspaceUuidApplicationsRpApplicationUuidManageCredentialsRouteImport.update(
+const WorkspacesWorkspaceUuidApplicationsApplicationInformationUuidSettingsRoute =
+  WorkspacesWorkspaceUuidApplicationsApplicationInformationUuidSettingsRouteImport.update(
     {
-      id: '/manage-credentials',
-      path: '/manage-credentials',
+      id: '/settings',
+      path: '/settings',
       getParentRoute: () =>
-        WorkspacesWorkspaceUuidApplicationsRpApplicationUuidRoute,
+        WorkspacesWorkspaceUuidApplicationsApplicationInformationUuidRoute,
     } as any,
   )
-const WorkspacesWorkspaceUuidApplicationsRpApplicationUuidEditRoute =
-  WorkspacesWorkspaceUuidApplicationsRpApplicationUuidEditRouteImport.update({
-    id: '/edit',
-    path: '/edit',
-    getParentRoute: () =>
-      WorkspacesWorkspaceUuidApplicationsRpApplicationUuidRoute,
-  } as any)
-const WorkspacesWorkspaceUuidApplicationsRpApplicationUuidConfigurationRoute =
-  WorkspacesWorkspaceUuidApplicationsRpApplicationUuidConfigurationRouteImport.update(
+const WorkspacesWorkspaceUuidApplicationsApplicationInformationUuidRpConfigurationsRoute =
+  WorkspacesWorkspaceUuidApplicationsApplicationInformationUuidRpConfigurationsRouteImport.update(
     {
-      id: '/configuration',
-      path: '/configuration',
+      id: '/rp-configurations',
+      path: '/rp-configurations',
       getParentRoute: () =>
-        WorkspacesWorkspaceUuidApplicationsRpApplicationUuidRoute,
+        WorkspacesWorkspaceUuidApplicationsApplicationInformationUuidRoute,
     } as any,
   )
-const WorkspacesWorkspaceUuidApplicationsRpApplicationUuidAuditRoute =
-  WorkspacesWorkspaceUuidApplicationsRpApplicationUuidAuditRouteImport.update({
-    id: '/audit',
-    path: '/audit',
-    getParentRoute: () =>
-      WorkspacesWorkspaceUuidApplicationsRpApplicationUuidRoute,
-  } as any)
-const WorkspacesWorkspaceUuidApplicationInformationApplicationInformationUuidEditRoute =
-  WorkspacesWorkspaceUuidApplicationInformationApplicationInformationUuidEditRouteImport.update(
+const WorkspacesWorkspaceUuidApplicationsApplicationInformationUuidReadinessRoute =
+  WorkspacesWorkspaceUuidApplicationsApplicationInformationUuidReadinessRouteImport.update(
+    {
+      id: '/readiness',
+      path: '/readiness',
+      getParentRoute: () =>
+        WorkspacesWorkspaceUuidApplicationsApplicationInformationUuidRoute,
+    } as any,
+  )
+const WorkspacesWorkspaceUuidApplicationsApplicationInformationUuidInternalReviewRoute =
+  WorkspacesWorkspaceUuidApplicationsApplicationInformationUuidInternalReviewRouteImport.update(
+    {
+      id: '/internal-review',
+      path: '/internal-review',
+      getParentRoute: () =>
+        WorkspacesWorkspaceUuidApplicationsApplicationInformationUuidRoute,
+    } as any,
+  )
+const WorkspacesWorkspaceUuidApplicationsApplicationInformationUuidEditRoute =
+  WorkspacesWorkspaceUuidApplicationsApplicationInformationUuidEditRouteImport.update(
     {
       id: '/edit',
       path: '/edit',
       getParentRoute: () =>
-        WorkspacesWorkspaceUuidApplicationInformationApplicationInformationUuidRoute,
+        WorkspacesWorkspaceUuidApplicationsApplicationInformationUuidRoute,
     } as any,
   )
-const WorkspacesWorkspaceUuidApplicationsRpApplicationUuidRegistrationConfirmationRoute =
-  WorkspacesWorkspaceUuidApplicationsRpApplicationUuidRegistrationConfirmationRouteImport.update(
+const WorkspacesWorkspaceUuidApplicationsApplicationInformationUuidDetailsRoute =
+  WorkspacesWorkspaceUuidApplicationsApplicationInformationUuidDetailsRouteImport.update(
+    {
+      id: '/details',
+      path: '/details',
+      getParentRoute: () =>
+        WorkspacesWorkspaceUuidApplicationsApplicationInformationUuidRoute,
+    } as any,
+  )
+const WorkspacesWorkspaceUuidApplicationsApplicationInformationUuidDeleteRoute =
+  WorkspacesWorkspaceUuidApplicationsApplicationInformationUuidDeleteRouteImport.update(
+    {
+      id: '/delete',
+      path: '/delete',
+      getParentRoute: () =>
+        WorkspacesWorkspaceUuidApplicationsApplicationInformationUuidRoute,
+    } as any,
+  )
+const WorkspacesWorkspaceUuidApplicationsApplicationInformationUuidContactsRoute =
+  WorkspacesWorkspaceUuidApplicationsApplicationInformationUuidContactsRouteImport.update(
+    {
+      id: '/contacts',
+      path: '/contacts',
+      getParentRoute: () =>
+        WorkspacesWorkspaceUuidApplicationsApplicationInformationUuidRoute,
+    } as any,
+  )
+const WorkspacesWorkspaceUuidApplicationsApplicationInformationUuidSplatRoute =
+  WorkspacesWorkspaceUuidApplicationsApplicationInformationUuidSplatRouteImport.update(
+    {
+      id: '/$',
+      path: '/$',
+      getParentRoute: () =>
+        WorkspacesWorkspaceUuidApplicationsApplicationInformationUuidRoute,
+    } as any,
+  )
+const WorkspacesWorkspaceUuidApplicationsApplicationInformationUuidRpConfigurationsIndexRoute =
+  WorkspacesWorkspaceUuidApplicationsApplicationInformationUuidRpConfigurationsIndexRouteImport.update(
+    {
+      id: '/',
+      path: '/',
+      getParentRoute: () =>
+        WorkspacesWorkspaceUuidApplicationsApplicationInformationUuidRpConfigurationsRoute,
+    } as any,
+  )
+const WorkspacesWorkspaceUuidApplicationsApplicationInformationUuidContactsIndexRoute =
+  WorkspacesWorkspaceUuidApplicationsApplicationInformationUuidContactsIndexRouteImport.update(
+    {
+      id: '/',
+      path: '/',
+      getParentRoute: () =>
+        WorkspacesWorkspaceUuidApplicationsApplicationInformationUuidContactsRoute,
+    } as any,
+  )
+const WorkspacesWorkspaceUuidApplicationsApplicationInformationUuidRpConfigurationsNewRoute =
+  WorkspacesWorkspaceUuidApplicationsApplicationInformationUuidRpConfigurationsNewRouteImport.update(
+    {
+      id: '/new',
+      path: '/new',
+      getParentRoute: () =>
+        WorkspacesWorkspaceUuidApplicationsApplicationInformationUuidRpConfigurationsRoute,
+    } as any,
+  )
+const WorkspacesWorkspaceUuidApplicationsApplicationInformationUuidRpConfigurationsRpConfigurationUuidRoute =
+  WorkspacesWorkspaceUuidApplicationsApplicationInformationUuidRpConfigurationsRpConfigurationUuidRouteImport.update(
+    {
+      id: '/$rpConfigurationUuid',
+      path: '/$rpConfigurationUuid',
+      getParentRoute: () =>
+        WorkspacesWorkspaceUuidApplicationsApplicationInformationUuidRpConfigurationsRoute,
+    } as any,
+  )
+const WorkspacesWorkspaceUuidApplicationsApplicationInformationUuidDetailsEditRoute =
+  WorkspacesWorkspaceUuidApplicationsApplicationInformationUuidDetailsEditRouteImport.update(
+    {
+      id: '/edit',
+      path: '/edit',
+      getParentRoute: () =>
+        WorkspacesWorkspaceUuidApplicationsApplicationInformationUuidDetailsRoute,
+    } as any,
+  )
+const WorkspacesWorkspaceUuidApplicationsApplicationInformationUuidContactsNewRoute =
+  WorkspacesWorkspaceUuidApplicationsApplicationInformationUuidContactsNewRouteImport.update(
+    {
+      id: '/new',
+      path: '/new',
+      getParentRoute: () =>
+        WorkspacesWorkspaceUuidApplicationsApplicationInformationUuidContactsRoute,
+    } as any,
+  )
+const WorkspacesWorkspaceUuidApplicationsApplicationInformationUuidRpConfigurationsRpConfigurationUuidIndexRoute =
+  WorkspacesWorkspaceUuidApplicationsApplicationInformationUuidRpConfigurationsRpConfigurationUuidIndexRouteImport.update(
+    {
+      id: '/',
+      path: '/',
+      getParentRoute: () =>
+        WorkspacesWorkspaceUuidApplicationsApplicationInformationUuidRpConfigurationsRpConfigurationUuidRoute,
+    } as any,
+  )
+const WorkspacesWorkspaceUuidApplicationsApplicationInformationUuidRpConfigurationsRpConfigurationUuidUsageRoute =
+  WorkspacesWorkspaceUuidApplicationsApplicationInformationUuidRpConfigurationsRpConfigurationUuidUsageRouteImport.update(
+    {
+      id: '/usage',
+      path: '/usage',
+      getParentRoute: () =>
+        WorkspacesWorkspaceUuidApplicationsApplicationInformationUuidRpConfigurationsRpConfigurationUuidRoute,
+    } as any,
+  )
+const WorkspacesWorkspaceUuidApplicationsApplicationInformationUuidRpConfigurationsRpConfigurationUuidSettingsRoute =
+  WorkspacesWorkspaceUuidApplicationsApplicationInformationUuidRpConfigurationsRpConfigurationUuidSettingsRouteImport.update(
+    {
+      id: '/settings',
+      path: '/settings',
+      getParentRoute: () =>
+        WorkspacesWorkspaceUuidApplicationsApplicationInformationUuidRpConfigurationsRpConfigurationUuidRoute,
+    } as any,
+  )
+const WorkspacesWorkspaceUuidApplicationsApplicationInformationUuidRpConfigurationsRpConfigurationUuidProgressionRoute =
+  WorkspacesWorkspaceUuidApplicationsApplicationInformationUuidRpConfigurationsRpConfigurationUuidProgressionRouteImport.update(
+    {
+      id: '/progression',
+      path: '/progression',
+      getParentRoute: () =>
+        WorkspacesWorkspaceUuidApplicationsApplicationInformationUuidRpConfigurationsRpConfigurationUuidRoute,
+    } as any,
+  )
+const WorkspacesWorkspaceUuidApplicationsApplicationInformationUuidRpConfigurationsRpConfigurationUuidProductionReviewRoute =
+  WorkspacesWorkspaceUuidApplicationsApplicationInformationUuidRpConfigurationsRpConfigurationUuidProductionReviewRouteImport.update(
+    {
+      id: '/production-review',
+      path: '/production-review',
+      getParentRoute: () =>
+        WorkspacesWorkspaceUuidApplicationsApplicationInformationUuidRpConfigurationsRpConfigurationUuidRoute,
+    } as any,
+  )
+const WorkspacesWorkspaceUuidApplicationsApplicationInformationUuidRpConfigurationsRpConfigurationUuidManageCredentialsRoute =
+  WorkspacesWorkspaceUuidApplicationsApplicationInformationUuidRpConfigurationsRpConfigurationUuidManageCredentialsRouteImport.update(
+    {
+      id: '/manage-credentials',
+      path: '/manage-credentials',
+      getParentRoute: () =>
+        WorkspacesWorkspaceUuidApplicationsApplicationInformationUuidRpConfigurationsRpConfigurationUuidRoute,
+    } as any,
+  )
+const WorkspacesWorkspaceUuidApplicationsApplicationInformationUuidRpConfigurationsRpConfigurationUuidConfigurationRoute =
+  WorkspacesWorkspaceUuidApplicationsApplicationInformationUuidRpConfigurationsRpConfigurationUuidConfigurationRouteImport.update(
+    {
+      id: '/configuration',
+      path: '/configuration',
+      getParentRoute: () =>
+        WorkspacesWorkspaceUuidApplicationsApplicationInformationUuidRpConfigurationsRpConfigurationUuidRoute,
+    } as any,
+  )
+const WorkspacesWorkspaceUuidApplicationsApplicationInformationUuidRpConfigurationsRpConfigurationUuidAuditRoute =
+  WorkspacesWorkspaceUuidApplicationsApplicationInformationUuidRpConfigurationsRpConfigurationUuidAuditRouteImport.update(
+    {
+      id: '/audit',
+      path: '/audit',
+      getParentRoute: () =>
+        WorkspacesWorkspaceUuidApplicationsApplicationInformationUuidRpConfigurationsRpConfigurationUuidRoute,
+    } as any,
+  )
+const WorkspacesWorkspaceUuidApplicationsApplicationInformationUuidContactsContactUuidEditRoute =
+  WorkspacesWorkspaceUuidApplicationsApplicationInformationUuidContactsContactUuidEditRouteImport.update(
+    {
+      id: '/$contactUuid/edit',
+      path: '/$contactUuid/edit',
+      getParentRoute: () =>
+        WorkspacesWorkspaceUuidApplicationsApplicationInformationUuidContactsRoute,
+    } as any,
+  )
+const WorkspacesWorkspaceUuidApplicationsApplicationInformationUuidRpConfigurationsRpConfigurationUuidRegistrationConfirmationRoute =
+  WorkspacesWorkspaceUuidApplicationsApplicationInformationUuidRpConfigurationsRpConfigurationUuidRegistrationConfirmationRouteImport.update(
     {
       id: '/registration/confirmation',
       path: '/registration/confirmation',
       getParentRoute: () =>
-        WorkspacesWorkspaceUuidApplicationsRpApplicationUuidRoute,
+        WorkspacesWorkspaceUuidApplicationsApplicationInformationUuidRpConfigurationsRpConfigurationUuidRoute,
     } as any,
   )
-const WorkspacesWorkspaceUuidApplicationsRpApplicationUuidRegistrationStepRoute =
-  WorkspacesWorkspaceUuidApplicationsRpApplicationUuidRegistrationStepRouteImport.update(
+const WorkspacesWorkspaceUuidApplicationsApplicationInformationUuidRpConfigurationsRpConfigurationUuidRegistrationStepRoute =
+  WorkspacesWorkspaceUuidApplicationsApplicationInformationUuidRpConfigurationsRpConfigurationUuidRegistrationStepRouteImport.update(
     {
       id: '/registration/$step',
       path: '/registration/$step',
       getParentRoute: () =>
-        WorkspacesWorkspaceUuidApplicationsRpApplicationUuidRoute,
+        WorkspacesWorkspaceUuidApplicationsApplicationInformationUuidRpConfigurationsRpConfigurationUuidRoute,
+    } as any,
+  )
+const WorkspacesWorkspaceUuidApplicationsApplicationInformationUuidRpConfigurationsRpConfigurationUuidPartnerEnvironmentEditRoute =
+  WorkspacesWorkspaceUuidApplicationsApplicationInformationUuidRpConfigurationsRpConfigurationUuidPartnerEnvironmentEditRouteImport.update(
+    {
+      id: '/partner-environment/edit',
+      path: '/partner-environment/edit',
+      getParentRoute: () =>
+        WorkspacesWorkspaceUuidApplicationsApplicationInformationUuidRpConfigurationsRpConfigurationUuidRoute,
     } as any,
   )
 
@@ -533,22 +707,38 @@ export interface FileRoutesByFullPath {
   '/workspaces/$workspaceUuid/': typeof WorkspacesWorkspaceUuidIndexRoute
   '/workspaces/rp-registration-adoption/': typeof WorkspacesRpRegistrationAdoptionIndexRoute
   '/your-applications/$rpApplicationUuid/': typeof YourApplicationsRpApplicationUuidIndexRoute
-  '/workspaces/$workspaceUuid/application-information/$applicationInformationUuid': typeof WorkspacesWorkspaceUuidApplicationInformationApplicationInformationUuidRouteWithChildren
-  '/workspaces/$workspaceUuid/application-information/new': typeof WorkspacesWorkspaceUuidApplicationInformationNewRoute
-  '/workspaces/$workspaceUuid/applications/$rpApplicationUuid': typeof WorkspacesWorkspaceUuidApplicationsRpApplicationUuidRouteWithChildren
+  '/workspaces/$workspaceUuid/application-information/$': typeof WorkspacesWorkspaceUuidApplicationInformationSplatRoute
+  '/workspaces/$workspaceUuid/applications/$applicationInformationUuid': typeof WorkspacesWorkspaceUuidApplicationsApplicationInformationUuidRouteWithChildren
   '/workspaces/$workspaceUuid/applications/new': typeof WorkspacesWorkspaceUuidApplicationsNewRoute
-  '/workspaces/$workspaceUuid/application-information/': typeof WorkspacesWorkspaceUuidApplicationInformationIndexRoute
   '/workspaces/$workspaceUuid/applications/': typeof WorkspacesWorkspaceUuidApplicationsIndexRoute
-  '/workspaces/$workspaceUuid/application-information/$applicationInformationUuid/edit': typeof WorkspacesWorkspaceUuidApplicationInformationApplicationInformationUuidEditRoute
-  '/workspaces/$workspaceUuid/applications/$rpApplicationUuid/audit': typeof WorkspacesWorkspaceUuidApplicationsRpApplicationUuidAuditRoute
-  '/workspaces/$workspaceUuid/applications/$rpApplicationUuid/configuration': typeof WorkspacesWorkspaceUuidApplicationsRpApplicationUuidConfigurationRoute
-  '/workspaces/$workspaceUuid/applications/$rpApplicationUuid/edit': typeof WorkspacesWorkspaceUuidApplicationsRpApplicationUuidEditRoute
-  '/workspaces/$workspaceUuid/applications/$rpApplicationUuid/manage-credentials': typeof WorkspacesWorkspaceUuidApplicationsRpApplicationUuidManageCredentialsRoute
-  '/workspaces/$workspaceUuid/applications/$rpApplicationUuid/usage': typeof WorkspacesWorkspaceUuidApplicationsRpApplicationUuidUsageRoute
-  '/workspaces/$workspaceUuid/application-information/$applicationInformationUuid/': typeof WorkspacesWorkspaceUuidApplicationInformationApplicationInformationUuidIndexRoute
-  '/workspaces/$workspaceUuid/applications/$rpApplicationUuid/': typeof WorkspacesWorkspaceUuidApplicationsRpApplicationUuidIndexRoute
-  '/workspaces/$workspaceUuid/applications/$rpApplicationUuid/registration/$step': typeof WorkspacesWorkspaceUuidApplicationsRpApplicationUuidRegistrationStepRoute
-  '/workspaces/$workspaceUuid/applications/$rpApplicationUuid/registration/confirmation': typeof WorkspacesWorkspaceUuidApplicationsRpApplicationUuidRegistrationConfirmationRoute
+  '/workspaces/$workspaceUuid/applications/$applicationInformationUuid/$': typeof WorkspacesWorkspaceUuidApplicationsApplicationInformationUuidSplatRoute
+  '/workspaces/$workspaceUuid/applications/$applicationInformationUuid/contacts': typeof WorkspacesWorkspaceUuidApplicationsApplicationInformationUuidContactsRouteWithChildren
+  '/workspaces/$workspaceUuid/applications/$applicationInformationUuid/delete': typeof WorkspacesWorkspaceUuidApplicationsApplicationInformationUuidDeleteRoute
+  '/workspaces/$workspaceUuid/applications/$applicationInformationUuid/details': typeof WorkspacesWorkspaceUuidApplicationsApplicationInformationUuidDetailsRouteWithChildren
+  '/workspaces/$workspaceUuid/applications/$applicationInformationUuid/edit': typeof WorkspacesWorkspaceUuidApplicationsApplicationInformationUuidEditRoute
+  '/workspaces/$workspaceUuid/applications/$applicationInformationUuid/internal-review': typeof WorkspacesWorkspaceUuidApplicationsApplicationInformationUuidInternalReviewRoute
+  '/workspaces/$workspaceUuid/applications/$applicationInformationUuid/readiness': typeof WorkspacesWorkspaceUuidApplicationsApplicationInformationUuidReadinessRoute
+  '/workspaces/$workspaceUuid/applications/$applicationInformationUuid/rp-configurations': typeof WorkspacesWorkspaceUuidApplicationsApplicationInformationUuidRpConfigurationsRouteWithChildren
+  '/workspaces/$workspaceUuid/applications/$applicationInformationUuid/settings': typeof WorkspacesWorkspaceUuidApplicationsApplicationInformationUuidSettingsRoute
+  '/workspaces/$workspaceUuid/applications/$applicationInformationUuid/': typeof WorkspacesWorkspaceUuidApplicationsApplicationInformationUuidIndexRoute
+  '/workspaces/$workspaceUuid/applications/$applicationInformationUuid/contacts/new': typeof WorkspacesWorkspaceUuidApplicationsApplicationInformationUuidContactsNewRoute
+  '/workspaces/$workspaceUuid/applications/$applicationInformationUuid/details/edit': typeof WorkspacesWorkspaceUuidApplicationsApplicationInformationUuidDetailsEditRoute
+  '/workspaces/$workspaceUuid/applications/$applicationInformationUuid/rp-configurations/$rpConfigurationUuid': typeof WorkspacesWorkspaceUuidApplicationsApplicationInformationUuidRpConfigurationsRpConfigurationUuidRouteWithChildren
+  '/workspaces/$workspaceUuid/applications/$applicationInformationUuid/rp-configurations/new': typeof WorkspacesWorkspaceUuidApplicationsApplicationInformationUuidRpConfigurationsNewRoute
+  '/workspaces/$workspaceUuid/applications/$applicationInformationUuid/contacts/': typeof WorkspacesWorkspaceUuidApplicationsApplicationInformationUuidContactsIndexRoute
+  '/workspaces/$workspaceUuid/applications/$applicationInformationUuid/rp-configurations/': typeof WorkspacesWorkspaceUuidApplicationsApplicationInformationUuidRpConfigurationsIndexRoute
+  '/workspaces/$workspaceUuid/applications/$applicationInformationUuid/contacts/$contactUuid/edit': typeof WorkspacesWorkspaceUuidApplicationsApplicationInformationUuidContactsContactUuidEditRoute
+  '/workspaces/$workspaceUuid/applications/$applicationInformationUuid/rp-configurations/$rpConfigurationUuid/audit': typeof WorkspacesWorkspaceUuidApplicationsApplicationInformationUuidRpConfigurationsRpConfigurationUuidAuditRoute
+  '/workspaces/$workspaceUuid/applications/$applicationInformationUuid/rp-configurations/$rpConfigurationUuid/configuration': typeof WorkspacesWorkspaceUuidApplicationsApplicationInformationUuidRpConfigurationsRpConfigurationUuidConfigurationRoute
+  '/workspaces/$workspaceUuid/applications/$applicationInformationUuid/rp-configurations/$rpConfigurationUuid/manage-credentials': typeof WorkspacesWorkspaceUuidApplicationsApplicationInformationUuidRpConfigurationsRpConfigurationUuidManageCredentialsRoute
+  '/workspaces/$workspaceUuid/applications/$applicationInformationUuid/rp-configurations/$rpConfigurationUuid/production-review': typeof WorkspacesWorkspaceUuidApplicationsApplicationInformationUuidRpConfigurationsRpConfigurationUuidProductionReviewRoute
+  '/workspaces/$workspaceUuid/applications/$applicationInformationUuid/rp-configurations/$rpConfigurationUuid/progression': typeof WorkspacesWorkspaceUuidApplicationsApplicationInformationUuidRpConfigurationsRpConfigurationUuidProgressionRoute
+  '/workspaces/$workspaceUuid/applications/$applicationInformationUuid/rp-configurations/$rpConfigurationUuid/settings': typeof WorkspacesWorkspaceUuidApplicationsApplicationInformationUuidRpConfigurationsRpConfigurationUuidSettingsRoute
+  '/workspaces/$workspaceUuid/applications/$applicationInformationUuid/rp-configurations/$rpConfigurationUuid/usage': typeof WorkspacesWorkspaceUuidApplicationsApplicationInformationUuidRpConfigurationsRpConfigurationUuidUsageRoute
+  '/workspaces/$workspaceUuid/applications/$applicationInformationUuid/rp-configurations/$rpConfigurationUuid/': typeof WorkspacesWorkspaceUuidApplicationsApplicationInformationUuidRpConfigurationsRpConfigurationUuidIndexRoute
+  '/workspaces/$workspaceUuid/applications/$applicationInformationUuid/rp-configurations/$rpConfigurationUuid/partner-environment/edit': typeof WorkspacesWorkspaceUuidApplicationsApplicationInformationUuidRpConfigurationsRpConfigurationUuidPartnerEnvironmentEditRoute
+  '/workspaces/$workspaceUuid/applications/$applicationInformationUuid/rp-configurations/$rpConfigurationUuid/registration/$step': typeof WorkspacesWorkspaceUuidApplicationsApplicationInformationUuidRpConfigurationsRpConfigurationUuidRegistrationStepRoute
+  '/workspaces/$workspaceUuid/applications/$applicationInformationUuid/rp-configurations/$rpConfigurationUuid/registration/confirmation': typeof WorkspacesWorkspaceUuidApplicationsApplicationInformationUuidRpConfigurationsRpConfigurationUuidRegistrationConfirmationRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -581,6 +771,7 @@ export interface FileRoutesByTo {
   '/your-applications': typeof YourApplicationsIndexRoute
   '/invitations/rp-applications/$token': typeof InvitationsRpApplicationsTokenRoute
   '/workspaces/$workspaceUuid/access': typeof WorkspacesWorkspaceUuidAccessRoute
+  '/workspaces/$workspaceUuid/application-information': typeof WorkspacesWorkspaceUuidApplicationInformationRouteWithChildren
   '/workspaces/$workspaceUuid/members': typeof WorkspacesWorkspaceUuidMembersRoute
   '/workspaces/$workspaceUuid/reports': typeof WorkspacesWorkspaceUuidReportsRoute
   '/workspaces/$workspaceUuid/settings': typeof WorkspacesWorkspaceUuidSettingsRoute
@@ -592,20 +783,34 @@ export interface FileRoutesByTo {
   '/workspaces/$workspaceUuid': typeof WorkspacesWorkspaceUuidIndexRoute
   '/workspaces/rp-registration-adoption': typeof WorkspacesRpRegistrationAdoptionIndexRoute
   '/your-applications/$rpApplicationUuid': typeof YourApplicationsRpApplicationUuidIndexRoute
-  '/workspaces/$workspaceUuid/application-information/new': typeof WorkspacesWorkspaceUuidApplicationInformationNewRoute
+  '/workspaces/$workspaceUuid/application-information/$': typeof WorkspacesWorkspaceUuidApplicationInformationSplatRoute
   '/workspaces/$workspaceUuid/applications/new': typeof WorkspacesWorkspaceUuidApplicationsNewRoute
-  '/workspaces/$workspaceUuid/application-information': typeof WorkspacesWorkspaceUuidApplicationInformationIndexRoute
   '/workspaces/$workspaceUuid/applications': typeof WorkspacesWorkspaceUuidApplicationsIndexRoute
-  '/workspaces/$workspaceUuid/application-information/$applicationInformationUuid/edit': typeof WorkspacesWorkspaceUuidApplicationInformationApplicationInformationUuidEditRoute
-  '/workspaces/$workspaceUuid/applications/$rpApplicationUuid/audit': typeof WorkspacesWorkspaceUuidApplicationsRpApplicationUuidAuditRoute
-  '/workspaces/$workspaceUuid/applications/$rpApplicationUuid/configuration': typeof WorkspacesWorkspaceUuidApplicationsRpApplicationUuidConfigurationRoute
-  '/workspaces/$workspaceUuid/applications/$rpApplicationUuid/edit': typeof WorkspacesWorkspaceUuidApplicationsRpApplicationUuidEditRoute
-  '/workspaces/$workspaceUuid/applications/$rpApplicationUuid/manage-credentials': typeof WorkspacesWorkspaceUuidApplicationsRpApplicationUuidManageCredentialsRoute
-  '/workspaces/$workspaceUuid/applications/$rpApplicationUuid/usage': typeof WorkspacesWorkspaceUuidApplicationsRpApplicationUuidUsageRoute
-  '/workspaces/$workspaceUuid/application-information/$applicationInformationUuid': typeof WorkspacesWorkspaceUuidApplicationInformationApplicationInformationUuidIndexRoute
-  '/workspaces/$workspaceUuid/applications/$rpApplicationUuid': typeof WorkspacesWorkspaceUuidApplicationsRpApplicationUuidIndexRoute
-  '/workspaces/$workspaceUuid/applications/$rpApplicationUuid/registration/$step': typeof WorkspacesWorkspaceUuidApplicationsRpApplicationUuidRegistrationStepRoute
-  '/workspaces/$workspaceUuid/applications/$rpApplicationUuid/registration/confirmation': typeof WorkspacesWorkspaceUuidApplicationsRpApplicationUuidRegistrationConfirmationRoute
+  '/workspaces/$workspaceUuid/applications/$applicationInformationUuid/$': typeof WorkspacesWorkspaceUuidApplicationsApplicationInformationUuidSplatRoute
+  '/workspaces/$workspaceUuid/applications/$applicationInformationUuid/delete': typeof WorkspacesWorkspaceUuidApplicationsApplicationInformationUuidDeleteRoute
+  '/workspaces/$workspaceUuid/applications/$applicationInformationUuid/details': typeof WorkspacesWorkspaceUuidApplicationsApplicationInformationUuidDetailsRouteWithChildren
+  '/workspaces/$workspaceUuid/applications/$applicationInformationUuid/edit': typeof WorkspacesWorkspaceUuidApplicationsApplicationInformationUuidEditRoute
+  '/workspaces/$workspaceUuid/applications/$applicationInformationUuid/internal-review': typeof WorkspacesWorkspaceUuidApplicationsApplicationInformationUuidInternalReviewRoute
+  '/workspaces/$workspaceUuid/applications/$applicationInformationUuid/readiness': typeof WorkspacesWorkspaceUuidApplicationsApplicationInformationUuidReadinessRoute
+  '/workspaces/$workspaceUuid/applications/$applicationInformationUuid/settings': typeof WorkspacesWorkspaceUuidApplicationsApplicationInformationUuidSettingsRoute
+  '/workspaces/$workspaceUuid/applications/$applicationInformationUuid': typeof WorkspacesWorkspaceUuidApplicationsApplicationInformationUuidIndexRoute
+  '/workspaces/$workspaceUuid/applications/$applicationInformationUuid/contacts/new': typeof WorkspacesWorkspaceUuidApplicationsApplicationInformationUuidContactsNewRoute
+  '/workspaces/$workspaceUuid/applications/$applicationInformationUuid/details/edit': typeof WorkspacesWorkspaceUuidApplicationsApplicationInformationUuidDetailsEditRoute
+  '/workspaces/$workspaceUuid/applications/$applicationInformationUuid/rp-configurations/new': typeof WorkspacesWorkspaceUuidApplicationsApplicationInformationUuidRpConfigurationsNewRoute
+  '/workspaces/$workspaceUuid/applications/$applicationInformationUuid/contacts': typeof WorkspacesWorkspaceUuidApplicationsApplicationInformationUuidContactsIndexRoute
+  '/workspaces/$workspaceUuid/applications/$applicationInformationUuid/rp-configurations': typeof WorkspacesWorkspaceUuidApplicationsApplicationInformationUuidRpConfigurationsIndexRoute
+  '/workspaces/$workspaceUuid/applications/$applicationInformationUuid/contacts/$contactUuid/edit': typeof WorkspacesWorkspaceUuidApplicationsApplicationInformationUuidContactsContactUuidEditRoute
+  '/workspaces/$workspaceUuid/applications/$applicationInformationUuid/rp-configurations/$rpConfigurationUuid/audit': typeof WorkspacesWorkspaceUuidApplicationsApplicationInformationUuidRpConfigurationsRpConfigurationUuidAuditRoute
+  '/workspaces/$workspaceUuid/applications/$applicationInformationUuid/rp-configurations/$rpConfigurationUuid/configuration': typeof WorkspacesWorkspaceUuidApplicationsApplicationInformationUuidRpConfigurationsRpConfigurationUuidConfigurationRoute
+  '/workspaces/$workspaceUuid/applications/$applicationInformationUuid/rp-configurations/$rpConfigurationUuid/manage-credentials': typeof WorkspacesWorkspaceUuidApplicationsApplicationInformationUuidRpConfigurationsRpConfigurationUuidManageCredentialsRoute
+  '/workspaces/$workspaceUuid/applications/$applicationInformationUuid/rp-configurations/$rpConfigurationUuid/production-review': typeof WorkspacesWorkspaceUuidApplicationsApplicationInformationUuidRpConfigurationsRpConfigurationUuidProductionReviewRoute
+  '/workspaces/$workspaceUuid/applications/$applicationInformationUuid/rp-configurations/$rpConfigurationUuid/progression': typeof WorkspacesWorkspaceUuidApplicationsApplicationInformationUuidRpConfigurationsRpConfigurationUuidProgressionRoute
+  '/workspaces/$workspaceUuid/applications/$applicationInformationUuid/rp-configurations/$rpConfigurationUuid/settings': typeof WorkspacesWorkspaceUuidApplicationsApplicationInformationUuidRpConfigurationsRpConfigurationUuidSettingsRoute
+  '/workspaces/$workspaceUuid/applications/$applicationInformationUuid/rp-configurations/$rpConfigurationUuid/usage': typeof WorkspacesWorkspaceUuidApplicationsApplicationInformationUuidRpConfigurationsRpConfigurationUuidUsageRoute
+  '/workspaces/$workspaceUuid/applications/$applicationInformationUuid/rp-configurations/$rpConfigurationUuid': typeof WorkspacesWorkspaceUuidApplicationsApplicationInformationUuidRpConfigurationsRpConfigurationUuidIndexRoute
+  '/workspaces/$workspaceUuid/applications/$applicationInformationUuid/rp-configurations/$rpConfigurationUuid/partner-environment/edit': typeof WorkspacesWorkspaceUuidApplicationsApplicationInformationUuidRpConfigurationsRpConfigurationUuidPartnerEnvironmentEditRoute
+  '/workspaces/$workspaceUuid/applications/$applicationInformationUuid/rp-configurations/$rpConfigurationUuid/registration/$step': typeof WorkspacesWorkspaceUuidApplicationsApplicationInformationUuidRpConfigurationsRpConfigurationUuidRegistrationStepRoute
+  '/workspaces/$workspaceUuid/applications/$applicationInformationUuid/rp-configurations/$rpConfigurationUuid/registration/confirmation': typeof WorkspacesWorkspaceUuidApplicationsApplicationInformationUuidRpConfigurationsRpConfigurationUuidRegistrationConfirmationRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -661,22 +866,38 @@ export interface FileRoutesById {
   '/workspaces/$workspaceUuid/': typeof WorkspacesWorkspaceUuidIndexRoute
   '/workspaces/rp-registration-adoption/': typeof WorkspacesRpRegistrationAdoptionIndexRoute
   '/your-applications/$rpApplicationUuid/': typeof YourApplicationsRpApplicationUuidIndexRoute
-  '/workspaces/$workspaceUuid/application-information/$applicationInformationUuid': typeof WorkspacesWorkspaceUuidApplicationInformationApplicationInformationUuidRouteWithChildren
-  '/workspaces/$workspaceUuid/application-information/new': typeof WorkspacesWorkspaceUuidApplicationInformationNewRoute
-  '/workspaces/$workspaceUuid/applications/$rpApplicationUuid': typeof WorkspacesWorkspaceUuidApplicationsRpApplicationUuidRouteWithChildren
+  '/workspaces/$workspaceUuid/application-information/$': typeof WorkspacesWorkspaceUuidApplicationInformationSplatRoute
+  '/workspaces/$workspaceUuid/applications/$applicationInformationUuid': typeof WorkspacesWorkspaceUuidApplicationsApplicationInformationUuidRouteWithChildren
   '/workspaces/$workspaceUuid/applications/new': typeof WorkspacesWorkspaceUuidApplicationsNewRoute
-  '/workspaces/$workspaceUuid/application-information/': typeof WorkspacesWorkspaceUuidApplicationInformationIndexRoute
   '/workspaces/$workspaceUuid/applications/': typeof WorkspacesWorkspaceUuidApplicationsIndexRoute
-  '/workspaces/$workspaceUuid/application-information/$applicationInformationUuid/edit': typeof WorkspacesWorkspaceUuidApplicationInformationApplicationInformationUuidEditRoute
-  '/workspaces/$workspaceUuid/applications/$rpApplicationUuid/audit': typeof WorkspacesWorkspaceUuidApplicationsRpApplicationUuidAuditRoute
-  '/workspaces/$workspaceUuid/applications/$rpApplicationUuid/configuration': typeof WorkspacesWorkspaceUuidApplicationsRpApplicationUuidConfigurationRoute
-  '/workspaces/$workspaceUuid/applications/$rpApplicationUuid/edit': typeof WorkspacesWorkspaceUuidApplicationsRpApplicationUuidEditRoute
-  '/workspaces/$workspaceUuid/applications/$rpApplicationUuid/manage-credentials': typeof WorkspacesWorkspaceUuidApplicationsRpApplicationUuidManageCredentialsRoute
-  '/workspaces/$workspaceUuid/applications/$rpApplicationUuid/usage': typeof WorkspacesWorkspaceUuidApplicationsRpApplicationUuidUsageRoute
-  '/workspaces/$workspaceUuid/application-information/$applicationInformationUuid/': typeof WorkspacesWorkspaceUuidApplicationInformationApplicationInformationUuidIndexRoute
-  '/workspaces/$workspaceUuid/applications/$rpApplicationUuid/': typeof WorkspacesWorkspaceUuidApplicationsRpApplicationUuidIndexRoute
-  '/workspaces/$workspaceUuid/applications/$rpApplicationUuid/registration/$step': typeof WorkspacesWorkspaceUuidApplicationsRpApplicationUuidRegistrationStepRoute
-  '/workspaces/$workspaceUuid/applications/$rpApplicationUuid/registration/confirmation': typeof WorkspacesWorkspaceUuidApplicationsRpApplicationUuidRegistrationConfirmationRoute
+  '/workspaces/$workspaceUuid/applications/$applicationInformationUuid/$': typeof WorkspacesWorkspaceUuidApplicationsApplicationInformationUuidSplatRoute
+  '/workspaces/$workspaceUuid/applications/$applicationInformationUuid/contacts': typeof WorkspacesWorkspaceUuidApplicationsApplicationInformationUuidContactsRouteWithChildren
+  '/workspaces/$workspaceUuid/applications/$applicationInformationUuid/delete': typeof WorkspacesWorkspaceUuidApplicationsApplicationInformationUuidDeleteRoute
+  '/workspaces/$workspaceUuid/applications/$applicationInformationUuid/details': typeof WorkspacesWorkspaceUuidApplicationsApplicationInformationUuidDetailsRouteWithChildren
+  '/workspaces/$workspaceUuid/applications/$applicationInformationUuid/edit': typeof WorkspacesWorkspaceUuidApplicationsApplicationInformationUuidEditRoute
+  '/workspaces/$workspaceUuid/applications/$applicationInformationUuid/internal-review': typeof WorkspacesWorkspaceUuidApplicationsApplicationInformationUuidInternalReviewRoute
+  '/workspaces/$workspaceUuid/applications/$applicationInformationUuid/readiness': typeof WorkspacesWorkspaceUuidApplicationsApplicationInformationUuidReadinessRoute
+  '/workspaces/$workspaceUuid/applications/$applicationInformationUuid/rp-configurations': typeof WorkspacesWorkspaceUuidApplicationsApplicationInformationUuidRpConfigurationsRouteWithChildren
+  '/workspaces/$workspaceUuid/applications/$applicationInformationUuid/settings': typeof WorkspacesWorkspaceUuidApplicationsApplicationInformationUuidSettingsRoute
+  '/workspaces/$workspaceUuid/applications/$applicationInformationUuid/': typeof WorkspacesWorkspaceUuidApplicationsApplicationInformationUuidIndexRoute
+  '/workspaces/$workspaceUuid/applications/$applicationInformationUuid/contacts/new': typeof WorkspacesWorkspaceUuidApplicationsApplicationInformationUuidContactsNewRoute
+  '/workspaces/$workspaceUuid/applications/$applicationInformationUuid/details/edit': typeof WorkspacesWorkspaceUuidApplicationsApplicationInformationUuidDetailsEditRoute
+  '/workspaces/$workspaceUuid/applications/$applicationInformationUuid/rp-configurations/$rpConfigurationUuid': typeof WorkspacesWorkspaceUuidApplicationsApplicationInformationUuidRpConfigurationsRpConfigurationUuidRouteWithChildren
+  '/workspaces/$workspaceUuid/applications/$applicationInformationUuid/rp-configurations/new': typeof WorkspacesWorkspaceUuidApplicationsApplicationInformationUuidRpConfigurationsNewRoute
+  '/workspaces/$workspaceUuid/applications/$applicationInformationUuid/contacts/': typeof WorkspacesWorkspaceUuidApplicationsApplicationInformationUuidContactsIndexRoute
+  '/workspaces/$workspaceUuid/applications/$applicationInformationUuid/rp-configurations/': typeof WorkspacesWorkspaceUuidApplicationsApplicationInformationUuidRpConfigurationsIndexRoute
+  '/workspaces/$workspaceUuid/applications/$applicationInformationUuid/contacts/$contactUuid/edit': typeof WorkspacesWorkspaceUuidApplicationsApplicationInformationUuidContactsContactUuidEditRoute
+  '/workspaces/$workspaceUuid/applications/$applicationInformationUuid/rp-configurations/$rpConfigurationUuid/audit': typeof WorkspacesWorkspaceUuidApplicationsApplicationInformationUuidRpConfigurationsRpConfigurationUuidAuditRoute
+  '/workspaces/$workspaceUuid/applications/$applicationInformationUuid/rp-configurations/$rpConfigurationUuid/configuration': typeof WorkspacesWorkspaceUuidApplicationsApplicationInformationUuidRpConfigurationsRpConfigurationUuidConfigurationRoute
+  '/workspaces/$workspaceUuid/applications/$applicationInformationUuid/rp-configurations/$rpConfigurationUuid/manage-credentials': typeof WorkspacesWorkspaceUuidApplicationsApplicationInformationUuidRpConfigurationsRpConfigurationUuidManageCredentialsRoute
+  '/workspaces/$workspaceUuid/applications/$applicationInformationUuid/rp-configurations/$rpConfigurationUuid/production-review': typeof WorkspacesWorkspaceUuidApplicationsApplicationInformationUuidRpConfigurationsRpConfigurationUuidProductionReviewRoute
+  '/workspaces/$workspaceUuid/applications/$applicationInformationUuid/rp-configurations/$rpConfigurationUuid/progression': typeof WorkspacesWorkspaceUuidApplicationsApplicationInformationUuidRpConfigurationsRpConfigurationUuidProgressionRoute
+  '/workspaces/$workspaceUuid/applications/$applicationInformationUuid/rp-configurations/$rpConfigurationUuid/settings': typeof WorkspacesWorkspaceUuidApplicationsApplicationInformationUuidRpConfigurationsRpConfigurationUuidSettingsRoute
+  '/workspaces/$workspaceUuid/applications/$applicationInformationUuid/rp-configurations/$rpConfigurationUuid/usage': typeof WorkspacesWorkspaceUuidApplicationsApplicationInformationUuidRpConfigurationsRpConfigurationUuidUsageRoute
+  '/workspaces/$workspaceUuid/applications/$applicationInformationUuid/rp-configurations/$rpConfigurationUuid/': typeof WorkspacesWorkspaceUuidApplicationsApplicationInformationUuidRpConfigurationsRpConfigurationUuidIndexRoute
+  '/workspaces/$workspaceUuid/applications/$applicationInformationUuid/rp-configurations/$rpConfigurationUuid/partner-environment/edit': typeof WorkspacesWorkspaceUuidApplicationsApplicationInformationUuidRpConfigurationsRpConfigurationUuidPartnerEnvironmentEditRoute
+  '/workspaces/$workspaceUuid/applications/$applicationInformationUuid/rp-configurations/$rpConfigurationUuid/registration/$step': typeof WorkspacesWorkspaceUuidApplicationsApplicationInformationUuidRpConfigurationsRpConfigurationUuidRegistrationStepRoute
+  '/workspaces/$workspaceUuid/applications/$applicationInformationUuid/rp-configurations/$rpConfigurationUuid/registration/confirmation': typeof WorkspacesWorkspaceUuidApplicationsApplicationInformationUuidRpConfigurationsRpConfigurationUuidRegistrationConfirmationRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -733,22 +954,38 @@ export interface FileRouteTypes {
     | '/workspaces/$workspaceUuid/'
     | '/workspaces/rp-registration-adoption/'
     | '/your-applications/$rpApplicationUuid/'
-    | '/workspaces/$workspaceUuid/application-information/$applicationInformationUuid'
-    | '/workspaces/$workspaceUuid/application-information/new'
-    | '/workspaces/$workspaceUuid/applications/$rpApplicationUuid'
+    | '/workspaces/$workspaceUuid/application-information/$'
+    | '/workspaces/$workspaceUuid/applications/$applicationInformationUuid'
     | '/workspaces/$workspaceUuid/applications/new'
-    | '/workspaces/$workspaceUuid/application-information/'
     | '/workspaces/$workspaceUuid/applications/'
-    | '/workspaces/$workspaceUuid/application-information/$applicationInformationUuid/edit'
-    | '/workspaces/$workspaceUuid/applications/$rpApplicationUuid/audit'
-    | '/workspaces/$workspaceUuid/applications/$rpApplicationUuid/configuration'
-    | '/workspaces/$workspaceUuid/applications/$rpApplicationUuid/edit'
-    | '/workspaces/$workspaceUuid/applications/$rpApplicationUuid/manage-credentials'
-    | '/workspaces/$workspaceUuid/applications/$rpApplicationUuid/usage'
-    | '/workspaces/$workspaceUuid/application-information/$applicationInformationUuid/'
-    | '/workspaces/$workspaceUuid/applications/$rpApplicationUuid/'
-    | '/workspaces/$workspaceUuid/applications/$rpApplicationUuid/registration/$step'
-    | '/workspaces/$workspaceUuid/applications/$rpApplicationUuid/registration/confirmation'
+    | '/workspaces/$workspaceUuid/applications/$applicationInformationUuid/$'
+    | '/workspaces/$workspaceUuid/applications/$applicationInformationUuid/contacts'
+    | '/workspaces/$workspaceUuid/applications/$applicationInformationUuid/delete'
+    | '/workspaces/$workspaceUuid/applications/$applicationInformationUuid/details'
+    | '/workspaces/$workspaceUuid/applications/$applicationInformationUuid/edit'
+    | '/workspaces/$workspaceUuid/applications/$applicationInformationUuid/internal-review'
+    | '/workspaces/$workspaceUuid/applications/$applicationInformationUuid/readiness'
+    | '/workspaces/$workspaceUuid/applications/$applicationInformationUuid/rp-configurations'
+    | '/workspaces/$workspaceUuid/applications/$applicationInformationUuid/settings'
+    | '/workspaces/$workspaceUuid/applications/$applicationInformationUuid/'
+    | '/workspaces/$workspaceUuid/applications/$applicationInformationUuid/contacts/new'
+    | '/workspaces/$workspaceUuid/applications/$applicationInformationUuid/details/edit'
+    | '/workspaces/$workspaceUuid/applications/$applicationInformationUuid/rp-configurations/$rpConfigurationUuid'
+    | '/workspaces/$workspaceUuid/applications/$applicationInformationUuid/rp-configurations/new'
+    | '/workspaces/$workspaceUuid/applications/$applicationInformationUuid/contacts/'
+    | '/workspaces/$workspaceUuid/applications/$applicationInformationUuid/rp-configurations/'
+    | '/workspaces/$workspaceUuid/applications/$applicationInformationUuid/contacts/$contactUuid/edit'
+    | '/workspaces/$workspaceUuid/applications/$applicationInformationUuid/rp-configurations/$rpConfigurationUuid/audit'
+    | '/workspaces/$workspaceUuid/applications/$applicationInformationUuid/rp-configurations/$rpConfigurationUuid/configuration'
+    | '/workspaces/$workspaceUuid/applications/$applicationInformationUuid/rp-configurations/$rpConfigurationUuid/manage-credentials'
+    | '/workspaces/$workspaceUuid/applications/$applicationInformationUuid/rp-configurations/$rpConfigurationUuid/production-review'
+    | '/workspaces/$workspaceUuid/applications/$applicationInformationUuid/rp-configurations/$rpConfigurationUuid/progression'
+    | '/workspaces/$workspaceUuid/applications/$applicationInformationUuid/rp-configurations/$rpConfigurationUuid/settings'
+    | '/workspaces/$workspaceUuid/applications/$applicationInformationUuid/rp-configurations/$rpConfigurationUuid/usage'
+    | '/workspaces/$workspaceUuid/applications/$applicationInformationUuid/rp-configurations/$rpConfigurationUuid/'
+    | '/workspaces/$workspaceUuid/applications/$applicationInformationUuid/rp-configurations/$rpConfigurationUuid/partner-environment/edit'
+    | '/workspaces/$workspaceUuid/applications/$applicationInformationUuid/rp-configurations/$rpConfigurationUuid/registration/$step'
+    | '/workspaces/$workspaceUuid/applications/$applicationInformationUuid/rp-configurations/$rpConfigurationUuid/registration/confirmation'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -781,6 +1018,7 @@ export interface FileRouteTypes {
     | '/your-applications'
     | '/invitations/rp-applications/$token'
     | '/workspaces/$workspaceUuid/access'
+    | '/workspaces/$workspaceUuid/application-information'
     | '/workspaces/$workspaceUuid/members'
     | '/workspaces/$workspaceUuid/reports'
     | '/workspaces/$workspaceUuid/settings'
@@ -792,20 +1030,34 @@ export interface FileRouteTypes {
     | '/workspaces/$workspaceUuid'
     | '/workspaces/rp-registration-adoption'
     | '/your-applications/$rpApplicationUuid'
-    | '/workspaces/$workspaceUuid/application-information/new'
+    | '/workspaces/$workspaceUuid/application-information/$'
     | '/workspaces/$workspaceUuid/applications/new'
-    | '/workspaces/$workspaceUuid/application-information'
     | '/workspaces/$workspaceUuid/applications'
-    | '/workspaces/$workspaceUuid/application-information/$applicationInformationUuid/edit'
-    | '/workspaces/$workspaceUuid/applications/$rpApplicationUuid/audit'
-    | '/workspaces/$workspaceUuid/applications/$rpApplicationUuid/configuration'
-    | '/workspaces/$workspaceUuid/applications/$rpApplicationUuid/edit'
-    | '/workspaces/$workspaceUuid/applications/$rpApplicationUuid/manage-credentials'
-    | '/workspaces/$workspaceUuid/applications/$rpApplicationUuid/usage'
-    | '/workspaces/$workspaceUuid/application-information/$applicationInformationUuid'
-    | '/workspaces/$workspaceUuid/applications/$rpApplicationUuid'
-    | '/workspaces/$workspaceUuid/applications/$rpApplicationUuid/registration/$step'
-    | '/workspaces/$workspaceUuid/applications/$rpApplicationUuid/registration/confirmation'
+    | '/workspaces/$workspaceUuid/applications/$applicationInformationUuid/$'
+    | '/workspaces/$workspaceUuid/applications/$applicationInformationUuid/delete'
+    | '/workspaces/$workspaceUuid/applications/$applicationInformationUuid/details'
+    | '/workspaces/$workspaceUuid/applications/$applicationInformationUuid/edit'
+    | '/workspaces/$workspaceUuid/applications/$applicationInformationUuid/internal-review'
+    | '/workspaces/$workspaceUuid/applications/$applicationInformationUuid/readiness'
+    | '/workspaces/$workspaceUuid/applications/$applicationInformationUuid/settings'
+    | '/workspaces/$workspaceUuid/applications/$applicationInformationUuid'
+    | '/workspaces/$workspaceUuid/applications/$applicationInformationUuid/contacts/new'
+    | '/workspaces/$workspaceUuid/applications/$applicationInformationUuid/details/edit'
+    | '/workspaces/$workspaceUuid/applications/$applicationInformationUuid/rp-configurations/new'
+    | '/workspaces/$workspaceUuid/applications/$applicationInformationUuid/contacts'
+    | '/workspaces/$workspaceUuid/applications/$applicationInformationUuid/rp-configurations'
+    | '/workspaces/$workspaceUuid/applications/$applicationInformationUuid/contacts/$contactUuid/edit'
+    | '/workspaces/$workspaceUuid/applications/$applicationInformationUuid/rp-configurations/$rpConfigurationUuid/audit'
+    | '/workspaces/$workspaceUuid/applications/$applicationInformationUuid/rp-configurations/$rpConfigurationUuid/configuration'
+    | '/workspaces/$workspaceUuid/applications/$applicationInformationUuid/rp-configurations/$rpConfigurationUuid/manage-credentials'
+    | '/workspaces/$workspaceUuid/applications/$applicationInformationUuid/rp-configurations/$rpConfigurationUuid/production-review'
+    | '/workspaces/$workspaceUuid/applications/$applicationInformationUuid/rp-configurations/$rpConfigurationUuid/progression'
+    | '/workspaces/$workspaceUuid/applications/$applicationInformationUuid/rp-configurations/$rpConfigurationUuid/settings'
+    | '/workspaces/$workspaceUuid/applications/$applicationInformationUuid/rp-configurations/$rpConfigurationUuid/usage'
+    | '/workspaces/$workspaceUuid/applications/$applicationInformationUuid/rp-configurations/$rpConfigurationUuid'
+    | '/workspaces/$workspaceUuid/applications/$applicationInformationUuid/rp-configurations/$rpConfigurationUuid/partner-environment/edit'
+    | '/workspaces/$workspaceUuid/applications/$applicationInformationUuid/rp-configurations/$rpConfigurationUuid/registration/$step'
+    | '/workspaces/$workspaceUuid/applications/$applicationInformationUuid/rp-configurations/$rpConfigurationUuid/registration/confirmation'
   id:
     | '__root__'
     | '/'
@@ -860,22 +1112,38 @@ export interface FileRouteTypes {
     | '/workspaces/$workspaceUuid/'
     | '/workspaces/rp-registration-adoption/'
     | '/your-applications/$rpApplicationUuid/'
-    | '/workspaces/$workspaceUuid/application-information/$applicationInformationUuid'
-    | '/workspaces/$workspaceUuid/application-information/new'
-    | '/workspaces/$workspaceUuid/applications/$rpApplicationUuid'
+    | '/workspaces/$workspaceUuid/application-information/$'
+    | '/workspaces/$workspaceUuid/applications/$applicationInformationUuid'
     | '/workspaces/$workspaceUuid/applications/new'
-    | '/workspaces/$workspaceUuid/application-information/'
     | '/workspaces/$workspaceUuid/applications/'
-    | '/workspaces/$workspaceUuid/application-information/$applicationInformationUuid/edit'
-    | '/workspaces/$workspaceUuid/applications/$rpApplicationUuid/audit'
-    | '/workspaces/$workspaceUuid/applications/$rpApplicationUuid/configuration'
-    | '/workspaces/$workspaceUuid/applications/$rpApplicationUuid/edit'
-    | '/workspaces/$workspaceUuid/applications/$rpApplicationUuid/manage-credentials'
-    | '/workspaces/$workspaceUuid/applications/$rpApplicationUuid/usage'
-    | '/workspaces/$workspaceUuid/application-information/$applicationInformationUuid/'
-    | '/workspaces/$workspaceUuid/applications/$rpApplicationUuid/'
-    | '/workspaces/$workspaceUuid/applications/$rpApplicationUuid/registration/$step'
-    | '/workspaces/$workspaceUuid/applications/$rpApplicationUuid/registration/confirmation'
+    | '/workspaces/$workspaceUuid/applications/$applicationInformationUuid/$'
+    | '/workspaces/$workspaceUuid/applications/$applicationInformationUuid/contacts'
+    | '/workspaces/$workspaceUuid/applications/$applicationInformationUuid/delete'
+    | '/workspaces/$workspaceUuid/applications/$applicationInformationUuid/details'
+    | '/workspaces/$workspaceUuid/applications/$applicationInformationUuid/edit'
+    | '/workspaces/$workspaceUuid/applications/$applicationInformationUuid/internal-review'
+    | '/workspaces/$workspaceUuid/applications/$applicationInformationUuid/readiness'
+    | '/workspaces/$workspaceUuid/applications/$applicationInformationUuid/rp-configurations'
+    | '/workspaces/$workspaceUuid/applications/$applicationInformationUuid/settings'
+    | '/workspaces/$workspaceUuid/applications/$applicationInformationUuid/'
+    | '/workspaces/$workspaceUuid/applications/$applicationInformationUuid/contacts/new'
+    | '/workspaces/$workspaceUuid/applications/$applicationInformationUuid/details/edit'
+    | '/workspaces/$workspaceUuid/applications/$applicationInformationUuid/rp-configurations/$rpConfigurationUuid'
+    | '/workspaces/$workspaceUuid/applications/$applicationInformationUuid/rp-configurations/new'
+    | '/workspaces/$workspaceUuid/applications/$applicationInformationUuid/contacts/'
+    | '/workspaces/$workspaceUuid/applications/$applicationInformationUuid/rp-configurations/'
+    | '/workspaces/$workspaceUuid/applications/$applicationInformationUuid/contacts/$contactUuid/edit'
+    | '/workspaces/$workspaceUuid/applications/$applicationInformationUuid/rp-configurations/$rpConfigurationUuid/audit'
+    | '/workspaces/$workspaceUuid/applications/$applicationInformationUuid/rp-configurations/$rpConfigurationUuid/configuration'
+    | '/workspaces/$workspaceUuid/applications/$applicationInformationUuid/rp-configurations/$rpConfigurationUuid/manage-credentials'
+    | '/workspaces/$workspaceUuid/applications/$applicationInformationUuid/rp-configurations/$rpConfigurationUuid/production-review'
+    | '/workspaces/$workspaceUuid/applications/$applicationInformationUuid/rp-configurations/$rpConfigurationUuid/progression'
+    | '/workspaces/$workspaceUuid/applications/$applicationInformationUuid/rp-configurations/$rpConfigurationUuid/settings'
+    | '/workspaces/$workspaceUuid/applications/$applicationInformationUuid/rp-configurations/$rpConfigurationUuid/usage'
+    | '/workspaces/$workspaceUuid/applications/$applicationInformationUuid/rp-configurations/$rpConfigurationUuid/'
+    | '/workspaces/$workspaceUuid/applications/$applicationInformationUuid/rp-configurations/$rpConfigurationUuid/partner-environment/edit'
+    | '/workspaces/$workspaceUuid/applications/$applicationInformationUuid/rp-configurations/$rpConfigurationUuid/registration/$step'
+    | '/workspaces/$workspaceUuid/applications/$applicationInformationUuid/rp-configurations/$rpConfigurationUuid/registration/confirmation'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -1275,13 +1543,6 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof WorkspacesWorkspaceUuidApplicationsIndexRouteImport
       parentRoute: typeof WorkspacesWorkspaceUuidApplicationsRoute
     }
-    '/workspaces/$workspaceUuid/application-information/': {
-      id: '/workspaces/$workspaceUuid/application-information/'
-      path: '/'
-      fullPath: '/workspaces/$workspaceUuid/application-information/'
-      preLoaderRoute: typeof WorkspacesWorkspaceUuidApplicationInformationIndexRouteImport
-      parentRoute: typeof WorkspacesWorkspaceUuidApplicationInformationRoute
-    }
     '/workspaces/$workspaceUuid/applications/new': {
       id: '/workspaces/$workspaceUuid/applications/new'
       path: '/new'
@@ -1289,96 +1550,215 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof WorkspacesWorkspaceUuidApplicationsNewRouteImport
       parentRoute: typeof WorkspacesWorkspaceUuidApplicationsRoute
     }
-    '/workspaces/$workspaceUuid/applications/$rpApplicationUuid': {
-      id: '/workspaces/$workspaceUuid/applications/$rpApplicationUuid'
-      path: '/$rpApplicationUuid'
-      fullPath: '/workspaces/$workspaceUuid/applications/$rpApplicationUuid'
-      preLoaderRoute: typeof WorkspacesWorkspaceUuidApplicationsRpApplicationUuidRouteImport
+    '/workspaces/$workspaceUuid/applications/$applicationInformationUuid': {
+      id: '/workspaces/$workspaceUuid/applications/$applicationInformationUuid'
+      path: '/$applicationInformationUuid'
+      fullPath: '/workspaces/$workspaceUuid/applications/$applicationInformationUuid'
+      preLoaderRoute: typeof WorkspacesWorkspaceUuidApplicationsApplicationInformationUuidRouteImport
       parentRoute: typeof WorkspacesWorkspaceUuidApplicationsRoute
     }
-    '/workspaces/$workspaceUuid/application-information/new': {
-      id: '/workspaces/$workspaceUuid/application-information/new'
+    '/workspaces/$workspaceUuid/application-information/$': {
+      id: '/workspaces/$workspaceUuid/application-information/$'
+      path: '/$'
+      fullPath: '/workspaces/$workspaceUuid/application-information/$'
+      preLoaderRoute: typeof WorkspacesWorkspaceUuidApplicationInformationSplatRouteImport
+      parentRoute: typeof WorkspacesWorkspaceUuidApplicationInformationRoute
+    }
+    '/workspaces/$workspaceUuid/applications/$applicationInformationUuid/': {
+      id: '/workspaces/$workspaceUuid/applications/$applicationInformationUuid/'
+      path: '/'
+      fullPath: '/workspaces/$workspaceUuid/applications/$applicationInformationUuid/'
+      preLoaderRoute: typeof WorkspacesWorkspaceUuidApplicationsApplicationInformationUuidIndexRouteImport
+      parentRoute: typeof WorkspacesWorkspaceUuidApplicationsApplicationInformationUuidRoute
+    }
+    '/workspaces/$workspaceUuid/applications/$applicationInformationUuid/settings': {
+      id: '/workspaces/$workspaceUuid/applications/$applicationInformationUuid/settings'
+      path: '/settings'
+      fullPath: '/workspaces/$workspaceUuid/applications/$applicationInformationUuid/settings'
+      preLoaderRoute: typeof WorkspacesWorkspaceUuidApplicationsApplicationInformationUuidSettingsRouteImport
+      parentRoute: typeof WorkspacesWorkspaceUuidApplicationsApplicationInformationUuidRoute
+    }
+    '/workspaces/$workspaceUuid/applications/$applicationInformationUuid/rp-configurations': {
+      id: '/workspaces/$workspaceUuid/applications/$applicationInformationUuid/rp-configurations'
+      path: '/rp-configurations'
+      fullPath: '/workspaces/$workspaceUuid/applications/$applicationInformationUuid/rp-configurations'
+      preLoaderRoute: typeof WorkspacesWorkspaceUuidApplicationsApplicationInformationUuidRpConfigurationsRouteImport
+      parentRoute: typeof WorkspacesWorkspaceUuidApplicationsApplicationInformationUuidRoute
+    }
+    '/workspaces/$workspaceUuid/applications/$applicationInformationUuid/readiness': {
+      id: '/workspaces/$workspaceUuid/applications/$applicationInformationUuid/readiness'
+      path: '/readiness'
+      fullPath: '/workspaces/$workspaceUuid/applications/$applicationInformationUuid/readiness'
+      preLoaderRoute: typeof WorkspacesWorkspaceUuidApplicationsApplicationInformationUuidReadinessRouteImport
+      parentRoute: typeof WorkspacesWorkspaceUuidApplicationsApplicationInformationUuidRoute
+    }
+    '/workspaces/$workspaceUuid/applications/$applicationInformationUuid/internal-review': {
+      id: '/workspaces/$workspaceUuid/applications/$applicationInformationUuid/internal-review'
+      path: '/internal-review'
+      fullPath: '/workspaces/$workspaceUuid/applications/$applicationInformationUuid/internal-review'
+      preLoaderRoute: typeof WorkspacesWorkspaceUuidApplicationsApplicationInformationUuidInternalReviewRouteImport
+      parentRoute: typeof WorkspacesWorkspaceUuidApplicationsApplicationInformationUuidRoute
+    }
+    '/workspaces/$workspaceUuid/applications/$applicationInformationUuid/edit': {
+      id: '/workspaces/$workspaceUuid/applications/$applicationInformationUuid/edit'
+      path: '/edit'
+      fullPath: '/workspaces/$workspaceUuid/applications/$applicationInformationUuid/edit'
+      preLoaderRoute: typeof WorkspacesWorkspaceUuidApplicationsApplicationInformationUuidEditRouteImport
+      parentRoute: typeof WorkspacesWorkspaceUuidApplicationsApplicationInformationUuidRoute
+    }
+    '/workspaces/$workspaceUuid/applications/$applicationInformationUuid/details': {
+      id: '/workspaces/$workspaceUuid/applications/$applicationInformationUuid/details'
+      path: '/details'
+      fullPath: '/workspaces/$workspaceUuid/applications/$applicationInformationUuid/details'
+      preLoaderRoute: typeof WorkspacesWorkspaceUuidApplicationsApplicationInformationUuidDetailsRouteImport
+      parentRoute: typeof WorkspacesWorkspaceUuidApplicationsApplicationInformationUuidRoute
+    }
+    '/workspaces/$workspaceUuid/applications/$applicationInformationUuid/delete': {
+      id: '/workspaces/$workspaceUuid/applications/$applicationInformationUuid/delete'
+      path: '/delete'
+      fullPath: '/workspaces/$workspaceUuid/applications/$applicationInformationUuid/delete'
+      preLoaderRoute: typeof WorkspacesWorkspaceUuidApplicationsApplicationInformationUuidDeleteRouteImport
+      parentRoute: typeof WorkspacesWorkspaceUuidApplicationsApplicationInformationUuidRoute
+    }
+    '/workspaces/$workspaceUuid/applications/$applicationInformationUuid/contacts': {
+      id: '/workspaces/$workspaceUuid/applications/$applicationInformationUuid/contacts'
+      path: '/contacts'
+      fullPath: '/workspaces/$workspaceUuid/applications/$applicationInformationUuid/contacts'
+      preLoaderRoute: typeof WorkspacesWorkspaceUuidApplicationsApplicationInformationUuidContactsRouteImport
+      parentRoute: typeof WorkspacesWorkspaceUuidApplicationsApplicationInformationUuidRoute
+    }
+    '/workspaces/$workspaceUuid/applications/$applicationInformationUuid/$': {
+      id: '/workspaces/$workspaceUuid/applications/$applicationInformationUuid/$'
+      path: '/$'
+      fullPath: '/workspaces/$workspaceUuid/applications/$applicationInformationUuid/$'
+      preLoaderRoute: typeof WorkspacesWorkspaceUuidApplicationsApplicationInformationUuidSplatRouteImport
+      parentRoute: typeof WorkspacesWorkspaceUuidApplicationsApplicationInformationUuidRoute
+    }
+    '/workspaces/$workspaceUuid/applications/$applicationInformationUuid/rp-configurations/': {
+      id: '/workspaces/$workspaceUuid/applications/$applicationInformationUuid/rp-configurations/'
+      path: '/'
+      fullPath: '/workspaces/$workspaceUuid/applications/$applicationInformationUuid/rp-configurations/'
+      preLoaderRoute: typeof WorkspacesWorkspaceUuidApplicationsApplicationInformationUuidRpConfigurationsIndexRouteImport
+      parentRoute: typeof WorkspacesWorkspaceUuidApplicationsApplicationInformationUuidRpConfigurationsRoute
+    }
+    '/workspaces/$workspaceUuid/applications/$applicationInformationUuid/contacts/': {
+      id: '/workspaces/$workspaceUuid/applications/$applicationInformationUuid/contacts/'
+      path: '/'
+      fullPath: '/workspaces/$workspaceUuid/applications/$applicationInformationUuid/contacts/'
+      preLoaderRoute: typeof WorkspacesWorkspaceUuidApplicationsApplicationInformationUuidContactsIndexRouteImport
+      parentRoute: typeof WorkspacesWorkspaceUuidApplicationsApplicationInformationUuidContactsRoute
+    }
+    '/workspaces/$workspaceUuid/applications/$applicationInformationUuid/rp-configurations/new': {
+      id: '/workspaces/$workspaceUuid/applications/$applicationInformationUuid/rp-configurations/new'
       path: '/new'
-      fullPath: '/workspaces/$workspaceUuid/application-information/new'
-      preLoaderRoute: typeof WorkspacesWorkspaceUuidApplicationInformationNewRouteImport
-      parentRoute: typeof WorkspacesWorkspaceUuidApplicationInformationRoute
+      fullPath: '/workspaces/$workspaceUuid/applications/$applicationInformationUuid/rp-configurations/new'
+      preLoaderRoute: typeof WorkspacesWorkspaceUuidApplicationsApplicationInformationUuidRpConfigurationsNewRouteImport
+      parentRoute: typeof WorkspacesWorkspaceUuidApplicationsApplicationInformationUuidRpConfigurationsRoute
     }
-    '/workspaces/$workspaceUuid/application-information/$applicationInformationUuid': {
-      id: '/workspaces/$workspaceUuid/application-information/$applicationInformationUuid'
-      path: '/$applicationInformationUuid'
-      fullPath: '/workspaces/$workspaceUuid/application-information/$applicationInformationUuid'
-      preLoaderRoute: typeof WorkspacesWorkspaceUuidApplicationInformationApplicationInformationUuidRouteImport
-      parentRoute: typeof WorkspacesWorkspaceUuidApplicationInformationRoute
+    '/workspaces/$workspaceUuid/applications/$applicationInformationUuid/rp-configurations/$rpConfigurationUuid': {
+      id: '/workspaces/$workspaceUuid/applications/$applicationInformationUuid/rp-configurations/$rpConfigurationUuid'
+      path: '/$rpConfigurationUuid'
+      fullPath: '/workspaces/$workspaceUuid/applications/$applicationInformationUuid/rp-configurations/$rpConfigurationUuid'
+      preLoaderRoute: typeof WorkspacesWorkspaceUuidApplicationsApplicationInformationUuidRpConfigurationsRpConfigurationUuidRouteImport
+      parentRoute: typeof WorkspacesWorkspaceUuidApplicationsApplicationInformationUuidRpConfigurationsRoute
     }
-    '/workspaces/$workspaceUuid/applications/$rpApplicationUuid/': {
-      id: '/workspaces/$workspaceUuid/applications/$rpApplicationUuid/'
+    '/workspaces/$workspaceUuid/applications/$applicationInformationUuid/details/edit': {
+      id: '/workspaces/$workspaceUuid/applications/$applicationInformationUuid/details/edit'
+      path: '/edit'
+      fullPath: '/workspaces/$workspaceUuid/applications/$applicationInformationUuid/details/edit'
+      preLoaderRoute: typeof WorkspacesWorkspaceUuidApplicationsApplicationInformationUuidDetailsEditRouteImport
+      parentRoute: typeof WorkspacesWorkspaceUuidApplicationsApplicationInformationUuidDetailsRoute
+    }
+    '/workspaces/$workspaceUuid/applications/$applicationInformationUuid/contacts/new': {
+      id: '/workspaces/$workspaceUuid/applications/$applicationInformationUuid/contacts/new'
+      path: '/new'
+      fullPath: '/workspaces/$workspaceUuid/applications/$applicationInformationUuid/contacts/new'
+      preLoaderRoute: typeof WorkspacesWorkspaceUuidApplicationsApplicationInformationUuidContactsNewRouteImport
+      parentRoute: typeof WorkspacesWorkspaceUuidApplicationsApplicationInformationUuidContactsRoute
+    }
+    '/workspaces/$workspaceUuid/applications/$applicationInformationUuid/rp-configurations/$rpConfigurationUuid/': {
+      id: '/workspaces/$workspaceUuid/applications/$applicationInformationUuid/rp-configurations/$rpConfigurationUuid/'
       path: '/'
-      fullPath: '/workspaces/$workspaceUuid/applications/$rpApplicationUuid/'
-      preLoaderRoute: typeof WorkspacesWorkspaceUuidApplicationsRpApplicationUuidIndexRouteImport
-      parentRoute: typeof WorkspacesWorkspaceUuidApplicationsRpApplicationUuidRoute
+      fullPath: '/workspaces/$workspaceUuid/applications/$applicationInformationUuid/rp-configurations/$rpConfigurationUuid/'
+      preLoaderRoute: typeof WorkspacesWorkspaceUuidApplicationsApplicationInformationUuidRpConfigurationsRpConfigurationUuidIndexRouteImport
+      parentRoute: typeof WorkspacesWorkspaceUuidApplicationsApplicationInformationUuidRpConfigurationsRpConfigurationUuidRoute
     }
-    '/workspaces/$workspaceUuid/application-information/$applicationInformationUuid/': {
-      id: '/workspaces/$workspaceUuid/application-information/$applicationInformationUuid/'
-      path: '/'
-      fullPath: '/workspaces/$workspaceUuid/application-information/$applicationInformationUuid/'
-      preLoaderRoute: typeof WorkspacesWorkspaceUuidApplicationInformationApplicationInformationUuidIndexRouteImport
-      parentRoute: typeof WorkspacesWorkspaceUuidApplicationInformationApplicationInformationUuidRoute
-    }
-    '/workspaces/$workspaceUuid/applications/$rpApplicationUuid/usage': {
-      id: '/workspaces/$workspaceUuid/applications/$rpApplicationUuid/usage'
+    '/workspaces/$workspaceUuid/applications/$applicationInformationUuid/rp-configurations/$rpConfigurationUuid/usage': {
+      id: '/workspaces/$workspaceUuid/applications/$applicationInformationUuid/rp-configurations/$rpConfigurationUuid/usage'
       path: '/usage'
-      fullPath: '/workspaces/$workspaceUuid/applications/$rpApplicationUuid/usage'
-      preLoaderRoute: typeof WorkspacesWorkspaceUuidApplicationsRpApplicationUuidUsageRouteImport
-      parentRoute: typeof WorkspacesWorkspaceUuidApplicationsRpApplicationUuidRoute
+      fullPath: '/workspaces/$workspaceUuid/applications/$applicationInformationUuid/rp-configurations/$rpConfigurationUuid/usage'
+      preLoaderRoute: typeof WorkspacesWorkspaceUuidApplicationsApplicationInformationUuidRpConfigurationsRpConfigurationUuidUsageRouteImport
+      parentRoute: typeof WorkspacesWorkspaceUuidApplicationsApplicationInformationUuidRpConfigurationsRpConfigurationUuidRoute
     }
-    '/workspaces/$workspaceUuid/applications/$rpApplicationUuid/manage-credentials': {
-      id: '/workspaces/$workspaceUuid/applications/$rpApplicationUuid/manage-credentials'
+    '/workspaces/$workspaceUuid/applications/$applicationInformationUuid/rp-configurations/$rpConfigurationUuid/settings': {
+      id: '/workspaces/$workspaceUuid/applications/$applicationInformationUuid/rp-configurations/$rpConfigurationUuid/settings'
+      path: '/settings'
+      fullPath: '/workspaces/$workspaceUuid/applications/$applicationInformationUuid/rp-configurations/$rpConfigurationUuid/settings'
+      preLoaderRoute: typeof WorkspacesWorkspaceUuidApplicationsApplicationInformationUuidRpConfigurationsRpConfigurationUuidSettingsRouteImport
+      parentRoute: typeof WorkspacesWorkspaceUuidApplicationsApplicationInformationUuidRpConfigurationsRpConfigurationUuidRoute
+    }
+    '/workspaces/$workspaceUuid/applications/$applicationInformationUuid/rp-configurations/$rpConfigurationUuid/progression': {
+      id: '/workspaces/$workspaceUuid/applications/$applicationInformationUuid/rp-configurations/$rpConfigurationUuid/progression'
+      path: '/progression'
+      fullPath: '/workspaces/$workspaceUuid/applications/$applicationInformationUuid/rp-configurations/$rpConfigurationUuid/progression'
+      preLoaderRoute: typeof WorkspacesWorkspaceUuidApplicationsApplicationInformationUuidRpConfigurationsRpConfigurationUuidProgressionRouteImport
+      parentRoute: typeof WorkspacesWorkspaceUuidApplicationsApplicationInformationUuidRpConfigurationsRpConfigurationUuidRoute
+    }
+    '/workspaces/$workspaceUuid/applications/$applicationInformationUuid/rp-configurations/$rpConfigurationUuid/production-review': {
+      id: '/workspaces/$workspaceUuid/applications/$applicationInformationUuid/rp-configurations/$rpConfigurationUuid/production-review'
+      path: '/production-review'
+      fullPath: '/workspaces/$workspaceUuid/applications/$applicationInformationUuid/rp-configurations/$rpConfigurationUuid/production-review'
+      preLoaderRoute: typeof WorkspacesWorkspaceUuidApplicationsApplicationInformationUuidRpConfigurationsRpConfigurationUuidProductionReviewRouteImport
+      parentRoute: typeof WorkspacesWorkspaceUuidApplicationsApplicationInformationUuidRpConfigurationsRpConfigurationUuidRoute
+    }
+    '/workspaces/$workspaceUuid/applications/$applicationInformationUuid/rp-configurations/$rpConfigurationUuid/manage-credentials': {
+      id: '/workspaces/$workspaceUuid/applications/$applicationInformationUuid/rp-configurations/$rpConfigurationUuid/manage-credentials'
       path: '/manage-credentials'
-      fullPath: '/workspaces/$workspaceUuid/applications/$rpApplicationUuid/manage-credentials'
-      preLoaderRoute: typeof WorkspacesWorkspaceUuidApplicationsRpApplicationUuidManageCredentialsRouteImport
-      parentRoute: typeof WorkspacesWorkspaceUuidApplicationsRpApplicationUuidRoute
+      fullPath: '/workspaces/$workspaceUuid/applications/$applicationInformationUuid/rp-configurations/$rpConfigurationUuid/manage-credentials'
+      preLoaderRoute: typeof WorkspacesWorkspaceUuidApplicationsApplicationInformationUuidRpConfigurationsRpConfigurationUuidManageCredentialsRouteImport
+      parentRoute: typeof WorkspacesWorkspaceUuidApplicationsApplicationInformationUuidRpConfigurationsRpConfigurationUuidRoute
     }
-    '/workspaces/$workspaceUuid/applications/$rpApplicationUuid/edit': {
-      id: '/workspaces/$workspaceUuid/applications/$rpApplicationUuid/edit'
-      path: '/edit'
-      fullPath: '/workspaces/$workspaceUuid/applications/$rpApplicationUuid/edit'
-      preLoaderRoute: typeof WorkspacesWorkspaceUuidApplicationsRpApplicationUuidEditRouteImport
-      parentRoute: typeof WorkspacesWorkspaceUuidApplicationsRpApplicationUuidRoute
-    }
-    '/workspaces/$workspaceUuid/applications/$rpApplicationUuid/configuration': {
-      id: '/workspaces/$workspaceUuid/applications/$rpApplicationUuid/configuration'
+    '/workspaces/$workspaceUuid/applications/$applicationInformationUuid/rp-configurations/$rpConfigurationUuid/configuration': {
+      id: '/workspaces/$workspaceUuid/applications/$applicationInformationUuid/rp-configurations/$rpConfigurationUuid/configuration'
       path: '/configuration'
-      fullPath: '/workspaces/$workspaceUuid/applications/$rpApplicationUuid/configuration'
-      preLoaderRoute: typeof WorkspacesWorkspaceUuidApplicationsRpApplicationUuidConfigurationRouteImport
-      parentRoute: typeof WorkspacesWorkspaceUuidApplicationsRpApplicationUuidRoute
+      fullPath: '/workspaces/$workspaceUuid/applications/$applicationInformationUuid/rp-configurations/$rpConfigurationUuid/configuration'
+      preLoaderRoute: typeof WorkspacesWorkspaceUuidApplicationsApplicationInformationUuidRpConfigurationsRpConfigurationUuidConfigurationRouteImport
+      parentRoute: typeof WorkspacesWorkspaceUuidApplicationsApplicationInformationUuidRpConfigurationsRpConfigurationUuidRoute
     }
-    '/workspaces/$workspaceUuid/applications/$rpApplicationUuid/audit': {
-      id: '/workspaces/$workspaceUuid/applications/$rpApplicationUuid/audit'
+    '/workspaces/$workspaceUuid/applications/$applicationInformationUuid/rp-configurations/$rpConfigurationUuid/audit': {
+      id: '/workspaces/$workspaceUuid/applications/$applicationInformationUuid/rp-configurations/$rpConfigurationUuid/audit'
       path: '/audit'
-      fullPath: '/workspaces/$workspaceUuid/applications/$rpApplicationUuid/audit'
-      preLoaderRoute: typeof WorkspacesWorkspaceUuidApplicationsRpApplicationUuidAuditRouteImport
-      parentRoute: typeof WorkspacesWorkspaceUuidApplicationsRpApplicationUuidRoute
+      fullPath: '/workspaces/$workspaceUuid/applications/$applicationInformationUuid/rp-configurations/$rpConfigurationUuid/audit'
+      preLoaderRoute: typeof WorkspacesWorkspaceUuidApplicationsApplicationInformationUuidRpConfigurationsRpConfigurationUuidAuditRouteImport
+      parentRoute: typeof WorkspacesWorkspaceUuidApplicationsApplicationInformationUuidRpConfigurationsRpConfigurationUuidRoute
     }
-    '/workspaces/$workspaceUuid/application-information/$applicationInformationUuid/edit': {
-      id: '/workspaces/$workspaceUuid/application-information/$applicationInformationUuid/edit'
-      path: '/edit'
-      fullPath: '/workspaces/$workspaceUuid/application-information/$applicationInformationUuid/edit'
-      preLoaderRoute: typeof WorkspacesWorkspaceUuidApplicationInformationApplicationInformationUuidEditRouteImport
-      parentRoute: typeof WorkspacesWorkspaceUuidApplicationInformationApplicationInformationUuidRoute
+    '/workspaces/$workspaceUuid/applications/$applicationInformationUuid/contacts/$contactUuid/edit': {
+      id: '/workspaces/$workspaceUuid/applications/$applicationInformationUuid/contacts/$contactUuid/edit'
+      path: '/$contactUuid/edit'
+      fullPath: '/workspaces/$workspaceUuid/applications/$applicationInformationUuid/contacts/$contactUuid/edit'
+      preLoaderRoute: typeof WorkspacesWorkspaceUuidApplicationsApplicationInformationUuidContactsContactUuidEditRouteImport
+      parentRoute: typeof WorkspacesWorkspaceUuidApplicationsApplicationInformationUuidContactsRoute
     }
-    '/workspaces/$workspaceUuid/applications/$rpApplicationUuid/registration/confirmation': {
-      id: '/workspaces/$workspaceUuid/applications/$rpApplicationUuid/registration/confirmation'
+    '/workspaces/$workspaceUuid/applications/$applicationInformationUuid/rp-configurations/$rpConfigurationUuid/registration/confirmation': {
+      id: '/workspaces/$workspaceUuid/applications/$applicationInformationUuid/rp-configurations/$rpConfigurationUuid/registration/confirmation'
       path: '/registration/confirmation'
-      fullPath: '/workspaces/$workspaceUuid/applications/$rpApplicationUuid/registration/confirmation'
-      preLoaderRoute: typeof WorkspacesWorkspaceUuidApplicationsRpApplicationUuidRegistrationConfirmationRouteImport
-      parentRoute: typeof WorkspacesWorkspaceUuidApplicationsRpApplicationUuidRoute
+      fullPath: '/workspaces/$workspaceUuid/applications/$applicationInformationUuid/rp-configurations/$rpConfigurationUuid/registration/confirmation'
+      preLoaderRoute: typeof WorkspacesWorkspaceUuidApplicationsApplicationInformationUuidRpConfigurationsRpConfigurationUuidRegistrationConfirmationRouteImport
+      parentRoute: typeof WorkspacesWorkspaceUuidApplicationsApplicationInformationUuidRpConfigurationsRpConfigurationUuidRoute
     }
-    '/workspaces/$workspaceUuid/applications/$rpApplicationUuid/registration/$step': {
-      id: '/workspaces/$workspaceUuid/applications/$rpApplicationUuid/registration/$step'
+    '/workspaces/$workspaceUuid/applications/$applicationInformationUuid/rp-configurations/$rpConfigurationUuid/registration/$step': {
+      id: '/workspaces/$workspaceUuid/applications/$applicationInformationUuid/rp-configurations/$rpConfigurationUuid/registration/$step'
       path: '/registration/$step'
-      fullPath: '/workspaces/$workspaceUuid/applications/$rpApplicationUuid/registration/$step'
-      preLoaderRoute: typeof WorkspacesWorkspaceUuidApplicationsRpApplicationUuidRegistrationStepRouteImport
-      parentRoute: typeof WorkspacesWorkspaceUuidApplicationsRpApplicationUuidRoute
+      fullPath: '/workspaces/$workspaceUuid/applications/$applicationInformationUuid/rp-configurations/$rpConfigurationUuid/registration/$step'
+      preLoaderRoute: typeof WorkspacesWorkspaceUuidApplicationsApplicationInformationUuidRpConfigurationsRpConfigurationUuidRegistrationStepRouteImport
+      parentRoute: typeof WorkspacesWorkspaceUuidApplicationsApplicationInformationUuidRpConfigurationsRpConfigurationUuidRoute
+    }
+    '/workspaces/$workspaceUuid/applications/$applicationInformationUuid/rp-configurations/$rpConfigurationUuid/partner-environment/edit': {
+      id: '/workspaces/$workspaceUuid/applications/$applicationInformationUuid/rp-configurations/$rpConfigurationUuid/partner-environment/edit'
+      path: '/partner-environment/edit'
+      fullPath: '/workspaces/$workspaceUuid/applications/$applicationInformationUuid/rp-configurations/$rpConfigurationUuid/partner-environment/edit'
+      preLoaderRoute: typeof WorkspacesWorkspaceUuidApplicationsApplicationInformationUuidRpConfigurationsRpConfigurationUuidPartnerEnvironmentEditRouteImport
+      parentRoute: typeof WorkspacesWorkspaceUuidApplicationsApplicationInformationUuidRpConfigurationsRpConfigurationUuidRoute
     }
   }
 }
@@ -1455,38 +1835,14 @@ const UsersRouteChildren: UsersRouteChildren = {
 
 const UsersRouteWithChildren = UsersRoute._addFileChildren(UsersRouteChildren)
 
-interface WorkspacesWorkspaceUuidApplicationInformationApplicationInformationUuidRouteChildren {
-  WorkspacesWorkspaceUuidApplicationInformationApplicationInformationUuidEditRoute: typeof WorkspacesWorkspaceUuidApplicationInformationApplicationInformationUuidEditRoute
-  WorkspacesWorkspaceUuidApplicationInformationApplicationInformationUuidIndexRoute: typeof WorkspacesWorkspaceUuidApplicationInformationApplicationInformationUuidIndexRoute
-}
-
-const WorkspacesWorkspaceUuidApplicationInformationApplicationInformationUuidRouteChildren: WorkspacesWorkspaceUuidApplicationInformationApplicationInformationUuidRouteChildren =
-  {
-    WorkspacesWorkspaceUuidApplicationInformationApplicationInformationUuidEditRoute:
-      WorkspacesWorkspaceUuidApplicationInformationApplicationInformationUuidEditRoute,
-    WorkspacesWorkspaceUuidApplicationInformationApplicationInformationUuidIndexRoute:
-      WorkspacesWorkspaceUuidApplicationInformationApplicationInformationUuidIndexRoute,
-  }
-
-const WorkspacesWorkspaceUuidApplicationInformationApplicationInformationUuidRouteWithChildren =
-  WorkspacesWorkspaceUuidApplicationInformationApplicationInformationUuidRoute._addFileChildren(
-    WorkspacesWorkspaceUuidApplicationInformationApplicationInformationUuidRouteChildren,
-  )
-
 interface WorkspacesWorkspaceUuidApplicationInformationRouteChildren {
-  WorkspacesWorkspaceUuidApplicationInformationApplicationInformationUuidRoute: typeof WorkspacesWorkspaceUuidApplicationInformationApplicationInformationUuidRouteWithChildren
-  WorkspacesWorkspaceUuidApplicationInformationNewRoute: typeof WorkspacesWorkspaceUuidApplicationInformationNewRoute
-  WorkspacesWorkspaceUuidApplicationInformationIndexRoute: typeof WorkspacesWorkspaceUuidApplicationInformationIndexRoute
+  WorkspacesWorkspaceUuidApplicationInformationSplatRoute: typeof WorkspacesWorkspaceUuidApplicationInformationSplatRoute
 }
 
 const WorkspacesWorkspaceUuidApplicationInformationRouteChildren: WorkspacesWorkspaceUuidApplicationInformationRouteChildren =
   {
-    WorkspacesWorkspaceUuidApplicationInformationApplicationInformationUuidRoute:
-      WorkspacesWorkspaceUuidApplicationInformationApplicationInformationUuidRouteWithChildren,
-    WorkspacesWorkspaceUuidApplicationInformationNewRoute:
-      WorkspacesWorkspaceUuidApplicationInformationNewRoute,
-    WorkspacesWorkspaceUuidApplicationInformationIndexRoute:
-      WorkspacesWorkspaceUuidApplicationInformationIndexRoute,
+    WorkspacesWorkspaceUuidApplicationInformationSplatRoute:
+      WorkspacesWorkspaceUuidApplicationInformationSplatRoute,
   }
 
 const WorkspacesWorkspaceUuidApplicationInformationRouteWithChildren =
@@ -1494,52 +1850,160 @@ const WorkspacesWorkspaceUuidApplicationInformationRouteWithChildren =
     WorkspacesWorkspaceUuidApplicationInformationRouteChildren,
   )
 
-interface WorkspacesWorkspaceUuidApplicationsRpApplicationUuidRouteChildren {
-  WorkspacesWorkspaceUuidApplicationsRpApplicationUuidAuditRoute: typeof WorkspacesWorkspaceUuidApplicationsRpApplicationUuidAuditRoute
-  WorkspacesWorkspaceUuidApplicationsRpApplicationUuidConfigurationRoute: typeof WorkspacesWorkspaceUuidApplicationsRpApplicationUuidConfigurationRoute
-  WorkspacesWorkspaceUuidApplicationsRpApplicationUuidEditRoute: typeof WorkspacesWorkspaceUuidApplicationsRpApplicationUuidEditRoute
-  WorkspacesWorkspaceUuidApplicationsRpApplicationUuidManageCredentialsRoute: typeof WorkspacesWorkspaceUuidApplicationsRpApplicationUuidManageCredentialsRoute
-  WorkspacesWorkspaceUuidApplicationsRpApplicationUuidUsageRoute: typeof WorkspacesWorkspaceUuidApplicationsRpApplicationUuidUsageRoute
-  WorkspacesWorkspaceUuidApplicationsRpApplicationUuidIndexRoute: typeof WorkspacesWorkspaceUuidApplicationsRpApplicationUuidIndexRoute
-  WorkspacesWorkspaceUuidApplicationsRpApplicationUuidRegistrationStepRoute: typeof WorkspacesWorkspaceUuidApplicationsRpApplicationUuidRegistrationStepRoute
-  WorkspacesWorkspaceUuidApplicationsRpApplicationUuidRegistrationConfirmationRoute: typeof WorkspacesWorkspaceUuidApplicationsRpApplicationUuidRegistrationConfirmationRoute
+interface WorkspacesWorkspaceUuidApplicationsApplicationInformationUuidContactsRouteChildren {
+  WorkspacesWorkspaceUuidApplicationsApplicationInformationUuidContactsNewRoute: typeof WorkspacesWorkspaceUuidApplicationsApplicationInformationUuidContactsNewRoute
+  WorkspacesWorkspaceUuidApplicationsApplicationInformationUuidContactsIndexRoute: typeof WorkspacesWorkspaceUuidApplicationsApplicationInformationUuidContactsIndexRoute
+  WorkspacesWorkspaceUuidApplicationsApplicationInformationUuidContactsContactUuidEditRoute: typeof WorkspacesWorkspaceUuidApplicationsApplicationInformationUuidContactsContactUuidEditRoute
 }
 
-const WorkspacesWorkspaceUuidApplicationsRpApplicationUuidRouteChildren: WorkspacesWorkspaceUuidApplicationsRpApplicationUuidRouteChildren =
+const WorkspacesWorkspaceUuidApplicationsApplicationInformationUuidContactsRouteChildren: WorkspacesWorkspaceUuidApplicationsApplicationInformationUuidContactsRouteChildren =
   {
-    WorkspacesWorkspaceUuidApplicationsRpApplicationUuidAuditRoute:
-      WorkspacesWorkspaceUuidApplicationsRpApplicationUuidAuditRoute,
-    WorkspacesWorkspaceUuidApplicationsRpApplicationUuidConfigurationRoute:
-      WorkspacesWorkspaceUuidApplicationsRpApplicationUuidConfigurationRoute,
-    WorkspacesWorkspaceUuidApplicationsRpApplicationUuidEditRoute:
-      WorkspacesWorkspaceUuidApplicationsRpApplicationUuidEditRoute,
-    WorkspacesWorkspaceUuidApplicationsRpApplicationUuidManageCredentialsRoute:
-      WorkspacesWorkspaceUuidApplicationsRpApplicationUuidManageCredentialsRoute,
-    WorkspacesWorkspaceUuidApplicationsRpApplicationUuidUsageRoute:
-      WorkspacesWorkspaceUuidApplicationsRpApplicationUuidUsageRoute,
-    WorkspacesWorkspaceUuidApplicationsRpApplicationUuidIndexRoute:
-      WorkspacesWorkspaceUuidApplicationsRpApplicationUuidIndexRoute,
-    WorkspacesWorkspaceUuidApplicationsRpApplicationUuidRegistrationStepRoute:
-      WorkspacesWorkspaceUuidApplicationsRpApplicationUuidRegistrationStepRoute,
-    WorkspacesWorkspaceUuidApplicationsRpApplicationUuidRegistrationConfirmationRoute:
-      WorkspacesWorkspaceUuidApplicationsRpApplicationUuidRegistrationConfirmationRoute,
+    WorkspacesWorkspaceUuidApplicationsApplicationInformationUuidContactsNewRoute:
+      WorkspacesWorkspaceUuidApplicationsApplicationInformationUuidContactsNewRoute,
+    WorkspacesWorkspaceUuidApplicationsApplicationInformationUuidContactsIndexRoute:
+      WorkspacesWorkspaceUuidApplicationsApplicationInformationUuidContactsIndexRoute,
+    WorkspacesWorkspaceUuidApplicationsApplicationInformationUuidContactsContactUuidEditRoute:
+      WorkspacesWorkspaceUuidApplicationsApplicationInformationUuidContactsContactUuidEditRoute,
   }
 
-const WorkspacesWorkspaceUuidApplicationsRpApplicationUuidRouteWithChildren =
-  WorkspacesWorkspaceUuidApplicationsRpApplicationUuidRoute._addFileChildren(
-    WorkspacesWorkspaceUuidApplicationsRpApplicationUuidRouteChildren,
+const WorkspacesWorkspaceUuidApplicationsApplicationInformationUuidContactsRouteWithChildren =
+  WorkspacesWorkspaceUuidApplicationsApplicationInformationUuidContactsRoute._addFileChildren(
+    WorkspacesWorkspaceUuidApplicationsApplicationInformationUuidContactsRouteChildren,
+  )
+
+interface WorkspacesWorkspaceUuidApplicationsApplicationInformationUuidDetailsRouteChildren {
+  WorkspacesWorkspaceUuidApplicationsApplicationInformationUuidDetailsEditRoute: typeof WorkspacesWorkspaceUuidApplicationsApplicationInformationUuidDetailsEditRoute
+}
+
+const WorkspacesWorkspaceUuidApplicationsApplicationInformationUuidDetailsRouteChildren: WorkspacesWorkspaceUuidApplicationsApplicationInformationUuidDetailsRouteChildren =
+  {
+    WorkspacesWorkspaceUuidApplicationsApplicationInformationUuidDetailsEditRoute:
+      WorkspacesWorkspaceUuidApplicationsApplicationInformationUuidDetailsEditRoute,
+  }
+
+const WorkspacesWorkspaceUuidApplicationsApplicationInformationUuidDetailsRouteWithChildren =
+  WorkspacesWorkspaceUuidApplicationsApplicationInformationUuidDetailsRoute._addFileChildren(
+    WorkspacesWorkspaceUuidApplicationsApplicationInformationUuidDetailsRouteChildren,
+  )
+
+interface WorkspacesWorkspaceUuidApplicationsApplicationInformationUuidRpConfigurationsRpConfigurationUuidRouteChildren {
+  WorkspacesWorkspaceUuidApplicationsApplicationInformationUuidRpConfigurationsRpConfigurationUuidAuditRoute: typeof WorkspacesWorkspaceUuidApplicationsApplicationInformationUuidRpConfigurationsRpConfigurationUuidAuditRoute
+  WorkspacesWorkspaceUuidApplicationsApplicationInformationUuidRpConfigurationsRpConfigurationUuidConfigurationRoute: typeof WorkspacesWorkspaceUuidApplicationsApplicationInformationUuidRpConfigurationsRpConfigurationUuidConfigurationRoute
+  WorkspacesWorkspaceUuidApplicationsApplicationInformationUuidRpConfigurationsRpConfigurationUuidManageCredentialsRoute: typeof WorkspacesWorkspaceUuidApplicationsApplicationInformationUuidRpConfigurationsRpConfigurationUuidManageCredentialsRoute
+  WorkspacesWorkspaceUuidApplicationsApplicationInformationUuidRpConfigurationsRpConfigurationUuidProductionReviewRoute: typeof WorkspacesWorkspaceUuidApplicationsApplicationInformationUuidRpConfigurationsRpConfigurationUuidProductionReviewRoute
+  WorkspacesWorkspaceUuidApplicationsApplicationInformationUuidRpConfigurationsRpConfigurationUuidProgressionRoute: typeof WorkspacesWorkspaceUuidApplicationsApplicationInformationUuidRpConfigurationsRpConfigurationUuidProgressionRoute
+  WorkspacesWorkspaceUuidApplicationsApplicationInformationUuidRpConfigurationsRpConfigurationUuidSettingsRoute: typeof WorkspacesWorkspaceUuidApplicationsApplicationInformationUuidRpConfigurationsRpConfigurationUuidSettingsRoute
+  WorkspacesWorkspaceUuidApplicationsApplicationInformationUuidRpConfigurationsRpConfigurationUuidUsageRoute: typeof WorkspacesWorkspaceUuidApplicationsApplicationInformationUuidRpConfigurationsRpConfigurationUuidUsageRoute
+  WorkspacesWorkspaceUuidApplicationsApplicationInformationUuidRpConfigurationsRpConfigurationUuidIndexRoute: typeof WorkspacesWorkspaceUuidApplicationsApplicationInformationUuidRpConfigurationsRpConfigurationUuidIndexRoute
+  WorkspacesWorkspaceUuidApplicationsApplicationInformationUuidRpConfigurationsRpConfigurationUuidPartnerEnvironmentEditRoute: typeof WorkspacesWorkspaceUuidApplicationsApplicationInformationUuidRpConfigurationsRpConfigurationUuidPartnerEnvironmentEditRoute
+  WorkspacesWorkspaceUuidApplicationsApplicationInformationUuidRpConfigurationsRpConfigurationUuidRegistrationStepRoute: typeof WorkspacesWorkspaceUuidApplicationsApplicationInformationUuidRpConfigurationsRpConfigurationUuidRegistrationStepRoute
+  WorkspacesWorkspaceUuidApplicationsApplicationInformationUuidRpConfigurationsRpConfigurationUuidRegistrationConfirmationRoute: typeof WorkspacesWorkspaceUuidApplicationsApplicationInformationUuidRpConfigurationsRpConfigurationUuidRegistrationConfirmationRoute
+}
+
+const WorkspacesWorkspaceUuidApplicationsApplicationInformationUuidRpConfigurationsRpConfigurationUuidRouteChildren: WorkspacesWorkspaceUuidApplicationsApplicationInformationUuidRpConfigurationsRpConfigurationUuidRouteChildren =
+  {
+    WorkspacesWorkspaceUuidApplicationsApplicationInformationUuidRpConfigurationsRpConfigurationUuidAuditRoute:
+      WorkspacesWorkspaceUuidApplicationsApplicationInformationUuidRpConfigurationsRpConfigurationUuidAuditRoute,
+    WorkspacesWorkspaceUuidApplicationsApplicationInformationUuidRpConfigurationsRpConfigurationUuidConfigurationRoute:
+      WorkspacesWorkspaceUuidApplicationsApplicationInformationUuidRpConfigurationsRpConfigurationUuidConfigurationRoute,
+    WorkspacesWorkspaceUuidApplicationsApplicationInformationUuidRpConfigurationsRpConfigurationUuidManageCredentialsRoute:
+      WorkspacesWorkspaceUuidApplicationsApplicationInformationUuidRpConfigurationsRpConfigurationUuidManageCredentialsRoute,
+    WorkspacesWorkspaceUuidApplicationsApplicationInformationUuidRpConfigurationsRpConfigurationUuidProductionReviewRoute:
+      WorkspacesWorkspaceUuidApplicationsApplicationInformationUuidRpConfigurationsRpConfigurationUuidProductionReviewRoute,
+    WorkspacesWorkspaceUuidApplicationsApplicationInformationUuidRpConfigurationsRpConfigurationUuidProgressionRoute:
+      WorkspacesWorkspaceUuidApplicationsApplicationInformationUuidRpConfigurationsRpConfigurationUuidProgressionRoute,
+    WorkspacesWorkspaceUuidApplicationsApplicationInformationUuidRpConfigurationsRpConfigurationUuidSettingsRoute:
+      WorkspacesWorkspaceUuidApplicationsApplicationInformationUuidRpConfigurationsRpConfigurationUuidSettingsRoute,
+    WorkspacesWorkspaceUuidApplicationsApplicationInformationUuidRpConfigurationsRpConfigurationUuidUsageRoute:
+      WorkspacesWorkspaceUuidApplicationsApplicationInformationUuidRpConfigurationsRpConfigurationUuidUsageRoute,
+    WorkspacesWorkspaceUuidApplicationsApplicationInformationUuidRpConfigurationsRpConfigurationUuidIndexRoute:
+      WorkspacesWorkspaceUuidApplicationsApplicationInformationUuidRpConfigurationsRpConfigurationUuidIndexRoute,
+    WorkspacesWorkspaceUuidApplicationsApplicationInformationUuidRpConfigurationsRpConfigurationUuidPartnerEnvironmentEditRoute:
+      WorkspacesWorkspaceUuidApplicationsApplicationInformationUuidRpConfigurationsRpConfigurationUuidPartnerEnvironmentEditRoute,
+    WorkspacesWorkspaceUuidApplicationsApplicationInformationUuidRpConfigurationsRpConfigurationUuidRegistrationStepRoute:
+      WorkspacesWorkspaceUuidApplicationsApplicationInformationUuidRpConfigurationsRpConfigurationUuidRegistrationStepRoute,
+    WorkspacesWorkspaceUuidApplicationsApplicationInformationUuidRpConfigurationsRpConfigurationUuidRegistrationConfirmationRoute:
+      WorkspacesWorkspaceUuidApplicationsApplicationInformationUuidRpConfigurationsRpConfigurationUuidRegistrationConfirmationRoute,
+  }
+
+const WorkspacesWorkspaceUuidApplicationsApplicationInformationUuidRpConfigurationsRpConfigurationUuidRouteWithChildren =
+  WorkspacesWorkspaceUuidApplicationsApplicationInformationUuidRpConfigurationsRpConfigurationUuidRoute._addFileChildren(
+    WorkspacesWorkspaceUuidApplicationsApplicationInformationUuidRpConfigurationsRpConfigurationUuidRouteChildren,
+  )
+
+interface WorkspacesWorkspaceUuidApplicationsApplicationInformationUuidRpConfigurationsRouteChildren {
+  WorkspacesWorkspaceUuidApplicationsApplicationInformationUuidRpConfigurationsRpConfigurationUuidRoute: typeof WorkspacesWorkspaceUuidApplicationsApplicationInformationUuidRpConfigurationsRpConfigurationUuidRouteWithChildren
+  WorkspacesWorkspaceUuidApplicationsApplicationInformationUuidRpConfigurationsNewRoute: typeof WorkspacesWorkspaceUuidApplicationsApplicationInformationUuidRpConfigurationsNewRoute
+  WorkspacesWorkspaceUuidApplicationsApplicationInformationUuidRpConfigurationsIndexRoute: typeof WorkspacesWorkspaceUuidApplicationsApplicationInformationUuidRpConfigurationsIndexRoute
+}
+
+const WorkspacesWorkspaceUuidApplicationsApplicationInformationUuidRpConfigurationsRouteChildren: WorkspacesWorkspaceUuidApplicationsApplicationInformationUuidRpConfigurationsRouteChildren =
+  {
+    WorkspacesWorkspaceUuidApplicationsApplicationInformationUuidRpConfigurationsRpConfigurationUuidRoute:
+      WorkspacesWorkspaceUuidApplicationsApplicationInformationUuidRpConfigurationsRpConfigurationUuidRouteWithChildren,
+    WorkspacesWorkspaceUuidApplicationsApplicationInformationUuidRpConfigurationsNewRoute:
+      WorkspacesWorkspaceUuidApplicationsApplicationInformationUuidRpConfigurationsNewRoute,
+    WorkspacesWorkspaceUuidApplicationsApplicationInformationUuidRpConfigurationsIndexRoute:
+      WorkspacesWorkspaceUuidApplicationsApplicationInformationUuidRpConfigurationsIndexRoute,
+  }
+
+const WorkspacesWorkspaceUuidApplicationsApplicationInformationUuidRpConfigurationsRouteWithChildren =
+  WorkspacesWorkspaceUuidApplicationsApplicationInformationUuidRpConfigurationsRoute._addFileChildren(
+    WorkspacesWorkspaceUuidApplicationsApplicationInformationUuidRpConfigurationsRouteChildren,
+  )
+
+interface WorkspacesWorkspaceUuidApplicationsApplicationInformationUuidRouteChildren {
+  WorkspacesWorkspaceUuidApplicationsApplicationInformationUuidSplatRoute: typeof WorkspacesWorkspaceUuidApplicationsApplicationInformationUuidSplatRoute
+  WorkspacesWorkspaceUuidApplicationsApplicationInformationUuidContactsRoute: typeof WorkspacesWorkspaceUuidApplicationsApplicationInformationUuidContactsRouteWithChildren
+  WorkspacesWorkspaceUuidApplicationsApplicationInformationUuidDeleteRoute: typeof WorkspacesWorkspaceUuidApplicationsApplicationInformationUuidDeleteRoute
+  WorkspacesWorkspaceUuidApplicationsApplicationInformationUuidDetailsRoute: typeof WorkspacesWorkspaceUuidApplicationsApplicationInformationUuidDetailsRouteWithChildren
+  WorkspacesWorkspaceUuidApplicationsApplicationInformationUuidEditRoute: typeof WorkspacesWorkspaceUuidApplicationsApplicationInformationUuidEditRoute
+  WorkspacesWorkspaceUuidApplicationsApplicationInformationUuidInternalReviewRoute: typeof WorkspacesWorkspaceUuidApplicationsApplicationInformationUuidInternalReviewRoute
+  WorkspacesWorkspaceUuidApplicationsApplicationInformationUuidReadinessRoute: typeof WorkspacesWorkspaceUuidApplicationsApplicationInformationUuidReadinessRoute
+  WorkspacesWorkspaceUuidApplicationsApplicationInformationUuidRpConfigurationsRoute: typeof WorkspacesWorkspaceUuidApplicationsApplicationInformationUuidRpConfigurationsRouteWithChildren
+  WorkspacesWorkspaceUuidApplicationsApplicationInformationUuidSettingsRoute: typeof WorkspacesWorkspaceUuidApplicationsApplicationInformationUuidSettingsRoute
+  WorkspacesWorkspaceUuidApplicationsApplicationInformationUuidIndexRoute: typeof WorkspacesWorkspaceUuidApplicationsApplicationInformationUuidIndexRoute
+}
+
+const WorkspacesWorkspaceUuidApplicationsApplicationInformationUuidRouteChildren: WorkspacesWorkspaceUuidApplicationsApplicationInformationUuidRouteChildren =
+  {
+    WorkspacesWorkspaceUuidApplicationsApplicationInformationUuidSplatRoute:
+      WorkspacesWorkspaceUuidApplicationsApplicationInformationUuidSplatRoute,
+    WorkspacesWorkspaceUuidApplicationsApplicationInformationUuidContactsRoute:
+      WorkspacesWorkspaceUuidApplicationsApplicationInformationUuidContactsRouteWithChildren,
+    WorkspacesWorkspaceUuidApplicationsApplicationInformationUuidDeleteRoute:
+      WorkspacesWorkspaceUuidApplicationsApplicationInformationUuidDeleteRoute,
+    WorkspacesWorkspaceUuidApplicationsApplicationInformationUuidDetailsRoute:
+      WorkspacesWorkspaceUuidApplicationsApplicationInformationUuidDetailsRouteWithChildren,
+    WorkspacesWorkspaceUuidApplicationsApplicationInformationUuidEditRoute:
+      WorkspacesWorkspaceUuidApplicationsApplicationInformationUuidEditRoute,
+    WorkspacesWorkspaceUuidApplicationsApplicationInformationUuidInternalReviewRoute:
+      WorkspacesWorkspaceUuidApplicationsApplicationInformationUuidInternalReviewRoute,
+    WorkspacesWorkspaceUuidApplicationsApplicationInformationUuidReadinessRoute:
+      WorkspacesWorkspaceUuidApplicationsApplicationInformationUuidReadinessRoute,
+    WorkspacesWorkspaceUuidApplicationsApplicationInformationUuidRpConfigurationsRoute:
+      WorkspacesWorkspaceUuidApplicationsApplicationInformationUuidRpConfigurationsRouteWithChildren,
+    WorkspacesWorkspaceUuidApplicationsApplicationInformationUuidSettingsRoute:
+      WorkspacesWorkspaceUuidApplicationsApplicationInformationUuidSettingsRoute,
+    WorkspacesWorkspaceUuidApplicationsApplicationInformationUuidIndexRoute:
+      WorkspacesWorkspaceUuidApplicationsApplicationInformationUuidIndexRoute,
+  }
+
+const WorkspacesWorkspaceUuidApplicationsApplicationInformationUuidRouteWithChildren =
+  WorkspacesWorkspaceUuidApplicationsApplicationInformationUuidRoute._addFileChildren(
+    WorkspacesWorkspaceUuidApplicationsApplicationInformationUuidRouteChildren,
   )
 
 interface WorkspacesWorkspaceUuidApplicationsRouteChildren {
-  WorkspacesWorkspaceUuidApplicationsRpApplicationUuidRoute: typeof WorkspacesWorkspaceUuidApplicationsRpApplicationUuidRouteWithChildren
+  WorkspacesWorkspaceUuidApplicationsApplicationInformationUuidRoute: typeof WorkspacesWorkspaceUuidApplicationsApplicationInformationUuidRouteWithChildren
   WorkspacesWorkspaceUuidApplicationsNewRoute: typeof WorkspacesWorkspaceUuidApplicationsNewRoute
   WorkspacesWorkspaceUuidApplicationsIndexRoute: typeof WorkspacesWorkspaceUuidApplicationsIndexRoute
 }
 
 const WorkspacesWorkspaceUuidApplicationsRouteChildren: WorkspacesWorkspaceUuidApplicationsRouteChildren =
   {
-    WorkspacesWorkspaceUuidApplicationsRpApplicationUuidRoute:
-      WorkspacesWorkspaceUuidApplicationsRpApplicationUuidRouteWithChildren,
+    WorkspacesWorkspaceUuidApplicationsApplicationInformationUuidRoute:
+      WorkspacesWorkspaceUuidApplicationsApplicationInformationUuidRouteWithChildren,
     WorkspacesWorkspaceUuidApplicationsNewRoute:
       WorkspacesWorkspaceUuidApplicationsNewRoute,
     WorkspacesWorkspaceUuidApplicationsIndexRoute:

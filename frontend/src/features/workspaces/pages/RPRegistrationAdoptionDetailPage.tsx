@@ -96,9 +96,9 @@ export const RPRegistrationAdoptionDetailPage = (): FunctionComponent => {
 		isLoading: isLoadingApplicationInformation,
 	} = useWorkspaceApplicationInformationList(workspaceUuid);
 
-	const pageTitle = preview?.candidate.name
+	const pageTitle = preview?.candidate.configurationName
 		? t("rpRegistrationAdoption.detailTitle", {
-				name: preview.candidate.name,
+				name: preview.candidate.configurationName,
 			})
 		: t("rpRegistrationAdoption.detailTitleFallback");
 	useDocumentTitle(pageTitle, t("home.title"));
@@ -119,6 +119,8 @@ export const RPRegistrationAdoptionDetailPage = (): FunctionComponent => {
 	);
 	const environmentRequired = preview?.canadaLoginEnvironment == null;
 	const hasWorkspaceError = validationAttempted && workspaceUuid.length === 0;
+	const hasApplicationError =
+		validationAttempted && applicationInformationUuid.length === 0;
 	const hasEnvironmentError =
 		validationAttempted &&
 		environmentRequired &&
@@ -194,6 +196,7 @@ export const RPRegistrationAdoptionDetailPage = (): FunctionComponent => {
 		setSubmissionError(null);
 		if (
 			workspaceUuid.length === 0 ||
+			applicationInformationUuid.length === 0 ||
 			(environmentRequired && canadaLoginEnvironment.length === 0)
 		) {
 			return;
@@ -201,7 +204,7 @@ export const RPRegistrationAdoptionDetailPage = (): FunctionComponent => {
 
 		try {
 			const result = await linkToWorkspace(rpApplicationUuid, {
-				applicationInformationUuid: applicationInformationUuid || null,
+				applicationInformationUuid,
 				canadaLoginEnvironment:
 					preview?.canadaLoginEnvironment ?? (canadaLoginEnvironment || null),
 				workspaceUuid,
@@ -270,6 +273,12 @@ export const RPRegistrationAdoptionDetailPage = (): FunctionComponent => {
 					<Text>
 						{t("rpRegistrationAdoption.ibmApplicationId", {
 							id: preview.candidate.ibmApplicationId,
+						})}
+					</Text>
+					<Text>
+						{t("rpRegistrationAdoption.partnerEnvironmentContext", {
+							environment:
+								preview.partnerEnvironment?.trim() || t("common.notProvided"),
 						})}
 					</Text>
 					<DataTable
@@ -341,11 +350,17 @@ export const RPRegistrationAdoptionDetailPage = (): FunctionComponent => {
 						</Notice>
 					) : null}
 					<Select
+						required
 						hint={t("rpRegistrationAdoption.applicationInformationHint")}
 						label={t("rpRegistrationAdoption.applicationInformationLabel")}
 						name="application-information"
 						selectId="rp-adoption-application-information"
 						value={applicationInformationUuid}
+						errorMessage={
+							hasApplicationError
+								? t("rpRegistrationAdoption.applicationRequired")
+								: undefined
+						}
 						onInput={(event): void => {
 							setApplicationInformationUuid(
 								(event.target as HTMLSelectElement).value
@@ -472,12 +487,18 @@ export const RPRegistrationAdoptionDetailPage = (): FunctionComponent => {
 					>
 						<Text>
 							{t("rpRegistrationAdoption.successBody", {
-								name: adopted.name,
+								name: adopted.configurationName,
+							})}
+						</Text>
+						<Text>
+							{t("rpRegistrationAdoption.partnerEnvironmentContext", {
+								environment:
+									adopted.partnerEnvironment?.trim() || t("common.notProvided"),
 							})}
 						</Text>
 						<div className="flex flex-wrap gap-300">
 							<Link
-								href={`/workspaces/${encodeURIComponent(adopted.workspaceUuid)}/applications/${encodeURIComponent(adopted.rpApplicationUuid)}`}
+								href={`/workspaces/${encodeURIComponent(adopted.workspaceUuid)}/applications/${encodeURIComponent(adopted.applicationInformationUuid)}/rp-configurations/${encodeURIComponent(adopted.rpApplicationUuid)}`}
 							>
 								{t("rpRegistrationAdoption.viewApplicationAction")}
 							</Link>

@@ -57,6 +57,7 @@ const Checkboxes: React.FC<CheckboxProps> = React.memo(
 				hideLabel={hideLabel}
 				hideLegend={hideLegend}
 				hint={hint}
+				id={name}
 				lang={lang}
 				legend={legend}
 				name={name}

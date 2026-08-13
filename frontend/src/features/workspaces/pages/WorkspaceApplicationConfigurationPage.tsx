@@ -1,33 +1,20 @@
-import { useNavigate, useParams } from "@tanstack/react-router";
-import { useState } from "react";
+import { useParams } from "@tanstack/react-router";
 import { useTranslation } from "react-i18next";
 import type { FunctionComponent } from "@/common/types";
 import { useDocumentTitle } from "@/common/use-document-title";
-import {
-	Button,
-	ConfirmDialog,
-	Grid,
-	Heading,
-	Link,
-	Notice,
-	Text,
-} from "@/components/ui";
+import { Button, Grid, Heading, Link, Notice, Text } from "@/components/ui";
 import { hasCapability } from "@/features/auth/authorization";
 import { getLocalizedRPApplicationName } from "@/features/rp-applications/rp-application-summary";
 import { getRequestErrorNotice } from "@/fetch";
 import type { WorkspaceRPApplicationRegistrationAnswers } from "@/fetch/rp-applications";
 import { useSession } from "@/hooks";
-import { useWorkspaceRPApplicationManagement } from "../hooks/use-workspace-rp-application-management";
-import { useWorkspaceRPApplicationConfiguration } from "../hooks/use-workspace-rp-applications";
+import { useApplicationRPConfigurationConfiguration } from "../hooks/use-application-rp-configurations";
 import {
 	getCanadaLoginEnvironmentLabel,
 	getWorkspaceOnboardingStateLabel,
 	getWorkspacePromotionStatusLabel,
 } from "../onboarding-display";
-import {
-	getEarliestIncompleteRegistrationStep,
-	getWorkspaceRPRegistrationStepPath,
-} from "../workspace-rp-registration-flow";
+import { getEarliestIncompleteRegistrationStep } from "../workspace-rp-registration-flow";
 
 type AnswerKey = keyof WorkspaceRPApplicationRegistrationAnswers;
 
@@ -195,45 +182,47 @@ const displayValue = (value: unknown, yes: string, no: string): string => {
 
 export const WorkspaceApplicationConfigurationPage = (): FunctionComponent => {
 	const { i18n, t } = useTranslation();
-	const navigate = useNavigate();
 	const { currentUser } = useSession();
-	const { rpApplicationUuid, workspaceUuid } = useParams({
-		from: "/workspaces/$workspaceUuid/applications/$rpApplicationUuid/configuration",
-	});
+	const params = useParams({ strict: false });
+	const workspaceUuid = params["workspaceUuid"] ?? "";
+	const applicationInformationUuid = params["applicationInformationUuid"] ?? "";
+	const rpApplicationUuid =
+		params["rpConfigurationUuid"] || params["rpApplicationUuid"] || "";
 	const { configuration, error, isLoading } =
-		useWorkspaceRPApplicationConfiguration(workspaceUuid, rpApplicationUuid);
-	const { deleteRPApplication, isDeleting } =
-		useWorkspaceRPApplicationManagement();
-	const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
-	const [localError, setLocalError] = useState<Error | null>(null);
+		useApplicationRPConfigurationConfiguration(
+			workspaceUuid,
+			applicationInformationUuid,
+			rpApplicationUuid
+		);
 	const canEdit = hasCapability(
 		currentUser?.authorizationContext,
 		"rp_configuration_write",
 		workspaceUuid
 	);
-	const canReadAudit = hasCapability(
-		currentUser?.authorizationContext,
-		"partner_audit_read",
-		workspaceUuid
-	);
 	const name = configuration
-		? getLocalizedRPApplicationName(
+		? configuration.configurationName?.trim() ||
+			getLocalizedRPApplicationName(
 				configuration,
 				i18n?.resolvedLanguage ?? i18n?.language ?? "en"
-			) || t("workspaces.rpConfigurationTitle")
+			) ||
+			t("workspaces.rpConfigurationTitle")
 		: t("workspaces.rpConfigurationTitle");
-	const errorNotice = getRequestErrorNotice(localError ?? error, {
+	const errorNotice = getRequestErrorNotice(error, {
 		bodyKey: "workspaces.rpConfigurationErrorBody",
 		titleKey: "workspaces.rpConfigurationErrorTitle",
 	});
-	const resumePath = configuration
-		? getWorkspaceRPRegistrationStepPath(
-				workspaceUuid,
-				rpApplicationUuid,
-				getEarliestIncompleteRegistrationStep(
-					configuration.registrationLastCompletedStep ?? null
-				)
+	const resumeStep = configuration
+		? getEarliestIncompleteRegistrationStep(
+				configuration.registrationLastCompletedStep ?? null
 			)
+		: null;
+	const resumePath = resumeStep
+		? `/workspaces/${encodeURIComponent(workspaceUuid)}/applications/${encodeURIComponent(applicationInformationUuid)}/rp-configurations/${encodeURIComponent(rpApplicationUuid)}/registration/${resumeStep}`
+		: null;
+	const applicationName = configuration
+		? (i18n?.resolvedLanguage ?? i18n?.language ?? "en").startsWith("fr")
+			? configuration.serviceNameFr
+			: configuration.serviceNameEn
 		: null;
 
 	useDocumentTitle(
@@ -242,22 +231,6 @@ export const WorkspaceApplicationConfigurationPage = (): FunctionComponent => {
 			: t("workspaces.rpConfigurationTitle"),
 		t("home.title")
 	);
-
-	const handleDelete = async (): Promise<void> => {
-		setLocalError(null);
-		try {
-			await deleteRPApplication(workspaceUuid, rpApplicationUuid);
-			await navigate({
-				params: { workspaceUuid },
-				replace: true,
-				search: { deleted: "1" },
-				to: "/workspaces/$workspaceUuid/applications",
-			});
-		} catch (requestError) {
-			setDeleteDialogOpen(false);
-			setLocalError(requestError as Error);
-		}
-	};
 
 	return (
 		<div className="grid gap-400">
@@ -292,6 +265,21 @@ export const WorkspaceApplicationConfigurationPage = (): FunctionComponent => {
 			{configuration ? (
 				<>
 					<Grid columns="1fr" columnsDesktop="12rem 1fr" tag="dl">
+						<dt>
+							<strong>
+								{t("workspaces.rpConfigurationsApplicationLabel")}
+							</strong>
+						</dt>
+						<dd>{applicationName}</dd>
+						<dt>
+							<strong>
+								{t("workspaces.applicationsPartnerEnvironmentLabel")}
+							</strong>
+						</dt>
+						<dd>
+							{configuration.partnerEnvironment?.trim() ||
+								t("common.notProvided")}
+						</dd>
 						<dt>
 							<strong>{t("workspaces.applicationsEnvironmentLabel")}</strong>
 						</dt>
@@ -328,8 +316,11 @@ export const WorkspaceApplicationConfigurationPage = (): FunctionComponent => {
 					</Grid>
 
 					{configurationGroups.map((group) => {
-						const values = group.fields.filter((field) =>
-							isDisplayable(configuration.registrationAnswers[field])
+						const values = group.fields.filter(
+							(field) =>
+								field !== "serviceNameEn" &&
+								field !== "serviceNameFr" &&
+								isDisplayable(configuration.registrationAnswers[field])
 						);
 						if (values.length === 0) return null;
 						return (
@@ -374,55 +365,14 @@ export const WorkspaceApplicationConfigurationPage = (): FunctionComponent => {
 								{t("workspaces.rpConfigurationResumeAction")}
 							</Button>
 						) : null}
-						{canEdit ? (
-							<Button
-								buttonRole="secondary"
-								href={`/workspaces/${workspaceUuid}/applications/${rpApplicationUuid}/edit`}
-								type="link"
-							>
-								{t("workspaces.applicationsEditAction")}
-							</Button>
-						) : null}
-						{canReadAudit ? (
-							<Link
-								href={`/workspaces/${workspaceUuid}/applications/${rpApplicationUuid}/audit`}
-							>
-								{t("workspaces.applicationsAuditAction")}
-							</Link>
-						) : null}
-						<Link href={`/workspaces/${workspaceUuid}/application-information`}>
+						<Link
+							href={`/workspaces/${workspaceUuid}/applications/${applicationInformationUuid}`}
+						>
 							{t("workspaces.manageApplicationInformation")}
 						</Link>
-						{canEdit ? (
-							<Button
-								buttonRole="danger"
-								type="button"
-								onGcdsClick={() => {
-									setDeleteDialogOpen(true);
-								}}
-							>
-								{t("workspaces.deleteApplication")}
-							</Button>
-						) : null}
 					</div>
 				</>
 			) : null}
-
-			<ConfirmDialog
-				cancelLabel={t("common.cancel")}
-				description={t("workspaces.deleteApplicationConfirmBody", { name })}
-				isOpen={deleteDialogOpen}
-				title={t("workspaces.deleteApplicationConfirmTitle")}
-				confirmLabel={
-					isDeleting
-						? t("workspaces.deletingAction")
-						: t("workspaces.deleteApplication")
-				}
-				onConfirm={() => void handleDelete()}
-				onClose={() => {
-					setDeleteDialogOpen(false);
-				}}
-			/>
 		</div>
 	);
 };

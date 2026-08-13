@@ -1,5 +1,6 @@
 import { useNavigate, useParams, useSearch } from "@tanstack/react-router";
 import { useTranslation } from "react-i18next";
+import { normalizeLanguageCode } from "@/common/language";
 import type { FunctionComponent } from "@/common/types";
 import { Button, DataTable, Heading, Notice, Text } from "@/components/ui";
 import type { DataTableColumn } from "@/components/ui/DataTable";
@@ -11,26 +12,29 @@ import { useWorkspaceApplicationInformationList } from "../hooks/use-workspace-a
 import { getWorkspaceOnboardingStateLabel } from "../onboarding-display";
 
 type ApplicationInformationRow = {
+	name: string;
 	onboardingState: string;
-	serviceNameEn: string;
-	serviceNameFr: string;
 	uuid: string;
 };
 
 export const ApplicationInformationListPage = (): FunctionComponent => {
-	const { t } = useTranslation() as unknown as {
+	const { i18n, t } = useTranslation() as unknown as {
+		i18n: { language?: string; resolvedLanguage?: string };
 		t: (
 			key: string | Array<string>,
 			options?: Record<string, unknown>
 		) => string;
 	};
+	const language = normalizeLanguageCode(
+		i18n.resolvedLanguage ?? i18n.language
+	);
 	const navigate = useNavigate();
 	const { currentUser } = useSession();
 	const { workspaceUuid } = useParams({
-		from: "/workspaces/$workspaceUuid/application-information",
+		from: "/workspaces/$workspaceUuid/applications",
 	});
 	const search = useSearch({
-		from: "/workspaces/$workspaceUuid/application-information",
+		from: "/workspaces/$workspaceUuid/applications",
 	});
 	const { workspace } = useWorkspace(workspaceUuid);
 	const { applicationInformationRecords, error, isLoading } =
@@ -46,26 +50,30 @@ export const ApplicationInformationListPage = (): FunctionComponent => {
 		"application_information_write",
 		workspaceUuid
 	);
+	const canCreateConfiguration = hasCapability(
+		currentUser?.authorizationContext,
+		"rp_configuration_write",
+		workspaceUuid
+	);
 	const rows: Array<ApplicationInformationRow> =
 		applicationInformationRecords.map((applicationInformation) => ({
+			name:
+				(language === "fr"
+					? applicationInformation.serviceNameFr
+					: applicationInformation.serviceNameEn
+				).trim() || t("common.notAvailable"),
 			onboardingState: applicationInformation.onboardingState?.trim()
 				? getWorkspaceOnboardingStateLabel(
 						t,
 						applicationInformation.onboardingState
 					)
 				: t("common.notAvailable"),
-			serviceNameEn: applicationInformation.serviceNameEn,
-			serviceNameFr: applicationInformation.serviceNameFr,
 			uuid: applicationInformation.uuid,
 		}));
 	const columns: Array<DataTableColumn<ApplicationInformationRow>> = [
 		{
-			field: "serviceNameEn",
-			headerName: t("workspaces.appInfoServiceNameEnLabel"),
-		},
-		{
-			field: "serviceNameFr",
-			headerName: t("workspaces.appInfoServiceNameFrLabel"),
+			field: "name",
+			headerName: t("workspaces.appInfoServiceNameLabel"),
 		},
 		{
 			field: "onboardingState",
@@ -122,7 +130,7 @@ export const ApplicationInformationListPage = (): FunctionComponent => {
 					{canCreateApplicationInformation ? (
 						<div className="mt-200">
 							<Button
-								href={`/workspaces/${workspaceUuid}/application-information/new`}
+								href={`/workspaces/${workspaceUuid}/applications/new`}
 								type="link"
 							>
 								{t("workspaces.appInfoCreateButton")}
@@ -138,19 +146,35 @@ export const ApplicationInformationListPage = (): FunctionComponent => {
 					itemLabel={t("workspaces.applicationInformationItemLabel")}
 					rows={rows}
 					title={t("workspaces.appInfoSectionTitle")}
-					action={{
-						buttonLabel: t("workspaces.viewAction"),
-						onAction: (row): void => {
-							void navigate({
-								params: {
-									applicationInformationUuid: row.uuid,
-									workspaceUuid,
-								},
-								to: "/workspaces/$workspaceUuid/application-information/$applicationInformationUuid",
-							});
+					action={[
+						{
+							buttonLabel: t("workspaces.appInfoViewAction"),
+							onAction: (row): void => {
+								void navigate({
+									params: {
+										applicationInformationUuid: row.uuid,
+										workspaceUuid,
+									},
+									to: "/workspaces/$workspaceUuid/applications/$applicationInformationUuid",
+								});
+							},
+							screenReaderLabel: (row): string => row.name,
 						},
-						screenReaderLabel: (row): string => row.serviceNameEn,
-					}}
+						{
+							buttonLabel: t("workspaces.rpConfigurationAddAction"),
+							isVisible: (): boolean => canCreateConfiguration,
+							onAction: (row): void => {
+								void navigate({
+									params: {
+										applicationInformationUuid: row.uuid,
+										workspaceUuid,
+									},
+									to: "/workspaces/$workspaceUuid/applications/$applicationInformationUuid/rp-configurations/new",
+								});
+							},
+							screenReaderLabel: (row): string => row.name,
+						},
+					]}
 					primaryAction={
 						canCreateApplicationInformation
 							? {
@@ -158,7 +182,7 @@ export const ApplicationInformationListPage = (): FunctionComponent => {
 									onAction: (): void => {
 										void navigate({
 											params: { workspaceUuid },
-											to: "/workspaces/$workspaceUuid/application-information/new",
+											to: "/workspaces/$workspaceUuid/applications/new",
 										});
 									},
 								}

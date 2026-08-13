@@ -24,7 +24,7 @@ export const WorkspaceReportsPage = (): FunctionComponent => {
 			filters={filters}
 			pageTitle={t("workspaces.reportsPageTitle", { name: workspaceName })}
 			returnHref={`/workspaces/${encodeURIComponent(workspaceUuid)}`}
-			returnLabel={t("workspaces.reportsBackToHub")}
+			returnLabel={t("workspaces.backToHub", { name: workspaceName })}
 			summary={t("workspaces.reportsSummary")}
 			workspaceUuid={workspaceUuid}
 			onFilterSubmit={(nextFilters): void => {

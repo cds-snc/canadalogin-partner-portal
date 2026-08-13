@@ -4,7 +4,6 @@ from uuid import UUID
 
 import pytest
 from fastapi.testclient import TestClient
-
 from src.app.api.dependencies import (
     get_current_user,
     get_rp_application_adoption_metadata_provider,
@@ -74,6 +73,8 @@ def candidate_row() -> dict:
         "id": 41,
         "uuid": RP_APPLICATION_UUID,
         "dnr_app_name": "Portal Name",
+        "configuration_name": "Portal production",
+        "partner_environment": "Partner production",
         "ibm_sv_application_id": "ibm-app-401",
         "status": "active",
         "oidc_registration_payload": {
@@ -168,6 +169,8 @@ class TestRPApplicationAdoptionService:
                 {
                     "rpApplicationUuid": str(RP_APPLICATION_UUID),
                     "name": "Portal Name",
+                    "configurationName": "Portal production",
+                    "partnerEnvironment": "Partner production",
                     "ibmApplicationId": "ibm-app-401",
                     "metadataCompleteness": "incomplete",
                     "missingFieldNames": [
@@ -388,6 +391,8 @@ class TestRPApplicationAdoptionService:
         assert adopted.department_uuid == DEPARTMENT_UUID
         assert adopted.application_information_uuid == APPLICATION_INFORMATION_UUID
         assert adopted.name == "Portal Name"
+        assert adopted.configuration_name == "Portal production"
+        assert adopted.partner_environment == "Partner production"
         assert adopted.filled_field_names == [
             "redirectUris",
             "logoutRedirectUris",
@@ -407,8 +412,11 @@ class TestRPApplicationAdoptionService:
         assert isinstance(audit, AuditLog)
         assert audit.target_uuid == RP_APPLICATION_UUID
         assert str(WORKSPACE_UUID) in audit.description
+        assert str(APPLICATION_INFORMATION_UUID) in audit.description
+        assert '"configurationName":"Portal production"' in audit.description
         assert "request-401" in audit.description
         assert "ibm-app-401" not in audit.description
+        assert "Partner production" not in audit.description
         assert "portal.example" not in audit.description
         assert db.commit.await_count == 2
         db.rollback.assert_not_awaited()
@@ -425,11 +433,13 @@ class TestRPApplicationAdoptionService:
                     row=link_candidate_row(
                         workspace_id=72,
                         department_id=81,
+                        application_information_id=91,
                         canada_login_environment="production",
                     )
                 ),
                 database_result(row={"id": 72, "uuid": WORKSPACE_UUID, "department_id": 81}),
                 scalar_database_result(DEPARTMENT_UUID),
+                database_result(row={"id": 91, "uuid": APPLICATION_INFORMATION_UUID}),
             ]
         )
         db.commit = AsyncMock()
@@ -441,7 +451,10 @@ class TestRPApplicationAdoptionService:
             db=db,
             current_user=cl_admin_user(),
             rp_application_uuid=RP_APPLICATION_UUID,
-            payload=RPApplicationWorkspaceLinkWrite(workspace_uuid=WORKSPACE_UUID),
+            payload=RPApplicationWorkspaceLinkWrite(
+                workspace_uuid=WORKSPACE_UUID,
+                application_information_uuid=APPLICATION_INFORMATION_UUID,
+            ),
             metadata_provider=provider,
             correlation_id="request-retry",
         )
@@ -482,6 +495,7 @@ class TestRPApplicationAdoptionService:
                 rp_application_uuid=RP_APPLICATION_UUID,
                 payload=RPApplicationWorkspaceLinkWrite(
                     workspace_uuid=WORKSPACE_UUID,
+                    application_information_uuid=APPLICATION_INFORMATION_UUID,
                 ),
                 metadata_provider=provider,
                 correlation_id="request-conflict",
@@ -504,6 +518,7 @@ class TestRPApplicationAdoptionService:
                 database_result(row=link_candidate_row()),
                 database_result(row={"id": 72, "uuid": WORKSPACE_UUID, "department_id": 81}),
                 scalar_database_result(DEPARTMENT_UUID),
+                database_result(row={"id": 91, "uuid": APPLICATION_INFORMATION_UUID}),
                 update_database_result(0),
             ]
         )
@@ -519,6 +534,7 @@ class TestRPApplicationAdoptionService:
                 rp_application_uuid=RP_APPLICATION_UUID,
                 payload=RPApplicationWorkspaceLinkWrite(
                     workspace_uuid=WORKSPACE_UUID,
+                    application_information_uuid=APPLICATION_INFORMATION_UUID,
                     canada_login_environment="test",
                 ),
                 metadata_provider=provider,
@@ -546,6 +562,7 @@ class TestRPApplicationAdoptionService:
                 rp_application_uuid=RP_APPLICATION_UUID,
                 payload=RPApplicationWorkspaceLinkWrite(
                     workspace_uuid=WORKSPACE_UUID,
+                    application_information_uuid=APPLICATION_INFORMATION_UUID,
                 ),
                 metadata_provider=provider,
                 correlation_id="request-denied",
@@ -578,6 +595,7 @@ class TestRPApplicationAdoptionService:
                 rp_application_uuid=RP_APPLICATION_UUID,
                 payload=RPApplicationWorkspaceLinkWrite(
                     workspace_uuid=WORKSPACE_UUID,
+                    application_information_uuid=APPLICATION_INFORMATION_UUID,
                 ),
                 metadata_provider=provider,
                 correlation_id="request-audit-failed",
@@ -609,6 +627,7 @@ class TestRPApplicationAdoptionService:
                 rp_application_uuid=RP_APPLICATION_UUID,
                 payload=RPApplicationWorkspaceLinkWrite(
                     workspace_uuid=WORKSPACE_UUID,
+                    application_information_uuid=APPLICATION_INFORMATION_UUID,
                 ),
                 metadata_provider=provider,
                 correlation_id="request-denied-audit-failed",
@@ -629,6 +648,7 @@ class TestRPApplicationAdoptionService:
                 database_result(row=link_candidate_row()),
                 database_result(row={"id": 72, "uuid": WORKSPACE_UUID, "department_id": 81}),
                 scalar_database_result(DEPARTMENT_UUID),
+                database_result(row={"id": 91, "uuid": APPLICATION_INFORMATION_UUID}),
             ]
         )
         db.commit = AsyncMock()
@@ -646,6 +666,7 @@ class TestRPApplicationAdoptionService:
                 rp_application_uuid=RP_APPLICATION_UUID,
                 payload=RPApplicationWorkspaceLinkWrite(
                     workspace_uuid=WORKSPACE_UUID,
+                    application_information_uuid=APPLICATION_INFORMATION_UUID,
                     canada_login_environment="staging",
                 ),
                 metadata_provider=provider,
@@ -653,7 +674,7 @@ class TestRPApplicationAdoptionService:
             )
 
         assert exc_info.value.status_code == 503
-        assert db.execute.await_count == 3
+        assert db.execute.await_count == 4
         assert db.add.call_count == 2
         failure_audit = db.add.call_args.args[0]
         assert '"result":"failed"' in failure_audit.description
@@ -692,6 +713,7 @@ class TestRPApplicationAdoptionService:
                 rp_application_uuid=RP_APPLICATION_UUID,
                 payload=RPApplicationWorkspaceLinkWrite(
                     workspace_uuid=WORKSPACE_UUID,
+                    application_information_uuid=APPLICATION_INFORMATION_UUID,
                     canada_login_environment="production",
                 ),
                 metadata_provider=provider,
@@ -725,6 +747,7 @@ class TestRPApplicationAdoptionService:
                 rp_application_uuid=RP_APPLICATION_UUID,
                 payload=RPApplicationWorkspaceLinkWrite(
                     workspace_uuid=WORKSPACE_UUID,
+                    application_information_uuid=APPLICATION_INFORMATION_UUID,
                     canada_login_environment="production",
                 ),
                 metadata_provider=provider,
@@ -749,6 +772,7 @@ class TestRPApplicationAdoptionAPI:
                     {
                         "rpApplicationUuid": str(RP_APPLICATION_UUID),
                         "name": "Portal Name",
+                        "configurationName": "Portal production",
                         "ibmApplicationId": "ibm-app-401",
                         "metadataCompleteness": "incomplete",
                         "missingFieldNames": ["logoutUri"],
@@ -771,6 +795,8 @@ class TestRPApplicationAdoptionAPI:
         assert response.json()["items"][0] == {
             "rpApplicationUuid": str(RP_APPLICATION_UUID),
             "name": "Portal Name",
+            "configurationName": "Portal production",
+            "partnerEnvironment": None,
             "ibmApplicationId": "ibm-app-401",
             "metadataCompleteness": "incomplete",
             "missingFieldNames": ["logoutUri"],
@@ -784,6 +810,7 @@ class TestRPApplicationAdoptionAPI:
                 "candidate": {
                     "rpApplicationUuid": str(RP_APPLICATION_UUID),
                     "name": "Portal Name",
+                    "configurationName": "Portal production",
                     "ibmApplicationId": "ibm-app-401",
                     "metadataCompleteness": "incomplete",
                     "missingFieldNames": ["logoutUri"],
@@ -838,9 +865,10 @@ class TestRPApplicationAdoptionAPI:
                 "rpApplicationUuid": str(RP_APPLICATION_UUID),
                 "workspaceUuid": str(WORKSPACE_UUID),
                 "departmentUuid": str(DEPARTMENT_UUID),
-                "applicationInformationUuid": None,
+                "applicationInformationUuid": str(APPLICATION_INFORMATION_UUID),
                 "ibmApplicationId": "ibm-app-401",
                 "name": "Portal Name",
+                "configurationName": "Portal production",
                 "canadaLoginEnvironment": "production",
                 "filledFieldNames": ["redirectUris"],
                 "preservedLocalFieldNames": ["displayName"],
@@ -861,6 +889,7 @@ class TestRPApplicationAdoptionAPI:
                 headers={"X-Request-ID": "request-api-link"},
                 json={
                     "workspaceUuid": str(WORKSPACE_UUID),
+                    "applicationInformationUuid": str(APPLICATION_INFORMATION_UUID),
                     "canadaLoginEnvironment": "production",
                 },
             )
@@ -908,7 +937,10 @@ class TestRPApplicationAdoptionAPI:
         try:
             response = client.put(
                 f"/api/v1/rp-applications/{RP_APPLICATION_UUID}/workspace-link",
-                json={"workspaceUuid": str(WORKSPACE_UUID)},
+                json={
+                    "workspaceUuid": str(WORKSPACE_UUID),
+                    "applicationInformationUuid": str(APPLICATION_INFORMATION_UUID),
+                },
             )
         finally:
             client.close()

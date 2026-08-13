@@ -129,6 +129,17 @@ vi.mock("@/features/workspaces/hooks/use-workspace-rp-applications", () => ({
 	useWorkspaceRPApplication: vi.fn(),
 	useWorkspaceRPApplicationAuditTrail: vi.fn(),
 }));
+vi.mock(
+	"@/features/workspaces/hooks/use-application-rp-configurations",
+	() => ({
+		useApplicationRPConfiguration: () => ({
+			configuration: null,
+			error: null,
+			isLoading: false,
+			refetch: vi.fn((): Promise<unknown> => Promise.resolve()),
+		}),
+	})
+);
 
 describe("Workspace application operations pages", () => {
 	it("renders audit results and loads more events", () => {

@@ -4,15 +4,15 @@ from unittest.mock import AsyncMock, Mock
 from uuid import UUID
 
 import pytest
+import src.app.repositories.dependencies as ibm_dependencies_module
+import src.app.services.rp_application_service as rp_application_module
 from fastapi.dependencies.models import Dependant
 from fastapi.routing import APIRoute
 from fastapi.testclient import TestClient
-
-import src.app.repositories.dependencies as ibm_dependencies_module
-import src.app.services.rp_application_service as rp_application_module
 from src.app.api.dependencies import get_current_user
 from src.app.core.authorization import CanonicalRoleCode
 from src.app.core.db.database import async_get_db
+from src.app.core.exceptions.http_exceptions import NotFoundException
 from src.app.main import app
 from src.app.repositories.dependencies import (
     get_ibm_sv_admin_client,
@@ -232,7 +232,7 @@ def test_excluded_actor_never_resolves_ibm_client_for_accessible_child_route(
     provider_factory.assert_not_awaited()
 
 
-def test_oauth_missing_department_returns_local_conflict_before_client_resolution(
+def test_oauth_missing_workspace_department_returns_local_not_found_before_client_resolution(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     provider_factory = AsyncMock(
@@ -251,6 +251,14 @@ def test_oauth_missing_department_returns_local_conflict_before_client_resolutio
         "get",
         local_application_get,
     )
+    effective_department = AsyncMock(
+        side_effect=NotFoundException("Workspace department is unavailable"),
+    )
+    monkeypatch.setattr(
+        rp_application_module.RPApplicationService,
+        "_get_effective_workspace_department",
+        effective_department,
+    )
 
     app.dependency_overrides[get_current_user] = lambda: _partner_user(
         workspace_id=23,
@@ -266,9 +274,10 @@ def test_oauth_missing_department_returns_local_conflict_before_client_resolutio
     finally:
         app.dependency_overrides.clear()
 
-    assert response.status_code == 409
-    assert response.json()["error"]["code"] == "rp_application_department_required"
+    assert response.status_code == 404
+    assert response.json()["error"]["code"] == "not_found"
     local_application_get.assert_awaited_once()
+    effective_department.assert_awaited_once()
     provider_factory.assert_not_awaited()
 
 

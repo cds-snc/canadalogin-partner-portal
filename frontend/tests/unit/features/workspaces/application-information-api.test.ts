@@ -190,7 +190,8 @@ describe("application-information-api", () => {
 			} as Response)
 			.mockResolvedValueOnce({
 				headers: new Headers({ "content-type": "application/json" }),
-				json: () => Promise.resolve({ message: "Application information deleted" }),
+				json: () =>
+					Promise.resolve({ message: "Application information deleted" }),
 				ok: true,
 				status: 200,
 			} as Response);
@@ -213,9 +214,7 @@ describe("application-information-api", () => {
 				method: "DELETE",
 			})
 		);
-		expect(deleteResponse["message"]).toBe(
-			"Application information deleted"
-		);
+		expect(deleteResponse["message"]).toBe("Application information deleted");
 	});
 
 	it("manages application information contacts through the backend API", async () => {
@@ -310,8 +309,8 @@ describe("application-information-api", () => {
 			applicationInformationUuid,
 			{
 				email: "jane.doe@example.gc.ca",
-				nameEn: "Jane Doe",
-				nameFr: "Jeanne Doe",
+				firstName: "Jane",
+				lastName: "Doe",
 				phoneNumber: "555-555-5555",
 				responsibilityEn: "Product owner",
 				responsibilityFr: "Responsable du produit",

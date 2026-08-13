@@ -26,7 +26,15 @@ from sqlalchemy import Engine, create_engine, inspect, text
 from sqlalchemy.engine import URL, make_url
 from sqlalchemy.exc import DBAPIError, IntegrityError
 from sqlalchemy.pool import NullPool
-
+from src.migrations.rp_configuration_hierarchy_reconciliation_v1 import (
+    build_candidate_manifest as build_hierarchy_candidate_manifest,
+)
+from src.migrations.rp_configuration_hierarchy_reconciliation_v1 import (
+    build_report as build_hierarchy_report,
+)
+from src.migrations.rp_configuration_hierarchy_reconciliation_v1 import (
+    load_snapshot as load_hierarchy_snapshot,
+)
 from src.scripts.reconcile_four_role_authorization import (
     build_candidate_manifest,
     build_report,
@@ -36,7 +44,8 @@ from src.scripts.reconcile_four_role_authorization import (
 RUN_ENV = "RUN_FOUR_ROLE_POSTGRES_TESTS"
 ADMIN_URL_ENV = "FOUR_ROLE_POSTGRES_ADMIN_URL"
 MANIFEST_ENV = "FOUR_ROLE_BACKFILL_MANIFEST"
-EXPECTED_HEAD = "0025_workspace_invitations"
+HIERARCHY_MANIFEST_ENV = "RP_HIERARCHY_BACKFILL_MANIFEST"
+EXPECTED_HEAD = "0032_partner_environment"
 BASELINE_REVISION = "0018_application_information_review_records"
 BACKEND_ROOT = Path(__file__).parents[1]
 BACKEND_SRC = BACKEND_ROOT / "src"
@@ -71,6 +80,7 @@ class TemporaryPostgresDatabase:
         revision: str,
         *,
         manifest_path: Path | None = None,
+        hierarchy_manifest_path: Path | None = None,
         expected_failure: str | None = None,
     ) -> None:
         if operation not in {"upgrade", "downgrade"}:
@@ -90,8 +100,11 @@ class TemporaryPostgresDatabase:
             }
         )
         environment.pop(MANIFEST_ENV, None)
+        environment.pop(HIERARCHY_MANIFEST_ENV, None)
         if manifest_path is not None:
             environment[MANIFEST_ENV] = str(manifest_path)
+        if hierarchy_manifest_path is not None:
+            environment[HIERARCHY_MANIFEST_ENV] = str(hierarchy_manifest_path)
 
         result = subprocess.run(
             [
@@ -228,6 +241,7 @@ def _populate_0018_fixture(engine: Engine) -> dict[str, object]:
         "partner_user_uuid": uuid4(),
         "other_user_uuid": uuid4(),
         "workspace_uuid": uuid4(),
+        "application_information_uuid": uuid4(),
         "membership_uuid": uuid4(),
         "application_uuid": uuid4(),
         "accepted_invitation_uuid": uuid4(),
@@ -315,6 +329,35 @@ def _populate_0018_fixture(engine: Engine) -> dict[str, object]:
                 "created_at": now,
             },
         )
+        application_information_id = int(
+            connection.execute(
+                text(
+                    """
+                    INSERT INTO application_information (
+                        workspace_id, created_by, uuid, service_name_en,
+                        service_name_fr, overview, technology_and_protocol,
+                        security_and_privacy, usage,
+                        migration_or_transition_plan, created_at, updated_at,
+                        deleted_at, is_deleted
+                    ) VALUES (
+                        :workspace_id, :created_by, :uuid,
+                        'Four-role migration service',
+                        'Service de migration quatre rôles',
+                        'Disposable overview', 'OIDC', 'Protected B',
+                        'Disposable usage', 'Disposable plan', :created_at,
+                        NULL, NULL, FALSE
+                    )
+                    RETURNING id
+                    """
+                ),
+                {
+                    "workspace_id": workspace_id,
+                    "created_by": admin_user_id,
+                    "uuid": fixture["application_information_uuid"],
+                    "created_at": now,
+                },
+            ).scalar_one()
+        )
         application_id = int(
             connection.execute(
                 text(
@@ -322,10 +365,12 @@ def _populate_0018_fixture(engine: Engine) -> dict[str, object]:
                     INSERT INTO rp_application (
                         department_id, dnr_app_name, created_by, uuid,
                         created_at, updated_at, deleted_at, is_deleted,
-                        workspace_id
+                        workspace_id, application_information_id,
+                        canada_login_environment
                     ) VALUES (
                         :department_id, 'Four-role migration RP', :created_by,
-                        :uuid, :created_at, NULL, NULL, FALSE, :workspace_id
+                        :uuid, :created_at, NULL, NULL, FALSE, :workspace_id,
+                        :application_information_id, 'test'
                     )
                     RETURNING id
                     """
@@ -336,6 +381,7 @@ def _populate_0018_fixture(engine: Engine) -> dict[str, object]:
                     "uuid": fixture["application_uuid"],
                     "created_at": now,
                     "workspace_id": workspace_id,
+                    "application_information_id": application_information_id,
                 },
             ).scalar_one()
         )
@@ -478,6 +524,7 @@ def _populate_0018_fixture(engine: Engine) -> dict[str, object]:
             "other_user_id": other_user_id,
             "workspace_id": workspace_id,
             "application_id": application_id,
+            "application_information_id": application_information_id,
         }
     )
     return fixture
@@ -497,6 +544,31 @@ def _write_reviewed_manifest(
         clAdminAssignments=[],
         workspaceMemberDispositions=[],
     )
+    manifest_path.write_text(
+        json.dumps(manifest, indent=2, sort_keys=True),
+        encoding="utf-8",
+    )
+    return manifest_path
+
+
+def _write_reviewed_hierarchy_manifest(
+    tmp_path: Path,
+    engine: Engine,
+    *,
+    application_uuid: UUID,
+    canada_login_environment: str,
+) -> Path:
+    manifest_path = tmp_path / "rp-hierarchy-reviewed-test-manifest.json"
+    with engine.connect() as connection:
+        report = build_hierarchy_report(load_hierarchy_snapshot(connection))
+    manifest = build_hierarchy_candidate_manifest(report)
+    manifest.update(
+        reviewed=True,
+        reviewReference="TEST-ONLY-LOCAL-HIERARCHY-MAP",
+    )
+    for mapping in manifest["mappings"]:
+        mapping["applicationUuid"] = str(application_uuid)
+        mapping["canadaLoginEnvironment"] = canada_login_environment
     manifest_path.write_text(
         json.dumps(manifest, indent=2, sort_keys=True),
         encoding="utf-8",
@@ -1100,9 +1172,487 @@ def test_clean_database_upgrade_reaches_the_single_head_without_manifest() -> No
         engine = database.connect()
         try:
             assert _current_revision(engine) == EXPECTED_HEAD
+            configuration_name = {column["name"]: column for column in inspect(engine).get_columns("rp_application")}["configuration_name"]
+            assert configuration_name["nullable"] is False
+            assert configuration_name["type"].length == 128
+            partner_environment = {column["name"]: column for column in inspect(engine).get_columns("rp_application")}["partner_environment"]
+            assert partner_environment["nullable"] is True
+            assert partner_environment["type"].length == 128
+            rp_constraints = {constraint["name"]: constraint for constraint in inspect(engine).get_check_constraints("rp_application")}
+            assert "partner_environment IS NULL" in rp_constraints["ck_rp_application_partner_environment_nonblank"]["sqltext"]
+            source_configuration = {column["name"]: column for column in inspect(engine).get_columns("rp_application")}["source_rp_configuration_id"]
+            assert source_configuration["nullable"] is True
+            assert any(
+                foreign_key["constrained_columns"] == ["source_rp_configuration_id"]
+                and foreign_key["referred_table"] == "rp_application"
+                and foreign_key["referred_columns"] == ["id"]
+                for foreign_key in inspect(engine).get_foreign_keys("rp_application")
+            )
+            assert "ix_rp_application_source_rp_configuration_id" in {index["name"] for index in inspect(engine).get_indexes("rp_application")}
+            contact_columns = {column["name"]: column for column in inspect(engine).get_columns("application_information_contact")}
+            assert contact_columns["name_en"]["nullable"] is True
+            assert contact_columns["name_fr"]["nullable"] is True
+            assert contact_columns["first_name"]["type"].length == 100
+            assert contact_columns["last_name"]["type"].length == 100
+            assert contact_columns["alternate_phone_number"]["type"].length == 50
+            assert contact_columns["identity_confirmed_at"]["nullable"] is True
+            assert contact_columns["identity_confirmed_by"]["nullable"] is True
+            assert any(
+                foreign_key["constrained_columns"] == ["identity_confirmed_by"]
+                and foreign_key["referred_table"] == "user"
+                and foreign_key["referred_columns"] == ["id"]
+                for foreign_key in inspect(engine).get_foreign_keys("application_information_contact")
+            )
+            assert "ix_application_information_contact_identity_confirmed_by" in {
+                index["name"] for index in inspect(engine).get_indexes("application_information_contact")
+            }
             with engine.connect() as connection:
                 assert connection.execute(text("SELECT COUNT(*) FROM role WHERE code = 'cl_admin'")).scalar_one() == 1
                 assert connection.execute(text("SELECT COUNT(*) FROM user_role")).scalar_one() == 0
+
+            database.run_alembic("downgrade", "0026_rp_config_expand")
+            assert _current_revision(engine) == "0026_rp_config_expand"
+            downgraded_contact_columns = {column["name"]: column for column in inspect(engine).get_columns("application_information_contact")}
+            assert downgraded_contact_columns["name_en"]["nullable"] is False
+            assert downgraded_contact_columns["name_fr"]["nullable"] is False
+            assert "first_name" not in downgraded_contact_columns
+            assert "identity_confirmed_by" not in downgraded_contact_columns
+
+            database.run_alembic("downgrade", "0025_workspace_invitations")
+            assert _current_revision(engine) == "0025_workspace_invitations"
+            assert "configuration_name" not in {column["name"] for column in inspect(engine).get_columns("rp_application")}
+            assert "source_rp_configuration_id" not in {column["name"] for column in inspect(engine).get_columns("rp_application")}
+
+            database.run_alembic("upgrade", "head")
+            assert _current_revision(engine) == EXPECTED_HEAD
+            assert "configuration_name" in {column["name"] for column in inspect(engine).get_columns("rp_application")}
+            assert "source_rp_configuration_id" in {column["name"] for column in inspect(engine).get_columns("rp_application")}
+            assert "partner_environment" in {column["name"] for column in inspect(engine).get_columns("rp_application")}
+            assert "first_name" in {column["name"] for column in inspect(engine).get_columns("application_information_contact")}
+        finally:
+            engine.dispose()
+
+
+def test_rp_hierarchy_constraints_reject_invalid_writes_and_recover_after_downgrade() -> None:
+    with _temporary_postgres_database() as database:
+        database.run_alembic("upgrade", "head")
+        engine = database.connect()
+        try:
+            now = datetime.now(UTC)
+            with engine.begin() as connection:
+                department_id = int(connection.execute(text("SELECT id FROM department WHERE is_deleted = FALSE ORDER BY id LIMIT 1")).scalar_one())
+                workspace_id = int(
+                    connection.execute(
+                        text(
+                            """
+                            INSERT INTO workspace (
+                                name, slug, department_id, created_by, uuid,
+                                description, created_at, updated_at,
+                                deleted_at, is_deleted
+                            ) VALUES (
+                                'Constraint workspace', :slug, :department_id,
+                                NULL, :uuid, 'Disposable constraint fixture',
+                                :created_at, NULL, NULL, FALSE
+                            ) RETURNING id
+                            """
+                        ),
+                        {
+                            "slug": f"constraint-{uuid4().hex[:12]}",
+                            "department_id": department_id,
+                            "uuid": uuid4(),
+                            "created_at": now,
+                        },
+                    ).scalar_one()
+                )
+                application_id = int(
+                    connection.execute(
+                        text(
+                            """
+                            INSERT INTO application_information (
+                                workspace_id, created_by, uuid, service_name_en,
+                                service_name_fr, overview,
+                                technology_and_protocol, security_and_privacy,
+                                usage, migration_or_transition_plan, created_at,
+                                updated_at, deleted_at, is_deleted
+                            ) VALUES (
+                                :workspace_id, NULL, :uuid, 'Benefits Portal',
+                                'Portail des prestations', 'Overview', 'OIDC',
+                                'Protected B', 'Usage', 'Plan', :created_at,
+                                NULL, NULL, FALSE
+                            ) RETURNING id
+                            """
+                        ),
+                        {
+                            "workspace_id": workspace_id,
+                            "uuid": uuid4(),
+                            "created_at": now,
+                        },
+                    ).scalar_one()
+                )
+
+            insert_rp = """
+                INSERT INTO rp_application (
+                    workspace_id, application_information_id, department_id,
+                    canada_login_environment, dnr_app_name,
+                    configuration_name, created_by, uuid, created_at,
+                    updated_at, deleted_at, is_deleted
+                ) VALUES (
+                    :workspace_id, :application_information_id, :department_id,
+                    :canada_login_environment, 'Benefits Portal',
+                    :configuration_name, NULL, :uuid, :created_at,
+                    NULL, :deleted_at, :is_deleted
+                )
+            """
+            insert_rp_with_partner_environment = insert_rp.replace(
+                "configuration_name, created_by",
+                "configuration_name, partner_environment, created_by",
+            ).replace(
+                ":configuration_name, NULL",
+                ":configuration_name, :partner_environment, NULL",
+            )
+            valid = {
+                "workspace_id": workspace_id,
+                "application_information_id": application_id,
+                "department_id": department_id,
+                "canada_login_environment": "staging",
+                "configuration_name": "Staging integration A",
+                "uuid": uuid4(),
+                "created_at": now,
+                "deleted_at": None,
+                "is_deleted": False,
+            }
+            _assert_integrity_error(
+                engine,
+                insert_rp,
+                {**valid, "workspace_id": None},
+            )
+            _assert_integrity_error(
+                engine,
+                insert_rp,
+                {**valid, "application_information_id": None},
+            )
+            _assert_integrity_error(
+                engine,
+                insert_rp,
+                {**valid, "department_id": None},
+            )
+            _assert_integrity_error(
+                engine,
+                insert_rp,
+                {**valid, "canada_login_environment": None},
+            )
+            _assert_integrity_error(
+                engine,
+                insert_rp,
+                {**valid, "canada_login_environment": "partner-qa"},
+            )
+            _assert_integrity_error(
+                engine,
+                insert_rp,
+                {**valid, "configuration_name": "   "},
+            )
+            _assert_integrity_error(
+                engine,
+                insert_rp_with_partner_environment,
+                {**valid, "partner_environment": "   "},
+            )
+            _assert_integrity_error(
+                engine,
+                insert_rp,
+                {
+                    **valid,
+                    "workspace_id": None,
+                    "application_information_id": None,
+                    "department_id": None,
+                    "canada_login_environment": None,
+                    "configuration_name": None,
+                },
+            )
+            with engine.begin() as connection:
+                connection.execute(
+                    text(insert_rp_with_partner_environment),
+                    {**valid, "partner_environment": "QA 2"},
+                )
+                connection.execute(
+                    text(insert_rp),
+                    {
+                        **valid,
+                        "configuration_name": "Legacy-compatible integration",
+                        "uuid": uuid4(),
+                    },
+                )
+
+            with engine.connect() as connection:
+                row_count_before_partner_downgrade = int(connection.execute(text("SELECT COUNT(*) FROM rp_application")).scalar_one())
+            database.run_alembic("downgrade", "0031_cross_namespace_uuid_guard")
+            assert "partner_environment" not in {column["name"] for column in inspect(engine).get_columns("rp_application")}
+            with engine.connect() as connection:
+                assert int(connection.execute(text("SELECT COUNT(*) FROM rp_application")).scalar_one()) == (row_count_before_partner_downgrade)
+            database.run_alembic("upgrade", "head")
+            assert _current_revision(engine) == EXPECTED_HEAD
+            with engine.connect() as connection:
+                assert connection.execute(text("SELECT COUNT(*) FROM rp_application WHERE partner_environment IS NOT NULL")).scalar_one() == 0
+
+            database.run_alembic("downgrade", "0029_rp_hierarchy_reconcile")
+            assert _current_revision(engine) == "0029_rp_hierarchy_reconcile"
+            assert {column["name"]: column for column in inspect(engine).get_columns("rp_application")}["configuration_name"]["nullable"] is True
+            with engine.begin() as connection:
+                recovery_uuid = uuid4()
+                connection.execute(
+                    text(insert_rp),
+                    {
+                        **valid,
+                        "workspace_id": None,
+                        "application_information_id": None,
+                        "department_id": None,
+                        "canada_login_environment": None,
+                        "configuration_name": None,
+                        "uuid": recovery_uuid,
+                    },
+                )
+            database.run_alembic(
+                "upgrade",
+                "head",
+                expected_failure="reconciliation findings remain",
+            )
+            with engine.begin() as connection:
+                connection.execute(
+                    text("UPDATE rp_application SET configuration_name = 'Recovered candidate' WHERE uuid = :uuid"),
+                    {"uuid": recovery_uuid},
+                )
+            database.run_alembic("upgrade", "head")
+            assert _current_revision(engine) == EXPECTED_HEAD
+        finally:
+            engine.dispose()
+
+
+def _insert_rp_backfill_fixture(
+    engine: Engine,
+    *,
+    contradictory_department: bool = False,
+) -> dict[str, object]:
+    now = datetime.now(UTC)
+    workspace_uuid = uuid4()
+    workspace_rp_uuid = uuid4()
+    candidate_rp_uuid = uuid4()
+    with engine.begin() as connection:
+        department_ids = [
+            int(row[0]) for row in connection.execute(text("SELECT id FROM department WHERE is_deleted = FALSE ORDER BY id LIMIT 2")).all()
+        ]
+        assert len(department_ids) == 2
+        workspace_id = int(
+            connection.execute(
+                text(
+                    """
+                    INSERT INTO workspace (
+                        name, slug, department_id, created_by, uuid, description,
+                        created_at, updated_at, deleted_at, is_deleted
+                    ) VALUES (
+                        'RP backfill workspace', :slug, :department_id, NULL,
+                        :uuid, 'Disposable RP backfill fixture', :created_at,
+                        NULL, NULL, FALSE
+                    )
+                    RETURNING id
+                    """
+                ),
+                {
+                    "slug": f"rp-backfill-{uuid4().hex[:12]}",
+                    "department_id": department_ids[0],
+                    "uuid": workspace_uuid,
+                    "created_at": now,
+                },
+            ).scalar_one()
+        )
+        connection.execute(
+            text(
+                """
+                INSERT INTO rp_application (
+                    workspace_id, department_id, dnr_app_name,
+                    configuration_name, created_by, uuid, created_at,
+                    updated_at, deleted_at, is_deleted
+                ) VALUES (
+                    :workspace_id, :department_id, :dnr_app_name, NULL, NULL,
+                    :uuid, :created_at, NULL, NULL, FALSE
+                )
+                """
+            ),
+            {
+                "workspace_id": workspace_id,
+                "department_id": (department_ids[1] if contradictory_department else None),
+                "dnr_app_name": "Benefits Portal",
+                "uuid": workspace_rp_uuid,
+                "created_at": now,
+            },
+        )
+        connection.execute(
+            text(
+                """
+                INSERT INTO rp_application (
+                    workspace_id, department_id, dnr_app_name,
+                    configuration_name, created_by, uuid, created_at,
+                    updated_at, deleted_at, is_deleted
+                ) VALUES (
+                    NULL, NULL, :dnr_app_name, NULL, NULL, :uuid,
+                    :created_at, NULL, NULL, FALSE
+                )
+                """
+            ),
+            {
+                "dnr_app_name": "Cafe\N{COMBINING ACUTE ACCENT} candidate",
+                "uuid": candidate_rp_uuid,
+                "created_at": now,
+            },
+        )
+    return {
+        "workspace_department_id": department_ids[0],
+        "workspace_rp_uuid": workspace_rp_uuid,
+        "candidate_rp_uuid": candidate_rp_uuid,
+    }
+
+
+def test_rp_configuration_backfill_is_deterministic_and_round_trippable() -> None:
+    with _temporary_postgres_database() as database:
+        database.run_alembic("upgrade", "0027_contact_identity_expand")
+        engine = database.connect()
+        try:
+            fixture = _insert_rp_backfill_fixture(engine)
+            database.run_alembic("upgrade", "0028_rp_config_backfill")
+            assert _current_revision(engine) == "0028_rp_config_backfill"
+            with engine.connect() as connection:
+                workspace_row = connection.execute(
+                    text("SELECT configuration_name, department_id FROM rp_application WHERE uuid = :uuid"),
+                    {"uuid": fixture["workspace_rp_uuid"]},
+                ).one()
+                candidate_name = connection.execute(
+                    text("SELECT configuration_name FROM rp_application WHERE uuid = :uuid"),
+                    {"uuid": fixture["candidate_rp_uuid"]},
+                ).scalar_one()
+            assert workspace_row.configuration_name == (f"Benefits Portal [{fixture['workspace_rp_uuid'].hex[:8]}]")
+            assert workspace_row.department_id == fixture["workspace_department_id"]
+            assert candidate_name == (f"Café candidate [{fixture['candidate_rp_uuid'].hex[:8]}]")
+
+            database.run_alembic("downgrade", "0027_contact_identity_expand")
+            assert _current_revision(engine) == "0027_contact_identity_expand"
+            with engine.connect() as connection:
+                retained_name = connection.execute(
+                    text("SELECT configuration_name FROM rp_application WHERE uuid = :uuid"),
+                    {"uuid": fixture["workspace_rp_uuid"]},
+                ).scalar_one()
+            assert retained_name == workspace_row.configuration_name
+
+            database.run_alembic("upgrade", "0028_rp_config_backfill")
+            assert _current_revision(engine) == "0028_rp_config_backfill"
+        finally:
+            engine.dispose()
+
+
+def test_rp_configuration_backfill_rejects_department_contradiction_atomically() -> None:
+    with _temporary_postgres_database() as database:
+        database.run_alembic("upgrade", "0027_contact_identity_expand")
+        engine = database.connect()
+        try:
+            fixture = _insert_rp_backfill_fixture(
+                engine,
+                contradictory_department=True,
+            )
+            database.run_alembic(
+                "upgrade",
+                "0028_rp_config_backfill",
+                expected_failure="contradictory Department values",
+            )
+            assert _current_revision(engine) == "0027_contact_identity_expand"
+            with engine.connect() as connection:
+                configuration_name = connection.execute(
+                    text("SELECT configuration_name FROM rp_application WHERE uuid = :uuid"),
+                    {"uuid": fixture["workspace_rp_uuid"]},
+                ).scalar_one()
+            assert configuration_name is None
+        finally:
+            engine.dispose()
+
+
+def test_rp_hierarchy_reconciliation_requires_and_applies_reviewed_mapping(
+    tmp_path: Path,
+) -> None:
+    with _temporary_postgres_database() as database:
+        database.run_alembic("upgrade", "0027_contact_identity_expand")
+        engine = database.connect()
+        try:
+            fixture = _insert_rp_backfill_fixture(engine)
+            database.run_alembic("upgrade", "0028_rp_config_backfill")
+            application_uuid = uuid4()
+            with engine.begin() as connection:
+                workspace_id = connection.execute(
+                    text("SELECT workspace_id FROM rp_application WHERE uuid = :uuid"),
+                    {"uuid": fixture["workspace_rp_uuid"]},
+                ).scalar_one()
+                connection.execute(
+                    text(
+                        """
+                        INSERT INTO application_information (
+                            workspace_id, created_by, uuid, service_name_en,
+                            service_name_fr, overview,
+                            technology_and_protocol, security_and_privacy,
+                            usage, migration_or_transition_plan, created_at,
+                            updated_at, deleted_at, is_deleted
+                        ) VALUES (
+                            :workspace_id, NULL, :uuid, 'Benefits Portal',
+                            'Portail des prestations', 'Disposable overview',
+                            'OIDC', 'Protected B', 'Disposable usage',
+                            'Disposable plan', :created_at, NULL, NULL, FALSE
+                        )
+                        """
+                    ),
+                    {
+                        "workspace_id": workspace_id,
+                        "uuid": application_uuid,
+                        "created_at": datetime.now(UTC),
+                    },
+                )
+
+            database.run_alembic(
+                "upgrade",
+                "head",
+                expected_failure="RP_HIERARCHY_BACKFILL_MANIFEST is required",
+            )
+            assert _current_revision(engine) == "0028_rp_config_backfill"
+            manifest_path = _write_reviewed_hierarchy_manifest(
+                tmp_path,
+                engine,
+                application_uuid=application_uuid,
+                canada_login_environment="staging",
+            )
+            database.run_alembic(
+                "upgrade",
+                "head",
+                hierarchy_manifest_path=manifest_path,
+            )
+            assert _current_revision(engine) == EXPECTED_HEAD
+            with engine.connect() as connection:
+                resolved = connection.execute(
+                    text(
+                        """
+                        SELECT ai.uuid AS application_uuid,
+                               rp.canada_login_environment
+                        FROM rp_application AS rp
+                        JOIN application_information AS ai
+                          ON ai.id = rp.application_information_id
+                        WHERE rp.uuid = :uuid
+                        """
+                    ),
+                    {"uuid": fixture["workspace_rp_uuid"]},
+                ).one()
+            assert resolved.application_uuid == application_uuid
+            assert resolved.canada_login_environment == "staging"
+
+            database.run_alembic("downgrade", "0028_rp_config_backfill")
+            assert _current_revision(engine) == "0028_rp_config_backfill"
+            with engine.connect() as connection:
+                retained_environment = connection.execute(
+                    text("SELECT canada_login_environment FROM rp_application WHERE uuid = :uuid"),
+                    {"uuid": fixture["workspace_rp_uuid"]},
+                ).scalar_one()
+            assert retained_environment == "staging"
         finally:
             engine.dispose()
 

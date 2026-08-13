@@ -4,7 +4,7 @@ from ..models.application_information_contact import ApplicationInformationConta
 from ..schemas.application_information import (
     ApplicationInformationContactCreateInternal,
     ApplicationInformationContactDelete,
-    ApplicationInformationContactRead,
+    ApplicationInformationContactRecordRead,
     ApplicationInformationContactUpdate,
     ApplicationInformationContactUpdateInternal,
 )
@@ -15,6 +15,6 @@ CRUDApplicationInformationContact = FastCRUD[
     ApplicationInformationContactUpdate,
     ApplicationInformationContactUpdateInternal,
     ApplicationInformationContactDelete,
-    ApplicationInformationContactRead,
+    ApplicationInformationContactRecordRead,
 ]
 crud_application_information_contacts = CRUDApplicationInformationContact(ApplicationInformationContact)

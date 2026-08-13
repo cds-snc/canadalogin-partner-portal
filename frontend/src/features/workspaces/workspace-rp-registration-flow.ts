@@ -32,13 +32,6 @@ export const isRegistrationDataStep = (
 	step: WorkspaceRPRegistrationStep
 ): step is RegistrationDataStep => step !== "review";
 
-export const getWorkspaceRPRegistrationStepPath = (
-	workspaceUuid: string,
-	rpApplicationUuid: string,
-	step: WorkspaceRPRegistrationStep | "confirmation"
-): string =>
-	`/workspaces/${encodeURIComponent(workspaceUuid)}/applications/${encodeURIComponent(rpApplicationUuid)}/registration/${step}`;
-
 export const getPreviousWorkspaceRPRegistrationStep = (
 	step: WorkspaceRPRegistrationStep
 ): WorkspaceRPRegistrationStep | null => {
@@ -74,4 +67,21 @@ export const getRecoverableWorkspaceRPRegistrationStep = (
 		WORKSPACE_RP_REGISTRATION_STEPS.indexOf(earliestIncomplete)
 		? earliestIncomplete
 		: requestedStep;
+};
+
+export type WorkspaceRPRegistrationStepState =
+	"available" | "blocked" | "current";
+
+export const getWorkspaceRPRegistrationStepState = (
+	targetStep: WorkspaceRPRegistrationStep,
+	currentStep: WorkspaceRPRegistrationStep,
+	lastCompletedStep: RegistrationDataStep | null
+): WorkspaceRPRegistrationStepState => {
+	if (targetStep === currentStep) return "current";
+	const completedIndex = lastCompletedStep
+		? WORKSPACE_RP_REGISTRATION_STEPS.indexOf(lastCompletedStep)
+		: -1;
+	return WORKSPACE_RP_REGISTRATION_STEPS.indexOf(targetStep) <= completedIndex
+		? "available"
+		: "blocked";
 };

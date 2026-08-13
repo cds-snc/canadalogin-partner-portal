@@ -8,8 +8,8 @@ This directory uses Alembic's generic single-database configuration.
   schema history is intentionally reset.
 
 - The current active revision chain runs linearly from `0001_core_schema.py`
-  through `0025_workspace_invitations.py`. The current head is
-  `0025_workspace_invitations`.
+  through `0032_partner_environment_expand.py`. The current head is
+  `0032_partner_environment`.
 
 - The archive folder `migrations/_archive/reset_20260420/` contains the
   superseded pre-reset active revisions that were replaced by this clean
@@ -99,6 +99,59 @@ This directory uses Alembic's generic single-database configuration.
     provenance. Existing application links remain unchanged. Downgrade fails
     rather than deleting or fabricating provenance when workspace-only
     invitation records exist.
+  - `0026_rp_configuration_expand.py` adds a nullable, bounded
+    `configuration_name` and a nullable indexed self-reference for explicit
+    clone lineage. It does not infer or backfill either value and does not
+    activate the later required-name or same-Application clone contract;
+    downgrade removes only the newly added metadata.
+  - `0027_contact_identity_expand.py` adds nullable locale-neutral first and
+    last names, alternate phone, and identity-confirmation metadata while
+    retaining every legacy bilingual name and both bilingual responsibility
+    values. It makes legacy full-name columns nullable without parsing or
+    backfilling them. Downgrade fails closed if newer records depend on the
+    locale-neutral fields rather than fabricating bilingual names.
+  - `0028_rp_configuration_backfill.py` fills only missing configuration names
+    from the safe retained display name plus stable RP UUID, and fills missing
+    RP Department context from the owning workspace. It fails before writes
+    when a retained workspace-linked RP Department contradicts its workspace,
+    never reads provider payloads, and never infers Application parentage or a
+    CanadaLogin environment. Downgrade intentionally retains these descriptive
+    and authoritative values.
+  - `0029_rp_hierarchy_reconciliation.py` inventories and locks the hierarchy,
+    requires a reviewed public-UUID manifest for unresolved active orphan or
+    CanadaLogin-environment decisions, and fails on every remaining ancestry,
+    lifecycle, name, or Department finding. It accepts the manifest only when
+    its report and snapshot digests match the locked data. Reviewed mappings
+    are retained on downgrade.
+
+    Generate the minimized report and mapping template locally from
+    `backend/`:
+
+    ```sh
+    UV_PROJECT_ENVIRONMENT=../.venv uv run python -m src.scripts.reconcile_rp_configuration_hierarchy \
+      --output rp-hierarchy-report.json \
+      --candidate-manifest rp-hierarchy-manifest.json
+    ```
+
+    Fill only the required public Application UUID and/or explicit `test`,
+    `staging`, or `production` value, set `reviewed` to `true`, add a bounded
+    non-personal `reviewReference`, validate with `--reviewed-manifest`, then
+    set `RP_HIERARCHY_BACKFILL_MANIFEST` only for the approved local migration
+    invocation. Shared-target mapping remains separately authorized.
+  - `0030_rp_hierarchy_constraints.py` repeats the locked reconciliation
+    preflight, makes every configuration label required, preserves the
+    provider-candidate versus partner-owned parent pairing, and requires active
+    partner configurations to retain Department and supported CanadaLogin
+    environment context. Downgrade removes only these constraints and restores
+    nullable labels so a failed local rollout can be repaired and retried.
+  - `0031_cross_namespace_uuid_guard.py` preflights the retained Application
+    and RP namespaces, stops on a same-workspace public UUID collision, and
+    installs symmetric advisory-lock-backed triggers so concurrent creation
+    cannot introduce route ambiguity while compatibility resolution remains.
+  - `0032_partner_environment_expand.py` adds nullable, bounded Partner-
+    environment metadata with a nonblank-when-present constraint. It performs
+    no inferred backfill and removes only that additive field and constraint on
+    downgrade.
   - The executable PostgreSQL round-trip tests are opt-in. They require a
     localhost administrative URL whose test user can create and drop databases;
     each test creates a uniquely named database and removes only that database:

@@ -19,10 +19,8 @@ vi.mock("react-i18next", () => ({
 				"workspaces.descriptionLabel": "Description",
 				"workspaces.detailSummary": "Choose a task for this workspace.",
 				"workspaces.navigation.access": "Access",
-				"workspaces.navigation.applicationInformation":
-					"Application information",
+				"workspaces.navigation.applications": "Applications",
 				"workspaces.navigation.reports": "Reports",
-				"workspaces.navigation.rpApplications": "RP applications",
 				"workspaces.navigation.settings": "Settings",
 				"workspaces.noDescriptionText": "Not provided",
 				"workspaces.onboardingStateLabel": "Onboarding status",
@@ -34,12 +32,10 @@ vi.mock("react-i18next", () => ({
 				"workspaces.taskGroups.workspaceManagement": "Workspace management",
 				"workspaces.taskDescriptions.access":
 					"Manage workspace role assignments and invitations.",
-				"workspaces.taskDescriptions.applicationInformation":
-					"Maintain reusable application information.",
+				"workspaces.taskDescriptions.applications":
+					"Manage Applications and their RP configurations.",
 				"workspaces.taskDescriptions.reports":
 					"Review aggregate workspace reports.",
-				"workspaces.taskDescriptions.rpApplications":
-					"Register and manage RP applications.",
 				"workspaces.taskDescriptions.settings": "Update workspace settings.",
 				"workspaces.tasksTitle": "Workspace tasks",
 				"workspaces.workspaceLabel": "Workspace",
@@ -158,8 +154,8 @@ describe("WorkspaceDetailPage", () => {
 			screen.getByRole("heading", { name: "Benefits Workspace" })
 		).toBeTruthy();
 		expect(
-			screen.getByText(/active role: rp admin for benefits workspace/i)
-		).toBeTruthy();
+			screen.queryByText(/active role: rp admin for benefits workspace/i)
+		).toBeNull();
 		expect(screen.getByText(/onboarding status: submitted/i)).toBeTruthy();
 		for (const groupName of [
 			"Setup and applications",
@@ -172,8 +168,7 @@ describe("WorkspaceDetailPage", () => {
 			).toBeTruthy();
 		}
 		const expectedTasks = [
-			["Application information", "application-information"],
-			["RP applications", "applications"],
+			["Applications", "applications"],
 			["Access", "access"],
 			["Reports", "reports"],
 			["Settings", "settings"],

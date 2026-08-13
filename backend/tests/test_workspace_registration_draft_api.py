@@ -4,7 +4,6 @@ from pathlib import Path
 from unittest.mock import AsyncMock, Mock
 
 from fastapi.testclient import TestClient
-
 from src.app.api.dependencies import get_current_user, get_workspace_service
 from src.app.core.db.database import async_get_db
 from src.app.core.exceptions.http_exceptions import RegistrationDraftConflictException
@@ -12,6 +11,7 @@ from src.app.main import app
 
 WORKSPACE_UUID = "018f6f83-0000-0000-0000-000000000201"
 APPLICATION_UUID = "018f6f83-0000-0000-0000-000000000701"
+APPLICATION_INFORMATION_UUID = "018f6f83-0000-0000-0000-000000000501"
 ENDPOINTS_CONTRACT_PATH = Path(__file__).resolve().parents[2] / "tests/contracts/workspace-rp-registration-endpoints-complete-step.json"
 
 
@@ -21,6 +21,8 @@ def _endpoints_contract() -> dict:
 
 def _draft_read(version: int = 2) -> dict:
     return {
+        "application_information_uuid": APPLICATION_INFORMATION_UUID,
+        "configuration_name": "Partner test A",
         "workspace_uuid": WORKSPACE_UUID,
         "rp_application_uuid": APPLICATION_UUID,
         "onboarding_state": "draft",
@@ -128,6 +130,8 @@ class TestWorkspaceRegistrationDraftAPI:
         assert read_response.status_code == 200
         assert read_response.json()["workspaceUuid"] == WORKSPACE_UUID
         assert read_response.json()["rpApplicationUuid"] == APPLICATION_UUID
+        assert read_response.json()["applicationInformationUuid"] == APPLICATION_INFORMATION_UUID
+        assert read_response.json()["configurationName"] == "Partner test A"
         assert read_response.json()["registrationDraftVersion"] == 2
         assert read_response.json()["registrationAnswers"]["serviceNameEn"] == ("Benefits Portal")
         assert "id" not in read_response.json()

@@ -2,6 +2,7 @@ import { useMemo, type ReactElement, type ReactNode } from "react";
 import { useTranslation } from "react-i18next";
 import Button from "./Button";
 import Input from "./Input";
+import Link from "./Link";
 import Table, { type TableColumn } from "./Table";
 
 export type DataTableColumn<Row extends Record<string, unknown>> = {
@@ -11,19 +12,33 @@ export type DataTableColumn<Row extends Record<string, unknown>> = {
 	maxWidth?: number;
 	minWidth?: number;
 	pinned?: "left" | "right";
+	rowHeader?: boolean;
 	sortable?: boolean;
 	valueFormatter?: (row: Row) => string;
 };
 
-export type DataTableAction<Row extends Record<string, unknown>> = {
+type DataTableActionBase<Row extends Record<string, unknown>> = {
 	buttonId?: (row: Row) => string | undefined;
 	buttonLabel: string;
 	buttonRole?: "primary" | "secondary" | "danger" | "start";
 	isVisible?: (row: Row) => boolean;
-	onAction: (row: Row) => void;
 	screenReaderLabel?: (row: Row) => string;
-	variant?: "button" | "link";
 };
+
+export type DataTableAction<Row extends Record<string, unknown>> =
+	DataTableActionBase<Row> &
+		(
+			| {
+					href: (row: Row) => string;
+					onAction?: never;
+					variant?: "link";
+			  }
+			| {
+					href?: never;
+					onAction: (row: Row) => void;
+					variant?: "button" | "link";
+			  }
+		);
 
 export type DataTableToolbarAction = {
 	buttonId?: string;
@@ -33,6 +48,7 @@ export type DataTableToolbarAction = {
 
 export type DataTableProps<Row extends Record<string, unknown>> = {
 	action?: DataTableAction<Row> | Array<DataTableAction<Row>>;
+	actionHeader?: string;
 	columns: Array<DataTableColumn<Row>>;
 	emptyMessage?: string;
 	filter?: boolean;
@@ -48,12 +64,16 @@ export type DataTableProps<Row extends Record<string, unknown>> = {
 	searchMode?: "client" | "server";
 	searchMinLength?: number;
 	searchQuery?: string;
+	sort?: boolean;
 	summary?: string;
 	title?: string;
 };
 
+const DEFAULT_COLLECTION_CONTROLS_THRESHOLD = 12;
+
 const DataTable = <Row extends Record<string, unknown>>({
 	action,
+	actionHeader,
 	columns,
 	emptyMessage,
 	filter,
@@ -69,6 +89,7 @@ const DataTable = <Row extends Record<string, unknown>>({
 	searchMode = "client",
 	searchMinLength,
 	searchQuery = "",
+	sort,
 	summary,
 	title = "Data table",
 }: DataTableProps<Row>): ReactElement => {
@@ -95,6 +116,9 @@ const DataTable = <Row extends Record<string, unknown>>({
 				: rows,
 		[normalizedSearchQuery, onSearchChange, rows, searchMode]
 	);
+	const showCollectionControlsByDefault =
+		rows.length > DEFAULT_COLLECTION_CONTROLS_THRESHOLD;
+	const effectiveSort = sort ?? rows.length > 1;
 	const gcdsColumns = useMemo<Array<TableColumn<Row>>>(() => {
 		const baseColumns = columns.map((col): TableColumn<Row> => {
 			const renderCell = col.cellRenderer;
@@ -103,7 +127,8 @@ const DataTable = <Row extends Record<string, unknown>>({
 			return {
 				field: col.field,
 				header: col.headerName,
-				sort: col.sortable ?? true,
+				rowHeader: col.rowHeader,
+				sort: effectiveSort && (col.sortable ?? true),
 				renderCell: renderCell
 					? ({ row }): ReactNode => renderCell(row ?? {})
 					: formatValue
@@ -122,7 +147,7 @@ const DataTable = <Row extends Record<string, unknown>>({
 			...baseColumns,
 			{
 				field: "_actions",
-				header: t("common.actions"),
+				header: actionHeader ?? t("common.actions"),
 				sort: false,
 				renderCell: ({ row }): ReactNode => {
 					const rowData = row as unknown as Row | null;
@@ -140,8 +165,36 @@ const DataTable = <Row extends Record<string, unknown>>({
 
 					return (
 						<div className="flex gap-100">
-							{visibleActions.map((a, index) =>
-								a.variant !== "link" ? (
+							{visibleActions.map((a, index) => {
+								const actionContent = (
+									<>
+										{a.buttonLabel}
+										{a.screenReaderLabel ? (
+											<>
+												{" "}
+												<span className="sr-only">
+													{a.screenReaderLabel(rowData)}
+												</span>
+											</>
+										) : null}
+									</>
+								);
+
+								if (a.href) {
+									return (
+										<Button
+											key={index}
+											buttonId={a.buttonId?.(rowData)}
+											buttonRole={a.buttonRole ?? "secondary"}
+											href={a.href(rowData)}
+											type="link"
+										>
+											{actionContent}
+										</Button>
+									);
+								}
+
+								return a.variant !== "link" ? (
 									<Button
 										key={index}
 										buttonId={a.buttonId?.(rowData)}
@@ -151,48 +204,43 @@ const DataTable = <Row extends Record<string, unknown>>({
 											a.onAction(rowData);
 										}}
 									>
-										{a.buttonLabel}
-										{a.screenReaderLabel ? (
-											<>
-												{" "}
-												<span className="sr-only">
-													{a.screenReaderLabel(rowData)}
-												</span>
-											</>
-										) : null}
+										{actionContent}
 									</Button>
 								) : (
-									<a
+									<Link
 										key={index}
 										className="gcds-button-link"
 										href="#"
-										onClick={(e) => {
-											e.preventDefault();
+										onGcdsClick={(event) => {
+											event.preventDefault();
 											a.onAction(rowData);
 										}}
 									>
-										{a.buttonLabel}
-										{a.screenReaderLabel ? (
-											<>
-												{" "}
-												<span className="sr-only">
-													{a.screenReaderLabel(rowData)}
-												</span>
-											</>
-										) : null}
-									</a>
-								)
-							)}
+										{actionContent}
+									</Link>
+								);
+							})}
 						</div>
 					);
 				},
 			},
 		];
-	}, [action, columns, t]);
+	}, [action, actionHeader, columns, effectiveSort, t]);
 
 	return (
 		<div className="grid gap-300">
 			{summary ? <p>{summary}</p> : null}
+			{primaryAction ? (
+				<div>
+					<Button
+						buttonId={primaryAction.buttonId}
+						type="button"
+						onGcdsClick={primaryAction.onAction}
+					>
+						{primaryAction.buttonLabel}
+					</Button>
+				</div>
+			) : null}
 			{onSearchChange && searchLabel ? (
 				<div className="grid max-w-prose gap-200">
 					<Input
@@ -232,17 +280,6 @@ const DataTable = <Row extends Record<string, unknown>>({
 					) : null}
 				</div>
 			) : null}
-			{primaryAction ? (
-				<div>
-					<Button
-						buttonId={primaryAction.buttonId}
-						type="button"
-						onGcdsClick={primaryAction.onAction}
-					>
-						{primaryAction.buttonLabel}
-					</Button>
-				</div>
-			) : null}
 			<p aria-live="polite">
 				{t("common.itemsShown", {
 					count: searchIsInvalid ? 0 : visibleRows.length,
@@ -253,12 +290,14 @@ const DataTable = <Row extends Record<string, unknown>>({
 				<p>{emptyMessage}</p>
 			) : (
 				<Table
-					sort
 					caption={title}
 					columns={gcdsColumns}
 					data={searchIsInvalid ? [] : visibleRows}
-					filter={filter ?? !onSearchChange}
-					pagination={paginationProp ?? true}
+					pagination={paginationProp ?? showCollectionControlsByDefault}
+					sort={effectiveSort}
+					filter={
+						filter ?? (!onSearchChange && showCollectionControlsByDefault)
+					}
 				/>
 			)}
 		</div>

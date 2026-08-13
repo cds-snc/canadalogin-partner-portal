@@ -162,6 +162,7 @@ async def read_accessible_rp_application(
     "/rp-applications/accessible/{rp_application_uuid}/department",
     response_model=AccessibleRPApplicationSummaryRead,
     responses=error_responses(403, 404, 500),
+    deprecated=True,
 )
 async def read_accessible_rp_application_department(
     request: Request,
@@ -182,6 +183,7 @@ async def read_accessible_rp_application_department(
     "/rp-applications/accessible/{rp_application_uuid}/department",
     response_model=AccessibleRPApplicationSummaryRead,
     responses=error_responses(403, 404, 409, 500),
+    deprecated=True,
 )
 async def assign_accessible_rp_application_department(
     request: Request,
@@ -242,13 +244,18 @@ async def read_accessible_rp_application_client_credentials(
         Depends(get_ibm_sv_admin_client_factory),
     ],
     workspace_uuid: Annotated[uuid_pkg.UUID | None, Query(alias="workspaceUuid")] = None,
+    application_information_uuid: Annotated[
+        uuid_pkg.UUID | None,
+        Query(alias="applicationInformationUuid"),
+    ] = None,
 ) -> RPApplicationClientCredentialsRead:
     credentials = await service.get_accessible_rp_application_client_credentials(
         db=db,
         rp_application_uuid=rp_application_uuid,
         current_user=current_user,
         ibm_admin_client_factory=ibm_admin_client_factory,
-        **({"expected_workspace_uuid": workspace_uuid} if workspace_uuid is not None else {}),
+        expected_workspace_uuid=workspace_uuid,
+        expected_application_information_uuid=application_information_uuid,
     )
     return RPApplicationClientCredentialsRead.model_validate(credentials)
 
@@ -269,13 +276,18 @@ async def read_accessible_rp_application_rotated_secrets(
         Depends(get_ibm_sv_admin_client_factory),
     ],
     workspace_uuid: Annotated[uuid_pkg.UUID | None, Query(alias="workspaceUuid")] = None,
+    application_information_uuid: Annotated[
+        uuid_pkg.UUID | None,
+        Query(alias="applicationInformationUuid"),
+    ] = None,
 ) -> list[RPApplicationClientRotatedSecretRead]:
     rotated_secrets = await service.list_accessible_rp_application_rotated_secrets(
         db=db,
         rp_application_uuid=rp_application_uuid,
         current_user=current_user,
         ibm_admin_client_factory=ibm_admin_client_factory,
-        **({"expected_workspace_uuid": workspace_uuid} if workspace_uuid is not None else {}),
+        expected_workspace_uuid=workspace_uuid,
+        expected_application_information_uuid=application_information_uuid,
     )
     return [RPApplicationClientRotatedSecretRead.model_validate(secret) for secret in rotated_secrets]
 
@@ -297,6 +309,10 @@ async def rotate_accessible_rp_application_client_secret(
         Depends(get_ibm_sv_admin_client_factory),
     ],
     workspace_uuid: Annotated[uuid_pkg.UUID | None, Query(alias="workspaceUuid")] = None,
+    application_information_uuid: Annotated[
+        uuid_pkg.UUID | None,
+        Query(alias="applicationInformationUuid"),
+    ] = None,
 ) -> RPApplicationClientCredentialsRead:
     credentials = await service.rotate_accessible_rp_application_client_secret(
         db=db,
@@ -304,7 +320,8 @@ async def rotate_accessible_rp_application_client_secret(
         current_user=current_user,
         payload=payload,
         ibm_admin_client_factory=ibm_admin_client_factory,
-        **({"expected_workspace_uuid": workspace_uuid} if workspace_uuid is not None else {}),
+        expected_workspace_uuid=workspace_uuid,
+        expected_application_information_uuid=application_information_uuid,
     )
     return RPApplicationClientCredentialsRead.model_validate(credentials)
 
@@ -326,6 +343,10 @@ async def create_accessible_rp_application_rotated_secret(
         Depends(get_ibm_sv_admin_client_factory),
     ],
     workspace_uuid: Annotated[uuid_pkg.UUID | None, Query(alias="workspaceUuid")] = None,
+    application_information_uuid: Annotated[
+        uuid_pkg.UUID | None,
+        Query(alias="applicationInformationUuid"),
+    ] = None,
 ) -> list[RPApplicationClientRotatedSecretRead]:
     rotated_secrets = await service.create_accessible_rp_application_rotated_secret(
         db=db,
@@ -333,7 +354,8 @@ async def create_accessible_rp_application_rotated_secret(
         current_user=current_user,
         payload=payload,
         ibm_admin_client_factory=ibm_admin_client_factory,
-        **({"expected_workspace_uuid": workspace_uuid} if workspace_uuid is not None else {}),
+        expected_workspace_uuid=workspace_uuid,
+        expected_application_information_uuid=application_information_uuid,
     )
     return [RPApplicationClientRotatedSecretRead.model_validate(secret) for secret in rotated_secrets]
 
@@ -354,6 +376,10 @@ async def delete_accessible_rp_application_rotated_secret(
         Depends(get_ibm_sv_admin_client_factory),
     ],
     workspace_uuid: Annotated[uuid_pkg.UUID | None, Query(alias="workspaceUuid")] = None,
+    application_information_uuid: Annotated[
+        uuid_pkg.UUID | None,
+        Query(alias="applicationInformationUuid"),
+    ] = None,
 ) -> dict[str, str]:
     await service.delete_accessible_rp_application_rotated_secret(
         db=db,
@@ -361,7 +387,8 @@ async def delete_accessible_rp_application_rotated_secret(
         current_user=current_user,
         secret_id=payload.secret_id,
         ibm_admin_client_factory=ibm_admin_client_factory,
-        **({"expected_workspace_uuid": workspace_uuid} if workspace_uuid is not None else {}),
+        expected_workspace_uuid=workspace_uuid,
+        expected_application_information_uuid=application_information_uuid,
     )
     return {"message": "Rotated client secret deleted"}
 
@@ -387,23 +414,28 @@ async def read_accessible_rp_application_mau_report(
         description="End date (YYYY-MM-DD), defaults to today",
     ),
     workspace_uuid: Annotated[uuid_pkg.UUID | None, Query(alias="workspaceUuid")] = None,
+    application_information_uuid: Annotated[
+        uuid_pkg.UUID | None,
+        Query(alias="applicationInformationUuid"),
+    ] = None,
 ) -> MAUReportResponse:
     application = await service.get_accessible_rp_application_department_preflight(
         db=db,
         rp_application_uuid=rp_application_uuid,
         current_user=current_user,
         **({"expected_workspace_uuid": workspace_uuid} if workspace_uuid is not None else {}),
+        **({"expected_application_information_uuid": application_information_uuid} if application_information_uuid is not None else {}),
     )
 
     await service._require_rp_application_department(application)
 
-    application_name = application.get("dnr_app_name")
+    application_name = application.get("dnr_app_name") or application.get("dnrAppName")
     if not isinstance(application_name, str) or application_name.strip() == "":
         # Keep a clear user-facing failure when data is incomplete.
         raise BadRequestException("RP application does not have a mapped MAU application name")
 
     department_name: str | None = None
-    department_id = application.get("department_id")
+    department_id = application.get("department_id") or application.get("departmentId")
     if department_id is not None:
         department = await crud_departments.get(db=db, id=department_id)
         if department:
@@ -422,6 +454,7 @@ async def read_accessible_rp_application_mau_report(
         start_date=resolved_start,
         end_date=resolved_end,
         department_name=department_name,
+        partner_environment=application.get("partner_environment") or application.get("partnerEnvironment"),
         records=[
             MAUReportItem(
                 date=record.date,

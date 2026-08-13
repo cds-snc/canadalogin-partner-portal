@@ -4,7 +4,6 @@ from uuid import UUID
 import casbin
 import pytest
 from fastapi.testclient import TestClient
-
 from src.app.api.dependencies import get_current_user, get_rp_application_service
 from src.app.core.access_control import CASBIN_MODEL_PATH, database_enforcer_provider
 from src.app.core.authorization import CanonicalRoleCode
@@ -195,9 +194,16 @@ class TestDepartmentAssignmentEndpoint:
         body = response.json()
         assert body["departmentId"] == 7
 
-    def test_assignment_unknown_department_returns_404(self) -> None:
+    def test_assignment_non_workspace_department_returns_409(self) -> None:
         service = Mock()
-        service.assign_accessible_rp_application_department = AsyncMock(side_effect=NotFoundException("Department not found"))
+        from fastcrud.exceptions.http_exceptions import CustomException
+
+        service.assign_accessible_rp_application_department = AsyncMock(
+            side_effect=CustomException(
+                status_code=409,
+                detail="RP configuration Department is inherited from its workspace",
+            )
+        )
 
         app.dependency_overrides[get_current_user] = lambda: _OWNER_USER
         override_rp_application_authorization()
@@ -213,9 +219,9 @@ class TestDepartmentAssignmentEndpoint:
         finally:
             app.dependency_overrides.clear()
 
-        assert response.status_code == 404
+        assert response.status_code == 409
 
-    def test_assignment_already_set_returns_409_conflict(self) -> None:
+    def test_assignment_legacy_conflict_returns_409(self) -> None:
         from fastcrud.exceptions.http_exceptions import CustomException
 
         service = Mock()
@@ -324,6 +330,7 @@ class TestMissingDepartmentConflictRoutes:
                 "uuid": _APP_UUID,
                 "dnr_app_name": "Benefits Portal",
                 "department_id": None,
+                "partner_environment": "Partner production",
             }
         )
         service._require_rp_application_department = AsyncMock(side_effect=RPApplicationDepartmentRequiredException())
@@ -355,6 +362,7 @@ class TestMissingDepartmentConflictRoutes:
                 "uuid": _APP_UUID,
                 "dnr_app_name": "Benefits Portal",
                 "department_id": None,
+                "partner_environment": "Partner production",
             }
         )
         service._require_rp_application_department = AsyncMock(return_value=None)
@@ -384,6 +392,7 @@ class TestMissingDepartmentConflictRoutes:
 
         assert response.status_code == 200
         assert response.json()["application_name"] == "Benefits Portal"
+        assert response.json()["partner_environment"] == "Partner production"
         service.get_accessible_rp_application_department_preflight.assert_awaited_once_with(
             db=db,
             current_user=current_user,
@@ -480,12 +489,16 @@ class TestDepartmentPreflightServiceMethod:
             "uuid": "018f6f83-0000-0000-0000-000000000333",
             "dnr_app_name": "Benefits Portal",
             "department_id": None,
+            "partner_environment": "Partner staging",
             "is_deleted": False,
             "application_owner": {"owners": [{"email": "owner@example.gc.ca"}]},
         }
 
         original_get = rp_module.crud_rp_applications.get
         rp_module.crud_rp_applications.get = AsyncMock(return_value=app_record)
+        service._get_effective_workspace_department = AsyncMock(  # type: ignore[method-assign]
+            return_value=(7, UUID("018f6f83-0000-0000-0000-000000000777"))
+        )
         try:
             with pytest.raises(NotFoundException):
                 await service.get_accessible_rp_application_department_preflight(
@@ -509,12 +522,16 @@ class TestDepartmentPreflightServiceMethod:
             "workspace_id": 23,
             "dnr_app_name": "Benefits Portal",
             "department_id": None,
+            "partner_environment": "Partner staging",
             "is_deleted": False,
             "application_owner": {"owners": [{"email": "owner@example.gc.ca"}]},
         }
 
         original_get = rp_module.crud_rp_applications.get
         rp_module.crud_rp_applications.get = AsyncMock(return_value=app_record)
+        service._get_effective_workspace_department = AsyncMock(  # type: ignore[method-assign]
+            return_value=(7, UUID("018f6f83-0000-0000-0000-000000000777"))
+        )
         try:
             result = await service.get_accessible_rp_application_department_preflight(
                 db=db,
@@ -525,7 +542,8 @@ class TestDepartmentPreflightServiceMethod:
             rp_module.crud_rp_applications.get = original_get
 
         assert result["dnrAppName"] == "Benefits Portal"
-        assert result["departmentId"] is None
+        assert result["departmentId"] == 7
+        assert result["partnerEnvironment"] == "Partner staging"
 
     @pytest.mark.asyncio
     async def test_preflight_raises_not_found_for_out_of_scope_user(self) -> None:
@@ -593,11 +611,11 @@ class TestDepartmentPreflightServiceMethod:
             rp_module.crud_departments.get = original_dept_get
 
     @pytest.mark.asyncio
-    async def test_assignment_raises_not_found_for_grant_user(self) -> None:
+    async def test_assignment_rejects_non_workspace_department_for_grant_user(self) -> None:
         import uuid as uuid_pkg
 
         import src.app.services.rp_application_service as rp_module
-        from src.app.core.exceptions.http_exceptions import NotFoundException
+        from fastcrud.exceptions.http_exceptions import CustomException
         from src.app.schemas.rp_application import AccessibleRPApplicationDepartmentAssignRequest
 
         service = RPApplicationService()
@@ -614,11 +632,12 @@ class TestDepartmentPreflightServiceMethod:
         }
 
         original_app_get = rp_module.crud_rp_applications.get
-        original_dept_get = rp_module.crud_departments.get
         rp_module.crud_rp_applications.get = AsyncMock(return_value=app_record)
-        rp_module.crud_departments.get = AsyncMock(return_value=None)
+        service._get_effective_workspace_department = AsyncMock(  # type: ignore[method-assign]
+            return_value=(7, UUID("018f6f83-0000-0000-0000-000000000777"))
+        )
         try:
-            with pytest.raises(NotFoundException):
+            with pytest.raises(CustomException) as exc_info:
                 await service.assign_accessible_rp_application_department(
                     db=db,
                     rp_application_uuid="018f6f83-0000-0000-0000-000000000333",
@@ -627,7 +646,8 @@ class TestDepartmentPreflightServiceMethod:
                 )
         finally:
             rp_module.crud_rp_applications.get = original_app_get
-            rp_module.crud_departments.get = original_dept_get
+
+        assert exc_info.value.status_code == 409
 
     @pytest.mark.asyncio
     async def test_require_department_raises_conflict_when_null(self) -> None:

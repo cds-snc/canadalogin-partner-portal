@@ -34,11 +34,17 @@ vi.mock("@gcds-core/components-react", () => ({
 		children,
 		href,
 		external,
+		onClickCapture,
 	}: PropsWithChildren<{
 		href: string;
 		external?: boolean;
+		onClickCapture?: (event: { nativeEvent: Event }) => void;
 	}>): ReactElement => (
-		<a data-external={external ? "true" : "false"} href={href}>
+		<a
+			data-external={external ? "true" : "false"}
+			href={href}
+			onClick={(event) => onClickCapture?.({ nativeEvent: event.nativeEvent })}
+		>
 			{children}
 		</a>
 	),
@@ -142,6 +148,20 @@ describe("GCDS UI wrappers", () => {
 		).toBe("/dashboard");
 	});
 
+	it("provides native link activation to callers without replacing link semantics", () => {
+		const onGcdsClick = vi.fn((event: Event) => event.preventDefault());
+		render(
+			<Link href="/registration/basics" onGcdsClick={onGcdsClick}>
+				Basics
+			</Link>
+		);
+
+		const link = screen.getByRole("link", { name: "Basics" });
+		link.click();
+		expect(onGcdsClick).toHaveBeenCalledOnce();
+		expect(link.getAttribute("href")).toBe("/registration/basics");
+	});
+
 	it("renders an error summary through the shared wrapper", () => {
 		render(<ErrorSummary listen />);
 
@@ -153,13 +173,16 @@ describe("GCDS UI wrappers", () => {
 	});
 
 	it("passes explicit links and moves focus to an actionable error summary", async () => {
-		render(
-			<ErrorSummary
-				errorLinks={{ "#application-url": "Check this answer." }}
-				focusOnRender
-				heading="The registration could not be saved"
-				listen={false}
-			/>
+		const view = render(
+			<>
+				<button type="button">Continue editing</button>
+				<ErrorSummary
+					errorLinks={{ "#application-url": "Check this answer." }}
+					focusOnRender
+					heading="The registration could not be saved"
+					listen={false}
+				/>
+			</>
 		);
 
 		const summary = screen.getByText("Error summary");
@@ -169,7 +192,31 @@ describe("GCDS UI wrappers", () => {
 		expect(summary.parentElement?.getAttribute("data-heading")).toBe(
 			"The registration could not be saved"
 		);
-		await waitFor(() => expect(document.activeElement).toBe(summary.parentElement));
+		await waitFor(() =>
+			expect(document.activeElement).toBe(summary.parentElement)
+		);
+
+		const continueEditing = screen.getByRole("button", {
+			name: "Continue editing",
+		});
+		continueEditing.focus();
+		view.rerender(
+			<>
+				<button type="button">Continue editing</button>
+				<ErrorSummary
+					errorLinks={{ "#other-field": "Correct another answer." }}
+					focusOnRender
+					heading="The registration could not be saved"
+					listen={false}
+				/>
+			</>
+		);
+		await waitFor(() =>
+			expect(summary.parentElement?.getAttribute("data-error-links")).toBe(
+				'{"#other-field":"Correct another answer."}'
+			)
+		);
+		expect(document.activeElement).toBe(continueEditing);
 	});
 
 	it("renders a stepper through the shared wrapper", () => {

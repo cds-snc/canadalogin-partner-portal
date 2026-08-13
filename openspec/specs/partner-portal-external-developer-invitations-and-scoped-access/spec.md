@@ -1,23 +1,33 @@
 # partner-portal-external-developer-invitations-and-scoped-access Specification
 
 ## Purpose
-Define the canonical invitation lifecycle, acceptance and delegation rules, and workspace-scoped partner access granted to invited RP application collaborators.
+Define the canonical invitation lifecycle, acceptance and delegation rules,
+and workspace-scoped access granted to collaborators who work with permitted
+Applications and RP configurations.
 ## Requirements
 ### Requirement: Invitation acceptance validates token and signed-in identity
 
-The system SHALL validate invitation acceptance using the tokenized route
-/invitations/rp-applications/$token and SHALL accept an invitation only when the
-signed-in CanadaLogin user matches the invited email identity for a currently
-pending, unexpired invitation. Validation SHALL complete before any partner
-assignment is created or changed. An invitation SHALL use its required
-workspace as authorization context and SHALL NOT require an RP application.
+The system SHALL validate invitation acceptance using the existing tokenized
+compatibility route `/invitations/rp-applications/$token` and SHALL accept an
+invitation only when the signed-in CanadaLogin user matches the invited email
+identity for a currently pending, unexpired invitation. Validation SHALL
+complete before any partner assignment is created or changed. An invitation
+SHALL use its required Partner workspace as authorization context and SHALL
+NOT require an Application or RP configuration.
+
+Optional source provenance MAY identify an Application or RP configuration
+from which the invitation was initiated. Before using that provenance for a
+post-acceptance destination, the backend SHALL resolve its complete workspace,
+Application, and configuration ancestry under the accepted grant. Missing,
+stale, or mismatched provenance SHALL fall back to the assigned workspace and
+SHALL NOT prevent acceptance or reveal another resource.
 
 #### Scenario: Invitee accepts a valid invitation
 
 - **WHEN** an invited user signs in with the invited email address and opens a valid pending invitation link
 - **THEN** the system accepts the invitation
 - **AND** the portal creates exactly one canonical workspace-scoped partner assignment on first acceptance
-- **AND** the portal redirects the user to the assigned workspace or, when safe source application context exists, an in-scope RP application experience
+- **AND** the portal redirects the user to the assigned workspace or, when validated source provenance exists, the in-scope Application hub or RP-configuration task
 
 #### Scenario: First login checks pending invitations before denying access
 
@@ -29,16 +39,16 @@ workspace as authorization context and SHALL NOT require an RP application.
 #### Scenario: Accepted invitee uses the invitation's existing partner context
 
 - **WHEN** an invited user accepts a valid invitation
-- **THEN** the portal uses the invitation's existing partner workspace context
-- **AND** the invitee is not asked to define a separate partner or department during acceptance
-- **AND** the acceptance does not depend on an RP application existing in the workspace
+- **THEN** the portal uses the invitation's existing Partner workspace context
+- **AND** the invitee is not asked to define a separate partner or Department during acceptance
+- **AND** the acceptance does not depend on an Application or RP configuration existing in the workspace
 
 #### Scenario: First accepted login assigns invitation roles to the local user record
 
 - **WHEN** an invited user accepts a valid invitation for the first time
 - **THEN** the portal creates or updates the local user identity record
 - **AND** the portal creates one active canonical partner assignment for the invitation workspace and role before granting access
-- **AND** it does not append a reusable platform role or workspace membership role
+- **AND** it does not append a reusable platform role, workspace membership role, Application grant, or RP-configuration grant
 
 #### Scenario: Repeated sign-in does not duplicate accepted invitation access
 
@@ -79,96 +89,96 @@ workspace as authorization context and SHALL NOT require an RP application.
 ### Requirement: Accepted invitations grant only partner-scoped invited-developer role access
 
 Accepted invitations SHALL grant exactly one canonical partner role for the
-invitation workspace and SHALL NOT create CL Admin, a reusable role, or a
-second workspace membership role. The active workspace grant SHALL be the
-authorization source for permitted workspace metadata, partner configuration,
-RP applications, secrets, reporting, and invitation actions defined by the
-four-role matrix.
+invitation workspace and SHALL NOT create CL Admin, a reusable role, an
+Application-specific grant, an RP-configuration-specific grant, or a second
+workspace membership role. The active workspace grant SHALL authorize only the
+permitted workspace metadata, Applications, RP configurations, secrets,
+reporting, and invitation actions defined by the four-role matrix.
 
-The role SHALL apply consistently to every RP application in the assigned
-workspace. Separate RP-application-specific permission assignments SHALL NOT
-be required for this phase.
+The role SHALL apply consistently to every Application and RP configuration in
+the assigned workspace. Separate child-specific permission assignments SHALL
+NOT be required for this phase.
 
 #### Scenario: Accepted invitee sees partner-scoped RP applications in current-user scope
 
-- **WHEN** an accepted partner user opens the grant-accessible RP application experience
-- **THEN** the RP applications inside each active assigned partner workspace appear in the user's allowed scope
-- **AND** each application response identifies the effective canonical role and workspace UUID
+- **WHEN** an accepted partner user opens the grant-accessible Partner work experience
+- **THEN** the Applications and RP configurations in each active assigned workspace appear in the user's allowed scope
+- **AND** each response identifies its effective canonical role and workspace UUID without using `/your-applications` as a second ownership experience
 
 #### Scenario: First-release partner grant applies across the partner workspace
 
-- **WHEN** an accepted partner user holds an active canonical role for one partner workspace
-- **THEN** that role applies to all RP applications in that workspace
-- **AND** the portal does not require a separate RP-specific permission assignment inside that workspace
+- **WHEN** an accepted partner user holds an active canonical role for one Partner workspace
+- **THEN** that role applies to all Applications and RP configurations in that workspace
+- **AND** the portal does not require a separate child-specific permission assignment
 
 #### Scenario: Invitee accesses only RP applications in the granted partner scope
 
-- **WHEN** an accepted partner user requests a permitted RP application route or endpoint in an assigned workspace
-- **THEN** the portal evaluates the canonical role for that workspace
-- **AND** it does not expose RP applications from an unassigned workspace
+- **WHEN** an accepted partner user requests a permitted Application or RP-configuration route in an assigned workspace
+- **THEN** the portal evaluates the canonical role for that workspace and the complete resource ancestry
+- **AND** it does not expose Applications or configurations from an unassigned workspace
 
 #### Scenario: RP Admin manages partner-scoped application collaboration and secrets
 
-- **WHEN** an accepted user holds RP Admin for one partner workspace
-- **THEN** the portal allows the RP Admin to administer permitted workspace and application information, RP configuration, secrets, MAU and aggregate reports, bounded partner audit events, and RP User (Edit) or Read Only invitations in that workspace
+- **WHEN** an accepted user holds RP Admin for one Partner workspace
+- **THEN** the portal allows permitted workspace and Application administration, contact management, RP-configuration management, secrets, reports, bounded partner audit, and RP User (Edit) or Read Only invitations in that workspace
 - **AND** the RP Admin cannot assign another RP Admin
 
 #### Scenario: RP User (Edit) manages partner-scoped application configuration but not invitations
 
-- **WHEN** an accepted user holds RP User (Edit) for one partner workspace
-- **THEN** the portal allows permitted application-information and RP-configuration edits, secret workflows, MAU and aggregate reports, and bounded partner audit events in that workspace
+- **WHEN** an accepted user holds RP User (Edit) for one Partner workspace
+- **THEN** the portal allows permitted Application, contact, RP-configuration, secret, promotion-request, report, and bounded-audit operations in that workspace
 - **AND** the user cannot manage invitations or role assignments
 
 #### Scenario: Read Only can view partner-scoped application details without secret access
 
-- **WHEN** an accepted user holds Read Only for one partner workspace
-- **THEN** the portal allows permitted metadata, OAuth configuration, MAU, aggregate reports, and redacted bounded partner audit events in that workspace
-- **AND** the user cannot mutate data, view or change secrets, or manage invitations
+- **WHEN** an accepted user holds Read Only for one Partner workspace
+- **THEN** the portal allows permitted Application details, contacts, readiness, RP Configuration, Usage, aggregate reports, and redacted bounded audit in that workspace
+- **AND** the user cannot mutate data, view or change secrets, view internal review notes, or manage invitations
 
 #### Scenario: Invitation-backed users do not use department self-setup
 
-- **WHEN** an accepted partner user reaches a protected product route without a personal department assignment
-- **THEN** the portal uses the canonical workspace assignment as the partner context
-- **AND** it does not redirect that user to self-service department setup
+- **WHEN** an accepted partner user reaches a protected product route without a personal Department assignment
+- **THEN** the portal uses canonical workspace assignment and inherited workspace Department as partner context
+- **AND** it does not redirect the user to personal or RP-configuration Department setup
 
 #### Scenario: Invitee cannot access unrelated RP applications or workspace views
 
-- **WHEN** an accepted partner user requests an RP application or workspace route outside an active assigned workspace
-- **THEN** the portal resolves the request as unavailable to the caller
-- **AND** it does not expose unrelated application or workspace data
+- **WHEN** an accepted partner user requests a workspace, Application, or RP configuration outside an active assigned workspace
+- **THEN** the portal resolves the request as unavailable
+- **AND** it does not expose unrelated hierarchy data
 
 #### Scenario: Unauthorized invited-role subresources resolve as unavailable
 
-- **WHEN** an accepted partner user requests a secret-management, invitation-management, or other protected subresource outside the canonical role matrix
-- **THEN** the portal resolves the request as unavailable to the caller
+- **WHEN** an accepted partner user requests credentials, invitations, internal review, or another protected subresource outside the canonical role matrix
+- **THEN** the portal resolves it as unavailable
 - **AND** it does not confirm the protected subresource exists
 
 #### Scenario: Invitation does not grant workspace membership
 
 - **WHEN** an invitation is accepted
-- **THEN** the portal creates only the canonical partner workspace grant
-- **AND** it does not create workspace_admin, workspace_member, or another product role
+- **THEN** the portal creates only the canonical Partner workspace grant
+- **AND** it does not create `workspace_admin`, `workspace_member`, an Application grant, an RP-configuration grant, or another product role
 
 ### Requirement: Role-boundary guidance explains collaboration models
 
 The portal SHALL provide user-facing guidance that explains the difference
 between CL Admin global authority and the three workspace-scoped partner roles.
-The guidance SHALL identify which actions each canonical role can perform, that
-only CL Admin can assign RP Admin, that RP Admin can invite only RP User (Edit)
-or Read Only, and that a partner role applies to every RP application in its
-assigned workspace.
+The guidance SHALL identify which actions each canonical role can perform,
+that only CL Admin can assign RP Admin, that RP Admin can invite only RP User
+(Edit) or Read Only, and that a partner role applies to every Application and
+RP configuration in its assigned workspace.
 
 #### Scenario: Collaboration guidance distinguishes workspace membership from platform-admin invitation access
 
 - **WHEN** a CL Admin bootstraps partner access or an RP Admin manages staff invitations
 - **THEN** the portal explains the permitted invitation roles and workspace boundary
-- **AND** the portal does not describe workspace_admin, workspace_member, superuser, or an arbitrary reusable role as an additional product role
+- **AND** it does not describe workspace membership, superuser, Application-specific, RP-specific, or arbitrary reusable roles as additional product roles
 
 #### Scenario: Invited developer reviews scope guidance
 
-- **WHEN** a partner user accesses grant-accessible RP application screens
+- **WHEN** a partner user accesses an Application or RP-configuration screen
 - **THEN** the portal confirms the active canonical role and assigned workspace
-- **AND** the guidance explains that the role applies to all RP applications in that workspace and does not grant another workspace
+- **AND** the guidance explains that the role applies to all Applications and configurations in that workspace and does not grant another workspace
 
 ### Requirement: Partner-scoped roles can read aggregate onboarding reports inside granted scope
 The portal SHALL allow accepted `RP Admin`, `RP User (Edit)`, and `Read Only` users to read aggregate onboarding reports for their granted partner scope without granting cross-workspace oversight access.
@@ -184,33 +194,33 @@ The portal SHALL allow accepted `RP Admin`, `RP User (Edit)`, and `Read Only` us
 ### Requirement: Canonical roles manage partner-scoped developer invitations
 
 CL Admin SHALL be the only role allowed to invite or assign RP Admin. An active
-RP Admin SHALL be allowed to invite RP User (Edit) or Read Only only within that
-RP Admin's assigned partner workspace. Invitation creation SHALL require an
-existing partner workspace and SHALL NOT require an RP application. A specific
-RP application MAY be retained only as optional source provenance when the
-invitation starts from an application, while the accepted role SHALL apply to
-the whole workspace.
+RP Admin SHALL be allowed to invite RP User (Edit) or Read Only only within
+that RP Admin's assigned Partner workspace. Invitation creation SHALL require
+an existing Partner workspace and SHALL NOT require an Application or RP
+configuration. An Application or RP configuration MAY be retained only as
+optional source provenance when the invitation starts from that resource,
+while the accepted role SHALL apply to the whole workspace.
 
 First successful invitation acceptance SHALL create exactly one active
 canonical partner assignment. Idempotent replay SHALL return the existing
 accepted outcome without mutating the current assignment. Acceptance SHALL NOT
-create a global role, a reusable role definition, or a second workspace
-membership role. Invitation creation SHALL be rejected when the target
-identity already has an active partner assignment in the workspace; an
-authorized actor SHALL use the explicit atomic role-replacement operation
-instead.
+create a global role, a reusable role definition, an Application- or RP-
+configuration-specific grant, or a second workspace membership role.
+Invitation creation SHALL be rejected when the target identity already has an
+active partner assignment in the workspace; an authorized actor SHALL use the
+explicit atomic role-replacement operation instead.
 
 #### Scenario: CL Admin bootstraps an RP Admin
 
-- **WHEN** a CL Admin creates an invitation for the initial partner-side RP Admin in an existing workspace before any RP application exists
+- **WHEN** a CL Admin creates an invitation for the initial partner-side RP Admin in an existing workspace before any Application or RP configuration exists
 - **THEN** the portal permits the invitation to carry RP Admin with workspace context only
 - **AND** acceptance creates one RP Admin assignment for that workspace
 
 #### Scenario: RP Admin invites permitted staff in the same workspace
 
-- **WHEN** an active RP Admin invites staff from the assigned workspace Access surface or an RP application entry point
-- **THEN** the portal permits RP User (Edit) or Read Only
-- **AND** the invitation cannot target another workspace
+- **WHEN** an active RP Admin invites staff from the assigned Workspace Access surface, an Application hub, or an RP-configuration task
+- **THEN** the portal permits RP User (Edit) or Read Only and records only validated child source provenance when supplied
+- **AND** the invitation cannot target another workspace or create child-specific authority
 
 #### Scenario: RP Admin cannot assign RP Admin
 
@@ -220,7 +230,7 @@ instead.
 
 #### Scenario: Invitation requires an existing workspace
 
-- **WHEN** an authorized actor attempts to invite a user before the partner workspace exists
+- **WHEN** an authorized actor attempts to invite a user before the Partner workspace exists
 - **THEN** the portal rejects the invitation
 - **AND** it does not create an unscoped role assignment
 
@@ -228,7 +238,7 @@ instead.
 
 - **WHEN** an authorized CL Admin or same-workspace RP Admin opens invitation management
 - **THEN** the portal lists the invitations the actor is allowed to manage
-- **AND** each record distinguishes pending, accepted, expired, and revoked status
+- **AND** each record distinguishes pending, accepted, expired, and revoked status without exposing child provenance outside that actor's scope
 
 #### Scenario: Authorized actor reissues an unavailable invitation
 
@@ -264,16 +274,18 @@ instead.
 
 ### Requirement: Invitation and partner-grant lifecycles fail closed and preserve history
 
-Invitation roles SHALL be constrained to RP Admin, RP User (Edit), or Read Only.
-Invitation status SHALL be constrained to pending, accepted, expired, or
+Invitation roles SHALL be constrained to RP Admin, RP User (Edit), or Read
+Only. Invitation status SHALL be constrained to pending, accepted, expired, or
 revoked. Partner-grant status SHALL be constrained to active or revoked.
 Lifecycle transitions SHALL be validated before an invitation or grant is
 mutated.
 
 The portal SHALL enforce at most one pending invitation for a normalized
 email/workspace pair and one active partner assignment for a user/workspace.
-An accepted partner assignment SHALL retain a valid reference to its source
-invitation when an invitation created it.
+Optional Application or RP-configuration source provenance does not change
+that workspace-level uniqueness rule. An accepted partner assignment SHALL
+retain a valid reference to its source invitation when an invitation created
+it.
 
 #### Scenario: Invalid role or status is rejected
 
@@ -284,7 +296,7 @@ invitation when an invitation created it.
 #### Scenario: Duplicate pending invitation is rejected within a workspace
 
 - **WHEN** a pending invitation already exists for a normalized email in one workspace
-- **AND** an authorized actor attempts another invitation for that email from a different RP application in the same workspace
+- **AND** an authorized actor attempts another invitation for that email from Workspace Access, a different Application, or a different RP configuration in the same workspace
 - **THEN** the portal rejects the duplicate or directs the actor to the existing invitation lifecycle
 - **AND** it does not create competing pending authority
 
@@ -339,4 +351,3 @@ state SHALL fail safely without mutating access.
 - **WHEN** identity resolution is ambiguous or finds disabled, deleted, mixed-access, or otherwise ineligible state
 - **THEN** the portal returns a safe recoverable failure
 - **AND** it creates no user, invitation, or assignment
-

@@ -13,7 +13,6 @@ import { getWorkspaceOnboardingStateLabel } from "../onboarding-display";
 type WorkspaceTableRow = {
 	name: string;
 	onboardingState: string;
-	slug: string;
 	uuid: string;
 };
 
@@ -45,16 +44,17 @@ export const WorkspacesPage = (): FunctionComponent => {
 		onboardingState: workspace.onboardingState?.trim()
 			? getWorkspaceOnboardingStateLabel(t, workspace.onboardingState)
 			: t("common.notAvailable"),
-		slug: workspace.slug,
 		uuid: workspace.uuid,
 	}));
 	const columns: Array<DataTableColumn<WorkspaceTableRow>> = [
-		{ field: "name", headerName: t("workspaces.nameLabel") },
+		{
+			field: "name",
+			headerName: t("workspaces.nameLabel"),
+		},
 		{
 			field: "onboardingState",
 			headerName: t("workspaces.onboardingStateColumn"),
 		},
-		{ field: "slug", headerName: t("workspaces.slugLabel") },
 	];
 
 	return (
@@ -129,7 +129,7 @@ export const WorkspacesPage = (): FunctionComponent => {
 				<div className="grid gap-300">
 					<DataTable
 						columns={columns}
-						itemLabel={t("workspaces.itemLabel")}
+						itemLabel={t("workspaces.itemLabel", { count: rows.length })}
 						rows={rows}
 						title={t("workspaces.title")}
 						action={{

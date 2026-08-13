@@ -1,5 +1,8 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
+	getApplicationRPConfigurationUsageAuditTrail,
+	getApplicationRPConfigurationUsageAuditTrailSearchAfter,
+	getApplicationRPConfigurationUsageSummary,
 	getRPApplication,
 	getWorkspaceRPApplicationConfiguration,
 	getRPApplications,
@@ -121,10 +124,7 @@ export const useWorkspaceRPApplicationConfiguration = (
 	const query = useQuery<WorkspaceRPApplicationConfigurationRead, Error>({
 		enabled: workspaceUuid.length > 0 && rpApplicationUuid.length > 0,
 		queryFn: () =>
-			getWorkspaceRPApplicationConfiguration(
-				workspaceUuid,
-				rpApplicationUuid
-			),
+			getWorkspaceRPApplicationConfiguration(workspaceUuid, rpApplicationUuid),
 		queryKey: workspaceRPApplicationConfigurationQueryKey(
 			workspaceUuid,
 			rpApplicationUuid
@@ -160,24 +160,42 @@ export const useWorkspaceRPApplication = (
 export const useWorkspaceRPApplicationUsageSummary = (
 	workspaceUuid: string,
 	rpApplicationUuid: string,
-	selectedDate: string
+	selectedDate: string,
+	applicationInformationUuid = ""
 ): WorkspaceRPApplicationUsageSummaryState => {
+	const isApplicationScoped = applicationInformationUuid.length > 0;
 	const query = useQuery<RPApplicationUsageSummaryRead, Error>({
 		enabled:
 			workspaceUuid.length > 0 &&
 			rpApplicationUuid.length > 0 &&
 			selectedDate.length > 0,
 		queryFn: () =>
-			getRPApplicationUsageSummary(
-				workspaceUuid,
-				rpApplicationUuid,
-				selectedDate
-			),
-		queryKey: workspaceRPApplicationUsageSummaryQueryKey(
-			workspaceUuid,
-			rpApplicationUuid,
-			selectedDate
-		),
+			isApplicationScoped
+				? getApplicationRPConfigurationUsageSummary(
+						workspaceUuid,
+						applicationInformationUuid,
+						rpApplicationUuid,
+						selectedDate
+					)
+				: getRPApplicationUsageSummary(
+						workspaceUuid,
+						rpApplicationUuid,
+						selectedDate
+					),
+		queryKey: isApplicationScoped
+			? [
+					...workspaceRPApplicationUsageSummaryQueryKey(
+						workspaceUuid,
+						rpApplicationUuid,
+						selectedDate
+					),
+					applicationInformationUuid,
+				]
+			: workspaceRPApplicationUsageSummaryQueryKey(
+					workspaceUuid,
+					rpApplicationUuid,
+					selectedDate
+				),
 	});
 
 	return {
@@ -192,25 +210,37 @@ export const useWorkspaceRPApplicationAuditTrail = (
 	workspaceUuid: string,
 	rpApplicationUuid: string,
 	selectedDate: string,
-	size = 25
+	size = 25,
+	applicationInformationUuid = ""
 ): WorkspaceRPApplicationAuditTrailState => {
 	const queryClient = useQueryClient();
-	const queryKey = workspaceRPApplicationAuditTrailQueryKey(
+	const legacyQueryKey = workspaceRPApplicationAuditTrailQueryKey(
 		workspaceUuid,
 		rpApplicationUuid,
 		selectedDate,
 		size
 	);
+	const isApplicationScoped = applicationInformationUuid.length > 0;
+	const queryKey = isApplicationScoped
+		? [...legacyQueryKey, applicationInformationUuid]
+		: legacyQueryKey;
 	const query = useQuery<RPApplicationUsageAuditTrailRead, Error>({
 		enabled:
 			workspaceUuid.length > 0 &&
 			rpApplicationUuid.length > 0 &&
 			selectedDate.length > 0,
 		queryFn: () =>
-			getRPApplicationUsageAuditTrail(workspaceUuid, rpApplicationUuid, {
-				selectedDate,
-				size,
-			}),
+			isApplicationScoped
+				? getApplicationRPConfigurationUsageAuditTrail(
+						workspaceUuid,
+						applicationInformationUuid,
+						rpApplicationUuid,
+						{ selectedDate, size }
+					)
+				: getRPApplicationUsageAuditTrail(workspaceUuid, rpApplicationUuid, {
+						selectedDate,
+						size,
+					}),
 		queryKey,
 	});
 	const loadMoreMutation = useMutation<
@@ -219,15 +249,26 @@ export const useWorkspaceRPApplicationAuditTrail = (
 		string
 	>({
 		mutationFn: (searchAfter: string) =>
-			getRPApplicationUsageAuditTrailSearchAfter(
-				workspaceUuid,
-				rpApplicationUuid,
-				{
-					searchAfter,
-					selectedDate,
-					size,
-				}
-			),
+			isApplicationScoped
+				? getApplicationRPConfigurationUsageAuditTrailSearchAfter(
+						workspaceUuid,
+						applicationInformationUuid,
+						rpApplicationUuid,
+						{
+							searchAfter,
+							selectedDate,
+							size,
+						}
+					)
+				: getRPApplicationUsageAuditTrailSearchAfter(
+						workspaceUuid,
+						rpApplicationUuid,
+						{
+							searchAfter,
+							selectedDate,
+							size,
+						}
+					),
 		onSuccess: (nextPage) => {
 			queryClient.setQueryData<RPApplicationUsageAuditTrailRead>(
 				queryKey,

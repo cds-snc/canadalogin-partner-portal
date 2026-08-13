@@ -11,6 +11,7 @@ vi.mock("react-i18next", () => ({
 		t: (key: string): string =>
 			({
 				"home.title": "Partner portal",
+				"common.notProvided": "Not provided",
 				"rpRegistrationAdoption.backToWorkspaces": "Return to Workspaces",
 				"rpRegistrationAdoption.completeness.incomplete": "Missing portal data",
 				"rpRegistrationAdoption.emptyBody": "No eligible registration.",
@@ -19,6 +20,8 @@ vi.mock("react-i18next", () => ({
 				"rpRegistrationAdoption.loadingBody": "Loading candidates.",
 				"rpRegistrationAdoption.loadingTitle": "Loading registrations",
 				"rpRegistrationAdoption.nameColumn": "Registration",
+				"rpRegistrationAdoption.partnerEnvironmentColumn":
+					"Partner environment",
 				"rpRegistrationAdoption.reviewAction": "Review and link",
 				"rpRegistrationAdoption.summary": "Link retained registrations.",
 				"rpRegistrationAdoption.tableTitle": "Unassigned registrations",
@@ -35,11 +38,16 @@ vi.mock("@/components/ui", () => ({
 	Button: ({ children, href }: PropsWithChildren<{ href?: string }>) => (
 		<a href={href}>{children}</a>
 	),
-	DataTable: ({ action, rows, title }: any): ReactElement => (
+	DataTable: ({ action, columns, rows, title }: any): ReactElement => (
 		<section>
 			<h2>{title}</h2>
+			{columns.map((column: any) => (
+				<span key={column.field}>{column.headerName}</span>
+			))}
 			{rows.map((row: any) => (
-				<div key={row.rpApplicationUuid}>{row.name}</div>
+				<div key={row.rpApplicationUuid}>
+					{row.configurationName} {row.partnerEnvironment}
+				</div>
 			))}
 			{rows[0] ? (
 				<button type="button" onClick={() => action.onAction(rows[0])}>
@@ -102,10 +110,12 @@ describe("RPRegistrationAdoptionListPage", () => {
 		vi.mocked(useRPRegistrationAdoptionCandidates).mockReturnValue({
 			candidates: [
 				{
+					configurationName: "Benefits production",
 					ibmApplicationId: "ibm-app-1",
 					metadataCompleteness: "incomplete",
 					missingFieldNames: ["redirectUris"],
 					name: "Benefits Portal",
+					partnerEnvironment: null,
 					rpApplicationUuid: "rp-application-1",
 					updatedAt: null,
 				},
@@ -116,6 +126,8 @@ describe("RPRegistrationAdoptionListPage", () => {
 		});
 
 		render(<RPRegistrationAdoptionListPage />);
+		expect(screen.getByText(/Benefits production Not provided/)).toBeTruthy();
+		expect(screen.getByText("Partner environment")).toBeTruthy();
 		fireEvent.click(screen.getByRole("button", { name: "Review and link" }));
 
 		expect(navigateMock).toHaveBeenCalledWith({

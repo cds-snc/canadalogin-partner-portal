@@ -53,14 +53,8 @@ describe("route catalog", () => {
 		expect(
 			isRouteVisible(ROUTE_CATALOG.onboardingOversight, clAdminContext)
 		).toBe(true);
-		expect(isRouteVisible(ROUTE_CATALOG.yourApplications, clAdminContext)).toBe(
-			false
-		);
 		expect(isRouteVisible(ROUTE_CATALOG.reports, clAdminContext)).toBe(true);
 
-		expect(isRouteVisible(ROUTE_CATALOG.yourApplications, partnerContext)).toBe(
-			true
-		);
 		expect(isRouteVisible(ROUTE_CATALOG.workspaces, partnerContext)).toBe(true);
 		expect(isRouteVisible(ROUTE_CATALOG.reports, partnerContext)).toBe(true);
 		expect(
@@ -82,7 +76,7 @@ describe("route catalog", () => {
 	});
 
 	it("derives active parent task areas from the recorded path families", () => {
-		expect(getActiveTaskArea("/your-applications/rp-uuid")).toBe("partnerWork");
+		expect(getActiveTaskArea("/your-applications/rp-uuid")).toBeNull();
 		expect(getActiveTaskArea("/workspaces/workspace-uuid/settings")).toBe(
 			"partnerWork"
 		);
@@ -114,7 +108,7 @@ describe("route catalog", () => {
 		).toEqual(["workspaces"]);
 		expect(
 			getTaskAreaRoutes("partnerWork", partnerContext).map(({ id }) => id)
-		).toEqual(["yourApplications", "workspaces"]);
+		).toEqual(["workspaces"]);
 		expect(getTaskAreaRoutes("administration", partnerContext)).toEqual([]);
 		expect(
 			getRoutesForSurface("primaryNavigation", noAccessContext).map(

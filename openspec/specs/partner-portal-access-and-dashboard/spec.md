@@ -3,7 +3,8 @@
 ## Purpose
 Define authenticated admission, first-time onboarding, the service Home,
 server-owned authorization context, grouped global navigation, and dedicated
-operational and task pages for the partner portal.
+operational and task pages that lead users into authorized Partner workspaces,
+Applications, and RP configurations.
 ## Requirements
 ### Requirement: Authenticated session is required for protected portal routes
 The system SHALL authenticate users through OIDC and maintain a server-backed session for protected portal routes and APIs.
@@ -78,15 +79,15 @@ separate from task navigation.
 
 - **WHEN** an admitted authenticated user opens a protected route
 - **THEN** the primary navigation includes a direct `Home` link to `/`
-- **AND** it includes a `Partner work` group containing the authorized `Your applications` and `Workspaces` destinations
-- **AND** it includes direct `Onboarding oversight` and `Administration` parent-area links only when each is available to that user
-- **AND** it does not expose every child module as a separate first-level item
+- **AND** it includes a `Partner work` group containing only the authorized `Partner workspaces` destination at `/workspaces`
+- **AND** it includes direct `Reports`, `Onboarding oversight`, and `Administration` parent-area links only when each is available to that user
+- **AND** it does not expose `Your applications`, individual Applications, RP configurations, or every child module as separate first-level items
 
 #### Scenario: Empty or unauthorized task areas are omitted
 
 - **WHEN** capability filtering leaves a navigation group with no available child destination
 - **THEN** the shell omits the empty group
-- **AND** unavailable Administration, oversight, partner, and child-route labels are not disclosed
+- **AND** unavailable Administration, oversight, Reports, Partner work, and child-route labels are not disclosed
 - **AND** backend and route authorization remain authoritative for direct requests
 
 #### Scenario: Account and Support controls stay outside primary task navigation
@@ -98,8 +99,8 @@ separate from task navigation.
 
 #### Scenario: Navigation identifies the current parent area
 
-- **WHEN** an authenticated user opens a route under `/your-applications`, `/workspaces`, `/onboarding-oversight`, or an Administration child family
-- **THEN** the shell identifies the corresponding Partner work, Onboarding oversight, or Administration parent area
+- **WHEN** an authenticated user opens a route under `/workspaces`, `/reports`, `/onboarding-oversight`, or an Administration child family
+- **THEN** the shell identifies the corresponding Partner work, Reports, Onboarding oversight, or Administration parent area
 - **AND** the current state does not rely on colour alone
 
 #### Scenario: Grouped navigation works with keyboard and responsive layouts
@@ -109,6 +110,13 @@ separate from task navigation.
 - **AND** focus remains visible
 - **AND** no task depends on hover-only interaction
 - **AND** labels and controls reflow without clipping or inaccessible horizontal task-navigation scrolling
+
+#### Scenario: Navigation disclosure follows user activation
+
+- **WHEN** a user activates an available navigation group with pointer, keyboard, or assistive technology
+- **THEN** the first activation opens the disclosure and a subsequent activation closes it
+- **AND** application rerendering or the active child route does not force a disclosure open again after the user closes it
+- **AND** the GC Design System component retains its supported focus, keyboard, and accessible-state behavior
 
 #### Scenario: Navigation has English and French parity
 
@@ -181,108 +189,52 @@ remains authorized SHALL take precedence over the default Home route.
 
 The portal SHALL use `/` as the authenticated service Home for admitted users
 and SHALL present the available parent task areas without becoming an
-operational dashboard or all-in-one work page.
+operational dashboard or all-in-one work page. Available destinations SHALL be
+organized under translated task-area headings and presented as responsive
+single-destination GC Design System cards with concise descriptions.
 
 #### Scenario: Admitted authenticated user opens Home
 
 - **WHEN** an admitted authenticated user opens `/`
 - **THEN** the page identifies the Partner Portal purpose in one H1
-- **AND** it presents short descriptions and links for only the task areas available to that user
-- **AND** an available Partner work section links directly to the authorized `/your-applications` and `/workspaces` destinations because Partner work is a navigation group rather than a route
-- **AND** available Onboarding oversight and Administration sections link to `/onboarding-oversight` and `/administration` respectively
+- **AND** it presents short descriptions and cards for only the task areas and destinations available to that user
+- **AND** each card has one linked task title, one concise description, and one focused destination
+- **AND** an available Partner work section links to `/workspaces` and does not link to `/your-applications`
+- **AND** available Reports, Onboarding oversight, and Administration sections link to `/reports`, `/onboarding-oversight`, and `/administration` respectively
+
+#### Scenario: Home card groups remain accessible and responsive
+
+- **WHEN** authenticated Home is used with keyboard navigation, assistive technology, a small screen, or a zoomed viewport
+- **THEN** task groups have a logical heading hierarchy and source order
+- **AND** cards reflow to a single column without clipped content or horizontal scrolling
+- **AND** no card contains nested interactive controls, multiple destinations, forms, tables, or decorative metrics
 
 #### Scenario: Home remains a task-selection surface
 
 - **WHEN** an authenticated user opens `/`
 - **THEN** the page helps the user choose a task area
 - **AND** it does not embed review queues, full reports, large record lists, administration tables, or data-changing forms
+- **AND** it does not expose a global or context-free RP-configuration creation wizard; creation begins only after a workspace and Application are selected
 
 #### Scenario: Unauthenticated root remains the public Home
 
 - **WHEN** a user without an authenticated session opens `/`
-- **THEN** the portal renders the public service introduction and sign-in path instead of authenticated task links or protected context
-
-### Requirement: Current-user RP applications page provides a partner operational overview
-
-The portal SHALL provide `/your-applications` as a dedicated cross-workspace
-operational overview of RP applications and workspace context available to the
-signed-in user through active canonical grants. The overview SHALL project the
-same workspace-owned RP application summaries used by selected-workspace
-application lists. It SHALL support status scanning and resuming work without
-acting as the generic portal Home, creating a second RP ownership model, or
-embedding unrelated workflows.
-
-#### Scenario: User opens the current-user RP applications overview
-
-- **WHEN** an authorized partner user opens `/your-applications`
-- **THEN** the page lists RP applications available in current-user scope
-- **AND** each application links to `/workspaces/$workspaceUuid/applications/$rpApplicationUuid` using the owning workspace returned by the server-scoped summary
-- **AND** available lifecycle or status context and a relevant resume-task link are shown when returned by the canonical data source
-
-#### Scenario: Invitation-backed applications appear after access is canonical
-
-- **WHEN** invitation-backed RP applications are included in the user's canonical accessible-application scope
-- **THEN** `/your-applications` presents those applications in the same overview as other accessible applications
-- **AND** it does not imply broader workspace access than the authorization context provides
-
-#### Scenario: Overview links accessible workspaces using meaningful labels
-
-- **WHEN** one or more workspaces are available in current-user scope
-- **THEN** the overview presents compact workspace navigation using localized workspace names rather than raw UUIDs as the primary labels
-- **AND** each link routes through the Workspaces task area
-
-#### Scenario: User has no available RP applications
-
-- **WHEN** an authorized partner user opens `/your-applications` and no RP applications are available in current-user scope
-- **THEN** the page displays an actionable application empty state instead of application cards, tables, or misleading status
-
-#### Scenario: User has no accessible workspaces
-
-- **WHEN** an authorized user opens `/your-applications` and no workspaces are available in current-user scope
-- **THEN** the page displays a workspace empty state instead of administrative controls or internal identifiers
-
-#### Scenario: Partner overview keeps full workflows on focused routes
-
-- **WHEN** an authorized user opens `/your-applications`
-- **THEN** the overview uses canonical workspace-scoped links to focused routes for configuration, credentials, invitations, reports, create or edit work, and other consequential actions
-- **AND** it does not embed those forms, cross-workspace oversight, or platform administration workflows
-
-#### Scenario: Partner overview handles asynchronous states
-
-- **WHEN** application or workspace summary data is loading, partially unavailable, fails, or becomes unauthorized
-- **THEN** the affected section shows a scoped loading, partial, error, or unauthorized state with a safe retry or return action
-- **AND** an unavailable section does not replace valid content from another section with misleading data
-
-#### Scenario: Partner overview data remains server scoped
-
-- **WHEN** `/your-applications` requests application or workspace summaries
-- **THEN** each backend request applies the current session, canonical authorization, and resource scope before returning data
-- **AND** the browser does not receive a wider dataset and reduce it through client-side filtering
-- **AND** safe failures do not disclose secret fields, out-of-scope identifiers, policy internals, or raw authorization payloads
-
-#### Scenario: Current-user and selected-workspace summaries remain consistent
-
-- **WHEN** one authorized RP application appears in both `/your-applications` and its selected-workspace application list
-- **THEN** both surfaces derive localized name, environment, onboarding state, optional promotion state, and permitted resume task from the same summary semantics
-- **AND** they link to the same canonical workspace-scoped RP application overview
-
-#### Scenario: Revoked workspace access removes projected applications
-
-- **WHEN** a partner user's active grant for one workspace is revoked
-- **THEN** `/your-applications` no longer returns or links RP applications owned by that workspace on the next protected request
-- **AND** independently authorized workspace and RP application summaries remain available
+- **THEN** the portal renders the public service introduction and sign-in path instead of authenticated task cards or protected context
 
 ### Requirement: Administration uses a dedicated task hub
 
 The portal SHALL provide `/administration` as the authorized parent task hub
 for platform governance modules. The hub SHALL expose focused destination links
 and SHALL NOT contain the modules' full tables, search interfaces, forms, or
-record actions.
+record actions. Administration children SHALL use the normal focused page
+layout without a persistent left-side navigation rail and SHALL provide a
+stable, translated link back to the Administration hub.
 
 #### Scenario: Authorized user opens the Administration hub
 
 - **WHEN** a user whose canonical authorization context permits platform administration opens `/administration`
-- **THEN** the hub presents the available Users and access, Departments, Tiers, Audit logs, and fixed Role reference tasks
+- **THEN** the hub groups available Users and access, Departments, Tiers, Audit logs, and fixed Role reference tasks under clear translated functional headings
+- **AND** each task is one responsive GC Design System card with one linked title, one concise description, and one focused destination
 - **AND** the destinations use `/users`, `/departments`, `/tiers`, `/audit-logs`, and `/roles` respectively
 - **AND** `/policies` is not presented as an independent administration destination
 
@@ -290,13 +242,21 @@ record actions.
 
 - **WHEN** an authorized user opens an Administration child route
 - **THEN** the page identifies Administration as its parent area
-- **AND** side navigation or breadcrumbs provide a path to `/administration`
-- **AND** browser history is not the only return mechanism
+- **AND** hierarchy breadcrumbs link to `/administration` when the page type uses breadcrumbs
+- **AND** a visible translated parent link returns to `/administration` without relying on browser history
+- **AND** the page does not render a persistent Administration side-navigation rail
+
+#### Scenario: Administration children use a focused responsive layout
+
+- **WHEN** an authorized user opens an Administration child route on desktop, mobile, or a zoomed viewport
+- **THEN** the focused child content uses the normal page container without a reserved left-navigation column
+- **AND** the page preserves logical keyboard order, visible focus, and reflow without clipped content or horizontal scrolling
 
 #### Scenario: Administration hub stays focused on task selection
 
 - **WHEN** an authorized user opens `/administration`
 - **THEN** the page uses one H1, short task descriptions, and links to focused modules
+- **AND** empty functional groups are omitted, and cards follow a logical source and keyboard order
 - **AND** it does not embed user tables, department or tier forms, audit results, or role-assignment controls
 
 #### Scenario: Unavailable Administration remains undiscoverable
@@ -324,7 +284,80 @@ administration work on the page types and routes that own them.
 
 #### Scenario: Partner overview remains separate from internal oversight
 
-- **WHEN** a partner user opens `/your-applications`
-- **THEN** the page presents only authorized partner operational context
-- **AND** it does not expose cross-workspace internal queue, filter, report, or review controls
+- **WHEN** a partner user opens a selected workspace, Application, or RP-configuration overview
+- **THEN** the page presents only authorized context and task destinations for that workspace-owned resource
+- **AND** it does not expose cross-workspace internal queue, filter, report, or review-note controls
 
+### Requirement: Reports uses a dedicated role-aware task hub
+
+The portal SHALL provide `/reports` as the authenticated task hub for
+discovering report families available through the current canonical
+authorization context. Reports SHALL appear in the shared primary navigation
+and authenticated Home only when the user can access at least one report
+family. The hub SHALL group report-family destinations as responsive
+single-destination GC Design System cards and SHALL NOT act as an operational
+dashboard or embed report results.
+
+#### Scenario: Authorized reporting user discovers Reports
+
+- **WHEN** the current canonical authorization context permits at least one cross-workspace, workspace, or application usage report
+- **THEN** authenticated Home and the shared top navigation expose a translated Reports destination
+- **AND** selecting that destination opens `/reports`
+
+#### Scenario: Reports hub groups available report families
+
+- **WHEN** an authorized reporting user opens `/reports`
+- **THEN** the page uses one Reports H1 and groups only available report families under clear translated Platform reporting or Partner reporting headings
+- **AND** each family uses one GC Design System card with one linked title, one concise scope description, and one focused destination
+- **AND** empty groups and unavailable report families are omitted
+
+#### Scenario: Reports remains a task-selection surface
+
+- **WHEN** an authorized user opens `/reports`
+- **THEN** the hub helps the user choose a report family and scope-selection path
+- **AND** it does not embed report filters, result tables, exports, charts, summary metrics, review queues, or data-changing controls
+
+#### Scenario: Reports card groups remain accessible and responsive
+
+- **WHEN** the Reports hub is used with keyboard navigation, assistive technology, a small screen, or a zoomed viewport
+- **THEN** task groups have a logical heading hierarchy and source order
+- **AND** cards reflow to a single column without clipped content or horizontal scrolling
+- **AND** each card exposes one clear accessible destination and contains no nested interactive controls
+
+#### Scenario: User without report access cannot discover or open Reports
+
+- **WHEN** the canonical authorization context permits no report family
+- **THEN** authenticated Home and the shared menu omit Reports
+- **AND** a direct request to `/reports` fails through the standard safe authorization behavior
+- **AND** the response does not reveal report types, workspaces, applications, or scope identifiers
+
+### Requirement: Retired Your applications entry does not create a duplicate product experience
+
+The portal SHALL remove `Your applications` from authenticated Home and shared
+primary navigation. During the recorded compatibility period,
+`/your-applications` SHALL redirect to `/workspaces` after normal admission
+checks and SHALL NOT load or render the retired cross-workspace RP list.
+
+Saved record-specific paths MAY remain as server-authorized redirects only as
+defined by the RP-configuration compatibility requirement. The root redirect
+SHALL NOT grant workspace access, reveal a broader application set, or keep a
+second list or dashboard alive.
+
+#### Scenario: User follows the retired overview link
+
+- **WHEN** an admitted authenticated user requests `/your-applications`
+- **THEN** the portal replace-redirects to `/workspaces`
+- **AND** it does not load or render the retired current-user RP application overview
+- **AND** the Workspaces page applies current server-owned authorization before listing Partner workspaces
+
+#### Scenario: Retired overview is no longer discoverable
+
+- **WHEN** an admitted user opens authenticated Home or the shared primary navigation
+- **THEN** neither surface presents `Your applications`
+- **AND** the available Partner work destination is `Partner workspaces` at `/workspaces`
+
+#### Scenario: Redirect does not preserve revoked authority
+
+- **WHEN** a user's former workspace grant has been revoked and the user follows `/your-applications`
+- **THEN** the destination lists only independently authorized current workspaces
+- **AND** the redirect does not expose former Application or RP-configuration labels, identifiers, or status

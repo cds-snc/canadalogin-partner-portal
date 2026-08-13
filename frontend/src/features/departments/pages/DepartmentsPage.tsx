@@ -260,6 +260,15 @@ export const DepartmentsPage = (): FunctionComponent => {
 					noticeTitleTag="h2"
 				>
 					<Text>{t("departments.emptyBody")}</Text>
+					<div className="mt-200">
+						<Button
+							buttonId="open-create-department-modal-empty-state"
+							type="button"
+							onGcdsClick={openCreateModal}
+						>
+							{t("departments.createAction")}
+						</Button>
+					</div>
 				</Notice>
 			) : null}
 

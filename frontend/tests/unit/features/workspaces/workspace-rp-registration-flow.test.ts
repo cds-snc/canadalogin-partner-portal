@@ -4,7 +4,7 @@ import {
 	getNextWorkspaceRPRegistrationStep,
 	getPreviousWorkspaceRPRegistrationStep,
 	getRecoverableWorkspaceRPRegistrationStep,
-	getWorkspaceRPRegistrationStepPath,
+	getWorkspaceRPRegistrationStepState,
 	isWorkspaceRPRegistrationStep,
 	WORKSPACE_RP_REGISTRATION_STEPS,
 } from "@/features/workspaces/workspace-rp-registration-flow";
@@ -36,17 +36,27 @@ describe("workspace RP registration flow", () => {
 		);
 	});
 
-	it("builds resource routes without putting answers in the URL", () => {
-		const path = getWorkspaceRPRegistrationStepPath(
-			"workspace uuid",
-			"rp uuid",
-			"client-and-access"
-		);
-		expect(path).toBe(
-			"/workspaces/workspace%20uuid/applications/rp%20uuid/registration/client-and-access"
-		);
-		expect(path).not.toContain("serviceName");
+	it("recognizes registration steps but keeps confirmation outside the sequence", () => {
 		expect(isWorkspaceRPRegistrationStep("review")).toBe(true);
 		expect(isWorkspaceRPRegistrationStep("confirmation")).toBe(false);
+	});
+
+	it("links only server-completed steps while keeping current and future steps non-links", () => {
+		expect(
+			getWorkspaceRPRegistrationStepState("basics", "endpoints", "basics")
+		).toBe("available");
+		expect(
+			getWorkspaceRPRegistrationStepState("endpoints", "endpoints", "basics")
+		).toBe("current");
+		expect(
+			getWorkspaceRPRegistrationStepState(
+				"client-and-access",
+				"endpoints",
+				"basics"
+			)
+		).toBe("blocked");
+		expect(
+			getWorkspaceRPRegistrationStepState("review", "basics", "encryption")
+		).toBe("blocked");
 	});
 });

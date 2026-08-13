@@ -198,6 +198,35 @@ vi.mock("@/hooks", () => ({
 }));
 
 describe("TiersPage", () => {
+	it("keeps the create action available in the empty state", () => {
+		vi.mocked(useTierManagement).mockReturnValue({
+			createTier: vi.fn((): Promise<void> => Promise.resolve()),
+			deleteTier: vi.fn((): Promise<void> => Promise.resolve()),
+			error: null,
+			isCreating: false,
+			isDeleting: false,
+			isLoading: false,
+			isUpdating: false,
+			itemsPerPage: 10,
+			page: 1,
+			refetch: vi.fn((): Promise<unknown> => Promise.resolve()),
+			response: {
+				data: [],
+				has_more: false,
+				items_per_page: 10,
+				page: 1,
+				total_count: 0,
+			},
+			tiers: [],
+			updateTier: vi.fn((): Promise<void> => Promise.resolve()),
+		});
+
+		render(<TiersPage />);
+		fireEvent.click(screen.getByRole("button", { name: "Create tier" }));
+
+		expect(screen.getByRole("heading", { name: "Create tier" })).toBeTruthy();
+	});
+
 	it("supports modal-driven tier management", () => {
 		vi.mocked(useTierManagement).mockReturnValue({
 			createTier: vi.fn((): Promise<void> => Promise.resolve()),

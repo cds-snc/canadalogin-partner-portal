@@ -62,7 +62,6 @@ describe("workspace route catalog", () => {
 		).toEqual([
 			"overview",
 			"applicationInformation",
-			"rpApplications",
 			"access",
 			"reports",
 			"settings",
@@ -71,23 +70,12 @@ describe("workspace route catalog", () => {
 			getWorkspaceRoutesForSurface("hub", readOnlyContext, workspaceUuid).map(
 				({ id }) => id
 			)
-		).toEqual([
-			"overview",
-			"applicationInformation",
-			"rpApplications",
-			"reports",
-		]);
+		).toEqual(["overview", "applicationInformation", "reports"]);
 		expect(
 			getWorkspaceRoutesForSurface("hub", clAdminContext, workspaceUuid).map(
 				({ id }) => id
 			)
-		).toEqual([
-			"overview",
-			"applicationInformation",
-			"rpApplications",
-			"access",
-			"reports",
-		]);
+		).toEqual(["overview", "applicationInformation", "access", "reports"]);
 		expect(
 			getWorkspaceRoutesForSurface("hub", otherWorkspaceContext, workspaceUuid)
 		).toEqual([]);
@@ -107,7 +95,7 @@ describe("workspace route catalog", () => {
 		);
 		expect(
 			findWorkspaceRouteByPath(
-				`/workspaces/${workspaceUuid}/application-information/record-uuid/edit`,
+				`/workspaces/${workspaceUuid}/applications/record-uuid/edit`,
 				workspaceUuid
 			)?.id
 		).toBe("applicationInformation");
@@ -116,7 +104,13 @@ describe("workspace route catalog", () => {
 				`/workspaces/${workspaceUuid}/applications/rp-uuid/audit`,
 				workspaceUuid
 			)?.id
-		).toBe("rpApplications");
+		).toBe("applicationInformation");
+		expect(
+			findWorkspaceRouteByPath(
+				`/workspaces/${workspaceUuid}/application-information/record-uuid`,
+				workspaceUuid
+			)
+		).toBeNull();
 		expect(
 			isWorkspaceRouteActive(
 				WORKSPACE_ROUTE_CATALOG.overview,

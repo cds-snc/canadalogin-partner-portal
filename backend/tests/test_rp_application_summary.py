@@ -3,7 +3,6 @@ from types import SimpleNamespace
 from unittest.mock import AsyncMock, patch
 
 import pytest
-
 from src.app.core.authorization import CanonicalRoleCode, Capability
 from src.app.services.rp_application_summary import build_rp_application_summary
 from src.app.services.workspace_service import WorkspaceService
@@ -16,7 +15,10 @@ def test_shared_summary_is_secret_free_and_points_drafts_to_the_next_task() -> N
     summary = build_rp_application_summary(
         application={
             "uuid": APPLICATION_UUID,
+            "application_information_uuid": "018f6f83-0000-0000-0000-000000000501",
             "dnr_app_name": "Legacy benefits name",
+            "configuration_name": "Staging integration A",
+            "partner_environment": "Partner QA 2",
             "canada_login_environment": "staging",
             "onboarding_state": "draft",
             "promotion_status": "review_tracked",
@@ -35,7 +37,13 @@ def test_shared_summary_is_secret_free_and_points_drafts_to_the_next_task() -> N
 
     assert summary["serviceNameEn"] == "Benefits Portal"
     assert summary["serviceNameFr"] == "Portail des prestations"
-    assert summary["resumeTaskPath"].endswith("/registration/client-and-access")
+    assert summary["configurationName"] == "Staging integration A"
+    assert summary["partnerEnvironment"] == "Partner QA 2"
+    assert summary["resumeTaskPath"] == (
+        f"/workspaces/{WORKSPACE_UUID}/applications/"
+        "018f6f83-0000-0000-0000-000000000501/"
+        f"rp-configurations/{APPLICATION_UUID}/registration/client-and-access"
+    )
     assert "oidc_registration_payload" not in summary
     assert "offline_jwk_or_certificate" not in summary
 
@@ -56,6 +64,8 @@ def test_shared_summary_uses_a_bilingual_safe_fallback_and_hides_resume_from_rea
 
     assert summary["serviceNameEn"] == "Benefits Portal"
     assert summary["serviceNameFr"] == "Benefits Portal"
+    assert summary["configurationName"] is None
+    assert summary["partnerEnvironment"] is None
     assert summary["resumeTaskPath"] is None
 
 
@@ -105,6 +115,7 @@ async def test_configuration_read_uses_local_answers_and_redacts_offline_key_mat
         return_value={
             "uuid": APPLICATION_UUID,
             "dnr_app_name": "Benefits Portal",
+            "partner_environment": "Partner staging",
             "canada_login_environment": "staging",
             "onboarding_state": "draft",
             "promotion_status": None,
@@ -128,6 +139,7 @@ async def test_configuration_read_uses_local_answers_and_redacts_offline_key_mat
     )
 
     assert result["offlinePublicKeyProvided"] is True
+    assert result["partnerEnvironment"] == "Partner staging"
     assert result["registrationAnswers"]["offlineJwkOrCertificate"] is None
     assert str(result["registrationAnswers"]["applicationEnvironmentUrlEn"]) == ("https://benefits.canada.ca/")
     assert "legacyProviderOnlyValue" not in result["registrationAnswers"]

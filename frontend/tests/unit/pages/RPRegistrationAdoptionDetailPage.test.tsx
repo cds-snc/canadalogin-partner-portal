@@ -17,11 +17,13 @@ const translations: Record<string, string> = {
 	"common.cancel": "Cancel",
 	"common.no": "No",
 	"common.notAvailable": "Not available",
+	"common.notProvided": "Not provided",
 	"common.yes": "Yes",
 	"home.title": "Partner portal",
 	"rpRegistrationAdoption.alreadyLinkedBody": "Return to the list.",
 	"rpRegistrationAdoption.alreadyLinkedTitle": "Registration already linked",
 	"rpRegistrationAdoption.applicationInformationHint": "Optional field.",
+	"rpRegistrationAdoption.applicationRequired": "Choose an Application.",
 	"rpRegistrationAdoption.applicationInformationLabel":
 		"Application information",
 	"rpRegistrationAdoption.chooseEnvironment": "Choose an environment",
@@ -47,6 +49,7 @@ const translations: Record<string, string> = {
 	"rpRegistrationAdoption.linkAction": "Link registration to workspace",
 	"rpRegistrationAdoption.linkingAction": "Linking registration...",
 	"rpRegistrationAdoption.noApplicationInformationOption": "None selected",
+	"rpRegistrationAdoption.partnerEnvironmentContext": "Partner environment",
 	"rpRegistrationAdoption.providerUnavailableBody": "Nothing was changed.",
 	"rpRegistrationAdoption.providerUnavailableTitle":
 		"IBM registration details unavailable",
@@ -68,6 +71,9 @@ vi.mock("react-i18next", () => ({
 			}
 			if (key === "rpRegistrationAdoption.successBody") {
 				return `${String(options?.["name"] ?? "")} is linked.`;
+			}
+			if (key === "rpRegistrationAdoption.partnerEnvironmentContext") {
+				return `Partner environment: ${String(options?.["environment"] ?? "")}`;
 			}
 			return translations[key] ?? key;
 		},
@@ -137,13 +143,16 @@ vi.mock("@/features/workspaces/hooks/use-workspaces", () => ({
 
 const preview = {
 	candidate: {
+		configurationName: "Benefits production",
 		ibmApplicationId: "ibm-app-1",
 		metadataCompleteness: "incomplete" as const,
 		missingFieldNames: ["redirectUris" as const],
 		name: "Benefits Portal",
+		partnerEnvironment: null,
 		rpApplicationUuid: "rp-application-1",
 		updatedAt: null,
 	},
+	partnerEnvironment: null,
 	canadaLoginEnvironment: null,
 	conflictingFieldNames: [],
 	fields: [
@@ -192,7 +201,25 @@ describe("RPRegistrationAdoptionDetailPage", () => {
 			],
 		});
 		vi.mocked(useWorkspaceApplicationInformationList).mockReturnValue({
-			applicationInformationRecords: [],
+			applicationInformationRecords: [
+				{
+					createdAt: "2026-08-12T00:00:00Z",
+					createdBy: 42,
+					deletedAt: null,
+					id: 17,
+					isDeleted: false,
+					migrationOrTransitionPlan: "Plan",
+					overview: "Overview",
+					securityAndPrivacy: "Protected B",
+					serviceNameEn: "Benefits Portal",
+					serviceNameFr: "Portail des prestations",
+					technologyAndProtocol: "OIDC",
+					updatedAt: null,
+					usage: "Usage",
+					uuid: "application-information-1",
+					workspaceId: 3,
+				},
+			],
 			error: null,
 			isLoading: false,
 			refetch: vi.fn(),
@@ -206,6 +233,10 @@ describe("RPRegistrationAdoptionDetailPage", () => {
 			screen.getByRole("heading", { name: "IBM Verify remains unchanged" })
 		).toBeTruthy();
 		expect(screen.getByText(/benefits.example\/callback/i)).toBeTruthy();
+		expect(screen.getByText("Partner environment: Not provided")).toBeTruthy();
+		expect(
+			screen.queryByRole("textbox", { name: /partner environment/i })
+		).toBeNull();
 	});
 
 	it("requires the workspace and unresolved environment before linking", () => {
@@ -222,7 +253,7 @@ describe("RPRegistrationAdoptionDetailPage", () => {
 
 	it("links the retained record and exposes the workspace and RP destinations", async () => {
 		linkToWorkspaceMock.mockResolvedValue({
-			applicationInformationUuid: null,
+			applicationInformationUuid: "application-information-1",
 			canadaLoginEnvironment: "production",
 			conflictingFieldNames: [],
 			departmentUuid: "department-1",
@@ -230,6 +261,8 @@ describe("RPRegistrationAdoptionDetailPage", () => {
 			ibmApplicationId: "ibm-app-1",
 			idempotentReplay: false,
 			name: "Benefits Portal",
+			configurationName: "Benefits production",
+			partnerEnvironment: null,
 			preservedLocalFieldNames: [],
 			rpApplicationUuid: "rp-application-1",
 			workspaceUuid: "workspace-1",
@@ -238,6 +271,9 @@ describe("RPRegistrationAdoptionDetailPage", () => {
 
 		fireEvent.input(screen.getByLabelText("Partner workspace"), {
 			target: { value: "workspace-1" },
+		});
+		fireEvent.input(screen.getByLabelText("Application information"), {
+			target: { value: "application-information-1" },
 		});
 		fireEvent.input(screen.getByLabelText("CanadaLogin environment"), {
 			target: { value: "production" },
@@ -258,11 +294,12 @@ describe("RPRegistrationAdoptionDetailPage", () => {
 			document.activeElement
 		);
 		expect(linkToWorkspaceMock).toHaveBeenCalledWith("rp-application-1", {
-			applicationInformationUuid: null,
+			applicationInformationUuid: "application-information-1",
 			canadaLoginEnvironment: "production",
 			workspaceUuid: "workspace-1",
 		});
 		expect(screen.getByRole("link", { name: "View application" })).toBeTruthy();
+		expect(screen.getByText("Partner environment: Not provided")).toBeTruthy();
 		expect(screen.getByRole("link", { name: "View workspace" })).toBeTruthy();
 	});
 
@@ -276,6 +313,9 @@ describe("RPRegistrationAdoptionDetailPage", () => {
 		render(<RPRegistrationAdoptionDetailPage />);
 		fireEvent.input(screen.getByLabelText("Partner workspace"), {
 			target: { value: "workspace-1" },
+		});
+		fireEvent.input(screen.getByLabelText("Application information"), {
+			target: { value: "application-information-1" },
 		});
 		fireEvent.input(screen.getByLabelText("CanadaLogin environment"), {
 			target: { value: "production" },

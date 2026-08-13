@@ -29,6 +29,8 @@ vi.mock("@/fetch/rp-applications", () => ({
 const workspaceUuid = "workspace-1";
 const rpApplicationUuid = "rp-1";
 const draft = {
+	applicationInformationUuid: "application-information-uuid-1",
+	configurationName: "Test integration A",
 	onboardingState: "draft" as const,
 	registrationAnswers: {
 		canadaLoginEnvironment: "test" as const,
@@ -81,7 +83,10 @@ describe("useWorkspaceRPRegistrationActions", () => {
 			await result.current.createDraft(
 				workspaceUuid,
 				{
+					applicationInformationUuid: "application-information-uuid-1",
 					canadaLoginEnvironment: "test",
+					configurationName: "Partner test integration",
+					partnerEnvironment: "Partner test",
 					serviceNameEn: "Benefits Portal",
 					serviceNameFr: "Portail des prestations",
 				},
@@ -140,7 +145,8 @@ describe("useWorkspaceRPRegistrationActions", () => {
 		);
 		await waitFor(() => expect(result.current.draft).toEqual(draft));
 
-		let refreshedDraft: WorkspaceRPApplicationRegistrationDraftRead | null = draft;
+		let refreshedDraft: WorkspaceRPApplicationRegistrationDraftRead | null =
+			draft;
 		await act(async () => {
 			refreshedDraft = await result.current.refetch();
 		});

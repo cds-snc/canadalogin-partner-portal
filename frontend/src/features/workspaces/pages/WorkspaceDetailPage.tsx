@@ -3,10 +3,6 @@ import { useTranslation } from "react-i18next";
 import type { FunctionComponent } from "@/common/types";
 import { Card, Grid, Heading, Link, Notice, Text } from "@/components/ui";
 import { getRequestErrorNotice } from "@/fetch";
-import {
-	getEffectiveRoleForWorkspace,
-	ROLE_LABEL_KEYS,
-} from "@/features/auth/authorization";
 import { useSession } from "@/hooks";
 import { useWorkspace } from "../hooks/use-workspace";
 import { getWorkspaceOnboardingStateLabel } from "../onboarding-display";
@@ -18,9 +14,8 @@ import {
 
 const WORKSPACE_TASK_DESCRIPTION_KEYS = {
 	access: "workspaces.taskDescriptions.access",
-	applicationInformation: "workspaces.taskDescriptions.applicationInformation",
+	applicationInformation: "workspaces.taskDescriptions.applications",
 	reports: "workspaces.taskDescriptions.reports",
-	rpApplications: "workspaces.taskDescriptions.rpApplications",
 	settings: "workspaces.taskDescriptions.settings",
 } as const;
 
@@ -35,7 +30,7 @@ const isWorkspaceTaskRoute = (
 const WORKSPACE_TASK_GROUPS = [
 	{
 		id: "setupAndApplications",
-		routeIds: ["applicationInformation", "rpApplications"],
+		routeIds: ["applicationInformation"],
 		titleKey: "workspaces.taskGroups.setupAndApplications",
 	},
 	{
@@ -77,10 +72,6 @@ export const WorkspaceDetailPage = (): FunctionComponent => {
 				? t("workspaces.updatedSuccess")
 				: null;
 	const authorizationContext = currentUser?.authorizationContext;
-	const effectiveRole = getEffectiveRoleForWorkspace(
-		authorizationContext,
-		workspaceUuid
-	);
 	const taskRoutes = getWorkspaceRoutesForSurface(
 		"hub",
 		authorizationContext,
@@ -93,15 +84,6 @@ export const WorkspaceDetailPage = (): FunctionComponent => {
 				{workspace?.name.trim() || t("workspaces.workspaceLabel")}
 			</Heading>
 			<Text>{t("workspaces.detailSummary")}</Text>
-			{effectiveRole ? (
-				<Text>
-					{t("authorization.activeWorkspaceNameContext", {
-						role: t(ROLE_LABEL_KEYS[effectiveRole]),
-						workspaceName:
-							workspace?.name.trim() || t("workspaces.workspaceLabel"),
-					})}
-				</Text>
-			) : null}
 
 			{successMessage ? (
 				<Notice
@@ -135,13 +117,6 @@ export const WorkspaceDetailPage = (): FunctionComponent => {
 
 			{workspace ? (
 				<div className="grid gap-300">
-					<Heading tag="h2">{t("workspaces.statusTitle")}</Heading>
-					<Text>
-						{`${t("workspaces.onboardingStateLabel")}: ${workspace.onboardingState?.trim() ? getWorkspaceOnboardingStateLabel(t, workspace.onboardingState) : t("common.notAvailable")}`}
-					</Text>
-					<Text>
-						{`${t("workspaces.descriptionLabel")}: ${workspace.description ?? t("workspaces.noDescriptionText")}`}
-					</Text>
 					{WORKSPACE_TASK_GROUPS.map((group) => {
 						const groupRoutes = taskRoutes.filter((route) =>
 							(group.routeIds as ReadonlyArray<string>).includes(route.id)
@@ -167,6 +142,15 @@ export const WorkspaceDetailPage = (): FunctionComponent => {
 							</section>
 						);
 					})}
+					<section>
+						<Heading tag="h2">{t("workspaces.statusTitle")}</Heading>
+						<Text>
+							{`${t("workspaces.onboardingStateLabel")}: ${workspace.onboardingState?.trim() ? getWorkspaceOnboardingStateLabel(t, workspace.onboardingState) : t("common.notAvailable")}`}
+						</Text>
+						{workspace.description?.trim() ? (
+							<Text>{`${t("workspaces.descriptionLabel")}: ${workspace.description}`}</Text>
+						) : null}
+					</section>
 					<Link href="/workspaces">{t("workspaces.chooseAnother")}</Link>
 				</div>
 			) : null}

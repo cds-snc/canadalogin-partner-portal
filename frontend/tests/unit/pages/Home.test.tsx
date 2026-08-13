@@ -29,8 +29,6 @@ vi.mock("react-i18next", () => ({
 				"home.authenticated.reportsLinkDescription": "Open reports.",
 				"home.authenticated.summary": "Choose a task area.",
 				"home.authenticated.workspacesLinkDescription": "Choose a workspace.",
-				"home.authenticated.yourApplicationsLinkDescription":
-					"Review applications.",
 				"home.featureSectionTitle": "Manage RP applications",
 				"home.heroEyebrow": "Partner portal",
 				"home.heroTitle":
@@ -187,13 +185,9 @@ describe("Home", () => {
 
 		expect(screen.getByRole("heading", { name: "Partner work" })).toBeTruthy();
 		expect(
-			screen
-				.getByRole("link", { name: "Your applications" })
-				.getAttribute("href")
-		).toBe("/your-applications");
-		expect(
 			screen.getByRole("link", { name: "Workspaces" }).getAttribute("href")
 		).toBe("/workspaces");
+		expect(screen.queryByText("Continue partner work.")).toBeNull();
 		expect(
 			screen.queryByRole("heading", { name: "Administration" })
 		).toBeNull();

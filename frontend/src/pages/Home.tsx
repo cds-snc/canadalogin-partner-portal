@@ -27,22 +27,11 @@ const HOME_TASK_AREA_IDS = [
 	"administration",
 ] as const satisfies ReadonlyArray<TaskAreaId>;
 
-const HOME_TASK_AREA_DESCRIPTION_KEYS: Readonly<Record<TaskAreaId, string>> = {
-	administration: "home.authenticated.administrationDescription",
-	onboardingOversight: "home.authenticated.onboardingOversightDescription",
-	partnerWork: "home.authenticated.partnerWorkDescription",
-	reports: "home.authenticated.reportsDescription",
-};
-
 const HOME_ROUTE_DESCRIPTION_KEYS: Readonly<
 	Record<
 		Extract<
 			RouteDefinition["id"],
-			| "administration"
-			| "onboardingOversight"
-			| "reports"
-			| "workspaces"
-			| "yourApplications"
+			"administration" | "onboardingOversight" | "reports" | "workspaces"
 		>,
 		string
 	>
@@ -51,16 +40,10 @@ const HOME_ROUTE_DESCRIPTION_KEYS: Readonly<
 	onboardingOversight: "home.authenticated.onboardingOversightLinkDescription",
 	reports: "home.authenticated.reportsLinkDescription",
 	workspaces: "home.authenticated.workspacesLinkDescription",
-	yourApplications: "home.authenticated.yourApplicationsLinkDescription",
 };
 
 type HomeRoute = RouteDefinition & {
-	id:
-		| "administration"
-		| "onboardingOversight"
-		| "reports"
-		| "workspaces"
-		| "yourApplications";
+	id: "administration" | "onboardingOversight" | "reports" | "workspaces";
 };
 
 const isHomeRoute = (route: RouteDefinition): route is HomeRoute =>
@@ -115,11 +98,6 @@ export const Home = (): FunctionComponent => {
 							<Heading tag="h2">
 								{String(t(TASK_AREA_CATALOG[taskAreaId].labelKey as never))}
 							</Heading>
-							<Text>
-								{String(
-									t(HOME_TASK_AREA_DESCRIPTION_KEYS[taskAreaId] as never)
-								)}
-							</Text>
 							<Grid columns="1fr" columnsTablet="1fr 1fr" tag="div">
 								{routes.map((route) => (
 									<Card

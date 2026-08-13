@@ -22,6 +22,26 @@ class RPApplication(Base):
             "('basics', 'endpoints', 'client-and-access', 'signing', 'encryption')",
             name="ck_rp_application_registration_last_completed_step",
         ),
+        CheckConstraint(
+            "(workspace_id IS NULL AND application_information_id IS NULL) OR (workspace_id IS NOT NULL AND application_information_id IS NOT NULL)",
+            name="ck_rp_application_hierarchy_pair",
+        ),
+        CheckConstraint(
+            "length(trim(configuration_name)) > 0",
+            name="ck_rp_application_configuration_name_nonblank",
+        ),
+        CheckConstraint(
+            "partner_environment IS NULL OR length(trim(partner_environment)) > 0",
+            name="ck_rp_application_partner_environment_nonblank",
+        ),
+        CheckConstraint(
+            "workspace_id IS NULL OR is_deleted OR deleted_at IS NOT NULL OR "
+            "(department_id IS NOT NULL AND canada_login_environment IS NOT NULL AND "
+            "canada_login_environment IN "
+            "('test', 'staging', 'production') AND "
+            "length(trim(configuration_name)) > 0)",
+            name="ck_rp_application_partner_required_fields",
+        ),
         Index(
             "uq_rp_application_registration_creation_key",
             "registration_creation_key",
@@ -43,6 +63,14 @@ class RPApplication(Base):
         nullable=True,
     )
     dnr_app_name: Mapped[str] = mapped_column(String(128), nullable=False)
+    configuration_name: Mapped[str] = mapped_column(String(128), nullable=False)
+    partner_environment: Mapped[str | None] = mapped_column(String(128), nullable=True, default=None)
+    source_rp_configuration_id: Mapped[int | None] = mapped_column(
+        ForeignKey("rp_application.id"),
+        index=True,
+        nullable=True,
+        default=None,
+    )
     canada_login_environment: Mapped[str | None] = mapped_column(String(32), nullable=True, default=None)
     status: Mapped[str | None] = mapped_column(String(64), nullable=True, default=None)
     created_by: Mapped[int | None] = mapped_column(ForeignKey("user.id"), nullable=True, default=None)

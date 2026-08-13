@@ -665,28 +665,28 @@ class UserService:
         ).all()
 
         global_user_ids: set[int] = set()
-        for row in global_rows:
-            if row.user_id in global_user_ids:
+        for global_row in global_rows:
+            if global_row.user_id in global_user_ids:
                 raise BadRequestException("User authorization state is inconsistent")
-            global_user_ids.add(row.user_id)
+            global_user_ids.add(global_row.user_id)
 
         workspace_access_by_user: dict[
             int,
             list[UserDirectoryWorkspaceAccessRead],
         ] = {}
         workspace_keys_by_user: dict[int, set[uuid_pkg.UUID]] = {}
-        for row in partner_rows:
-            if row.user_id in global_user_ids:
+        for partner_row in partner_rows:
+            if partner_row.user_id in global_user_ids:
                 raise BadRequestException("User authorization state is inconsistent")
-            workspace_keys = workspace_keys_by_user.setdefault(row.user_id, set())
-            if row.workspace_uuid in workspace_keys:
+            workspace_keys = workspace_keys_by_user.setdefault(partner_row.user_id, set())
+            if partner_row.workspace_uuid in workspace_keys:
                 raise BadRequestException("User authorization state is inconsistent")
-            workspace_keys.add(row.workspace_uuid)
-            workspace_access_by_user.setdefault(row.user_id, []).append(
+            workspace_keys.add(partner_row.workspace_uuid)
+            workspace_access_by_user.setdefault(partner_row.user_id, []).append(
                 UserDirectoryWorkspaceAccessRead(
-                    workspace_uuid=row.workspace_uuid,
-                    workspace_name=row.workspace_name,
-                    role=row.role,
+                    workspace_uuid=partner_row.workspace_uuid,
+                    workspace_name=partner_row.workspace_name,
+                    role=partner_row.role,
                 )
             )
 

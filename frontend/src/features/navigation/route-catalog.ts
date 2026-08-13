@@ -1,14 +1,12 @@
 import {
 	canReadWorkspace,
 	hasCapability,
-	hasPartnerAccess,
 	type AuthorizationContext,
 	type Capability,
 } from "@/features/auth/authorization";
 
 export const ROUTE_IDS = [
 	"home",
-	"yourApplications",
 	"workspaces",
 	"rpRegistrationAdoption",
 	"reports",
@@ -46,7 +44,6 @@ export type RouteVisibility =
 	| { kind: "authenticated" }
 	| { kind: "anyCapability"; capabilities: ReadonlyArray<Capability> }
 	| { kind: "capability"; capability: Capability }
-	| { kind: "partnerAccess" }
 	| { kind: "public" }
 	| { kind: "workspaceRead" };
 
@@ -240,18 +237,6 @@ export const ROUTE_CATALOG = {
 		surfaces: ["primaryNavigation", "home", "breadcrumb"],
 		visibility: { kind: "workspaceRead" },
 	},
-	yourApplications: {
-		activePathPrefixes: ["/your-applications"],
-		breadcrumbRouteIds: ["home"],
-		hiddenReasonKey: "navigation.hidden.partnerAccessRequired",
-		id: "yourApplications",
-		labelKey: "nav.dashboard",
-		parentTaskArea: "partnerWork",
-		path: "/your-applications",
-		returnRouteId: "home",
-		surfaces: ["primaryNavigation", "home", "breadcrumb"],
-		visibility: { kind: "partnerAccess" },
-	},
 } as const satisfies Readonly<Record<RouteId, RouteDefinition>>;
 
 export const TASK_AREA_CATALOG = {
@@ -280,7 +265,7 @@ export const TASK_AREA_CATALOG = {
 	partnerWork: {
 		id: "partnerWork",
 		labelKey: "nav.partnerWork",
-		routeIds: ["yourApplications", "workspaces"],
+		routeIds: ["workspaces"],
 	},
 } as const satisfies Readonly<Record<TaskAreaId, TaskAreaDefinition>>;
 
@@ -315,8 +300,6 @@ export const isRouteVisible = (
 			);
 		case "capability":
 			return hasCapability(authorizationContext, route.visibility.capability);
-		case "partnerAccess":
-			return hasPartnerAccess(authorizationContext);
 		case "public":
 			return true;
 		case "workspaceRead":

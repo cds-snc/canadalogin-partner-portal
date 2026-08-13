@@ -423,6 +423,7 @@ export const OnboardingOversightQueuePage = (): FunctionComponent => {
 			{!errorNotice && tableRows.length > 0 ? (
 				<DataTable
 					columns={columns}
+					filter={false}
 					itemLabel={t("onboardingOversight.queue.tableTitle")}
 					rows={tableRows}
 					title={t("onboardingOversight.queue.tableTitle")}

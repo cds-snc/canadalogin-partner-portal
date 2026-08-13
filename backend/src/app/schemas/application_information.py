@@ -2,7 +2,7 @@ import uuid as uuid_pkg
 from datetime import datetime
 from typing import Literal
 
-from pydantic import BaseModel, ConfigDict, EmailStr, Field
+from pydantic import BaseModel, ConfigDict, EmailStr, Field, field_validator
 from pydantic.alias_generators import to_camel
 
 from ..core.schemas import PersistentDeletion, TimestampSchema
@@ -112,12 +112,32 @@ class ApplicationInformationContactBase(BaseModel):
         populate_by_name=True,
     )
 
-    name_en: str = Field(..., min_length=1, max_length=255)
-    name_fr: str = Field(..., min_length=1, max_length=255)
     responsibility_en: str = Field(..., min_length=1, max_length=255)
     responsibility_fr: str = Field(..., min_length=1, max_length=255)
     email: EmailStr
     phone_number: str | None = Field(None, max_length=50)
+    alternate_phone_number: str | None = Field(None, max_length=50)
+
+
+class ApplicationInformationContactRecordRead(ApplicationInformationContactBase, TimestampSchema, PersistentDeletion):
+    model_config = ConfigDict(
+        validate_by_name=True,
+        validate_by_alias=True,
+        alias_generator=to_camel,
+        populate_by_name=True,
+    )
+
+    id: int
+    uuid: uuid_pkg.UUID
+    application_information_id: int
+    created_by: int | None = None
+    name_en: str | None = Field(default=None, min_length=1, max_length=255)
+    name_fr: str | None = Field(default=None, min_length=1, max_length=255)
+    first_name: str | None = Field(default=None, min_length=1, max_length=100)
+    last_name: str | None = Field(default=None, min_length=1, max_length=100)
+    alternate_phone_number: str | None = Field(default=None, max_length=50)
+    identity_confirmed_at: datetime | None = None
+    identity_confirmed_by: int | None = None
 
 
 class ApplicationInformationContactRead(ApplicationInformationContactBase, TimestampSchema, PersistentDeletion):
@@ -132,6 +152,13 @@ class ApplicationInformationContactRead(ApplicationInformationContactBase, Times
     uuid: uuid_pkg.UUID
     application_information_id: int
     created_by: int | None = None
+    name_en: str | None = Field(default=None, min_length=1, max_length=255)
+    name_fr: str | None = Field(default=None, min_length=1, max_length=255)
+    first_name: str | None = Field(default=None, min_length=1, max_length=100)
+    last_name: str | None = Field(default=None, min_length=1, max_length=100)
+    identity_confirmed_at: datetime | None = None
+    identity_confirmed_by_user_uuid: uuid_pkg.UUID | None = None
+    identity_confirmation_required: bool
 
 
 class ApplicationInformationContactCreate(ApplicationInformationContactBase):
@@ -143,18 +170,36 @@ class ApplicationInformationContactCreate(ApplicationInformationContactBase):
         populate_by_name=True,
     )
 
+    first_name: str = Field(..., min_length=1, max_length=100)
+    last_name: str = Field(..., min_length=1, max_length=100)
+
+    @field_validator("first_name", "last_name", "responsibility_en", "responsibility_fr", mode="before")
+    @classmethod
+    def normalize_required_text(cls, value: object) -> object:
+        if isinstance(value, str):
+            normalized = value.strip()
+            if not normalized:
+                raise ValueError("value must not be blank")
+            return normalized
+        return value
+
 
 class ApplicationInformationContactCreateInternal(BaseModel):
     model_config = ConfigDict(arbitrary_types_allowed=True)
 
     application_information_id: int
     created_by: int | None = None
-    name_en: str
-    name_fr: str
+    name_en: str | None = None
+    name_fr: str | None = None
+    first_name: str = Field(..., min_length=1, max_length=100)
+    last_name: str = Field(..., min_length=1, max_length=100)
     responsibility_en: str
     responsibility_fr: str
     email: EmailStr
     phone_number: str | None = None
+    alternate_phone_number: str | None = Field(default=None, max_length=50)
+    identity_confirmed_at: datetime | None = None
+    identity_confirmed_by: int | None = Field(default=None, ge=1)
 
 
 class ApplicationInformationContactUpdate(BaseModel):
@@ -166,12 +211,23 @@ class ApplicationInformationContactUpdate(BaseModel):
         populate_by_name=True,
     )
 
-    name_en: str | None = Field(None, min_length=1, max_length=255)
-    name_fr: str | None = Field(None, min_length=1, max_length=255)
+    first_name: str | None = Field(None, min_length=1, max_length=100)
+    last_name: str | None = Field(None, min_length=1, max_length=100)
     responsibility_en: str | None = Field(None, min_length=1, max_length=255)
     responsibility_fr: str | None = Field(None, min_length=1, max_length=255)
     email: EmailStr | None = None
     phone_number: str | None = Field(None, max_length=50)
+    alternate_phone_number: str | None = Field(None, max_length=50)
+
+    @field_validator("first_name", "last_name", "responsibility_en", "responsibility_fr", mode="before")
+    @classmethod
+    def normalize_optional_text(cls, value: object) -> object:
+        if isinstance(value, str):
+            normalized = value.strip()
+            if not normalized:
+                raise ValueError("value must not be blank")
+            return normalized
+        return value
 
 
 class ApplicationInformationContactUpdateInternal(BaseModel):
@@ -179,10 +235,15 @@ class ApplicationInformationContactUpdateInternal(BaseModel):
 
     name_en: str | None = None
     name_fr: str | None = None
+    first_name: str | None = Field(default=None, min_length=1, max_length=100)
+    last_name: str | None = Field(default=None, min_length=1, max_length=100)
     responsibility_en: str | None = None
     responsibility_fr: str | None = None
     email: EmailStr | None = None
     phone_number: str | None = None
+    alternate_phone_number: str | None = Field(default=None, max_length=50)
+    identity_confirmed_at: datetime | None = None
+    identity_confirmed_by: int | None = Field(default=None, ge=1)
     updated_at: datetime
 
 
@@ -330,9 +391,7 @@ class ApplicationInformationReviewChecklistSummaryRead(
     reviewed_by_user_uuid: uuid_pkg.UUID | None = None
 
 
-class ApplicationInformationReviewChecklistSummaryWrite(
-    ApplicationInformationReviewChecklistSummaryBase
-):
+class ApplicationInformationReviewChecklistSummaryWrite(ApplicationInformationReviewChecklistSummaryBase):
     model_config = ConfigDict(
         extra="forbid",
         validate_by_name=True,
@@ -357,9 +416,7 @@ class ApplicationInformationReviewChecklistSummaryCreateInternal(BaseModel):
     rationale: str | None = Field(default=None, min_length=1, max_length=4000)
 
 
-class ApplicationInformationReviewChecklistSummaryUpdate(
-    ApplicationInformationReviewChecklistSummaryBase
-):
+class ApplicationInformationReviewChecklistSummaryUpdate(ApplicationInformationReviewChecklistSummaryBase):
     model_config = ConfigDict(
         extra="forbid",
         validate_by_name=True,
@@ -369,9 +426,7 @@ class ApplicationInformationReviewChecklistSummaryUpdate(
     )
 
 
-class ApplicationInformationReviewChecklistSummaryUpdateInternal(
-    ApplicationInformationReviewChecklistSummaryUpdate
-):
+class ApplicationInformationReviewChecklistSummaryUpdateInternal(ApplicationInformationReviewChecklistSummaryUpdate):
     model_config = ConfigDict(arbitrary_types_allowed=True)
 
     reviewed_by_user_id: int | None = None

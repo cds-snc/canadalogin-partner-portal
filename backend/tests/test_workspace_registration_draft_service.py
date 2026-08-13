@@ -4,11 +4,11 @@ from pathlib import Path
 from unittest.mock import AsyncMock, patch
 
 import pytest
-
 from src.app.core.exceptions.http_exceptions import (
     BadRequestException,
     RegistrationDraftConflictException,
 )
+from src.app.core.logging_privacy import hash_log_value
 from src.app.schemas.onboarding import (
     WorkspaceRPApplicationOnboardingLifecycleTransitionRequest,
 )
@@ -41,6 +41,10 @@ def _workspace() -> dict:
 
 def _draft(**overrides: object) -> dict:
     return {
+        "application_information_id": 13,
+        "configuration_name": "Test integration A",
+        "partner_environment": "Partner test",
+        "canada_login_environment": "test",
         "created_by": 42,
         "dnr_app_name": "Benefits Portal",
         "is_deleted": False,
@@ -60,6 +64,9 @@ def _draft(**overrides: object) -> dict:
 
 def _create_payload() -> WorkspaceRPApplicationRegistrationDraftCreate:
     return WorkspaceRPApplicationRegistrationDraftCreate(
+        applicationInformationUuid=APPLICATION_INFORMATION_UUID,
+        configurationName="Test integration A",
+        partnerEnvironment="Partner test",
         canadaLoginEnvironment="test",
         serviceNameEn="Benefits Portal",
         serviceNameFr="Portail des prestations",
@@ -69,12 +76,18 @@ def _create_payload() -> WorkspaceRPApplicationRegistrationDraftCreate:
 def _service() -> WorkspaceService:
     service = WorkspaceService()
     service._require_workspace_capability = AsyncMock(return_value=(_workspace(), None))  # type: ignore[method-assign]
-    service._resolve_workspace_application_information_id = AsyncMock(return_value=None)  # type: ignore[method-assign]
+    service._resolve_workspace_application_information_id = AsyncMock(return_value=13)  # type: ignore[method-assign]
+    service._resolve_workspace_application_information_uuid = AsyncMock(  # type: ignore[method-assign]
+        return_value=APPLICATION_INFORMATION_UUID
+    )
     return service
 
 
 def _complete_answers() -> dict:
     return WorkspaceRPApplicationRegistrationCreate(
+        applicationInformationUuid=APPLICATION_INFORMATION_UUID,
+        configurationName="Test integration A",
+        partnerEnvironment="Partner test",
         canadaLoginEnvironment="test",
         serviceNameEn="Benefits Portal",
         serviceNameFr="Portail des prestations",
@@ -103,7 +116,11 @@ def _complete_answers() -> dict:
         messageDecryptionTargets=["id_token"],
         messageDecryptionKeyManagementAlgorithms=["RSA-OAEP-256"],
         messageDecryptionContentAlgorithms=["A256GCM"],
-    ).model_dump(mode="json", exclude_none=True)
+    ).model_dump(
+        mode="json",
+        exclude={"application_information_uuid", "configuration_name", "partner_environment"},
+        exclude_none=True,
+    )
 
 
 @pytest.mark.asyncio
@@ -153,12 +170,33 @@ async def test_creation_key_reuse_with_changed_basics_link_fails_safely(mock_db)
     service._resolve_workspace_application_information_id = AsyncMock(return_value=14)  # type: ignore[method-assign]
     payload = WorkspaceRPApplicationRegistrationDraftCreate(
         applicationInformationUuid=APPLICATION_INFORMATION_UUID,
+        configurationName="Test integration A",
+        partnerEnvironment="Partner test",
         canadaLoginEnvironment="test",
         serviceNameEn="Benefits Portal",
         serviceNameFr="Portail des prestations",
     )
     with patch("src.app.services.workspace_service.crud_rp_applications") as applications:
         applications.get = AsyncMock(return_value=_draft(application_information_id=13))
+
+        with pytest.raises(RegistrationDraftConflictException) as exc_info:
+            await service.create_workspace_rp_application_registration_draft(
+                db=mock_db,
+                workspace_uuid=WORKSPACE_UUID,
+                payload=payload,
+                current_user={"id": 42},
+                registration_creation_key=CREATION_KEY,
+            )
+
+    assert exc_info.value.code == "registration_draft_creation_conflict"
+
+
+@pytest.mark.asyncio
+async def test_creation_key_reuse_with_changed_partner_environment_fails_safely(mock_db) -> None:
+    service = _service()
+    payload = _create_payload().model_copy(update={"partner_environment": "Partner test 2"})
+    with patch("src.app.services.workspace_service.crud_rp_applications") as applications:
+        applications.get = AsyncMock(return_value=_draft())
 
         with pytest.raises(RegistrationDraftConflictException) as exc_info:
             await service.create_workspace_rp_application_registration_draft(
@@ -196,9 +234,14 @@ async def test_new_draft_starts_at_version_one_with_basics_completed(
     create_object = applications.create.await_args.kwargs["object"]
     assert create_object.registration_draft_version == 1
     assert create_object.registration_last_completed_step == "basics"
+    assert create_object.partner_environment == "Partner test"
+    assert "partner_environment" not in create_object.oidc_registration_payload
     assert str(create_object.registration_creation_key) == CREATION_KEY
     assert result["registration_last_completed_step"] == "basics"
     assert "event=draft_create" in caplog.text
+    assert f"application_information_reference={hash_log_value(APPLICATION_INFORMATION_UUID)}" in caplog.text
+    assert APPLICATION_INFORMATION_UUID not in caplog.text
+    assert WORKSPACE_UUID not in caplog.text
     assert "changed_field_names=canada_login_environment,service_name_en,service_name_fr" in caplog.text
     assert "Benefits Portal" not in caplog.text
     assert "Portail des prestations" not in caplog.text
@@ -288,6 +331,8 @@ async def test_completed_step_update_is_versioned_and_path_scope_conditional(
     assert update_kwargs["return_columns"] == [
         "uuid",
         "dnr_app_name",
+        "configuration_name",
+        "partner_environment",
         "oidc_registration_payload",
         "onboarding_state",
         "registration_draft_version",
@@ -301,8 +346,91 @@ async def test_completed_step_update_is_versioned_and_path_scope_conditional(
         "https://prestations.canada.ca/rappel",
     ]
     assert "event=draft_save" in caplog.text
+    assert f"application_information_reference={hash_log_value(APPLICATION_INFORMATION_UUID)}" in caplog.text
+    assert APPLICATION_INFORMATION_UUID not in caplog.text
+    assert APPLICATION_UUID not in caplog.text
     assert "step_id=endpoints" in caplog.text
     assert "https://benefits.canada.ca" not in caplog.text
+
+
+@pytest.mark.asyncio
+async def test_basics_update_changes_configuration_identity_without_application_identity(mock_db) -> None:
+    service = _service()
+    existing = _draft()
+    updated = _draft(
+        configuration_name="Partner test B",
+        registration_draft_version=2,
+    )
+    service._get_workspace_rp_application = AsyncMock(return_value=existing)  # type: ignore[method-assign]
+    payload = WorkspaceRPApplicationRegistrationDraftPatch(
+        stepId="basics",
+        saveMode="completeStep",
+        expectedDraftVersion=1,
+        configurationName=" Partner test B ",
+        registrationAnswers={
+            "canadaLoginEnvironment": "test",
+            "serviceNameEn": "Benefits Portal",
+            "serviceNameFr": "Portail des prestations",
+        },
+    )
+
+    with patch("src.app.services.workspace_service.crud_rp_applications") as applications:
+        applications.update = AsyncMock(return_value=updated)
+        result = await service.update_workspace_rp_application_registration_draft(
+            db=mock_db,
+            workspace_uuid=WORKSPACE_UUID,
+            rp_application_uuid=APPLICATION_UUID,
+            payload=payload,
+            current_user={"id": 42},
+        )
+
+    update_object = applications.update.await_args.kwargs["object"]
+    assert update_object["configuration_name"] == "Partner test B"
+    assert update_object["canada_login_environment"] == "test"
+    assert result["configuration_name"] == "Partner test B"
+
+
+@pytest.mark.asyncio
+async def test_resaving_an_earlier_completed_step_relocks_dependent_steps(mock_db) -> None:
+    service = _service()
+    existing = _draft(
+        registration_draft_version=6,
+        registration_last_completed_step="encryption",
+        oidc_registration_payload=_complete_answers(),
+    )
+    updated = _draft(
+        registration_draft_version=7,
+        registration_last_completed_step="basics",
+        oidc_registration_payload={
+            **_complete_answers(),
+            "canada_login_environment": "production",
+        },
+    )
+    service._get_workspace_rp_application = AsyncMock(return_value=existing)  # type: ignore[method-assign]
+    payload = WorkspaceRPApplicationRegistrationDraftPatch(
+        stepId="basics",
+        saveMode="completeStep",
+        expectedDraftVersion=6,
+        registrationAnswers={
+            "canadaLoginEnvironment": "production",
+            "serviceNameEn": "Benefits Portal",
+            "serviceNameFr": "Portail des prestations",
+        },
+    )
+
+    with patch("src.app.services.workspace_service.crud_rp_applications") as applications:
+        applications.update = AsyncMock(return_value=updated)
+        result = await service.update_workspace_rp_application_registration_draft(
+            db=mock_db,
+            workspace_uuid=WORKSPACE_UUID,
+            rp_application_uuid=APPLICATION_UUID,
+            payload=payload,
+            current_user={"id": 42},
+        )
+
+    update_object = applications.update.await_args.kwargs["object"]
+    assert update_object["registration_last_completed_step"] == "basics"
+    assert result["registration_last_completed_step"] == "basics"
 
 
 @pytest.mark.asyncio
@@ -387,6 +515,8 @@ async def test_final_submission_is_complete_versioned_and_atomic(mock_db, caplog
     assert update["return_columns"] == [
         "uuid",
         "dnr_app_name",
+        "configuration_name",
+        "partner_environment",
         "oidc_registration_payload",
         "onboarding_state",
         "registration_draft_version",
@@ -401,6 +531,9 @@ async def test_final_submission_is_complete_versioned_and_atomic(mock_db, caplog
         "service_name_fr": "Portail des prestations",
     }
     assert "event=final_submit" in caplog.text
+    assert f"application_information_reference={hash_log_value(APPLICATION_INFORMATION_UUID)}" in caplog.text
+    assert APPLICATION_INFORMATION_UUID not in caplog.text
+    assert APPLICATION_UUID not in caplog.text
     assert "result=success" in caplog.text
     assert "correlation_id=request-789" in caplog.text
     assert "Benefits Portal" not in caplog.text
@@ -440,6 +573,35 @@ async def test_final_submission_rejects_stale_or_incomplete_draft_without_write(
             )
 
     assert conflict.value.code == "registration_draft_version_conflict"
+    applications.update.assert_not_awaited()
+
+
+@pytest.mark.asyncio
+async def test_final_submission_rejects_complete_answers_when_partner_environment_is_missing(mock_db) -> None:
+    service = _service()
+    service._get_workspace_rp_application = AsyncMock(  # type: ignore[method-assign]
+        return_value=_draft(
+            partner_environment=None,
+            registration_draft_version=3,
+            registration_last_completed_step="encryption",
+            oidc_registration_payload=_complete_answers(),
+        )
+    )
+
+    with patch("src.app.services.workspace_service.crud_rp_applications") as applications:
+        applications.update = AsyncMock()
+        with pytest.raises(BadRequestException, match="questionnaire must be complete"):
+            await service.transition_workspace_rp_application_onboarding_state(
+                db=mock_db,
+                workspace_uuid=WORKSPACE_UUID,
+                rp_application_uuid=APPLICATION_UUID,
+                payload=WorkspaceRPApplicationOnboardingLifecycleTransitionRequest(
+                    targetState="submitted",
+                    expectedDraftVersion=3,
+                ),
+                current_user={"id": 42},
+            )
+
     applications.update.assert_not_awaited()
 
 

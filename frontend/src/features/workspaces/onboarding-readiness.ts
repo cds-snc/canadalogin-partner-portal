@@ -4,9 +4,7 @@ import type {
 } from "@/fetch/workspaces";
 
 export type ApplicationInformationReadinessStatus =
-	| "not_started"
-	| "incomplete"
-	| "complete";
+	"not_started" | "incomplete" | "complete";
 
 export type ApplicationInformationReadinessKey =
 	| "service_identity"
@@ -22,8 +20,10 @@ export type ApplicationInformationReadinessItem = {
 };
 
 export type ApplicationInformationReadinessSummary = {
+	completedCount: number;
 	items: Array<ApplicationInformationReadinessItem>;
 	submitReady: boolean;
+	totalCount: number;
 };
 
 const hasContent = (value: string | null | undefined): boolean =>
@@ -48,8 +48,9 @@ const getStatusFromPresence = (
 const isCompleteContact = (
 	contact: ApplicationInformationContactRead
 ): boolean =>
-	hasContent(contact.nameEn) &&
-	hasContent(contact.nameFr) &&
+	!contact.identityConfirmationRequired &&
+	hasContent(contact.firstName) &&
+	hasContent(contact.lastName) &&
 	hasContent(contact.email) &&
 	hasContent(contact.responsibilityEn) &&
 	hasContent(contact.responsibilityFr);
@@ -102,8 +103,13 @@ export const getApplicationInformationReadinessSummary = (
 		},
 	];
 
+	const completedCount = items.filter(
+		(item) => item.status === "complete"
+	).length;
 	return {
+		completedCount,
 		items,
-		submitReady: items.every((item) => item.status === "complete"),
+		submitReady: completedCount === items.length,
+		totalCount: items.length,
 	};
 };

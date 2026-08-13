@@ -41,6 +41,7 @@ const Select: React.FC<SelectProps> = React.memo(
 				errorMessage={errorMessage}
 				hideLabel={hideLabel}
 				hint={hint}
+				id={selectId}
 				label={label}
 				lang={lang}
 				name={name}

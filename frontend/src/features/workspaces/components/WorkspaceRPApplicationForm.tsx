@@ -1,3 +1,4 @@
+import type { ReactNode } from "react";
 import { useTranslation } from "react-i18next";
 import type { FunctionComponent } from "@/common/types";
 import type { RegistrationDataStep } from "@/fetch/rp-applications";
@@ -19,9 +20,11 @@ type ApplicationInformationOption = {
 };
 
 type WorkspaceRPApplicationFormProps = {
+	applicationContextName?: string;
 	applicationInformationOptions: Array<ApplicationInformationOption>;
 	backHref?: string;
 	cancelHref: string;
+	errorSummary?: ReactNode;
 	fieldErrors?: Partial<Record<keyof WorkspaceRPApplicationFormState, string>>;
 	form: WorkspaceRPApplicationFormState;
 	isSubmitting: boolean;
@@ -47,9 +50,11 @@ const asBooleanRadioOptions = (
 ];
 
 export const WorkspaceRPApplicationForm = ({
+	applicationContextName,
 	applicationInformationOptions,
 	backHref,
 	cancelHref,
+	errorSummary,
 	fieldErrors,
 	form,
 	isSubmitting,
@@ -81,34 +86,77 @@ export const WorkspaceRPApplicationForm = ({
 				onSubmit();
 			}}
 		>
+			{errorSummary}
 			{!step || step === "basics" ? (
 				<Fieldset
 					className="grid gap-300"
 					legend={t("workspaces.applicationsBasicsLegend")}
 					legendSize="h2"
 				>
-					<Select
-						errorMessage={fieldErrors?.applicationInformationUuid}
-						label={t("workspaces.applicationsApplicationInformationLabel")}
-						name="applicationInformationUuid"
-						selectId="workspace-rp-application-application-information"
-						value={form.applicationInformationUuid}
+					{applicationContextName ? (
+						<Text>
+							<strong>
+								{t("workspaces.rpConfigurationsApplicationLabel")}:
+							</strong>{" "}
+							{applicationContextName}
+						</Text>
+					) : (
+						<Select
+							required
+							errorMessage={fieldErrors?.applicationInformationUuid}
+							label={t("workspaces.applicationsApplicationInformationLabel")}
+							name="applicationInformationUuid"
+							selectId="workspace-rp-application-application-information"
+							value={form.applicationInformationUuid}
+							onInput={(event): void => {
+								onChange(
+									"applicationInformationUuid",
+									(event.target as HTMLSelectElement).value
+								);
+							}}
+						>
+							<option value="">
+								{t("workspaces.applicationsApplicationInformationNone")}
+							</option>
+							{applicationInformationOptions.map((option) => (
+								<option key={option.value} value={option.value}>
+									{option.label}
+								</option>
+							))}
+						</Select>
+					)}
+					<Input
+						required
+						errorMessage={fieldErrors?.configurationName}
+						hint={t("workspaces.applicationsConfigurationNameHint")}
+						inputId="workspace-rp-application-configuration-name"
+						label={t("workspaces.applicationsConfigurationNameLabel")}
+						maxLength={128}
+						name="configurationName"
+						value={form.configurationName}
 						onInput={(event): void => {
 							onChange(
-								"applicationInformationUuid",
-								(event.target as HTMLSelectElement).value
+								"configurationName",
+								(event.target as HTMLInputElement).value
 							);
 						}}
-					>
-						<option value="">
-							{t("workspaces.applicationsApplicationInformationNone")}
-						</option>
-						{applicationInformationOptions.map((option) => (
-							<option key={option.value} value={option.value}>
-								{option.label}
-							</option>
-						))}
-					</Select>
+					/>
+					<Input
+						required
+						errorMessage={fieldErrors?.partnerEnvironment}
+						hint={t("workspaces.applicationsPartnerEnvironmentHint")}
+						inputId="workspace-rp-application-partner-environment"
+						label={t("workspaces.applicationsPartnerEnvironmentLabel")}
+						maxLength={128}
+						name="partnerEnvironment"
+						value={form.partnerEnvironment}
+						onInput={(event): void => {
+							onChange(
+								"partnerEnvironment",
+								(event.target as HTMLInputElement).value
+							);
+						}}
+					/>
 					<Select
 						required
 						errorMessage={fieldErrors?.canadaLoginEnvironment}
@@ -136,34 +184,38 @@ export const WorkspaceRPApplicationForm = ({
 							{t("workspaces.applicationsEnvironmentProduction")}
 						</option>
 					</Select>
-					<Input
-						required
-						errorMessage={fieldErrors?.serviceNameEn}
-						inputId="workspace-rp-application-service-name-en"
-						label={t("workspaces.applicationsServiceNameEnLabel")}
-						name="serviceNameEn"
-						value={form.serviceNameEn}
-						onInput={(event): void => {
-							onChange(
-								"serviceNameEn",
-								(event.target as HTMLInputElement).value
-							);
-						}}
-					/>
-					<Input
-						required
-						errorMessage={fieldErrors?.serviceNameFr}
-						inputId="workspace-rp-application-service-name-fr"
-						label={t("workspaces.applicationsServiceNameFrLabel")}
-						name="serviceNameFr"
-						value={form.serviceNameFr}
-						onInput={(event): void => {
-							onChange(
-								"serviceNameFr",
-								(event.target as HTMLInputElement).value
-							);
-						}}
-					/>
+					{applicationContextName ? null : (
+						<>
+							<Input
+								required
+								errorMessage={fieldErrors?.serviceNameEn}
+								inputId="workspace-rp-application-service-name-en"
+								label={t("workspaces.applicationsServiceNameEnLabel")}
+								name="serviceNameEn"
+								value={form.serviceNameEn}
+								onInput={(event): void => {
+									onChange(
+										"serviceNameEn",
+										(event.target as HTMLInputElement).value
+									);
+								}}
+							/>
+							<Input
+								required
+								errorMessage={fieldErrors?.serviceNameFr}
+								inputId="workspace-rp-application-service-name-fr"
+								label={t("workspaces.applicationsServiceNameFrLabel")}
+								name="serviceNameFr"
+								value={form.serviceNameFr}
+								onInput={(event): void => {
+									onChange(
+										"serviceNameFr",
+										(event.target as HTMLInputElement).value
+									);
+								}}
+							/>
+						</>
+					)}
 				</Fieldset>
 			) : null}
 

@@ -187,7 +187,7 @@ describe("ApplicationInformationEditPage", () => {
 				},
 				replace: true,
 				search: { updated: "1" },
-				to: "/workspaces/$workspaceUuid/application-information/$applicationInformationUuid",
+				to: "/workspaces/$workspaceUuid/applications/$applicationInformationUuid",
 			});
 		});
 	});

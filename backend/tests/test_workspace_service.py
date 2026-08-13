@@ -1,3 +1,5 @@
+import json
+from datetime import UTC, datetime
 from unittest.mock import AsyncMock, Mock, patch
 from uuid import UUID
 
@@ -5,6 +7,7 @@ import pytest
 
 from src.app.core.authorization import (
     CanonicalRoleCode,
+    Capability,
     ResourceScopeDecision,
     ResourceScopeDecisionReason,
 )
@@ -17,6 +20,7 @@ from src.app.core.exceptions.http_exceptions import (
 )
 from src.app.schemas.application_information import (
     ApplicationInformationContactCreate,
+    ApplicationInformationContactUpdate,
     ApplicationInformationCreate,
     ApplicationInformationReviewChecklistSummaryWrite,
     ApplicationInformationReviewNoteCreate,
@@ -26,7 +30,11 @@ from src.app.schemas.onboarding import (
     WorkspaceRPApplicationOnboardingLifecycleTransitionRequest,
 )
 from src.app.schemas.rp_application import (
+    ApplicationRPConfigurationPartnerEnvironmentUpdate,
+    ApplicationRPConfigurationProgressionCreate,
+    ApplicationRPConfigurationRegistrationDraftCreate,
     WorkspaceRPApplicationRegistrationCreate,
+    WorkspaceRPApplicationRegistrationDraftPatch,
     WorkspaceRPApplicationRegistrationUpdate,
 )
 from src.app.schemas.rp_application_promotion_request import (
@@ -96,6 +104,9 @@ def _allowed_scope(
 
 def _complete_registration_answers() -> dict[str, object]:
     return WorkspaceRPApplicationRegistrationCreate(
+        application_information_uuid="018f6f83-0000-0000-0000-000000000501",
+        configuration_name="Staging integration A",
+        partner_environment="Partner staging",
         canada_login_environment="staging",
         service_name_en="Benefits Portal",
         service_name_fr="Portail des prestations",
@@ -124,10 +135,372 @@ def _complete_registration_answers() -> dict[str, object]:
         message_decryption_targets=["id_token"],
         message_decryption_key_management_algorithms=["RSA-OAEP-256"],
         message_decryption_content_algorithms=["A256GCM"],
-    ).model_dump(mode="json", exclude_none=True)
+    ).model_dump(
+        mode="json",
+        exclude={"application_information_uuid", "configuration_name", "partner_environment"},
+        exclude_none=True,
+    )
 
 
 class TestWorkspaceService:
+    @pytest.mark.asyncio
+    async def test_partner_environment_update_is_ancestry_scoped_lifecycle_independent_and_safely_audited(self, mock_db) -> None:
+        service = WorkspaceService()
+        application_uuid = UUID("018f6f83-0000-0000-0000-000000000501")
+        configuration_uuid = UUID("018f6f83-0000-0000-0000-000000000701")
+        actor_uuid = UUID("018f6f83-0000-0000-0000-000000000041")
+        updated_at = datetime(2026, 8, 13, 15, 0, tzinfo=UTC)
+        resolved_access = AsyncMock(
+            return_value=(
+                {"id": 9, "uuid": WORKSPACE_UUID},
+                Mock(),
+                {
+                    "id": 33,
+                    "uuid": configuration_uuid,
+                    "application_information_id": 17,
+                    "onboarding_state": "launched",
+                    "oidc_registration_payload": {"client_type": "public"},
+                    "registration_draft_version": 7,
+                },
+            )
+        )
+
+        with (
+            patch.object(service, "_resolve_application_rp_configuration_access", resolved_access),
+            patch("src.app.services.workspace_service.crud_rp_applications") as mock_configurations,
+        ):
+            mock_configurations.update = AsyncMock(
+                return_value={
+                    "uuid": configuration_uuid,
+                    "partner_environment": "Partnér QA 2",
+                    "updated_at": updated_at,
+                }
+            )
+            result = await service.update_application_rp_configuration_partner_environment(
+                db=mock_db,
+                workspace_uuid=WORKSPACE_UUID,
+                application_information_uuid=application_uuid,
+                rp_configuration_uuid=configuration_uuid,
+                payload=ApplicationRPConfigurationPartnerEnvironmentUpdate(partnerEnvironment="  Partne\u0301r QA 2  "),
+                current_user={**_partner(), "uuid": actor_uuid},
+            )
+
+        resolved_access.assert_awaited_once_with(
+            db=mock_db,
+            workspace_uuid=WORKSPACE_UUID,
+            application_information_uuid=application_uuid,
+            rp_configuration_uuid=configuration_uuid,
+            current_user={**_partner(), "uuid": actor_uuid},
+            capability=Capability.RP_CONFIGURATION_WRITE,
+        )
+        update_arguments = mock_configurations.update.await_args.kwargs
+        assert update_arguments["object"]["partner_environment"] == "Partnér QA 2"
+        assert set(update_arguments["object"]) == {"partner_environment", "updated_at"}
+        assert update_arguments["workspace_id"] == 9
+        assert update_arguments["application_information_id"] == 17
+        assert update_arguments["uuid"] == configuration_uuid
+        assert "onboarding_state" not in update_arguments
+        assert update_arguments["commit"] is False
+        audit_record = mock_db.add.call_args.args[0]
+        audit_payload = json.loads(audit_record.description)
+        assert audit_record.operation == "metadata_update"
+        assert audit_record.user_uuid == actor_uuid
+        assert audit_payload["fieldName"] == "partner_environment"
+        assert audit_payload["result"] == "succeeded"
+        assert "Partnér QA 2" not in audit_record.description
+        assert "client_type" not in audit_record.description
+        mock_db.commit.assert_awaited_once()
+        assert result == {
+            "workspaceUuid": str(WORKSPACE_UUID),
+            "applicationInformationUuid": str(application_uuid),
+            "rpConfigurationUuid": str(configuration_uuid),
+            "partnerEnvironment": "Partnér QA 2",
+            "updatedAt": "2026-08-13T15:00:00Z",
+        }
+
+    @pytest.mark.asyncio
+    async def test_partner_environment_update_denies_read_only_before_mutation(self, mock_db) -> None:
+        service = WorkspaceService()
+        denied_access = AsyncMock(side_effect=ForbiddenException("Insufficient workspace capability"))
+
+        with (
+            patch.object(service, "_resolve_application_rp_configuration_access", denied_access),
+            patch("src.app.services.workspace_service.crud_rp_applications") as mock_configurations,
+        ):
+            with pytest.raises(ForbiddenException):
+                await service.update_application_rp_configuration_partner_environment(
+                    db=mock_db,
+                    workspace_uuid=WORKSPACE_UUID,
+                    application_information_uuid=UUID("018f6f83-0000-0000-0000-000000000501"),
+                    rp_configuration_uuid=UUID("018f6f83-0000-0000-0000-000000000701"),
+                    payload=ApplicationRPConfigurationPartnerEnvironmentUpdate(partnerEnvironment="Partner QA"),
+                    current_user=_partner(CanonicalRoleCode.READ_ONLY),
+                )
+
+        assert denied_access.await_args.kwargs["capability"] is Capability.RP_CONFIGURATION_WRITE
+        mock_configurations.update.assert_not_called()
+        mock_db.add.assert_not_called()
+
+    @pytest.mark.asyncio
+    async def test_application_scoped_draft_inherits_public_names_from_parent(self, mock_db) -> None:
+        service = WorkspaceService()
+        create_draft = AsyncMock(return_value={"rp_application_uuid": "rp-1"})
+        application_uuid = UUID("018f6f83-0000-0000-0000-000000000501")
+
+        with (
+            patch.object(
+                service,
+                "_require_workspace_capability",
+                _allowed_scope({"id": 9, "uuid": str(WORKSPACE_UUID)}),
+            ),
+            patch.object(
+                service,
+                "_get_workspace_application_information",
+                AsyncMock(
+                    return_value={
+                        "id": 17,
+                        "uuid": application_uuid,
+                        "service_name_en": "Benefits Portal",
+                        "service_name_fr": "Portail des prestations",
+                    }
+                ),
+            ),
+            patch.object(
+                service,
+                "create_workspace_rp_application_registration_draft",
+                create_draft,
+            ),
+        ):
+            result = await service.create_application_rp_configuration_registration_draft(
+                db=mock_db,
+                workspace_uuid=WORKSPACE_UUID,
+                application_information_uuid=application_uuid,
+                payload=ApplicationRPConfigurationRegistrationDraftCreate(
+                    configurationName="Partner staging A",
+                    partnerEnvironment="Partner QA 2",
+                    canadaLoginEnvironment="staging",
+                ),
+                current_user=_partner(),
+                registration_creation_key=UUID("018f6f83-0000-0000-0000-000000000901"),
+                correlation_id="request-1",
+            )
+
+        assert result == {"rp_application_uuid": "rp-1"}
+        forwarded = create_draft.await_args.kwargs["payload"]
+        assert forwarded.application_information_uuid == application_uuid
+        assert forwarded.configuration_name == "Partner staging A"
+        assert forwarded.partner_environment == "Partner QA 2"
+        assert forwarded.canada_login_environment == "staging"
+        assert forwarded.service_name_en == "Benefits Portal"
+        assert forwarded.service_name_fr == "Portail des prestations"
+
+    @pytest.mark.asyncio
+    async def test_progression_creates_explicit_production_target_with_allowlisted_answers(self, mock_db) -> None:
+        service = WorkspaceService()
+        application_uuid = UUID("018f6f83-0000-0000-0000-000000000501")
+        source_uuid = UUID("018f6f83-0000-0000-0000-000000000701")
+        target_uuid = UUID("018f6f83-0000-0000-0000-000000000702")
+        source = {
+            "id": 33,
+            "uuid": source_uuid,
+            "workspace_id": 9,
+            "application_information_id": 17,
+            "configuration_name": "Partner staging A",
+            "partner_environment": "Partner staging",
+            "canada_login_environment": "staging",
+            "oidc_registration_payload": {
+                "application_environment_url_en": "https://staging.example/callback",
+                "redirect_uris": ["https://staging.example/callback"],
+                "client_type": "public",
+                "supports_authorization_code_flow": True,
+                "requested_scopes": ["openid"],
+                "pkce_supported": True,
+                "pkce_algorithms": ["S256"],
+                "offline_jwk_or_certificate": "must-not-copy",
+            },
+        }
+        target = {
+            "id": 34,
+            "uuid": target_uuid,
+            "workspace_id": 9,
+            "application_information_id": 17,
+            "configuration_name": "Partner production A",
+            "partner_environment": "Partner production",
+            "canada_login_environment": "production",
+            "registration_draft_version": 1,
+            "registration_last_completed_step": "basics",
+        }
+        mock_db.commit = AsyncMock()
+
+        with (
+            patch.object(
+                service,
+                "_resolve_application_rp_configuration_access",
+                AsyncMock(
+                    return_value=(
+                        {"id": 9, "uuid": WORKSPACE_UUID, "department_id": 7},
+                        Mock(),
+                        source,
+                    )
+                ),
+            ),
+            patch.object(
+                service,
+                "_get_workspace_application_information",
+                AsyncMock(
+                    return_value={
+                        "id": 17,
+                        "uuid": application_uuid,
+                        "service_name_en": "Benefits Portal",
+                        "service_name_fr": "Portail des prestations",
+                    }
+                ),
+            ),
+            patch("src.app.services.workspace_service.crud_rp_applications") as mock_configurations,
+            patch("src.app.services.workspace_service.crud_rp_application_promotion_requests") as mock_promotions,
+        ):
+            mock_configurations.get = AsyncMock(return_value=None)
+            mock_configurations.create = AsyncMock(return_value=target)
+            mock_promotions.create = AsyncMock(return_value={"id": 4})
+
+            result = await service.create_application_rp_configuration_progression(
+                db=mock_db,
+                workspace_uuid=WORKSPACE_UUID,
+                application_information_uuid=application_uuid,
+                source_rp_configuration_uuid=source_uuid,
+                payload=ApplicationRPConfigurationProgressionCreate(
+                    targetConfigurationName=" Partner production A ",
+                    targetPartnerEnvironment=" Partner production ",
+                    targetEnvironment="production",
+                ),
+                current_user=_partner(),
+                progression_creation_key=UUID("018f6f83-0000-0000-0000-000000000902"),
+                correlation_id="request-progression",
+            )
+
+        assert result["source_rp_configuration_uuid"] == str(source_uuid)
+        assert result["target_rp_configuration_uuid"] == str(target_uuid)
+        assert result["promotion_status"] == "review_tracked"
+        assert result["self_serve"] is False
+        create_object = mock_configurations.create.await_args.kwargs["object"]
+        assert create_object.source_rp_configuration_id == 33
+        assert create_object.configuration_name == "Partner production A"
+        assert create_object.partner_environment == "Partner production"
+        assert create_object.application_information_id == 17
+        assert create_object.oidc_registration_payload["client_type"] == "public"
+        assert create_object.oidc_registration_payload["pkce_algorithms"] == ["S256"]
+        assert "redirect_uris" not in create_object.oidc_registration_payload
+        assert "application_environment_url_en" not in create_object.oidc_registration_payload
+        assert "offline_jwk_or_certificate" not in create_object.oidc_registration_payload
+        promotion_object = mock_promotions.create.await_args.kwargs["object"]
+        assert promotion_object.rp_application_id == 34
+        assert promotion_object.status == "review_tracked"
+        assert mock_configurations.create.await_args.kwargs["commit"] is False
+        assert mock_promotions.create.await_args.kwargs["commit"] is False
+        mock_db.commit.assert_awaited_once()
+
+    @pytest.mark.asyncio
+    async def test_progression_rejects_implicit_or_skipped_environment_path(self, mock_db) -> None:
+        service = WorkspaceService()
+        with (
+            patch.object(
+                service,
+                "_resolve_application_rp_configuration_access",
+                AsyncMock(
+                    return_value=(
+                        {"id": 9, "uuid": WORKSPACE_UUID, "department_id": 7},
+                        Mock(),
+                        {
+                            "id": 33,
+                            "uuid": UUID("018f6f83-0000-0000-0000-000000000701"),
+                            "configuration_name": "Partner test A",
+                            "canada_login_environment": "test",
+                        },
+                    )
+                ),
+            ),
+            patch.object(
+                service,
+                "_get_workspace_application_information",
+                AsyncMock(
+                    return_value={
+                        "id": 17,
+                        "uuid": UUID("018f6f83-0000-0000-0000-000000000501"),
+                        "service_name_en": "Benefits Portal",
+                        "service_name_fr": "Portail des prestations",
+                    }
+                ),
+            ),
+        ):
+            with pytest.raises(BadRequestException, match="only to staging"):
+                await service.create_application_rp_configuration_progression(
+                    db=mock_db,
+                    workspace_uuid=WORKSPACE_UUID,
+                    application_information_uuid=UUID("018f6f83-0000-0000-0000-000000000501"),
+                    source_rp_configuration_uuid=UUID("018f6f83-0000-0000-0000-000000000701"),
+                    payload=ApplicationRPConfigurationProgressionCreate(
+                        targetConfigurationName="Partner production A",
+                        targetPartnerEnvironment="Partner production",
+                        targetEnvironment="production",
+                    ),
+                    current_user=_partner(),
+                    progression_creation_key=UUID("018f6f83-0000-0000-0000-000000000902"),
+                )
+
+    @pytest.mark.asyncio
+    async def test_nested_draft_update_replaces_duplicate_names_with_parent_identity(self, mock_db) -> None:
+        service = WorkspaceService()
+        application_uuid = UUID("018f6f83-0000-0000-0000-000000000501")
+        update_draft = AsyncMock(return_value={"configuration_name": "Partner staging B"})
+
+        with (
+            patch.object(
+                service,
+                "_resolve_application_rp_configuration_access",
+                AsyncMock(return_value=({"id": 9, "uuid": WORKSPACE_UUID}, Mock(), {})),
+            ),
+            patch.object(
+                service,
+                "_get_workspace_application_information",
+                AsyncMock(
+                    return_value={
+                        "id": 17,
+                        "uuid": application_uuid,
+                        "service_name_en": "Current Benefits Portal",
+                        "service_name_fr": "Portail actuel des prestations",
+                    }
+                ),
+            ),
+            patch.object(
+                service,
+                "update_workspace_rp_application_registration_draft",
+                update_draft,
+            ),
+        ):
+            await service.update_application_rp_configuration_registration_draft(
+                db=mock_db,
+                workspace_uuid=WORKSPACE_UUID,
+                application_information_uuid=application_uuid,
+                rp_configuration_uuid=UUID("018f6f83-0000-0000-0000-000000000701"),
+                payload=WorkspaceRPApplicationRegistrationDraftPatch(
+                    stepId="basics",
+                    saveMode="completeStep",
+                    expectedDraftVersion=1,
+                    configurationName="Partner staging B",
+                    registrationAnswers={
+                        "canadaLoginEnvironment": "staging",
+                        "serviceNameEn": "Client supplied English",
+                        "serviceNameFr": "Valeur française du client",
+                    },
+                ),
+                current_user=_partner(),
+            )
+
+        forwarded = update_draft.await_args.kwargs["payload"]
+        assert forwarded.configuration_name == "Partner staging B"
+        assert forwarded.registration_answers.service_name_en == "Current Benefits Portal"
+        assert forwarded.registration_answers.service_name_fr == "Portail actuel des prestations"
+
     @pytest.mark.asyncio
     async def test_create_workspace_rejects_missing_department(self, mock_db) -> None:
         service = WorkspaceService()
@@ -674,6 +1047,8 @@ class TestWorkspaceService:
             "department_id": 7,
             "application_information_id": 17,
             "dnr_app_name": "Benefits Portal",
+            "configuration_name": "Staging integration A",
+            "partner_environment": "Partner staging",
             "canada_login_environment": "staging",
             "status": None,
             "created_by": 42,
@@ -704,6 +1079,11 @@ class TestWorkspaceService:
                 "_get_workspace_rp_application",
                 AsyncMock(return_value=existing_record),
             ) as mock_get_record,
+            patch.object(
+                service,
+                "_resolve_workspace_application_information_uuid",
+                AsyncMock(return_value=UUID("018f6f83-0000-0000-0000-000000000301")),
+            ),
             patch("src.app.services.workspace_service.crud_rp_applications") as mock_rp_applications,
         ):
             mock_rp_applications.update = AsyncMock(return_value=updated_record)
@@ -945,6 +1325,75 @@ class TestWorkspaceService:
         assert create_kwargs["object"].requested_at is not None
 
     @pytest.mark.asyncio
+    async def test_nested_promotion_read_exposes_public_source_and_target_lineage(self, mock_db) -> None:
+        service = WorkspaceService()
+        application_uuid = UUID("018f6f83-0000-0000-0000-000000000501")
+        source_uuid = UUID("018f6f83-0000-0000-0000-000000000701")
+        target_uuid = UUID("018f6f83-0000-0000-0000-000000000702")
+        target = {
+            "id": 34,
+            "uuid": target_uuid,
+            "workspace_id": 9,
+            "application_information_id": 17,
+            "configuration_name": "Partner production A",
+            "canada_login_environment": "production",
+        }
+        source_id_result = Mock()
+        source_id_result.scalar_one_or_none.return_value = 33
+        source_uuid_result = Mock()
+        source_uuid_result.scalar_one_or_none.return_value = source_uuid
+        mock_db.execute = AsyncMock(side_effect=[source_id_result, source_uuid_result])
+
+        with (
+            patch.object(
+                service,
+                "_resolve_application_rp_configuration_access",
+                AsyncMock(
+                    return_value=(
+                        {"id": 9, "uuid": WORKSPACE_UUID, "department_id": 7},
+                        Mock(),
+                        target,
+                    )
+                ),
+            ),
+            patch.object(
+                service,
+                "_get_rp_application_promotion_request_record",
+                AsyncMock(return_value={"id": 4}),
+            ),
+            patch.object(
+                service,
+                "_build_rp_application_promotion_request_read",
+                AsyncMock(
+                    return_value={
+                        "target_environment": "production",
+                        "status": "review_tracked",
+                        "external_reference": "CAB-123",
+                        "reviewed_by_user_uuid": None,
+                        "reviewed_by_team": None,
+                        "requested_at": datetime(2026, 8, 11, 12, 0, tzinfo=UTC),
+                        "reviewed_at": None,
+                        "decided_at": None,
+                        "created_at": datetime(2026, 8, 11, 12, 0, tzinfo=UTC),
+                        "updated_at": None,
+                    }
+                ),
+            ),
+        ):
+            result = await service.get_application_rp_configuration_promotion_request(
+                db=mock_db,
+                workspace_uuid=WORKSPACE_UUID,
+                application_information_uuid=application_uuid,
+                rp_configuration_uuid=target_uuid,
+                current_user=_cl_admin(),
+            )
+
+        assert result["application_information_uuid"] == application_uuid
+        assert result["source_rp_configuration_uuid"] == source_uuid
+        assert result["target_rp_configuration_uuid"] == target_uuid
+        assert result["target_configuration_name"] == "Partner production A"
+
+    @pytest.mark.asyncio
     async def test_review_workspace_rp_application_promotion_request_updates_review_metadata(self, mock_db) -> None:
         service = WorkspaceService()
         workspace_uuid = "018f6f83-0000-0000-0000-000000000201"
@@ -1111,7 +1560,179 @@ class TestWorkspaceService:
         assert create_kwargs["object"].service_name_fr == "Service exemple"
 
     @pytest.mark.asyncio
-    async def test_delete_workspace_application_information_rejects_linked_rp_applications(self, mock_db) -> None:
+    async def test_list_application_rp_configurations_scopes_records_to_parent(self, mock_db) -> None:
+        service = WorkspaceService()
+        workspace = {
+            "id": 9,
+            "uuid": WORKSPACE_UUID,
+            "name": "Benefits Workspace",
+        }
+        application_information = {
+            "id": 17,
+            "uuid": "018f6f83-0000-0000-0000-000000000501",
+            "service_name_en": "Canonical Benefits Portal",
+            "service_name_fr": "Portail canonique des prestations",
+        }
+        configuration = {
+            "id": 33,
+            "uuid": "018f6f83-0000-0000-0000-000000000701",
+            "configuration_name": "Partner staging A",
+            "dnr_app_name": "Stale child name",
+            "canada_login_environment": "staging",
+            "onboarding_state": "draft",
+            "registration_last_completed_step": "basics",
+            "oidc_registration_payload": {
+                "service_name_en": "Stale payload name",
+                "service_name_fr": "Ancien nom de charge utile",
+            },
+        }
+
+        with (
+            patch.object(
+                service,
+                "_require_workspace_capability",
+                _allowed_scope(workspace, CanonicalRoleCode.RP_ADMIN),
+            ),
+            patch.object(
+                service,
+                "_get_workspace_application_information",
+                AsyncMock(return_value=application_information),
+            ) as mock_get_application,
+            patch("src.app.services.workspace_service.crud_rp_applications") as mock_rp_applications,
+        ):
+            mock_rp_applications.get_multi = AsyncMock(return_value={"data": [configuration]})
+
+            result = await service.list_application_rp_configurations(
+                db=mock_db,
+                workspace_uuid=WORKSPACE_UUID,
+                application_information_uuid=application_information["uuid"],
+                current_user=_partner(),
+            )
+
+        assert result[0]["configurationName"] == "Partner staging A"
+        assert str(result[0]["applicationInformationUuid"]) == application_information["uuid"]
+        assert result[0]["serviceNameEn"] == "Canonical Benefits Portal"
+        assert result[0]["serviceNameFr"] == "Portail canonique des prestations"
+        assert result[0]["resumeTaskPath"].endswith("/registration/endpoints")
+        mock_get_application.assert_awaited_once_with(
+            db=mock_db,
+            workspace_id=9,
+            application_information_uuid=application_information["uuid"],
+        )
+        mock_rp_applications.get_multi.assert_awaited_once_with(
+            db=mock_db,
+            workspace_id=9,
+            application_information_id=17,
+            sort_columns="id",
+            sort_orders="asc",
+            is_deleted=False,
+            schema_to_select=service.list_application_rp_configurations.__globals__["RPApplicationRead"],
+        )
+
+    @pytest.mark.asyncio
+    async def test_application_rp_configuration_view_uses_parent_names_without_duplicate_aliases(self, mock_db) -> None:
+        service = WorkspaceService()
+        workspace = {
+            "id": 9,
+            "uuid": WORKSPACE_UUID,
+            "name": "Benefits Workspace",
+        }
+        application_information = {
+            "id": 17,
+            "uuid": "018f6f83-0000-0000-0000-000000000501",
+            "service_name_en": "Canonical Benefits Portal",
+            "service_name_fr": "Portail canonique des prestations",
+        }
+        configuration = {
+            "id": 33,
+            "uuid": "018f6f83-0000-0000-0000-000000000701",
+            "configuration_name": "Partner staging A",
+            "partner_environment": None,
+            "canada_login_environment": "staging",
+            "onboarding_state": "draft",
+            "promotion_status": None,
+            "registration_draft_version": 6,
+            "registration_last_completed_step": "encryption",
+            "oidc_registration_payload": {
+                "service_name_en": "Stale child English name",
+                "service_name_fr": "Ancien nom français enfant",
+            },
+        }
+
+        with (
+            patch.object(
+                service,
+                "_require_workspace_capability",
+                _allowed_scope(workspace, CanonicalRoleCode.RP_ADMIN),
+            ),
+            patch.object(
+                service,
+                "_get_workspace_application_information",
+                AsyncMock(return_value=application_information),
+            ),
+            patch.object(
+                service,
+                "_get_application_rp_configuration",
+                AsyncMock(return_value=configuration),
+            ),
+        ):
+            result = await service.get_application_rp_configuration_configuration(
+                db=mock_db,
+                workspace_uuid=WORKSPACE_UUID,
+                application_information_uuid=application_information["uuid"],
+                rp_configuration_uuid=configuration["uuid"],
+                current_user=_partner(),
+            )
+
+        assert result["serviceNameEn"] == "Canonical Benefits Portal"
+        assert result["serviceNameFr"] == "Portail canonique des prestations"
+        assert result["configurationName"] == "Partner staging A"
+        assert str(result["applicationInformationUuid"]) == application_information["uuid"]
+
+    @pytest.mark.asyncio
+    async def test_get_application_rp_configuration_filters_complete_ancestry(self, mock_db) -> None:
+        service = WorkspaceService()
+        configuration = {
+            "id": 33,
+            "uuid": "018f6f83-0000-0000-0000-000000000701",
+            "workspace_id": 9,
+            "application_information_id": 17,
+            "dnr_app_name": "Benefits Portal",
+            "configuration_name": "Partner staging A",
+        }
+
+        with (
+            patch("src.app.services.workspace_service.crud_rp_applications") as mock_rp_applications,
+            patch.object(
+                service,
+                "_attach_rp_application_promotion_request_summary",
+                AsyncMock(return_value=configuration),
+            ),
+        ):
+            mock_rp_applications.get = AsyncMock(return_value=configuration)
+
+            result = await service._get_application_rp_configuration(
+                db=mock_db,
+                workspace_id=9,
+                application_information_id=17,
+                rp_configuration_uuid=configuration["uuid"],
+            )
+
+        assert result == configuration
+        mock_rp_applications.get.assert_awaited_once_with(
+            db=mock_db,
+            workspace_id=9,
+            application_information_id=17,
+            uuid=configuration["uuid"],
+            is_deleted=False,
+            schema_to_select=service._get_application_rp_configuration.__globals__["RPApplicationRead"],
+        )
+
+    @pytest.mark.asyncio
+    async def test_delete_workspace_application_information_rejects_every_retained_rp_configuration(
+        self,
+        mock_db,
+    ) -> None:
         service = WorkspaceService()
 
         with (
@@ -1159,7 +1780,7 @@ class TestWorkspaceService:
 
             with pytest.raises(
                 CustomException,
-                match="Linked RP applications must be unlinked or removed before deleting application information",
+                match="Retained RP configurations must be resolved before deleting the Application",
             ):
                 await service.delete_workspace_application_information(
                     db=mock_db,
@@ -1171,12 +1792,14 @@ class TestWorkspaceService:
         mock_rp_applications.exists.assert_awaited_once_with(
             db=mock_db,
             application_information_id=17,
-            is_deleted=False,
         )
 
     @pytest.mark.asyncio
     async def test_add_application_information_contact_sets_parent_and_creator(self, mock_db) -> None:
         service = WorkspaceService()
+        actor_result = Mock()
+        actor_result.scalar_one_or_none.return_value = UUID("018f6f83-0000-0000-0000-000000000301")
+        mock_db.execute = AsyncMock(return_value=actor_result)
 
         with (
             patch("src.app.services.workspace_service.crud_workspaces") as mock_workspaces,
@@ -1225,12 +1848,17 @@ class TestWorkspaceService:
                     "uuid": "018f6f83-0000-0000-0000-000000000601",
                     "application_information_id": 17,
                     "created_by": 42,
-                    "name_en": "Jane Doe",
-                    "name_fr": "Jeanne Doe",
+                    "name_en": None,
+                    "name_fr": None,
+                    "first_name": "Jane",
+                    "last_name": "Doe",
                     "responsibility_en": "Product owner",
                     "responsibility_fr": "Responsable du produit",
                     "email": "jane.doe@example.gc.ca",
                     "phone_number": "555-555-5555",
+                    "alternate_phone_number": None,
+                    "identity_confirmed_at": "2026-07-30T15:15:00Z",
+                    "identity_confirmed_by": 42,
                     "created_at": "2026-07-30T15:15:00",
                     "updated_at": None,
                     "deleted_at": None,
@@ -1243,8 +1871,8 @@ class TestWorkspaceService:
                 workspace_uuid="018f6f83-0000-0000-0000-000000000201",
                 application_information_uuid="018f6f83-0000-0000-0000-000000000501",
                 payload=ApplicationInformationContactCreate(
-                    name_en="Jane Doe",
-                    name_fr="Jeanne Doe",
+                    first_name="Jane",
+                    last_name="Doe",
                     responsibility_en="Product owner",
                     responsibility_fr="Responsable du produit",
                     email="jane.doe@example.gc.ca",
@@ -1257,7 +1885,126 @@ class TestWorkspaceService:
         create_kwargs = mock_contacts.create.await_args.kwargs
         assert create_kwargs["object"].application_information_id == 17
         assert create_kwargs["object"].created_by == 42
+        assert create_kwargs["object"].first_name == "Jane"
+        assert create_kwargs["object"].last_name == "Doe"
+        assert create_kwargs["object"].identity_confirmed_by == 42
         assert str(create_kwargs["object"].email) == "jane.doe@example.gc.ca"
+
+    @pytest.mark.asyncio
+    async def test_contact_read_preserves_unconfirmed_legacy_names_without_guessing(self, mock_db) -> None:
+        result = await WorkspaceService._build_application_information_contact_read(
+            db=mock_db,
+            contact={
+                "id": 3,
+                "uuid": "018f6f83-0000-0000-0000-000000000601",
+                "application_information_id": 17,
+                "created_by": 42,
+                "name_en": "Jane Mary Doe",
+                "name_fr": "Jeanne Marie Doe",
+                "first_name": None,
+                "last_name": None,
+                "responsibility_en": "Product owner",
+                "responsibility_fr": "Responsable du produit",
+                "email": "jane.doe@example.gc.ca",
+                "phone_number": None,
+                "alternate_phone_number": None,
+                "identity_confirmed_at": None,
+                "identity_confirmed_by": None,
+                "created_at": "2026-07-30T15:15:00Z",
+                "updated_at": None,
+                "deleted_at": None,
+                "is_deleted": False,
+            },
+        )
+
+        assert result["name_en"] == "Jane Mary Doe"
+        assert result["name_fr"] == "Jeanne Marie Doe"
+        assert result["first_name"] is None
+        assert result["last_name"] is None
+        assert result["identity_confirmation_required"] is True
+        assert result["identity_confirmed_by_user_uuid"] is None
+        assert "identity_confirmed_by" not in result
+        mock_db.execute.assert_not_awaited()
+
+    @pytest.mark.asyncio
+    async def test_updating_legacy_contact_identity_confirms_names_with_public_actor_uuid(self, mock_db) -> None:
+        service = WorkspaceService()
+        actor_uuid = UUID("018f6f83-0000-0000-0000-000000000301")
+        actor_result = Mock()
+        actor_result.scalar_one_or_none.return_value = actor_uuid
+        mock_db.execute = AsyncMock(return_value=actor_result)
+        legacy_contact = {
+            "id": 3,
+            "uuid": "018f6f83-0000-0000-0000-000000000601",
+            "application_information_id": 17,
+            "created_by": 42,
+            "name_en": "Jane Mary Doe",
+            "name_fr": "Jeanne Marie Doe",
+            "first_name": None,
+            "last_name": None,
+            "responsibility_en": "Product owner",
+            "responsibility_fr": "Responsable du produit",
+            "email": "jane.doe@example.gc.ca",
+            "phone_number": None,
+            "alternate_phone_number": None,
+            "identity_confirmed_at": None,
+            "identity_confirmed_by": None,
+            "created_at": "2026-07-30T15:15:00Z",
+            "updated_at": None,
+            "deleted_at": None,
+            "is_deleted": False,
+        }
+        confirmed_contact = {
+            **legacy_contact,
+            "first_name": "Jane",
+            "last_name": "Doe",
+            "identity_confirmed_at": "2026-08-13T00:00:00Z",
+            "identity_confirmed_by": 42,
+            "updated_at": "2026-08-13T00:00:00Z",
+        }
+
+        with (
+            patch.object(
+                service,
+                "_require_workspace_capability",
+                _allowed_scope({"id": 9, "uuid": str(WORKSPACE_UUID)}),
+            ),
+            patch.object(
+                service,
+                "_get_workspace_application_information",
+                AsyncMock(return_value={"id": 17}),
+            ),
+            patch.object(
+                service,
+                "_get_application_information_contact",
+                AsyncMock(side_effect=[legacy_contact, confirmed_contact]),
+            ),
+            patch("src.app.services.workspace_service.crud_application_information_contacts") as mock_contacts,
+        ):
+            mock_contacts.update = AsyncMock()
+            result = await service.update_application_information_contact(
+                db=mock_db,
+                workspace_uuid=WORKSPACE_UUID,
+                application_information_uuid="018f6f83-0000-0000-0000-000000000501",
+                contact_uuid=legacy_contact["uuid"],
+                payload=ApplicationInformationContactUpdate(
+                    first_name="Jane",
+                    last_name="Doe",
+                ),
+                current_user=_partner(),
+            )
+
+        update_object = mock_contacts.update.await_args.kwargs["object"]
+        changed_fields = update_object.model_dump(exclude_unset=True)
+        assert changed_fields["first_name"] == "Jane"
+        assert changed_fields["last_name"] == "Doe"
+        assert changed_fields["identity_confirmed_by"] == 42
+        assert changed_fields["identity_confirmed_at"] is not None
+        assert "responsibility_en" not in changed_fields
+        assert "responsibility_fr" not in changed_fields
+        assert result["identity_confirmation_required"] is False
+        assert result["identity_confirmed_by_user_uuid"] == str(actor_uuid)
+        assert "identity_confirmed_by" not in result
 
     @pytest.mark.asyncio
     async def test_get_workspace_application_information_review_context_returns_note_history_and_summary(self, mock_db) -> None:
@@ -1539,6 +2286,7 @@ class TestWorkspaceService:
     @pytest.mark.asyncio
     async def test_create_workspace_rp_application_sets_workspace_department_and_registration_payload(self, mock_db) -> None:
         service = WorkspaceService()
+        service._resolve_workspace_application_information_id = AsyncMock(return_value=17)  # type: ignore[method-assign]
 
         with (
             patch("src.app.services.workspace_service.crud_workspaces") as mock_workspaces,
@@ -1616,6 +2364,8 @@ class TestWorkspaceService:
                 workspace_uuid="018f6f83-0000-0000-0000-000000000201",
                 payload=WorkspaceRPApplicationRegistrationCreate(
                     application_information_uuid="018f6f83-0000-0000-0000-000000000501",
+                    configuration_name="Staging integration A",
+                    partner_environment="Partner staging",
                     canada_login_environment="staging",
                     service_name_en="Benefits Portal",
                     service_name_fr="Portail des prestations",
@@ -1663,6 +2413,7 @@ class TestWorkspaceService:
     @pytest.mark.asyncio
     async def test_create_workspace_rp_application_does_not_promote_legacy_access_rows(self, mock_db) -> None:
         service = WorkspaceService()
+        service._resolve_workspace_application_information_id = AsyncMock(return_value=17)  # type: ignore[method-assign]
 
         with (
             patch("src.app.services.workspace_service.crud_workspaces") as mock_workspaces,
@@ -1741,6 +2492,8 @@ class TestWorkspaceService:
                 workspace_uuid="018f6f83-0000-0000-0000-000000000201",
                 payload=WorkspaceRPApplicationRegistrationCreate(
                     application_information_uuid="018f6f83-0000-0000-0000-000000000501",
+                    configuration_name="Staging integration A",
+                    partner_environment="Partner staging",
                     canada_login_environment="staging",
                     service_name_en="Benefits Portal",
                     service_name_fr="Portail des prestations",

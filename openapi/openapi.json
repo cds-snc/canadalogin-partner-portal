@@ -158,6 +158,18 @@
         "additionalProperties": false,
         "description": "Grant-derived projection without internal integer identifiers.",
         "properties": {
+          "applicationInformationUuid": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Applicationinformationuuid"
+          },
           "canadaLoginEnvironment": {
             "anyOf": [
               {
@@ -168,6 +180,18 @@
               }
             ],
             "title": "Canadaloginenvironment"
+          },
+          "configurationName": {
+            "anyOf": [
+              {
+                "maxLength": 128,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Configurationname"
           },
           "departmentUuid": {
             "anyOf": [
@@ -213,6 +237,19 @@
               }
             ],
             "title": "Onboardingstate"
+          },
+          "partnerEnvironment": {
+            "anyOf": [
+              {
+                "maxLength": 128,
+                "minLength": 1,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Partnerenvironment"
           },
           "promotionStatus": {
             "anyOf": [
@@ -274,6 +311,19 @@
           "id": {
             "title": "Id",
             "type": "integer"
+          },
+          "partnerEnvironment": {
+            "anyOf": [
+              {
+                "maxLength": 128,
+                "minLength": 1,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Partnerenvironment"
           },
           "uuid": {
             "format": "uuid",
@@ -413,21 +463,33 @@
       "ApplicationInformationContactCreate": {
         "additionalProperties": false,
         "properties": {
+          "alternatePhoneNumber": {
+            "anyOf": [
+              {
+                "maxLength": 50,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Alternatephonenumber"
+          },
           "email": {
             "format": "email",
             "title": "Email",
             "type": "string"
           },
-          "nameEn": {
-            "maxLength": 255,
+          "firstName": {
+            "maxLength": 100,
             "minLength": 1,
-            "title": "Nameen",
+            "title": "Firstname",
             "type": "string"
           },
-          "nameFr": {
-            "maxLength": 255,
+          "lastName": {
+            "maxLength": 100,
             "minLength": 1,
-            "title": "Namefr",
+            "title": "Lastname",
             "type": "string"
           },
           "phoneNumber": {
@@ -456,17 +518,29 @@
           }
         },
         "required": [
-          "nameEn",
-          "nameFr",
           "responsibilityEn",
           "responsibilityFr",
-          "email"
+          "email",
+          "firstName",
+          "lastName"
         ],
         "title": "ApplicationInformationContactCreate",
         "type": "object"
       },
       "ApplicationInformationContactRead": {
         "properties": {
+          "alternatePhoneNumber": {
+            "anyOf": [
+              {
+                "maxLength": 50,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Alternatephonenumber"
+          },
           "applicationInformationId": {
             "title": "Applicationinformationid",
             "type": "integer"
@@ -509,26 +583,94 @@
             "title": "Email",
             "type": "string"
           },
+          "firstName": {
+            "anyOf": [
+              {
+                "maxLength": 100,
+                "minLength": 1,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Firstname"
+          },
           "id": {
             "title": "Id",
             "type": "integer"
+          },
+          "identityConfirmationRequired": {
+            "title": "Identityconfirmationrequired",
+            "type": "boolean"
+          },
+          "identityConfirmedAt": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Identityconfirmedat"
+          },
+          "identityConfirmedByUserUuid": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Identityconfirmedbyuseruuid"
           },
           "isDeleted": {
             "default": false,
             "title": "Isdeleted",
             "type": "boolean"
           },
+          "lastName": {
+            "anyOf": [
+              {
+                "maxLength": 100,
+                "minLength": 1,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Lastname"
+          },
           "nameEn": {
-            "maxLength": 255,
-            "minLength": 1,
-            "title": "Nameen",
-            "type": "string"
+            "anyOf": [
+              {
+                "maxLength": 255,
+                "minLength": 1,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Nameen"
           },
           "nameFr": {
-            "maxLength": 255,
-            "minLength": 1,
-            "title": "Namefr",
-            "type": "string"
+            "anyOf": [
+              {
+                "maxLength": 255,
+                "minLength": 1,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Namefr"
           },
           "phoneNumber": {
             "anyOf": [
@@ -572,14 +714,13 @@
           }
         },
         "required": [
-          "nameEn",
-          "nameFr",
           "responsibilityEn",
           "responsibilityFr",
           "email",
           "id",
           "uuid",
-          "applicationInformationId"
+          "applicationInformationId",
+          "identityConfirmationRequired"
         ],
         "title": "ApplicationInformationContactRead",
         "type": "object"
@@ -587,6 +728,18 @@
       "ApplicationInformationContactUpdate": {
         "additionalProperties": false,
         "properties": {
+          "alternatePhoneNumber": {
+            "anyOf": [
+              {
+                "maxLength": 50,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Alternatephonenumber"
+          },
           "email": {
             "anyOf": [
               {
@@ -599,10 +752,10 @@
             ],
             "title": "Email"
           },
-          "nameEn": {
+          "firstName": {
             "anyOf": [
               {
-                "maxLength": 255,
+                "maxLength": 100,
                 "minLength": 1,
                 "type": "string"
               },
@@ -610,12 +763,12 @@
                 "type": "null"
               }
             ],
-            "title": "Nameen"
+            "title": "Firstname"
           },
-          "nameFr": {
+          "lastName": {
             "anyOf": [
               {
-                "maxLength": 255,
+                "maxLength": 100,
                 "minLength": 1,
                 "type": "string"
               },
@@ -623,7 +776,7 @@
                 "type": "null"
               }
             ],
-            "title": "Namefr"
+            "title": "Lastname"
           },
           "phoneNumber": {
             "anyOf": [
@@ -1359,6 +1512,677 @@
           }
         },
         "title": "ApplicationInformationUpdate",
+        "type": "object"
+      },
+      "ApplicationRPConfigurationPartnerEnvironmentRead": {
+        "additionalProperties": false,
+        "description": "Public result of the focused Partner-environment metadata update.",
+        "properties": {
+          "applicationInformationUuid": {
+            "format": "uuid",
+            "title": "Applicationinformationuuid",
+            "type": "string"
+          },
+          "partnerEnvironment": {
+            "maxLength": 128,
+            "minLength": 1,
+            "title": "Partnerenvironment",
+            "type": "string"
+          },
+          "rpConfigurationUuid": {
+            "format": "uuid",
+            "title": "Rpconfigurationuuid",
+            "type": "string"
+          },
+          "updatedAt": {
+            "format": "date-time",
+            "title": "Updatedat",
+            "type": "string"
+          },
+          "workspaceUuid": {
+            "format": "uuid",
+            "title": "Workspaceuuid",
+            "type": "string"
+          }
+        },
+        "required": [
+          "workspaceUuid",
+          "applicationInformationUuid",
+          "rpConfigurationUuid",
+          "partnerEnvironment",
+          "updatedAt"
+        ],
+        "title": "ApplicationRPConfigurationPartnerEnvironmentRead",
+        "type": "object"
+      },
+      "ApplicationRPConfigurationPartnerEnvironmentUpdate": {
+        "additionalProperties": false,
+        "description": "Focused metadata update that cannot mutate registration or lifecycle state.",
+        "properties": {
+          "partnerEnvironment": {
+            "maxLength": 128,
+            "minLength": 1,
+            "title": "Partnerenvironment",
+            "type": "string"
+          }
+        },
+        "required": [
+          "partnerEnvironment"
+        ],
+        "title": "ApplicationRPConfigurationPartnerEnvironmentUpdate",
+        "type": "object"
+      },
+      "ApplicationRPConfigurationProgressionCreate": {
+        "additionalProperties": false,
+        "description": "Create one explicitly named target from one selected source.",
+        "properties": {
+          "targetConfigurationName": {
+            "maxLength": 128,
+            "minLength": 1,
+            "title": "Targetconfigurationname",
+            "type": "string"
+          },
+          "targetEnvironment": {
+            "enum": [
+              "staging",
+              "production"
+            ],
+            "title": "Targetenvironment",
+            "type": "string"
+          },
+          "targetPartnerEnvironment": {
+            "maxLength": 128,
+            "minLength": 1,
+            "title": "Targetpartnerenvironment",
+            "type": "string"
+          }
+        },
+        "required": [
+          "targetConfigurationName",
+          "targetPartnerEnvironment",
+          "targetEnvironment"
+        ],
+        "title": "ApplicationRPConfigurationProgressionCreate",
+        "type": "object"
+      },
+      "ApplicationRPConfigurationProgressionRead": {
+        "additionalProperties": false,
+        "description": "Public source/target lineage for a newly created progression draft.",
+        "properties": {
+          "applicationInformationUuid": {
+            "format": "uuid",
+            "title": "Applicationinformationuuid",
+            "type": "string"
+          },
+          "promotionStatus": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Promotionstatus"
+          },
+          "selfServe": {
+            "title": "Selfserve",
+            "type": "boolean"
+          },
+          "sourceConfigurationName": {
+            "title": "Sourceconfigurationname",
+            "type": "string"
+          },
+          "sourceEnvironment": {
+            "enum": [
+              "test",
+              "staging",
+              "production"
+            ],
+            "title": "Sourceenvironment",
+            "type": "string"
+          },
+          "sourcePartnerEnvironment": {
+            "anyOf": [
+              {
+                "maxLength": 128,
+                "minLength": 1,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Sourcepartnerenvironment"
+          },
+          "sourceRpConfigurationUuid": {
+            "format": "uuid",
+            "title": "Sourcerpconfigurationuuid",
+            "type": "string"
+          },
+          "targetConfigurationName": {
+            "title": "Targetconfigurationname",
+            "type": "string"
+          },
+          "targetEnvironment": {
+            "enum": [
+              "staging",
+              "production"
+            ],
+            "title": "Targetenvironment",
+            "type": "string"
+          },
+          "targetPartnerEnvironment": {
+            "anyOf": [
+              {
+                "maxLength": 128,
+                "minLength": 1,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Targetpartnerenvironment"
+          },
+          "targetRegistrationDraftVersion": {
+            "minimum": 0.0,
+            "title": "Targetregistrationdraftversion",
+            "type": "integer"
+          },
+          "targetRegistrationLastCompletedStep": {
+            "anyOf": [
+              {
+                "enum": [
+                  "basics",
+                  "endpoints",
+                  "client-and-access",
+                  "signing",
+                  "encryption"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Targetregistrationlastcompletedstep"
+          },
+          "targetRpConfigurationUuid": {
+            "format": "uuid",
+            "title": "Targetrpconfigurationuuid",
+            "type": "string"
+          },
+          "workspaceUuid": {
+            "format": "uuid",
+            "title": "Workspaceuuid",
+            "type": "string"
+          }
+        },
+        "required": [
+          "workspaceUuid",
+          "applicationInformationUuid",
+          "sourceRpConfigurationUuid",
+          "sourceConfigurationName",
+          "sourceEnvironment",
+          "targetRpConfigurationUuid",
+          "targetConfigurationName",
+          "targetEnvironment",
+          "targetRegistrationDraftVersion",
+          "selfServe"
+        ],
+        "title": "ApplicationRPConfigurationProgressionRead",
+        "type": "object"
+      },
+      "ApplicationRPConfigurationPromotionRequestRead": {
+        "description": "Promotion review context with public Application and lineage identifiers.",
+        "properties": {
+          "applicationInformationUuid": {
+            "format": "uuid",
+            "title": "Applicationinformationuuid",
+            "type": "string"
+          },
+          "createdAt": {
+            "format": "date-time",
+            "title": "Createdat",
+            "type": "string"
+          },
+          "decidedAt": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Decidedat"
+          },
+          "externalReference": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Externalreference"
+          },
+          "requestedAt": {
+            "format": "date-time",
+            "title": "Requestedat",
+            "type": "string"
+          },
+          "reviewedAt": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reviewedat"
+          },
+          "reviewedByTeam": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reviewedbyteam"
+          },
+          "reviewedByUserUuid": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reviewedbyuseruuid"
+          },
+          "sourceRpConfigurationUuid": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Sourcerpconfigurationuuid"
+          },
+          "status": {
+            "enum": [
+              "review_tracked",
+              "changes_requested",
+              "approved",
+              "launched"
+            ],
+            "title": "Status",
+            "type": "string"
+          },
+          "targetConfigurationName": {
+            "maxLength": 128,
+            "minLength": 1,
+            "title": "Targetconfigurationname",
+            "type": "string"
+          },
+          "targetEnvironment": {
+            "const": "production",
+            "title": "Targetenvironment",
+            "type": "string"
+          },
+          "targetRpConfigurationUuid": {
+            "format": "uuid",
+            "title": "Targetrpconfigurationuuid",
+            "type": "string"
+          },
+          "updatedAt": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Updatedat"
+          }
+        },
+        "required": [
+          "targetEnvironment",
+          "status",
+          "requestedAt",
+          "createdAt",
+          "applicationInformationUuid",
+          "targetRpConfigurationUuid",
+          "targetConfigurationName"
+        ],
+        "title": "ApplicationRPConfigurationPromotionRequestRead",
+        "type": "object"
+      },
+      "ApplicationRPConfigurationRead": {
+        "additionalProperties": false,
+        "description": "Secret-free Configuration view with public Application ancestry.",
+        "properties": {
+          "applicationInformationUuid": {
+            "format": "uuid",
+            "title": "Applicationinformationuuid",
+            "type": "string"
+          },
+          "canadaLoginEnvironment": {
+            "anyOf": [
+              {
+                "enum": [
+                  "test",
+                  "staging",
+                  "production"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Canadaloginenvironment"
+          },
+          "configurationName": {
+            "maxLength": 128,
+            "minLength": 1,
+            "title": "Configurationname",
+            "type": "string"
+          },
+          "offlinePublicKeyProvided": {
+            "default": false,
+            "title": "Offlinepublickeyprovided",
+            "type": "boolean"
+          },
+          "onboardingState": {
+            "anyOf": [
+              {
+                "enum": [
+                  "draft",
+                  "submitted",
+                  "under_review",
+                  "approved",
+                  "launched"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Onboardingstate"
+          },
+          "partnerEnvironment": {
+            "anyOf": [
+              {
+                "maxLength": 128,
+                "minLength": 1,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Partnerenvironment"
+          },
+          "promotionStatus": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Promotionstatus"
+          },
+          "registrationAnswers": {
+            "$ref": "#/components/schemas/WorkspaceRPApplicationRegistrationAnswers"
+          },
+          "registrationDraftVersion": {
+            "minimum": 0.0,
+            "title": "Registrationdraftversion",
+            "type": "integer"
+          },
+          "registrationLastCompletedStep": {
+            "anyOf": [
+              {
+                "enum": [
+                  "basics",
+                  "endpoints",
+                  "client-and-access",
+                  "signing",
+                  "encryption"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Registrationlastcompletedstep"
+          },
+          "rpApplicationUuid": {
+            "format": "uuid",
+            "title": "Rpapplicationuuid",
+            "type": "string"
+          },
+          "serviceNameEn": {
+            "title": "Servicenameen",
+            "type": "string"
+          },
+          "serviceNameFr": {
+            "title": "Servicenamefr",
+            "type": "string"
+          },
+          "workspaceUuid": {
+            "format": "uuid",
+            "title": "Workspaceuuid",
+            "type": "string"
+          }
+        },
+        "required": [
+          "workspaceUuid",
+          "rpApplicationUuid",
+          "serviceNameEn",
+          "serviceNameFr",
+          "configurationName",
+          "registrationDraftVersion",
+          "registrationAnswers",
+          "applicationInformationUuid"
+        ],
+        "title": "ApplicationRPConfigurationRead",
+        "type": "object"
+      },
+      "ApplicationRPConfigurationRegistrationDraftCreate": {
+        "additionalProperties": false,
+        "description": "Minimum Basics payload for an Application-scoped RP configuration.",
+        "properties": {
+          "canadaLoginEnvironment": {
+            "enum": [
+              "test",
+              "staging",
+              "production"
+            ],
+            "title": "Canadaloginenvironment",
+            "type": "string"
+          },
+          "configurationName": {
+            "maxLength": 128,
+            "minLength": 1,
+            "title": "Configurationname",
+            "type": "string"
+          },
+          "partnerEnvironment": {
+            "maxLength": 128,
+            "minLength": 1,
+            "title": "Partnerenvironment",
+            "type": "string"
+          }
+        },
+        "required": [
+          "configurationName",
+          "partnerEnvironment",
+          "canadaLoginEnvironment"
+        ],
+        "title": "ApplicationRPConfigurationRegistrationDraftCreate",
+        "type": "object"
+      },
+      "ApplicationRPConfigurationSummaryRead": {
+        "additionalProperties": false,
+        "description": "Secret-free RP configuration summary scoped to one Application.",
+        "properties": {
+          "applicationInformationUuid": {
+            "format": "uuid",
+            "title": "Applicationinformationuuid",
+            "type": "string"
+          },
+          "canadaLoginEnvironment": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Canadaloginenvironment"
+          },
+          "configurationName": {
+            "maxLength": 128,
+            "minLength": 1,
+            "title": "Configurationname",
+            "type": "string"
+          },
+          "onboardingState": {
+            "anyOf": [
+              {
+                "enum": [
+                  "draft",
+                  "submitted",
+                  "under_review",
+                  "approved",
+                  "launched"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Onboardingstate"
+          },
+          "partnerEnvironment": {
+            "anyOf": [
+              {
+                "maxLength": 128,
+                "minLength": 1,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Partnerenvironment"
+          },
+          "promotionStatus": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Promotionstatus"
+          },
+          "registrationLastCompletedStep": {
+            "anyOf": [
+              {
+                "enum": [
+                  "basics",
+                  "endpoints",
+                  "client-and-access",
+                  "signing",
+                  "encryption"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Registrationlastcompletedstep"
+          },
+          "resumeTaskPath": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Resumetaskpath"
+          },
+          "role": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/CanonicalRoleCode"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "serviceNameEn": {
+            "title": "Servicenameen",
+            "type": "string"
+          },
+          "serviceNameFr": {
+            "title": "Servicenamefr",
+            "type": "string"
+          },
+          "uuid": {
+            "format": "uuid",
+            "title": "Uuid",
+            "type": "string"
+          },
+          "workspaceName": {
+            "title": "Workspacename",
+            "type": "string"
+          },
+          "workspaceUuid": {
+            "format": "uuid",
+            "title": "Workspaceuuid",
+            "type": "string"
+          }
+        },
+        "required": [
+          "uuid",
+          "workspaceUuid",
+          "workspaceName",
+          "serviceNameEn",
+          "serviceNameFr",
+          "configurationName",
+          "applicationInformationUuid"
+        ],
+        "title": "ApplicationRPConfigurationSummaryRead",
         "type": "object"
       },
       "AuditLogRead": {
@@ -2169,6 +2993,17 @@
             "format": "date",
             "title": "End Date",
             "type": "string"
+          },
+          "partner_environment": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Partner Environment"
           },
           "records": {
             "items": {
@@ -3390,6 +4225,19 @@
             "title": "Fillablefieldnames",
             "type": "array"
           },
+          "partnerEnvironment": {
+            "anyOf": [
+              {
+                "maxLength": 128,
+                "minLength": 1,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Partnerenvironment"
+          },
           "preservedLocalFieldNames": {
             "items": {
               "enum": [
@@ -3422,6 +4270,12 @@
       "RPApplicationAdoptionCandidateRead": {
         "additionalProperties": false,
         "properties": {
+          "configurationName": {
+            "maxLength": 128,
+            "minLength": 1,
+            "title": "Configurationname",
+            "type": "string"
+          },
           "ibmApplicationId": {
             "maxLength": 128,
             "minLength": 1,
@@ -3460,6 +4314,19 @@
             "title": "Name",
             "type": "string"
           },
+          "partnerEnvironment": {
+            "anyOf": [
+              {
+                "maxLength": 128,
+                "minLength": 1,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Partnerenvironment"
+          },
           "rpApplicationUuid": {
             "format": "uuid",
             "title": "Rpapplicationuuid",
@@ -3480,6 +4347,7 @@
         },
         "required": [
           "rpApplicationUuid",
+          "configurationName",
           "name",
           "ibmApplicationId",
           "metadataCompleteness",
@@ -4194,6 +5062,12 @@
             ],
             "title": "Canadaloginenvironment"
           },
+          "configurationName": {
+            "maxLength": 128,
+            "minLength": 1,
+            "title": "Configurationname",
+            "type": "string"
+          },
           "createdAt": {
             "format": "date-time",
             "title": "Createdat",
@@ -4299,6 +5173,19 @@
             ],
             "default": "draft",
             "title": "Onboardingstate"
+          },
+          "partnerEnvironment": {
+            "anyOf": [
+              {
+                "maxLength": 128,
+                "minLength": 1,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Partnerenvironment"
           },
           "promotionDecidedAt": {
             "anyOf": [
@@ -4470,6 +5357,7 @@
           "dnrAppName",
           "id",
           "departmentId",
+          "configurationName",
           "createdBy",
           "createdAt"
         ],
@@ -4491,6 +5379,18 @@
             ],
             "title": "Canadaloginenvironment"
           },
+          "configurationName": {
+            "anyOf": [
+              {
+                "maxLength": 128,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Configurationname"
+          },
           "onboardingState": {
             "anyOf": [
               {
@@ -4508,6 +5408,19 @@
               }
             ],
             "title": "Onboardingstate"
+          },
+          "partnerEnvironment": {
+            "anyOf": [
+              {
+                "maxLength": 128,
+                "minLength": 1,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Partnerenvironment"
           },
           "promotionStatus": {
             "anyOf": [
@@ -4719,16 +5632,9 @@
         "additionalProperties": false,
         "properties": {
           "applicationInformationUuid": {
-            "anyOf": [
-              {
-                "format": "uuid",
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Applicationinformationuuid"
+            "format": "uuid",
+            "title": "Applicationinformationuuid",
+            "type": "string"
           },
           "canadaLoginEnvironment": {
             "enum": [
@@ -4737,6 +5643,12 @@
               "production"
             ],
             "title": "Canadaloginenvironment",
+            "type": "string"
+          },
+          "configurationName": {
+            "maxLength": 128,
+            "minLength": 1,
+            "title": "Configurationname",
             "type": "string"
           },
           "conflictingFieldNames": {
@@ -4797,6 +5709,19 @@
             "title": "Name",
             "type": "string"
           },
+          "partnerEnvironment": {
+            "anyOf": [
+              {
+                "maxLength": 128,
+                "minLength": 1,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Partnerenvironment"
+          },
           "preservedLocalFieldNames": {
             "items": {
               "enum": [
@@ -4830,7 +5755,9 @@
           "rpApplicationUuid",
           "workspaceUuid",
           "departmentUuid",
+          "applicationInformationUuid",
           "ibmApplicationId",
+          "configurationName",
           "name",
           "canadaLoginEnvironment",
           "filledFieldNames",
@@ -4844,16 +5771,9 @@
         "additionalProperties": false,
         "properties": {
           "applicationInformationUuid": {
-            "anyOf": [
-              {
-                "format": "uuid",
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Applicationinformationuuid"
+            "format": "uuid",
+            "title": "Applicationinformationuuid",
+            "type": "string"
           },
           "canadaLoginEnvironment": {
             "anyOf": [
@@ -4878,7 +5798,8 @@
           }
         },
         "required": [
-          "workspaceUuid"
+          "workspaceUuid",
+          "applicationInformationUuid"
         ],
         "title": "RPApplicationWorkspaceLinkWrite",
         "type": "object"
@@ -6392,6 +7313,18 @@
             ],
             "title": "Canadaloginenvironment"
           },
+          "configurationName": {
+            "anyOf": [
+              {
+                "maxLength": 128,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Configurationname"
+          },
           "offlinePublicKeyProvided": {
             "default": false,
             "title": "Offlinepublickeyprovided",
@@ -6414,6 +7347,19 @@
               }
             ],
             "title": "Onboardingstate"
+          },
+          "partnerEnvironment": {
+            "anyOf": [
+              {
+                "maxLength": 128,
+                "minLength": 1,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Partnerenvironment"
           },
           "promotionStatus": {
             "anyOf": [
@@ -7295,16 +8241,9 @@
             "title": "Applicationenvironmenturlfr"
           },
           "applicationInformationUuid": {
-            "anyOf": [
-              {
-                "format": "uuid",
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Applicationinformationuuid"
+            "format": "uuid",
+            "title": "Applicationinformationuuid",
+            "type": "string"
           },
           "canadaLoginEnvironment": {
             "enum": [
@@ -7345,6 +8284,12 @@
               }
             ],
             "title": "Clienttype"
+          },
+          "configurationName": {
+            "maxLength": 128,
+            "minLength": 1,
+            "title": "Configurationname",
+            "type": "string"
           },
           "jwksUri": {
             "anyOf": [
@@ -7530,6 +8475,12 @@
               }
             ],
             "title": "Offlinejwkorcertificate"
+          },
+          "partnerEnvironment": {
+            "maxLength": 128,
+            "minLength": 1,
+            "title": "Partnerenvironment",
+            "type": "string"
           },
           "pkceAlgorithms": {
             "anyOf": [
@@ -7990,9 +8941,12 @@
           }
         },
         "required": [
+          "applicationInformationUuid",
           "canadaLoginEnvironment",
           "serviceNameEn",
-          "serviceNameFr"
+          "serviceNameFr",
+          "configurationName",
+          "partnerEnvironment"
         ],
         "title": "WorkspaceRPApplicationRegistrationDraftCreate",
         "type": "object"
@@ -8000,10 +8954,36 @@
       "WorkspaceRPApplicationRegistrationDraftPatch": {
         "additionalProperties": false,
         "properties": {
+          "configurationName": {
+            "anyOf": [
+              {
+                "maxLength": 128,
+                "minLength": 1,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Configurationname"
+          },
           "expectedDraftVersion": {
             "minimum": 0.0,
             "title": "Expecteddraftversion",
             "type": "integer"
+          },
+          "partnerEnvironment": {
+            "anyOf": [
+              {
+                "maxLength": 128,
+                "minLength": 1,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Partnerenvironment"
           },
           "registrationAnswers": {
             "$ref": "#/components/schemas/WorkspaceRPApplicationRegistrationAnswers"
@@ -8039,10 +9019,34 @@
       },
       "WorkspaceRPApplicationRegistrationDraftRead": {
         "properties": {
+          "applicationInformationUuid": {
+            "format": "uuid",
+            "title": "Applicationinformationuuid",
+            "type": "string"
+          },
+          "configurationName": {
+            "maxLength": 128,
+            "minLength": 1,
+            "title": "Configurationname",
+            "type": "string"
+          },
           "onboardingState": {
             "const": "draft",
             "title": "Onboardingstate",
             "type": "string"
+          },
+          "partnerEnvironment": {
+            "anyOf": [
+              {
+                "maxLength": 128,
+                "minLength": 1,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Partnerenvironment"
           },
           "registrationAnswers": {
             "$ref": "#/components/schemas/WorkspaceRPApplicationRegistrationAnswers"
@@ -8084,7 +9088,9 @@
         "required": [
           "workspaceUuid",
           "rpApplicationUuid",
+          "applicationInformationUuid",
           "onboardingState",
+          "configurationName",
           "registrationDraftVersion",
           "registrationAnswers"
         ],
@@ -11891,6 +12897,23 @@
               ],
               "title": "Workspaceuuid"
             }
+          },
+          {
+            "in": "query",
+            "name": "applicationInformationUuid",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "uuid",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Applicationinformationuuid"
+            }
           }
         ],
         "responses": {
@@ -11995,6 +13018,23 @@
                 }
               ],
               "title": "Workspaceuuid"
+            }
+          },
+          {
+            "in": "query",
+            "name": "applicationInformationUuid",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "uuid",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Applicationinformationuuid"
             }
           }
         ],
@@ -12121,6 +13161,23 @@
               ],
               "title": "Workspaceuuid"
             }
+          },
+          {
+            "in": "query",
+            "name": "applicationInformationUuid",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "uuid",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Applicationinformationuuid"
+            }
           }
         ],
         "requestBody": {
@@ -12238,6 +13295,23 @@
               ],
               "title": "Workspaceuuid"
             }
+          },
+          {
+            "in": "query",
+            "name": "applicationInformationUuid",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "uuid",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Applicationinformationuuid"
+            }
           }
         ],
         "responses": {
@@ -12345,6 +13419,23 @@
               ],
               "title": "Workspaceuuid"
             }
+          },
+          {
+            "in": "query",
+            "name": "applicationInformationUuid",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "uuid",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Applicationinformationuuid"
+            }
           }
         ],
         "requestBody": {
@@ -12446,6 +13537,7 @@
     },
     "/api/v1/rp-applications/accessible/{rp_application_uuid}/department": {
       "get": {
+        "deprecated": true,
         "operationId": "read_accessible_rp_application_department_api_v1_rp_applications_accessible__rp_application_uuid__department_get",
         "parameters": [
           {
@@ -12522,6 +13614,7 @@
         ]
       },
       "patch": {
+        "deprecated": true,
         "operationId": "assign_accessible_rp_application_department_api_v1_rp_applications_accessible__rp_application_uuid__department_patch",
         "parameters": [
           {
@@ -12685,6 +13778,23 @@
                 }
               ],
               "title": "Workspaceuuid"
+            }
+          },
+          {
+            "in": "query",
+            "name": "applicationInformationUuid",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "uuid",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Applicationinformationuuid"
             }
           }
         ],
@@ -17300,8 +18410,2120 @@
         ]
       }
     },
+    "/api/v1/workspaces/{workspace_uuid}/application-information/{application_information_uuid}/rp-configurations": {
+      "get": {
+        "operationId": "read_application_rp_configurations_api_v1_workspaces__workspace_uuid__application_information__application_information_uuid__rp_configurations_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "workspace_uuid",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Workspace Uuid",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "application_information_uuid",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Application Information Uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/ApplicationRPConfigurationSummaryRead"
+                  },
+                  "title": "Response Read Application Rp Configurations Api V1 Workspaces  Workspace Uuid  Application Information  Application Information Uuid  Rp Configurations Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Forbidden"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unprocessable Entity"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Internal Server Error"
+          }
+        },
+        "security": [
+          {
+            "SessionCookie": []
+          }
+        ],
+        "summary": "Read Application Rp Configurations",
+        "tags": [
+          "workspaces"
+        ]
+      },
+      "post": {
+        "operationId": "write_application_rp_configuration_api_v1_workspaces__workspace_uuid__application_information__application_information_uuid__rp_configurations_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "workspace_uuid",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Workspace Uuid",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "application_information_uuid",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Application Information Uuid",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "Idempotency-Key",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Idempotency-Key",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ApplicationRPConfigurationRegistrationDraftCreate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkspaceRPApplicationRegistrationDraftRead"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Bad Request"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Forbidden"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unprocessable Entity"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Internal Server Error"
+          }
+        },
+        "security": [
+          {
+            "SessionCookie": []
+          }
+        ],
+        "summary": "Write Application Rp Configuration",
+        "tags": [
+          "workspaces"
+        ]
+      }
+    },
+    "/api/v1/workspaces/{workspace_uuid}/application-information/{application_information_uuid}/rp-configurations/{rp_configuration_uuid}": {
+      "delete": {
+        "operationId": "erase_application_rp_configuration_api_v1_workspaces__workspace_uuid__application_information__application_information_uuid__rp_configurations__rp_configuration_uuid__delete",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "workspace_uuid",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Workspace Uuid",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "application_information_uuid",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Application Information Uuid",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "rp_configuration_uuid",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Rp Configuration Uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": {
+                    "type": "string"
+                  },
+                  "title": "Response Erase Application Rp Configuration Api V1 Workspaces  Workspace Uuid  Application Information  Application Information Uuid  Rp Configurations  Rp Configuration Uuid  Delete",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Forbidden"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unprocessable Entity"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Internal Server Error"
+          }
+        },
+        "security": [
+          {
+            "SessionCookie": []
+          }
+        ],
+        "summary": "Erase Application Rp Configuration",
+        "tags": [
+          "workspaces"
+        ]
+      },
+      "get": {
+        "operationId": "read_application_rp_configuration_api_v1_workspaces__workspace_uuid__application_information__application_information_uuid__rp_configurations__rp_configuration_uuid__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "workspace_uuid",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Workspace Uuid",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "application_information_uuid",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Application Information Uuid",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "rp_configuration_uuid",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Rp Configuration Uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApplicationRPConfigurationSummaryRead"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Forbidden"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unprocessable Entity"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Internal Server Error"
+          }
+        },
+        "security": [
+          {
+            "SessionCookie": []
+          }
+        ],
+        "summary": "Read Application Rp Configuration",
+        "tags": [
+          "workspaces"
+        ]
+      }
+    },
+    "/api/v1/workspaces/{workspace_uuid}/application-information/{application_information_uuid}/rp-configurations/{rp_configuration_uuid}/audit-events": {
+      "get": {
+        "operationId": "read_application_rp_configuration_audit_events_api_v1_workspaces__workspace_uuid__application_information__application_information_uuid__rp_configurations__rp_configuration_uuid__audit_events_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "workspace_uuid",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Workspace Uuid",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "application_information_uuid",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Application Information Uuid",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "rp_configuration_uuid",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Rp Configuration Uuid",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "selected_date",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Selected Date"
+            }
+          },
+          {
+            "in": "query",
+            "name": "size",
+            "required": false,
+            "schema": {
+              "default": 25,
+              "title": "Size",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RPApplicationUsageAuditTrailRead"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Bad Request"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Forbidden"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unprocessable Entity"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Internal Server Error"
+          }
+        },
+        "security": [
+          {
+            "SessionCookie": []
+          }
+        ],
+        "summary": "Read Application Rp Configuration Audit Events",
+        "tags": [
+          "workspaces"
+        ]
+      }
+    },
+    "/api/v1/workspaces/{workspace_uuid}/application-information/{application_information_uuid}/rp-configurations/{rp_configuration_uuid}/audit-events/search-after": {
+      "get": {
+        "operationId": "read_application_rp_configuration_audit_events_search_after_api_v1_workspaces__workspace_uuid__application_information__application_information_uuid__rp_configurations__rp_configuration_uuid__audit_events_search_after_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "workspace_uuid",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Workspace Uuid",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "application_information_uuid",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Application Information Uuid",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "rp_configuration_uuid",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Rp Configuration Uuid",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "search_after",
+            "required": true,
+            "schema": {
+              "title": "Search After",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "selected_date",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Selected Date"
+            }
+          },
+          {
+            "in": "query",
+            "name": "size",
+            "required": false,
+            "schema": {
+              "default": 25,
+              "title": "Size",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RPApplicationUsageAuditTrailRead"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Bad Request"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Forbidden"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unprocessable Entity"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Internal Server Error"
+          }
+        },
+        "security": [
+          {
+            "SessionCookie": []
+          }
+        ],
+        "summary": "Read Application Rp Configuration Audit Events Search After",
+        "tags": [
+          "workspaces"
+        ]
+      }
+    },
+    "/api/v1/workspaces/{workspace_uuid}/application-information/{application_information_uuid}/rp-configurations/{rp_configuration_uuid}/configuration": {
+      "get": {
+        "operationId": "read_application_rp_configuration_configuration_api_v1_workspaces__workspace_uuid__application_information__application_information_uuid__rp_configurations__rp_configuration_uuid__configuration_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "workspace_uuid",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Workspace Uuid",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "application_information_uuid",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Application Information Uuid",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "rp_configuration_uuid",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Rp Configuration Uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApplicationRPConfigurationRead"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Forbidden"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unprocessable Entity"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Internal Server Error"
+          }
+        },
+        "security": [
+          {
+            "SessionCookie": []
+          }
+        ],
+        "summary": "Read Application Rp Configuration Configuration",
+        "tags": [
+          "workspaces"
+        ]
+      }
+    },
+    "/api/v1/workspaces/{workspace_uuid}/application-information/{application_information_uuid}/rp-configurations/{rp_configuration_uuid}/onboarding-state": {
+      "post": {
+        "operationId": "write_application_rp_configuration_onboarding_state_api_v1_workspaces__workspace_uuid__application_information__application_information_uuid__rp_configurations__rp_configuration_uuid__onboarding_state_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "workspace_uuid",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Workspace Uuid",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "application_information_uuid",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Application Information Uuid",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "rp_configuration_uuid",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Rp Configuration Uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/WorkspaceRPApplicationOnboardingLifecycleTransitionRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "anyOf": [
+                    {
+                      "$ref": "#/components/schemas/WorkspaceRPApplicationRegistrationSubmissionRead"
+                    },
+                    {
+                      "$ref": "#/components/schemas/RPApplicationRead"
+                    }
+                  ],
+                  "title": "Response Write Application Rp Configuration Onboarding State Api V1 Workspaces  Workspace Uuid  Application Information  Application Information Uuid  Rp Configurations  Rp Configuration Uuid  Onboarding State Post"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Bad Request"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Forbidden"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unprocessable Entity"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Internal Server Error"
+          }
+        },
+        "security": [
+          {
+            "SessionCookie": []
+          }
+        ],
+        "summary": "Write Application Rp Configuration Onboarding State",
+        "tags": [
+          "workspaces"
+        ]
+      }
+    },
+    "/api/v1/workspaces/{workspace_uuid}/application-information/{application_information_uuid}/rp-configurations/{rp_configuration_uuid}/partner-environment": {
+      "patch": {
+        "operationId": "patch_application_rp_configuration_partner_environment_api_v1_workspaces__workspace_uuid__application_information__application_information_uuid__rp_configurations__rp_configuration_uuid__partner_environment_patch",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "workspace_uuid",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Workspace Uuid",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "application_information_uuid",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Application Information Uuid",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "rp_configuration_uuid",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Rp Configuration Uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ApplicationRPConfigurationPartnerEnvironmentUpdate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApplicationRPConfigurationPartnerEnvironmentRead"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Bad Request"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Forbidden"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unprocessable Entity"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Internal Server Error"
+          }
+        },
+        "security": [
+          {
+            "SessionCookie": []
+          }
+        ],
+        "summary": "Patch Application Rp Configuration Partner Environment",
+        "tags": [
+          "workspaces"
+        ]
+      }
+    },
+    "/api/v1/workspaces/{workspace_uuid}/application-information/{application_information_uuid}/rp-configurations/{rp_configuration_uuid}/promotion-request": {
+      "get": {
+        "operationId": "read_application_rp_configuration_promotion_request_api_v1_workspaces__workspace_uuid__application_information__application_information_uuid__rp_configurations__rp_configuration_uuid__promotion_request_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "workspace_uuid",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Workspace Uuid",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "application_information_uuid",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Application Information Uuid",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "rp_configuration_uuid",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Rp Configuration Uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApplicationRPConfigurationPromotionRequestRead"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Bad Request"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Forbidden"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unprocessable Entity"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Internal Server Error"
+          }
+        },
+        "security": [
+          {
+            "SessionCookie": []
+          }
+        ],
+        "summary": "Read Application Rp Configuration Promotion Request",
+        "tags": [
+          "workspaces"
+        ]
+      },
+      "patch": {
+        "operationId": "patch_application_rp_configuration_promotion_request_api_v1_workspaces__workspace_uuid__application_information__application_information_uuid__rp_configurations__rp_configuration_uuid__promotion_request_patch",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "workspace_uuid",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Workspace Uuid",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "application_information_uuid",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Application Information Uuid",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "rp_configuration_uuid",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Rp Configuration Uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PromotionReviewUpdate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApplicationRPConfigurationPromotionRequestRead"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Bad Request"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Forbidden"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unprocessable Entity"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Internal Server Error"
+          }
+        },
+        "security": [
+          {
+            "SessionCookie": []
+          }
+        ],
+        "summary": "Patch Application Rp Configuration Promotion Request",
+        "tags": [
+          "workspaces"
+        ]
+      },
+      "post": {
+        "operationId": "write_application_rp_configuration_promotion_request_api_v1_workspaces__workspace_uuid__application_information__application_information_uuid__rp_configurations__rp_configuration_uuid__promotion_request_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "workspace_uuid",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Workspace Uuid",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "application_information_uuid",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Application Information Uuid",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "rp_configuration_uuid",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Rp Configuration Uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PromotionRequestUpsert"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApplicationRPConfigurationPromotionRequestRead"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Bad Request"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Forbidden"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unprocessable Entity"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Internal Server Error"
+          }
+        },
+        "security": [
+          {
+            "SessionCookie": []
+          }
+        ],
+        "summary": "Write Application Rp Configuration Promotion Request",
+        "tags": [
+          "workspaces"
+        ]
+      }
+    },
+    "/api/v1/workspaces/{workspace_uuid}/application-information/{application_information_uuid}/rp-configurations/{rp_configuration_uuid}/registration-draft": {
+      "get": {
+        "operationId": "read_application_rp_configuration_registration_draft_api_v1_workspaces__workspace_uuid__application_information__application_information_uuid__rp_configurations__rp_configuration_uuid__registration_draft_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "workspace_uuid",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Workspace Uuid",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "application_information_uuid",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Application Information Uuid",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "rp_configuration_uuid",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Rp Configuration Uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkspaceRPApplicationRegistrationDraftRead"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Bad Request"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Forbidden"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unprocessable Entity"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Internal Server Error"
+          }
+        },
+        "security": [
+          {
+            "SessionCookie": []
+          }
+        ],
+        "summary": "Read Application Rp Configuration Registration Draft",
+        "tags": [
+          "workspaces"
+        ]
+      },
+      "patch": {
+        "operationId": "patch_application_rp_configuration_registration_draft_api_v1_workspaces__workspace_uuid__application_information__application_information_uuid__rp_configurations__rp_configuration_uuid__registration_draft_patch",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "workspace_uuid",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Workspace Uuid",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "application_information_uuid",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Application Information Uuid",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "rp_configuration_uuid",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Rp Configuration Uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/WorkspaceRPApplicationRegistrationDraftPatch"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkspaceRPApplicationRegistrationDraftRead"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Bad Request"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Forbidden"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unprocessable Entity"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Internal Server Error"
+          }
+        },
+        "security": [
+          {
+            "SessionCookie": []
+          }
+        ],
+        "summary": "Patch Application Rp Configuration Registration Draft",
+        "tags": [
+          "workspaces"
+        ]
+      }
+    },
+    "/api/v1/workspaces/{workspace_uuid}/application-information/{application_information_uuid}/rp-configurations/{rp_configuration_uuid}/usage/summary": {
+      "get": {
+        "operationId": "read_application_rp_configuration_usage_summary_api_v1_workspaces__workspace_uuid__application_information__application_information_uuid__rp_configurations__rp_configuration_uuid__usage_summary_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "workspace_uuid",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Workspace Uuid",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "application_information_uuid",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Application Information Uuid",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "rp_configuration_uuid",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Rp Configuration Uuid",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "selected_date",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Selected Date"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RPApplicationUsageSummaryRead"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Bad Request"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Forbidden"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unprocessable Entity"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Internal Server Error"
+          }
+        },
+        "security": [
+          {
+            "SessionCookie": []
+          }
+        ],
+        "summary": "Read Application Rp Configuration Usage Summary",
+        "tags": [
+          "workspaces"
+        ]
+      }
+    },
+    "/api/v1/workspaces/{workspace_uuid}/application-information/{application_information_uuid}/rp-configurations/{source_rp_configuration_uuid}/progression": {
+      "post": {
+        "operationId": "write_application_rp_configuration_progression_api_v1_workspaces__workspace_uuid__application_information__application_information_uuid__rp_configurations__source_rp_configuration_uuid__progression_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "workspace_uuid",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Workspace Uuid",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "application_information_uuid",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Application Information Uuid",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "source_rp_configuration_uuid",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Source Rp Configuration Uuid",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "Idempotency-Key",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Idempotency-Key",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ApplicationRPConfigurationProgressionCreate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApplicationRPConfigurationProgressionRead"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Bad Request"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Forbidden"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unprocessable Entity"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Internal Server Error"
+          }
+        },
+        "security": [
+          {
+            "SessionCookie": []
+          }
+        ],
+        "summary": "Write Application Rp Configuration Progression",
+        "tags": [
+          "workspaces"
+        ]
+      }
+    },
     "/api/v1/workspaces/{workspace_uuid}/applications": {
       "get": {
+        "deprecated": true,
         "operationId": "read_workspace_rp_applications_api_v1_workspaces__workspace_uuid__applications_get",
         "parameters": [
           {
@@ -17392,6 +20614,7 @@
         ]
       },
       "post": {
+        "deprecated": true,
         "operationId": "write_workspace_rp_application_api_v1_workspaces__workspace_uuid__applications_post",
         "parameters": [
           {
@@ -17520,6 +20743,7 @@
     },
     "/api/v1/workspaces/{workspace_uuid}/applications/{rp_application_uuid}": {
       "delete": {
+        "deprecated": true,
         "operationId": "erase_workspace_rp_application_api_v1_workspaces__workspace_uuid__applications__rp_application_uuid__delete",
         "parameters": [
           {
@@ -17620,6 +20844,7 @@
         ]
       },
       "get": {
+        "deprecated": true,
         "operationId": "read_workspace_rp_application_detail_api_v1_workspaces__workspace_uuid__applications__rp_application_uuid__get",
         "parameters": [
           {
@@ -17716,6 +20941,7 @@
         ]
       },
       "patch": {
+        "deprecated": true,
         "operationId": "patch_workspace_rp_application_api_v1_workspaces__workspace_uuid__applications__rp_application_uuid__patch",
         "parameters": [
           {
@@ -17834,6 +21060,7 @@
     },
     "/api/v1/workspaces/{workspace_uuid}/applications/{rp_application_uuid}/audit-events": {
       "get": {
+        "deprecated": true,
         "operationId": "read_workspace_rp_application_audit_events_api_v1_workspaces__workspace_uuid__applications__rp_application_uuid__audit_events_get",
         "parameters": [
           {
@@ -17978,6 +21205,7 @@
     },
     "/api/v1/workspaces/{workspace_uuid}/applications/{rp_application_uuid}/audit-events/search-after": {
       "get": {
+        "deprecated": true,
         "operationId": "read_workspace_rp_application_audit_events_search_after_api_v1_workspaces__workspace_uuid__applications__rp_application_uuid__audit_events_search_after_get",
         "parameters": [
           {
@@ -18131,6 +21359,7 @@
     },
     "/api/v1/workspaces/{workspace_uuid}/applications/{rp_application_uuid}/configuration": {
       "get": {
+        "deprecated": true,
         "operationId": "read_workspace_rp_application_configuration_api_v1_workspaces__workspace_uuid__applications__rp_application_uuid__configuration_get",
         "parameters": [
           {
@@ -18229,6 +21458,7 @@
     },
     "/api/v1/workspaces/{workspace_uuid}/applications/{rp_application_uuid}/developer-invitations": {
       "get": {
+        "deprecated": true,
         "operationId": "read_workspace_rp_application_developer_invitations_api_v1_workspaces__workspace_uuid__applications__rp_application_uuid__developer_invitations_get",
         "parameters": [
           {
@@ -18329,6 +21559,7 @@
         ]
       },
       "post": {
+        "deprecated": true,
         "operationId": "write_workspace_rp_application_developer_invitation_api_v1_workspaces__workspace_uuid__applications__rp_application_uuid__developer_invitations_post",
         "parameters": [
           {
@@ -18457,6 +21688,7 @@
     },
     "/api/v1/workspaces/{workspace_uuid}/applications/{rp_application_uuid}/developer-invitations/{invitation_uuid}/reissue": {
       "post": {
+        "deprecated": true,
         "operationId": "reissue_workspace_rp_application_developer_invitation_api_v1_workspaces__workspace_uuid__applications__rp_application_uuid__developer_invitations__invitation_uuid__reissue_post",
         "parameters": [
           {
@@ -18585,6 +21817,7 @@
     },
     "/api/v1/workspaces/{workspace_uuid}/applications/{rp_application_uuid}/developer-invitations/{invitation_uuid}/revoke": {
       "post": {
+        "deprecated": true,
         "operationId": "revoke_workspace_rp_application_developer_invitation_api_v1_workspaces__workspace_uuid__applications__rp_application_uuid__developer_invitations__invitation_uuid__revoke_post",
         "parameters": [
           {
@@ -18703,6 +21936,7 @@
     },
     "/api/v1/workspaces/{workspace_uuid}/applications/{rp_application_uuid}/onboarding-state": {
       "post": {
+        "deprecated": true,
         "operationId": "write_workspace_rp_application_onboarding_state_api_v1_workspaces__workspace_uuid__applications__rp_application_uuid__onboarding_state_post",
         "parameters": [
           {
@@ -18839,6 +22073,7 @@
     },
     "/api/v1/workspaces/{workspace_uuid}/applications/{rp_application_uuid}/promotion-request": {
       "get": {
+        "deprecated": true,
         "operationId": "read_workspace_rp_application_promotion_request_api_v1_workspaces__workspace_uuid__applications__rp_application_uuid__promotion_request_get",
         "parameters": [
           {
@@ -18955,6 +22190,7 @@
         ]
       },
       "patch": {
+        "deprecated": true,
         "operationId": "patch_workspace_rp_application_promotion_request_api_v1_workspaces__workspace_uuid__applications__rp_application_uuid__promotion_request_patch",
         "parameters": [
           {
@@ -19071,6 +22307,7 @@
         ]
       },
       "post": {
+        "deprecated": true,
         "operationId": "write_workspace_rp_application_promotion_request_api_v1_workspaces__workspace_uuid__applications__rp_application_uuid__promotion_request_post",
         "parameters": [
           {
@@ -19189,6 +22426,7 @@
     },
     "/api/v1/workspaces/{workspace_uuid}/applications/{rp_application_uuid}/registration-draft": {
       "get": {
+        "deprecated": true,
         "operationId": "read_workspace_rp_application_registration_draft_api_v1_workspaces__workspace_uuid__applications__rp_application_uuid__registration_draft_get",
         "parameters": [
           {
@@ -19305,6 +22543,7 @@
         ]
       },
       "patch": {
+        "deprecated": true,
         "operationId": "patch_workspace_rp_application_registration_draft_api_v1_workspaces__workspace_uuid__applications__rp_application_uuid__registration_draft_patch",
         "parameters": [
           {
@@ -19433,6 +22672,7 @@
     },
     "/api/v1/workspaces/{workspace_uuid}/applications/{rp_application_uuid}/usage/summary": {
       "get": {
+        "deprecated": true,
         "operationId": "read_workspace_rp_application_usage_summary_api_v1_workspaces__workspace_uuid__applications__rp_application_uuid__usage_summary_get",
         "parameters": [
           {

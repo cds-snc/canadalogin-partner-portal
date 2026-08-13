@@ -24,8 +24,8 @@ class ApplicationInformationContact(Base):
         index=True,
         nullable=False,
     )
-    name_en: Mapped[str] = mapped_column(String(255), nullable=False)
-    name_fr: Mapped[str] = mapped_column(String(255), nullable=False)
+    name_en: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    name_fr: Mapped[str | None] = mapped_column(String(255), nullable=True)
     responsibility_en: Mapped[str] = mapped_column(String(255), nullable=False)
     responsibility_fr: Mapped[str] = mapped_column(String(255), nullable=False)
     email: Mapped[str] = mapped_column(String(254), nullable=False)
@@ -40,6 +40,20 @@ class ApplicationInformationContact(Base):
         unique=True,
     )
     phone_number: Mapped[str | None] = mapped_column(String(50), nullable=True, default=None)
+    first_name: Mapped[str | None] = mapped_column(String(100), nullable=True, default=None)
+    last_name: Mapped[str | None] = mapped_column(String(100), nullable=True, default=None)
+    alternate_phone_number: Mapped[str | None] = mapped_column(String(50), nullable=True, default=None)
+    identity_confirmed_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True),
+        nullable=True,
+        default=None,
+    )
+    identity_confirmed_by: Mapped[int | None] = mapped_column(
+        ForeignKey("user.id"),
+        index=True,
+        nullable=True,
+        default=None,
+    )
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True),
         default_factory=lambda: datetime.now(UTC),

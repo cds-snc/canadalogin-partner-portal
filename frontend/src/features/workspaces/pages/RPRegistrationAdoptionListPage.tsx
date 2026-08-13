@@ -8,9 +8,10 @@ import { getRequestErrorNotice } from "@/fetch";
 import { useRPRegistrationAdoptionCandidates } from "../hooks/use-rp-registration-adoption";
 
 type AdoptionCandidateRow = {
+	configurationName: string;
 	ibmApplicationId: string;
 	metadataCompleteness: string;
-	name: string;
+	partnerEnvironment: string;
 	rpApplicationUuid: string;
 };
 
@@ -30,17 +31,23 @@ export const RPRegistrationAdoptionListPage = (): FunctionComponent => {
 		titleKey: "rpRegistrationAdoption.listErrorTitle",
 	});
 	const rows: Array<AdoptionCandidateRow> = candidates.map((candidate) => ({
+		configurationName: candidate.configurationName,
 		ibmApplicationId: candidate.ibmApplicationId,
 		metadataCompleteness: t(
 			`rpRegistrationAdoption.completeness.${candidate.metadataCompleteness}`
 		),
-		name: candidate.name,
+		partnerEnvironment:
+			candidate.partnerEnvironment?.trim() || t("common.notProvided"),
 		rpApplicationUuid: candidate.rpApplicationUuid,
 	}));
 	const columns: Array<DataTableColumn<AdoptionCandidateRow>> = [
 		{
-			field: "name",
+			field: "configurationName",
 			headerName: t("rpRegistrationAdoption.nameColumn"),
+		},
+		{
+			field: "partnerEnvironment",
+			headerName: t("rpRegistrationAdoption.partnerEnvironmentColumn"),
 		},
 		{
 			field: "ibmApplicationId",
@@ -106,7 +113,7 @@ export const RPRegistrationAdoptionListPage = (): FunctionComponent => {
 								to: "/workspaces/rp-registration-adoption/$rpApplicationUuid",
 							});
 						},
-						screenReaderLabel: (row): string => row.name,
+						screenReaderLabel: (row): string => row.configurationName,
 					}}
 				/>
 			) : null}

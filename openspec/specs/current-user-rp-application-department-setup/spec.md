@@ -1,193 +1,91 @@
 # current-user-rp-application-department-setup
 
 ## Purpose
-Define the grant-scoped RP application department preflight and forced setup flow with workspace-role-aware read and write behavior.
+Define workspace-inherited Department behavior for Applications and RP
+configurations, including the retained current-user department-setup
+compatibility flow and workspace-role-aware access.
 ## Requirements
-### Requirement: Parent route guard redirects missing-department RP applications
+### Requirement: Workspace Department is authoritative for RP configuration context
 
-The frontend SHALL enforce RP application department setup in the parent route
-`/your-applications/$rpApplicationUuid` using the grant-derived accessible
-application and department-preflight endpoints. It SHALL redirect only an
-in-scope RP Admin or RP User (Edit) into the write setup flow. Read Only SHALL
-not be offered department-assignment controls.
+Every partner-visible Application and RP configuration SHALL derive its
+effective Department from its owning Partner workspace. The portal SHALL NOT
+require a user to assign a second Department to one RP configuration or use a
+child-level Department value to change workspace, Application, authorization,
+reporting, or review scope.
 
-#### Scenario: Guard redirects to setup route
+Existing RP Department data MAY remain as a compatibility shadow during
+migration. It SHALL be reconciled to the workspace value before the legacy
+field or adapter is retired.
 
-- **WHEN** the parent route receives `AccessibleRPApplicationRead` for an RP Admin or RP User (Edit) and `AccessibleRPApplicationSummaryRead.departmentId` is `null`
-- **THEN** navigation is redirected to `/your-applications/$rpApplicationUuid/department-setup`
-- **AND** the intended destination is preserved through redirect search state
+#### Scenario: New RP configuration derives Department from its workspace
 
-#### Scenario: Guard allows already-assigned application routes
+- **WHEN** an authorized editor creates an RP configuration under an Application
+- **THEN** its effective Department is the Department of the owning workspace
+- **AND** configuration Basics does not present a Department picker or create a separate Department assignment
 
-- **WHEN** the parent route receives in-scope accessible application preflight data with non-null `departmentId`
-- **THEN** navigation continues to the requested accessible application child route
+#### Scenario: Existing configuration reads inherited Department
 
-#### Scenario: Guard avoids setup redirect loop
+- **WHEN** an authorized user opens Configuration, Usage, credentials, or another scoped child for a migrated RP configuration
+- **THEN** the backend resolves Department through the owning workspace after authorization
+- **AND** a compatibility response may project that value without making the child field authoritative
 
-- **WHEN** an authorized partner editor is already on `/your-applications/$rpApplicationUuid/department-setup`
-- **THEN** the parent guard does not redirect back to setup for that same navigation
+#### Scenario: Conflicting legacy Department fails reconciliation
 
-#### Scenario: Guard does not expose department assignment to Read Only
+- **WHEN** migration finds an RP Department value different from its owning workspace Department
+- **THEN** the reconciliation reports the mismatch and does not silently change workspace scope
+- **AND** canonical cutover does not use the conflicting child value for authorization or disclosure
 
-- **WHEN** a Read Only user opens an in-scope RP application whose department is unset
-- **THEN** the parent guard does not redirect the user into the department-assignment form
-- **AND** missing-department handling offers no mutation control to that user
+#### Scenario: Provider candidate has no partner Department before adoption
 
-### Requirement: RP application department setup page behavior
+- **WHEN** a retained provider candidate has no Partner workspace or Application
+- **THEN** it remains outside partner configuration routes and has no effective Partner workspace Department
+- **AND** adoption derives Department only after CL Admin selects the authorized workspace and Application
 
-The frontend SHALL provide
-`/your-applications/$rpApplicationUuid/department-setup` as a forced
-application-level setup flow for RP Admin and RP User (Edit) with an active
-grant for the owning workspace.
+### Requirement: Legacy RP Department setup retires through authorized compatibility
 
-#### Scenario: Setup page displays application context
+The portal SHALL remove the forced
+`/your-applications/$rpApplicationUuid/department-setup` product flow after
+workspace Department inheritance and caller migration are complete. A saved
+legacy setup path SHALL verify current workspace, Application, configuration,
+and role scope before redirecting to the canonical RP-configuration hub or the
+original intended nested destination.
 
-- **WHEN** the setup page loads for an RP application available to the authorized partner editor
-- **THEN** it displays the RP application name from `AccessibleRPApplicationSummaryRead.dnrAppName` using the same convention as the accessible applications page
+Existing accessible Department preflight and assignment APIs SHALL remain
+deprecated compatibility adapters in this change. The GET SHALL project the
+authorized workspace Department. The PATCH SHALL return an idempotent success
+only when its requested Department matches the workspace Department and SHALL
+return a stable conflict otherwise. Neither SHALL override the workspace
+Department, grant access, call IBM Verify, or reveal a missing versus out-of-
+scope RP record. Their later removal requires separately recorded caller and
+compatibility evidence.
 
-#### Scenario: Setup page department picker strategy
+#### Scenario: Legacy setup link resolves without an assignment form
 
-- **WHEN** the setup page loads department options
-- **THEN** it uses the same simple fetch strategy as profile setup (`useDepartments(1, 200)`) and client-side alphabetical sort
+- **WHEN** an RP Admin or RP User (Edit) follows a saved legacy Department-setup link for an in-scope migrated RP configuration
+- **THEN** the portal resolves the owning workspace and Application through current server authorization
+- **AND** it redirects to the canonical configuration hub or safely preserved intended child
+- **AND** it does not show a forced picker, write a child Department, or display a success toast for assignment
 
-#### Scenario: Setup page successful assignment navigation
+#### Scenario: Read Only is not offered Department mutation
 
-- **WHEN** assignment succeeds from the setup page
-- **THEN** the frontend redirects to the supplied redirect target, or defaults to `/your-applications/$rpApplicationUuid` when no redirect is provided
+- **WHEN** a Read Only user opens an in-scope migrated RP configuration or a legacy setup link
+- **THEN** the configuration uses inherited workspace Department context where permitted
+- **AND** no Department-assignment form, mutation control, or write endpoint is offered
 
-#### Scenario: Setup page race where assignment is already complete
+#### Scenario: Missing or out-of-scope legacy setup link fails safely
 
-- **WHEN** setup submit receives conflict indicating assignment is already complete
-- **THEN** the frontend navigates to `/your-applications/$rpApplicationUuid` instead of staying in an error state
+- **WHEN** a user follows a legacy setup path for a missing, revoked, mismatched, or out-of-scope RP configuration
+- **THEN** the portal returns the standard safe unavailable result
+- **AND** it does not reveal the resource, its owning workspace, Application, Department, or role
 
-#### Scenario: Setup page forced flow UI
+#### Scenario: Protected child no longer depends on child Department assignment
 
-- **WHEN** an authorized partner editor is on the setup page
-- **THEN** the page does not present a cancel or back action and does not show a success toast for RP application assignment
+- **WHEN** an authorized user opens portal-owned Configuration or scoped Usage after workspace Department cutover
+- **THEN** the backend authorizes the complete workspace/Application/configuration hierarchy and uses the workspace Department
+- **AND** null legacy `rp_application.department_id` does not redirect to a current-user setup page or block an otherwise valid request
 
-### Requirement: Frontend redirect mapping for missing-department conflict
+#### Scenario: Compatibility adapter cannot change workspace ownership
 
-Frontend accessible RP application pages SHALL map the missing-department
-conflict according to the caller's canonical role. RP Admin and RP User (Edit)
-may enter the setup recovery flow; Read Only SHALL not receive that write flow.
-
-#### Scenario: OAuth setup page receives missing-department conflict
-
-- **WHEN** the accessible OAuth setup fetch fails with `409` and code `rp_application_department_required`
-- **THEN** an RP Admin or RP User (Edit) is redirected to `/your-applications/$rpApplicationUuid/department-setup`
-- **AND** a Read Only user is redirected to `/access-denied` without assignment controls
-
-#### Scenario: MAU report page receives missing-department conflict
-
-- **WHEN** the accessible MAU report fetch fails with `409` and code `rp_application_department_required`
-- **THEN** an RP Admin or RP User (Edit) is redirected to `/your-applications/$rpApplicationUuid/department-setup`
-- **AND** a Read Only user is redirected to `/access-denied` without assignment controls
-
-### Requirement: Grant-derived accessible RP application department preflight endpoint
-
-The system SHALL provide the database-only endpoint
-`GET /api/v1/rp-applications/accessible/{rpApplicationUuid}/department` for an
-RP application covered by the caller's active canonical partner workspace
-grant. RP Admin, RP User (Edit), and Read Only SHALL be able to read preflight
-state. The endpoint MUST NOT call IBM Verify SDK clients.
-
-The endpoint SHALL return DTO `AccessibleRPApplicationSummaryRead` containing
-exactly `id`, `uuid`, `dnrAppName`, and `departmentId`. A caller without an
-active partner grant for the owning workspace, a caller with a revoked grant,
-or a caller whose role is outside the permitted partner set SHALL receive the
-same `404 not_found` response as a missing RP application. Historical owner
-snapshots SHALL NOT authorize this endpoint.
-
-#### Scenario: Authorized partner user retrieves RP application department preflight
-
-- **WHEN** an RP Admin, RP User (Edit), or Read Only user requests `GET /api/v1/rp-applications/accessible/{rpApplicationUuid}/department` for an RP application in the assigned workspace
-- **THEN** the API returns `200` with `AccessibleRPApplicationSummaryRead` containing exactly `id`, `uuid`, `dnrAppName`, and `departmentId`
-- **AND** it performs no IBM Verify request
-
-#### Scenario: Department preflight endpoint returns unset department state
-
-- **WHEN** the in-scope RP application has no associated department
-- **THEN** the API returns `200` and `departmentId` is `null`
-
-#### Scenario: Out-of-scope caller requests department preflight
-
-- **WHEN** a caller without an active permitted grant for the RP application's workspace requests the department preflight endpoint
-- **THEN** the API returns `404` with error code `not_found`
-- **AND** it does not disclose whether the RP application exists
-
-#### Scenario: Missing RP application department preflight resource
-
-- **WHEN** the requested RP application UUID does not exist
-- **THEN** the API returns `404` with error code `not_found`
-
-### Requirement: Grant-authorized one-time department assignment endpoint
-
-The system SHALL provide
-`PATCH /api/v1/rp-applications/accessible/{rpApplicationUuid}/department` to
-assign an RP application department once. The endpoint SHALL accept DTO
-`AccessibleRPApplicationDepartmentAssignRequest` with required field
-`departmentUuid` and return updated DTO `AccessibleRPApplicationSummaryRead`.
-
-Only RP Admin and RP User (Edit) with an active grant for the owning workspace
-SHALL perform this configuration mutation. Read Only, CL Admin, users without
-the owning-workspace grant, and users with revoked grants SHALL receive the
-same safe `404 not_found` response as a missing resource before department
-lookup or mutation.
-
-#### Scenario: Authorized partner editor assigns missing department
-
-- **WHEN** an RP Admin or RP User (Edit) submits `PATCH /api/v1/rp-applications/accessible/{rpApplicationUuid}/department` with body `{ "departmentUuid": "<uuid>" }` and the in-scope RP application `departmentId` is currently null
-- **THEN** the API resolves the UUID from active local department records, updates RP application `departmentId`, records the RP application update audit event, and returns `200` with updated `AccessibleRPApplicationSummaryRead`
-
-#### Scenario: Assignment uses unknown department UUID
-
-- **WHEN** an authorized partner editor submits a `departmentUuid` that does not map to an active local department
-- **THEN** the API returns `404` with error code `not_found`
-
-#### Scenario: Assignment submitted after department already set
-
-- **WHEN** an authorized partner editor submits assignment for an in-scope RP application whose `departmentId` is already non-null
-- **THEN** the API does not modify the record and returns `409` with error code `conflict`
-
-#### Scenario: Role without configuration authority attempts department assignment
-
-- **WHEN** Read Only, CL Admin, or a user without the owning-workspace grant requests the department assignment endpoint
-- **THEN** the API returns `404` with error code `not_found` before department lookup or record mutation
-
-### Requirement: Protected accessible application child routes enforce missing-department conflict
-
-The backend SHALL enforce the RP application department precondition on
-protected accessible OAuth setup and MAU report routes. The precondition SHALL
-run only after active grant, role, workspace, and RP application scope are
-resolved. A safely unavailable resource SHALL remain `404`; an authorized
-in-scope resource with no department SHALL return the specific department
-conflict.
-
-#### Scenario: Accessible OAuth setup is blocked by missing department
-
-- **WHEN** an authorized partner user calls `GET /api/v1/rp-applications/accessible/{rpApplicationUuid}/oauth-setup` and the in-scope RP application has null `departmentId`
-- **THEN** the API returns `409` with error code `rp_application_department_required`
-
-#### Scenario: Accessible MAU report is blocked by missing department
-
-- **WHEN** an authorized partner user calls `GET /api/v1/rp-applications/accessible/{rpApplicationUuid}/mau-report` and the in-scope RP application has null `departmentId`
-- **THEN** the API returns `409` with error code `rp_application_department_required`
-
-### Requirement: Setup route preserves canonical active-workspace access behavior
-
-The frontend department-setup route SHALL require an active in-scope RP Admin
-or RP User (Edit) role. Read Only SHALL be able to read already valid in-scope
-OAuth and MAU data but SHALL NOT enter or submit the department-assignment
-flow. Backend resource resolution SHALL continue to return safe `404` responses
-outside active grant or role scope.
-
-#### Scenario: Setup route denies a role without department-assignment capability
-
-- **WHEN** a Read Only or CL Admin user attempts `/your-applications/$rpApplicationUuid/department-setup`
-- **THEN** the frontend resolves to `/access-denied` without displaying or submitting the assignment form
-
-#### Scenario: Setup route safely handles an unavailable RP application
-
-- **WHEN** an RP Admin or RP User (Edit) requests the setup route for a missing or out-of-scope RP application
-- **THEN** the accessible preflight endpoint returns `404 not_found`
-- **AND** the frontend resolves to `/error?kind=not_found` without distinguishing missing from out-of-scope
+- **WHEN** a remaining legacy assignment caller supplies a Department different from the owning workspace Department
+- **THEN** the backend rejects the request without changing the RP configuration or workspace
+- **AND** the response and audit behavior remain safe and contain no broader Department data

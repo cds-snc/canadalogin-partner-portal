@@ -14,14 +14,18 @@ import {
 	type RPApplicationSummaryRead,
 } from "@/fetch/rp-applications";
 import { useSession } from "@/hooks";
-import { getLocalizedRPApplicationName } from "@/features/rp-applications/rp-application-summary";
+import {
+	buildRPConfigurationPublicReferences,
+	getLocalizedRPApplicationName,
+	getRPConfigurationDisplayName,
+} from "@/features/rp-applications/rp-application-summary";
+import { getCanadaLoginEnvironmentLabel } from "@/features/workspaces/onboarding-display";
 
 const getApplicationLabel = (
 	application: RPApplicationSummaryRead,
 	language: string,
 	fallback: string
-): string =>
-	getLocalizedRPApplicationName(application, language) || fallback;
+): string => getLocalizedRPApplicationName(application, language) || fallback;
 
 export const ApplicationReportsChooserPage = (): FunctionComponent => {
 	const { i18n, t } = useTranslation();
@@ -42,9 +46,16 @@ export const ApplicationReportsChooserPage = (): FunctionComponent => {
 			application.role !== null &&
 			application.role !== undefined &&
 			sessionAccess?.role === application.role &&
-			roleAllows(application.role, "mau_report_read")
+			roleAllows(application.role, "mau_report_read") &&
+			Boolean(application.applicationInformationUuid)
 		);
 	});
+	const language = i18n?.resolvedLanguage ?? i18n?.language ?? "en";
+	const publicReferences = buildRPConfigurationPublicReferences(
+		reportApplications,
+		language,
+		t("reports.applicationsChooser.unknownConfiguration")
+	);
 	const errorNotice = getRequestErrorNotice(error, {
 		bodyKey: "reports.applicationsChooser.errorBody",
 		titleKey: "reports.applicationsChooser.errorTitle",
@@ -89,20 +100,61 @@ export const ApplicationReportsChooserPage = (): FunctionComponent => {
 					<Text>{t("reports.applicationsChooser.emptyBody")}</Text>
 				</Notice>
 			) : (
-				<ul className="space-y-400">
+				<ul className="m-0 grid list-none gap-200 p-0">
 					{reportApplications.map((application) => (
-						<li key={application.uuid}>
+						<li
+							key={application.uuid}
+							className="grid gap-100 rounded-sm border border-[var(--gcds-border-default)] bg-[var(--gcds-bg-white)] p-300"
+						>
 							<Heading tag="h2">
 								<Link
-									href={`/workspaces/${encodeURIComponent(application.workspaceUuid)}/applications/${encodeURIComponent(application.uuid)}/usage`}
+									href={`/workspaces/${encodeURIComponent(application.workspaceUuid)}/applications/${encodeURIComponent(application.applicationInformationUuid ?? "")}/rp-configurations/${encodeURIComponent(application.uuid)}/usage`}
 								>
-									{getApplicationLabel(
+									{getRPConfigurationDisplayName(
 										application,
-										i18n?.resolvedLanguage ?? i18n?.language ?? "en",
-										t("reports.applicationsChooser.unknownApplication")
+										language,
+										t("reports.applicationsChooser.unknownConfiguration")
 									)}
 								</Link>
 							</Heading>
+							<Text>
+								{t("reports.applicationsChooser.workspaceContext", {
+									name: application.workspaceName,
+								})}
+							</Text>
+							<Text>
+								{t("reports.applicationsChooser.applicationContext", {
+									name: getApplicationLabel(
+										application,
+										language,
+										t("reports.applicationsChooser.unknownApplication")
+									),
+								})}
+							</Text>
+							<Text>
+								{t("reports.applicationsChooser.partnerEnvironmentContext", {
+									environment:
+										application.partnerEnvironment?.trim() ||
+										t("common.notProvided"),
+								})}
+							</Text>
+							<Text>
+								{t("reports.applicationsChooser.environmentContext", {
+									environment: application.canadaLoginEnvironment
+										? getCanadaLoginEnvironmentLabel(
+												t as never,
+												application.canadaLoginEnvironment
+											)
+										: t("common.notAvailable"),
+								})}
+							</Text>
+							{publicReferences.get(application.uuid) ? (
+								<Text>
+									{t("reports.applicationsChooser.referenceContext", {
+										reference: publicReferences.get(application.uuid),
+									})}
+								</Text>
+							) : null}
 						</li>
 					))}
 				</ul>

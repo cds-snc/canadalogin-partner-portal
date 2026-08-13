@@ -12,10 +12,8 @@ import {
 } from "@/components/ui";
 import type { DataTableColumn } from "@/components/ui/DataTable";
 import { getRequestErrorNotice } from "@/fetch";
-import {
-	useWorkspaceRPApplication,
-	useWorkspaceRPApplicationAuditTrail,
-} from "../hooks/use-workspace-rp-applications";
+import { useApplicationRPConfiguration } from "../hooks/use-application-rp-configurations";
+import { useWorkspaceRPApplicationAuditTrail } from "../hooks/use-workspace-rp-applications";
 
 type AuditRow = {
 	country: string;
@@ -35,28 +33,36 @@ export const WorkspaceApplicationAuditPage = (): FunctionComponent => {
 			options?: Record<string, unknown>
 		) => string;
 	};
-	const { rpApplicationUuid, workspaceUuid } = useParams({
-		from: "/workspaces/$workspaceUuid/applications/$rpApplicationUuid/audit",
-	});
+	const params = useParams({ strict: false });
+	const applicationInformationUuid = params["applicationInformationUuid"] ?? "";
+	const rpApplicationUuid =
+		params["rpConfigurationUuid"] || params["rpApplicationUuid"] || "";
+	const workspaceUuid = params["workspaceUuid"] ?? "";
 	const [draftSelectedDate, setDraftSelectedDate] = useState<string>(getToday);
 	const [activeSelectedDate, setActiveSelectedDate] =
 		useState<string>(getToday);
-	const {
-		application,
-		error: applicationError,
-		isLoading: isLoadingApplication,
-	} = useWorkspaceRPApplication(workspaceUuid, rpApplicationUuid);
+	const configurationState = useApplicationRPConfiguration(
+		workspaceUuid,
+		applicationInformationUuid,
+		rpApplicationUuid
+	);
+	const configuration = configurationState.configuration;
+	const applicationDisplayName =
+		configuration?.configurationName?.trim() ||
+		t("workspaces.rpConfigurationTitle");
 	const { error, events, isLoading, isLoadingMore, loadMore, next, total } =
 		useWorkspaceRPApplicationAuditTrail(
 			workspaceUuid,
 			rpApplicationUuid,
 			activeSelectedDate,
-			25
+			25,
+			applicationInformationUuid
 		);
-	const errorNotice = getRequestErrorNotice(error ?? applicationError, {
+	const errorNotice = getRequestErrorNotice(error ?? configurationState.error, {
 		bodyKey: "workspaces.applicationsErrorBody",
 		titleKey: "workspaces.applicationsErrorTitle",
 	});
+	const isLoadingContext = configurationState.isLoading;
 	const rows: Array<AuditRow> = useMemo(
 		() =>
 			events.map((event, index) => ({
@@ -102,9 +108,9 @@ export const WorkspaceApplicationAuditPage = (): FunctionComponent => {
 	return (
 		<>
 			<Heading tag="h1">
-				{application
+				{applicationDisplayName
 					? t("workspaces.applicationsAuditPageTitle", {
-							name: application.dnrAppName,
+							name: applicationDisplayName,
 						})
 					: t("workspaces.applicationsAuditAction")}
 			</Heading>
@@ -131,7 +137,7 @@ export const WorkspaceApplicationAuditPage = (): FunctionComponent => {
 				</div>
 			</form>
 
-			{isLoading || isLoadingApplication ? (
+			{isLoading || isLoadingContext ? (
 				<Notice
 					noticeRole="info"
 					noticeTitle={t("workspaces.applicationsAuditLoadingTitle")}
@@ -151,10 +157,7 @@ export const WorkspaceApplicationAuditPage = (): FunctionComponent => {
 				</Notice>
 			) : null}
 
-			{!isLoading &&
-			!isLoadingApplication &&
-			!errorNotice &&
-			rows.length === 0 ? (
+			{!isLoading && !isLoadingContext && !errorNotice && rows.length === 0 ? (
 				<Notice
 					noticeRole="warning"
 					noticeTitle={t("workspaces.applicationsAuditEmptyTitle")}
@@ -176,6 +179,7 @@ export const WorkspaceApplicationAuditPage = (): FunctionComponent => {
 					) : null}
 					<DataTable
 						columns={columns}
+						filter={false}
 						itemLabel={t("workspaces.applicationAuditEventsItemLabel")}
 						pagination={false}
 						rows={rows}
@@ -202,7 +206,7 @@ export const WorkspaceApplicationAuditPage = (): FunctionComponent => {
 
 			<div className="mt-200">
 				<Button
-					href={`/workspaces/${workspaceUuid}/applications/${rpApplicationUuid}`}
+					href={`/workspaces/${workspaceUuid}/applications/${applicationInformationUuid}/rp-configurations/${rpApplicationUuid}`}
 					type="link"
 				>
 					{t("workspaces.applicationsBackToDetail")}

@@ -1,3 +1,4 @@
+import type { MouseEvent as ReactMouseEvent } from "react";
 import { useNavigate, useRouterState } from "@tanstack/react-router";
 import { useTranslation } from "react-i18next";
 import {
@@ -14,7 +15,6 @@ import type { FunctionComponent } from "@/common/types";
 import { useAppPreferencesState, useSession } from "@/hooks";
 import { getOidcLoginUrl } from "@/fetch/auth";
 import {
-	getActiveTaskArea,
 	getBreadcrumbRoutes,
 	getTaskAreaRoutes,
 	findRouteByPath,
@@ -30,6 +30,10 @@ import {
 	getWorkspaceRoutePath,
 	getWorkspaceUuidFromPath,
 } from "@/features/workspaces/workspace-route-catalog";
+import {
+	allowNextPendingNavigation,
+	confirmPendingNavigation,
+} from "@/features/navigation/pending-navigation-guard";
 import type { RouteBackLink } from "@/types/route-breadcrumbs";
 import { UserNavGroup } from "./UserNavGroup";
 
@@ -37,6 +41,16 @@ type HeaderBreadcrumb = {
 	href?: string;
 	key: string;
 	label: string;
+};
+
+const getEquivalentLanguageHref = (
+	href: string,
+	targetLanguage: "en" | "fr"
+): string => {
+	const url = new URL(href, "https://local.invalid");
+	url.searchParams.set("lng", targetLanguage);
+
+	return `${url.pathname}${url.search}${url.hash}`;
 };
 
 const selectBackLink = (
@@ -69,24 +83,49 @@ const Header = (): FunctionComponent => {
 	const { t, i18n } = useTranslation();
 	const navigate = useNavigate();
 	const { currentUser, isAuthenticated, isLoading } = useSession();
-	const { language, toggleLanguage } = useAppPreferencesState();
-	const pathname = useRouterState({
-		select: (state) => state.location.pathname,
+	const { setLanguage } = useAppPreferencesState();
+	const currentLocation = useRouterState({
+		select: (state) => state.location,
 	});
+	const { href: currentHref, pathname } = currentLocation;
 	const backLink = useRouterState({
 		select: (state) => selectBackLink(state.matches),
 	});
 	const serviceName = t("home.title");
 
-	const lang = language ?? (i18n.language?.startsWith("fr") ? "fr" : "en");
+	const lang = i18n.language?.startsWith("fr") ? "fr" : "en";
+	const targetLanguage = lang === "en" ? "fr" : "en";
+	const languageToggleHref = getEquivalentLanguageHref(
+		currentHref,
+		targetLanguage
+	);
 	const handleLangToggle = async (): Promise<void> => {
-		await toggleLanguage();
-		await navigate({ replace: true, to: pathname });
+		if (!confirmPendingNavigation()) return;
+		const clearNavigationAllowance = allowNextPendingNavigation();
+		try {
+			await setLanguage(targetLanguage);
+			await navigate({ replace: true, to: currentHref });
+		} finally {
+			clearNavigationAllowance();
+		}
+	};
+	const handleLangToggleClick = (event: ReactMouseEvent): void => {
+		if (
+			event.button !== 0 ||
+			event.altKey ||
+			event.ctrlKey ||
+			event.metaKey ||
+			event.shiftKey
+		) {
+			return;
+		}
+
+		event.preventDefault();
+		void handleLangToggle();
 	};
 
 	const authorizationContext = currentUser?.authorizationContext;
 	const partnerRoutes = getTaskAreaRoutes("partnerWork", authorizationContext);
-	const activeTaskArea = getActiveTaskArea(pathname);
 	const currentCatalogRoute = findRouteByPath(pathname);
 	const isCatalogLanding =
 		currentCatalogRoute !== null &&
@@ -175,13 +214,10 @@ const Header = (): FunctionComponent => {
 	return (
 		<GcdsHeader signatureHasLink lang={lang} skipToHref="#main-content">
 			<GcdsLangToggle
-				href={pathname}
+				href={languageToggleHref}
 				lang={lang}
 				slot="toggle"
-				onGcdsClick={(event) => {
-					event.preventDefault();
-					void handleLangToggle();
-				}}
+				onClickCapture={handleLangToggleClick}
 			/>
 			{headerBreadcrumbs.length > 0 ? (
 				<GcdsBreadcrumbs lang={lang} slot="breadcrumb">
@@ -213,7 +249,6 @@ const Header = (): FunctionComponent => {
 						closeTrigger={t("nav.partnerWorkClose")}
 						lang={lang}
 						menuLabel={t("nav.partnerWork")}
-						open={activeTaskArea === "partnerWork"}
 						openTrigger={t("nav.partnerWork")}
 					>
 						{partnerRoutes.map(renderRouteLink)}

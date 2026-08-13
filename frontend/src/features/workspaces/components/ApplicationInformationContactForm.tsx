@@ -30,8 +30,8 @@ export const ApplicationInformationContactForm = ({
 		) => string;
 	};
 	const isSubmitDisabled =
-		form.nameEn.trim().length === 0 ||
-		form.nameFr.trim().length === 0 ||
+		form.firstName.trim().length === 0 ||
+		form.lastName.trim().length === 0 ||
 		form.responsibilityEn.trim().length === 0 ||
 		form.responsibilityFr.trim().length === 0 ||
 		form.email.trim().length === 0 ||
@@ -41,22 +41,22 @@ export const ApplicationInformationContactForm = ({
 		<div className="grid gap-200">
 			<Input
 				required
-				inputId="application-information-contact-name-en"
-				label={t("workspaces.appInfoContactNameEnLabel")}
-				name="nameEn"
-				value={form.nameEn}
+				inputId="application-information-contact-first-name"
+				label={t("workspaces.appInfoContactFirstNameLabel")}
+				name="firstName"
+				value={form.firstName}
 				onInput={(event): void => {
-					onChange("nameEn", (event.target as HTMLInputElement).value);
+					onChange("firstName", (event.target as HTMLInputElement).value);
 				}}
 			/>
 			<Input
 				required
-				inputId="application-information-contact-name-fr"
-				label={t("workspaces.appInfoContactNameFrLabel")}
-				name="nameFr"
-				value={form.nameFr}
+				inputId="application-information-contact-last-name"
+				label={t("workspaces.appInfoContactLastNameLabel")}
+				name="lastName"
+				value={form.lastName}
 				onInput={(event): void => {
-					onChange("nameFr", (event.target as HTMLInputElement).value);
+					onChange("lastName", (event.target as HTMLInputElement).value);
 				}}
 			/>
 			<Input
@@ -103,6 +103,18 @@ export const ApplicationInformationContactForm = ({
 				value={form.phoneNumber}
 				onInput={(event): void => {
 					onChange("phoneNumber", (event.target as HTMLInputElement).value);
+				}}
+			/>
+			<Input
+				inputId="application-information-contact-alternate-phone-number"
+				label={t("workspaces.appInfoContactAlternatePhoneNumberLabel")}
+				name="alternatePhoneNumber"
+				value={form.alternatePhoneNumber}
+				onInput={(event): void => {
+					onChange(
+						"alternatePhoneNumber",
+						(event.target as HTMLInputElement).value
+					);
 				}}
 			/>
 			<div className="flex flex-wrap gap-200">

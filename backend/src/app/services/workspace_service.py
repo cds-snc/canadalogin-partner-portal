@@ -1,9 +1,11 @@
+import json
 import logging
 import uuid as uuid_pkg
 from datetime import UTC, datetime
-from typing import Any
+from typing import Any, cast
 
 from pydantic import ValidationError
+from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError, NoResultFound
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -23,7 +25,12 @@ from ..core.exceptions.http_exceptions import (
     NotFoundException,
     RegistrationDraftConflictException,
 )
+from ..core.logging_privacy import hash_log_value
 from ..core.utils.slugify import slugify
+from ..models.application_information import ApplicationInformation
+from ..models.audit_log import AuditLog
+from ..models.rp_application import RPApplication
+from ..models.user import User
 from ..repositories.crud_application_information import crud_application_information
 from ..repositories.crud_application_information_contacts import crud_application_information_contacts
 from ..repositories.crud_application_information_review_checklists import (
@@ -41,7 +48,9 @@ from ..schemas.application_information import (
     ApplicationInformationContactCreate,
     ApplicationInformationContactCreateInternal,
     ApplicationInformationContactRead,
+    ApplicationInformationContactRecordRead,
     ApplicationInformationContactUpdate,
+    ApplicationInformationContactUpdateInternal,
     ApplicationInformationCreate,
     ApplicationInformationCreateInternal,
     ApplicationInformationRead,
@@ -61,6 +70,14 @@ from ..schemas.onboarding import (
     WorkspaceRPApplicationOnboardingLifecycleTransitionRequest,
 )
 from ..schemas.rp_application import (
+    ApplicationRPConfigurationPartnerEnvironmentRead,
+    ApplicationRPConfigurationPartnerEnvironmentUpdate,
+    ApplicationRPConfigurationProgressionCreate,
+    ApplicationRPConfigurationProgressionRead,
+    ApplicationRPConfigurationRead,
+    ApplicationRPConfigurationRegistrationDraftCreate,
+    CanadaLoginEnvironment,
+    RegistrationDataStep,
     RPApplicationCreateInternal,
     RPApplicationRead,
     RPApplicationUpdateInternal,
@@ -75,6 +92,7 @@ from ..schemas.rp_application import (
     WorkspaceRPApplicationRegistrationUpdate,
 )
 from ..schemas.rp_application_promotion_request import (
+    ApplicationRPConfigurationPromotionRequestRead,
     PromotionRequestStatus,
     PromotionRequestTargetEnvironment,
     PromotionRequestUpsert,
@@ -90,9 +108,12 @@ from ..schemas.workspace import (
 )
 from .authorization_service import get_resolved_authorization_state
 from .ibm_sv_admin_service import IBMVerifyAdminService
-from .rp_application_summary import build_rp_application_summary
+from .rp_application_summary import (
+    build_application_rp_configuration_summary,
+    build_rp_application_summary,
+)
 
-LINKED_RP_APPLICATIONS_DELETE_BLOCK_MESSAGE = "Linked RP applications must be unlinked or removed before deleting application information"
+LINKED_RP_APPLICATIONS_DELETE_BLOCK_MESSAGE = "Retained RP configurations must be resolved before deleting the Application"
 RP_APPLICATION_USAGE_UNAVAILABLE_MESSAGE = "RP application is not linked to an IBM Security Verify application"
 ONBOARDING_STATE_TRANSITIONS: dict[str, set[str]] = {
     "draft": {"submitted"},
@@ -117,6 +138,8 @@ REGISTRATION_DATA_STEPS = (
 REGISTRATION_UPDATE_RETURN_COLUMNS = [
     "uuid",
     "dnr_app_name",
+    "configuration_name",
+    "partner_environment",
     "oidc_registration_payload",
     "onboarding_state",
     "registration_draft_version",
@@ -153,6 +176,45 @@ REGISTRATION_STEP_REQUIRED_FIELDS: dict[str, tuple[str, ...]] = {
         "message_decryption_supported",
     ),
 }
+PROGRESSION_REUSABLE_ANSWER_FIELDS = (
+    "client_type",
+    "supports_authorization_code_flow",
+    "client_auth_method",
+    "requested_scopes",
+    "sector_identifier",
+    "shares_pairwise_identifiers",
+    "pkce_supported",
+    "pkce_algorithms",
+    "pkce_other_algorithm",
+    "request_signing_supported",
+    "request_signing_targets",
+    "request_signing_algorithms",
+    "request_signing_other_algorithm",
+    "request_signing_roadmap",
+    "request_signing_revisit_on",
+    "signature_validation_supported",
+    "signature_validation_targets",
+    "signature_validation_algorithms",
+    "signature_validation_other_algorithm",
+    "signature_validation_roadmap",
+    "signature_validation_revisit_on",
+    "request_encryption_supported",
+    "request_encryption_targets",
+    "request_encryption_key_management_algorithms",
+    "request_encryption_other_key_management_algorithm",
+    "request_encryption_content_algorithms",
+    "request_encryption_other_content_algorithm",
+    "request_encryption_roadmap",
+    "request_encryption_revisit_on",
+    "message_decryption_supported",
+    "message_decryption_targets",
+    "message_decryption_key_management_algorithms",
+    "message_decryption_other_key_management_algorithm",
+    "message_decryption_content_algorithms",
+    "message_decryption_other_content_algorithm",
+    "message_decryption_roadmap",
+    "message_decryption_revisit_on",
+)
 logger = logging.getLogger(__name__)
 
 
@@ -513,7 +575,6 @@ class WorkspaceService:
         if await crud_rp_applications.exists(
             db=db,
             application_information_id=application_information["id"],
-            is_deleted=False,
         ):
             raise CustomException(
                 status_code=409,
@@ -544,9 +605,9 @@ class WorkspaceService:
             db=db,
             application_information_id=application_information["id"],
             is_deleted=False,
-            schema_to_select=ApplicationInformationContactRead,
+            schema_to_select=ApplicationInformationContactRecordRead,
         )
-        return contacts.get("data", [])
+        return [await self._build_application_information_contact_read(db=db, contact=contact) for contact in contacts.get("data", [])]
 
     async def add_application_information_contact(
         self,
@@ -571,14 +632,16 @@ class WorkspaceService:
             db=db,
             object=ApplicationInformationContactCreateInternal(
                 application_information_id=application_information["id"],
-                created_by=current_user.get("id"),
+                created_by=self._normalize_current_user_id(current_user),
+                identity_confirmed_at=datetime.now(UTC),
+                identity_confirmed_by=self._normalize_current_user_id(current_user),
                 **payload.model_dump(),
             ),
-            schema_to_select=ApplicationInformationContactRead,
+            schema_to_select=ApplicationInformationContactRecordRead,
         )
         if created is None:
             raise NotFoundException("Failed to create application information contact")
-        return created
+        return await self._build_application_information_contact_read(db=db, contact=created)
 
     async def update_application_information_contact(
         self,
@@ -607,18 +670,39 @@ class WorkspaceService:
         )
         update_data = payload.model_dump(exclude_unset=True)
         if not update_data:
-            return existing_contact
+            return await self._build_application_information_contact_read(db=db, contact=existing_contact)
+
+        if "first_name" in update_data or "last_name" in update_data:
+            first_name = update_data.get("first_name", existing_contact.get("first_name"))
+            last_name = update_data.get("last_name", existing_contact.get("last_name"))
+            if not isinstance(first_name, str) or not first_name.strip():
+                raise BadRequestException("First name is required to confirm contact identity")
+            if not isinstance(last_name, str) or not last_name.strip():
+                raise BadRequestException("Last name is required to confirm contact identity")
+            update_data.update(
+                {
+                    "first_name": first_name.strip(),
+                    "last_name": last_name.strip(),
+                    "identity_confirmed_at": datetime.now(UTC),
+                    "identity_confirmed_by": self._normalize_current_user_id(current_user),
+                }
+            )
+        update_data["updated_at"] = datetime.now(UTC)
 
         await crud_application_information_contacts.update(
             db=db,
-            object=update_data,
+            object=cast(
+                ApplicationInformationContactUpdate,
+                ApplicationInformationContactUpdateInternal(**update_data),
+            ),
             uuid=contact_uuid,
         )
-        return await self._get_application_information_contact(
+        updated_contact = await self._get_application_information_contact(
             db=db,
             application_information_id=application_information["id"],
             contact_uuid=contact_uuid,
         )
+        return await self._build_application_information_contact_read(db=db, contact=updated_contact)
 
     async def delete_application_information_contact(
         self,
@@ -824,6 +908,60 @@ class WorkspaceService:
             for application in applications
         ]
 
+    async def list_application_rp_configurations(
+        self,
+        db: AsyncSession,
+        workspace_uuid: uuid_pkg.UUID | str,
+        application_information_uuid: uuid_pkg.UUID | str,
+        current_user: dict[str, Any],
+    ) -> list[dict[str, Any]]:
+        workspace, decision = await self._require_workspace_capability(
+            db=db,
+            workspace_uuid=workspace_uuid,
+            current_user=current_user,
+            capability=self._metadata_read_capability(
+                current_user=current_user,
+                partner_capability=Capability.RP_CONFIGURATION_READ,
+            ),
+        )
+        application_information = await self._get_workspace_application_information(
+            db=db,
+            workspace_id=workspace["id"],
+            application_information_uuid=application_information_uuid,
+        )
+        records = await crud_rp_applications.get_multi(
+            db=db,
+            workspace_id=workspace["id"],
+            application_information_id=application_information["id"],
+            sort_columns="id",
+            sort_orders="asc",
+            is_deleted=False,
+            schema_to_select=RPApplicationRead,
+        )
+        configurations = [
+            await self._attach_rp_application_promotion_request_summary(
+                db=db,
+                rp_application=self._without_legacy_application_owner(record),
+            )
+            for record in records.get("data", [])
+        ]
+        assert decision.role is not None
+        can_resume_registration = decision.role in {
+            CanonicalRoleCode.RP_ADMIN,
+            CanonicalRoleCode.RP_USER_EDIT,
+        }
+        return [
+            build_application_rp_configuration_summary(
+                application=configuration,
+                application_information=application_information,
+                workspace_uuid=workspace["uuid"],
+                workspace_name=str(workspace["name"]),
+                role=decision.role,
+                can_resume_registration=can_resume_registration,
+            )
+            for configuration in configurations
+        ]
+
     @staticmethod
     def _registration_step_index(step: str | None) -> int:
         if step not in REGISTRATION_DATA_STEPS:
@@ -836,6 +974,7 @@ class WorkspaceService:
         event: str,
         current_user: dict[str, Any],
         workspace_uuid: uuid_pkg.UUID | str,
+        application_information_uuid: uuid_pkg.UUID | str | None = None,
         rp_application_uuid: uuid_pkg.UUID | str | None = None,
         step_id: str | None = None,
         save_mode: str | None = None,
@@ -843,14 +982,20 @@ class WorkspaceService:
         result: str,
         correlation_id: str | None = None,
     ) -> None:
+        actor_reference = hash_log_value(current_user.get("uuid") or current_user.get("id") or "unknown")
+        workspace_reference = hash_log_value(workspace_uuid)
+        application_information_reference = hash_log_value(application_information_uuid) if application_information_uuid is not None else "unknown"
+        rp_application_reference = hash_log_value(rp_application_uuid) if rp_application_uuid is not None else "pending"
         logger.info(
-            "RP registration event=%s actor_reference=%s workspace_uuid=%s "
-            "rp_application_uuid=%s step_id=%s save_mode=%s "
+            "RP registration event=%s actor_reference=%s workspace_reference=%s "
+            "application_information_reference=%s rp_application_reference=%s "
+            "step_id=%s save_mode=%s "
             "changed_field_names=%s result=%s correlation_id=%s",
             event,
-            current_user.get("uuid") or current_user.get("id") or "unknown",
-            workspace_uuid,
-            rp_application_uuid or "pending",
+            actor_reference,
+            workspace_reference,
+            application_information_reference,
+            rp_application_reference,
             step_id or "none",
             save_mode or "none",
             ",".join(sorted(changed_field_names or [])),
@@ -893,17 +1038,24 @@ class WorkspaceService:
     def _build_registration_draft_read(
         *,
         workspace_uuid: uuid_pkg.UUID | str,
+        application_information_uuid: uuid_pkg.UUID | str,
         rp_application: dict[str, Any],
         last_completed_step: str | None = None,
     ) -> dict[str, Any]:
         answers = WorkspaceRPApplicationRegistrationAnswers.model_validate(rp_application.get("oidc_registration_payload") or {})
         read = WorkspaceRPApplicationRegistrationDraftRead(
-            workspace_uuid=workspace_uuid,
+            workspace_uuid=uuid_pkg.UUID(str(workspace_uuid)),
             rp_application_uuid=rp_application["uuid"],
+            application_information_uuid=uuid_pkg.UUID(str(application_information_uuid)),
             onboarding_state="draft",
+            configuration_name=rp_application["configuration_name"],
+            partner_environment=rp_application.get("partner_environment"),
             registration_draft_version=rp_application.get("registration_draft_version", 0),
             registration_last_completed_step=(
-                last_completed_step if last_completed_step is not None else rp_application.get("registration_last_completed_step")
+                cast(
+                    RegistrationDataStep | None,
+                    last_completed_step if last_completed_step is not None else rp_application.get("registration_last_completed_step"),
+                )
             ),
             registration_answers=answers,
         )
@@ -917,7 +1069,7 @@ class WorkspaceService:
     ) -> dict[str, Any]:
         answers = rp_application.get("oidc_registration_payload") or {}
         read = WorkspaceRPApplicationRegistrationSubmissionRead(
-            workspace_uuid=workspace_uuid,
+            workspace_uuid=uuid_pkg.UUID(str(workspace_uuid)),
             rp_application_uuid=rp_application["uuid"],
             onboarding_state="submitted",
             registration_draft_version=int(rp_application.get("registration_draft_version") or 0),
@@ -940,6 +1092,8 @@ class WorkspaceService:
             existing.get("workspace_id") == workspace_id
             and existing.get("created_by") == current_user.get("id")
             and existing.get("application_information_id") == application_information_id
+            and existing.get("configuration_name") == payload.configuration_name
+            and existing.get("partner_environment") == payload.partner_environment
             and existing_answers.get("canada_login_environment") == payload.canada_login_environment
             and existing_answers.get("service_name_en") == payload.service_name_en
             and existing_answers.get("service_name_fr") == payload.service_name_fr
@@ -966,6 +1120,7 @@ class WorkspaceService:
                 event="draft_create",
                 current_user=current_user,
                 workspace_uuid=workspace_uuid,
+                application_information_uuid=payload.application_information_uuid,
                 result="denied",
                 correlation_id=correlation_id,
             )
@@ -993,6 +1148,7 @@ class WorkspaceService:
                     event="draft_create",
                     current_user=current_user,
                     workspace_uuid=workspace_uuid,
+                    application_information_uuid=payload.application_information_uuid,
                     rp_application_uuid=existing.get("uuid"),
                     step_id="basics",
                     save_mode="completeStep",
@@ -1005,13 +1161,14 @@ class WorkspaceService:
                 )
             return self._build_registration_draft_read(
                 workspace_uuid=workspace["uuid"],
+                application_information_uuid=payload.application_information_uuid,
                 rp_application=existing,
                 last_completed_step="basics",
             )
 
         registration_payload = payload.model_dump(
             mode="json",
-            exclude={"application_information_uuid"},
+            exclude={"application_information_uuid", "configuration_name", "partner_environment"},
             exclude_none=True,
         )
         created_new = True
@@ -1023,6 +1180,8 @@ class WorkspaceService:
                     department_id=workspace["department_id"],
                     application_information_id=application_information_id,
                     dnr_app_name=payload.service_name_en,
+                    configuration_name=payload.configuration_name,
+                    partner_environment=payload.partner_environment,
                     canada_login_environment=payload.canada_login_environment,
                     status=None,
                     ibm_sv_application_id=None,
@@ -1037,16 +1196,16 @@ class WorkspaceService:
         except IntegrityError:
             created_new = False
             await db.rollback()
-            created = await crud_rp_applications.get(
+            replayed_created = await crud_rp_applications.get(
                 db=db,
                 registration_creation_key=registration_creation_key,
                 is_deleted=False,
                 schema_to_select=RPApplicationRead,
             )
-            if created is None or not self._registration_creation_matches(
+            if replayed_created is None or not self._registration_creation_matches(
                 application_information_id=application_information_id,
                 current_user=current_user,
-                existing=created,
+                existing=replayed_created,
                 payload=payload,
                 workspace_id=workspace["id"],
             ):
@@ -1054,7 +1213,8 @@ class WorkspaceService:
                     event="draft_create",
                     current_user=current_user,
                     workspace_uuid=workspace_uuid,
-                    rp_application_uuid=(created or {}).get("uuid"),
+                    application_information_uuid=payload.application_information_uuid,
+                    rp_application_uuid=(replayed_created or {}).get("uuid"),
                     step_id="basics",
                     save_mode="completeStep",
                     result="conflict",
@@ -1064,6 +1224,7 @@ class WorkspaceService:
                     code="registration_draft_creation_conflict",
                     message="The registration creation key is already in use.",
                 ) from None
+            created = replayed_created
         if created is None:
             raise NotFoundException("Failed to create RP application draft")
         if created_new:
@@ -1071,6 +1232,7 @@ class WorkspaceService:
                 event="draft_create",
                 current_user=current_user,
                 workspace_uuid=workspace["uuid"],
+                application_information_uuid=payload.application_information_uuid,
                 rp_application_uuid=created["uuid"],
                 step_id="basics",
                 save_mode="completeStep",
@@ -1080,9 +1242,278 @@ class WorkspaceService:
             )
         return self._build_registration_draft_read(
             workspace_uuid=workspace["uuid"],
+            application_information_uuid=payload.application_information_uuid,
             rp_application=created,
             last_completed_step="basics",
         )
+
+    async def create_application_rp_configuration_registration_draft(
+        self,
+        db: AsyncSession,
+        workspace_uuid: uuid_pkg.UUID | str,
+        application_information_uuid: uuid_pkg.UUID | str,
+        payload: ApplicationRPConfigurationRegistrationDraftCreate,
+        current_user: dict[str, Any],
+        registration_creation_key: uuid_pkg.UUID,
+        correlation_id: str | None = None,
+    ) -> dict[str, Any]:
+        """Create a draft whose public Application identity comes from its parent."""
+
+        workspace, _ = await self._require_workspace_capability(
+            db=db,
+            workspace_uuid=workspace_uuid,
+            current_user=current_user,
+            capability=Capability.RP_CONFIGURATION_WRITE,
+        )
+        application_information = await self._get_workspace_application_information(
+            db=db,
+            workspace_id=workspace["id"],
+            application_information_uuid=application_information_uuid,
+        )
+        compatibility_payload = WorkspaceRPApplicationRegistrationDraftCreate.model_validate(
+            {
+                "application_information_uuid": application_information["uuid"],
+                "configuration_name": payload.configuration_name,
+                "partner_environment": payload.partner_environment,
+                "canada_login_environment": payload.canada_login_environment,
+                "service_name_en": application_information["service_name_en"],
+                "service_name_fr": application_information["service_name_fr"],
+            }
+        )
+        return await self.create_workspace_rp_application_registration_draft(
+            db=db,
+            workspace_uuid=workspace["uuid"],
+            payload=compatibility_payload,
+            current_user=current_user,
+            registration_creation_key=registration_creation_key,
+            correlation_id=correlation_id,
+        )
+
+    async def create_application_rp_configuration_progression(
+        self,
+        db: AsyncSession,
+        workspace_uuid: uuid_pkg.UUID | str,
+        application_information_uuid: uuid_pkg.UUID | str,
+        source_rp_configuration_uuid: uuid_pkg.UUID | str,
+        payload: ApplicationRPConfigurationProgressionCreate,
+        current_user: dict[str, Any],
+        progression_creation_key: uuid_pkg.UUID,
+        correlation_id: str | None = None,
+    ) -> dict[str, Any]:
+        """Create one new target draft from one explicitly selected source."""
+
+        workspace, _, source = await self._resolve_application_rp_configuration_access(
+            db=db,
+            workspace_uuid=workspace_uuid,
+            application_information_uuid=application_information_uuid,
+            rp_configuration_uuid=source_rp_configuration_uuid,
+            current_user=current_user,
+            capability=Capability.RP_CONFIGURATION_WRITE,
+        )
+        application_information = await self._get_workspace_application_information(
+            db=db,
+            workspace_id=workspace["id"],
+            application_information_uuid=application_information_uuid,
+        )
+
+        source_environment = str(source.get("canada_login_environment") or "").strip().lower()
+        expected_target_environment = {
+            "test": "staging",
+            "staging": "production",
+        }.get(source_environment)
+        if expected_target_environment is None:
+            raise BadRequestException("Only Test or Staging RP configurations can progress")
+        if payload.target_environment != expected_target_environment:
+            raise BadRequestException(f"A {source_environment} RP configuration can progress only to {expected_target_environment}")
+
+        existing = await crud_rp_applications.get(
+            db=db,
+            registration_creation_key=progression_creation_key,
+            is_deleted=False,
+            schema_to_select=RPApplicationRead,
+        )
+        if existing is not None:
+            source_id_result = await db.execute(
+                select(RPApplication.source_rp_configuration_id).where(
+                    RPApplication.id == existing["id"],
+                    RPApplication.is_deleted.is_(False),
+                )
+            )
+            existing_source_id = source_id_result.scalar_one_or_none()
+            if not self._progression_creation_matches(
+                existing=existing,
+                source_rp_configuration_id=source["id"],
+                existing_source_rp_configuration_id=existing_source_id,
+                workspace_id=workspace["id"],
+                application_information_id=application_information["id"],
+                payload=payload,
+            ):
+                raise RegistrationDraftConflictException(
+                    code="rp_configuration_progression_creation_conflict",
+                    message="The progression creation key is already in use.",
+                )
+            return self._build_rp_configuration_progression_read(
+                workspace_uuid=workspace["uuid"],
+                application_information_uuid=application_information["uuid"],
+                source=source,
+                target=existing,
+            )
+
+        source_answers = dict(source.get("oidc_registration_payload") or {})
+        target_answers = {
+            key: source_answers[key] for key in PROGRESSION_REUSABLE_ANSWER_FIELDS if key in source_answers and source_answers[key] is not None
+        }
+        target_answers.update(
+            {
+                "canada_login_environment": payload.target_environment,
+                "service_name_en": application_information["service_name_en"],
+                "service_name_fr": application_information["service_name_fr"],
+            }
+        )
+
+        try:
+            target = await crud_rp_applications.create(
+                db=db,
+                object=RPApplicationCreateInternal(
+                    workspace_id=workspace["id"],
+                    department_id=workspace["department_id"],
+                    application_information_id=application_information["id"],
+                    dnr_app_name=application_information["service_name_en"],
+                    configuration_name=payload.target_configuration_name,
+                    partner_environment=payload.target_partner_environment,
+                    source_rp_configuration_id=source["id"],
+                    canada_login_environment=payload.target_environment,
+                    status=None,
+                    ibm_sv_application_id=None,
+                    oidc_registration_payload=target_answers,
+                    registration_creation_key=progression_creation_key,
+                    registration_draft_version=1,
+                    registration_last_completed_step="basics",
+                    created_by=current_user.get("id"),
+                ),
+                commit=False,
+                schema_to_select=RPApplicationRead,
+            )
+            if target is None:
+                raise NotFoundException("Failed to create RP configuration progression target")
+            if payload.target_environment == "production":
+                await crud_rp_application_promotion_requests.create(
+                    db=db,
+                    object=RPApplicationPromotionRequestCreateInternal(
+                        rp_application_id=target["id"],
+                        target_environment="production",
+                        status=PROMOTION_REQUEST_REVIEW_TRACKED_STATUS,
+                        requested_at=datetime.now(UTC),
+                    ),
+                    commit=False,
+                )
+            await db.commit()
+        except IntegrityError:
+            await db.rollback()
+            existing = await crud_rp_applications.get(
+                db=db,
+                registration_creation_key=progression_creation_key,
+                is_deleted=False,
+                schema_to_select=RPApplicationRead,
+            )
+            if existing is None:
+                raise RegistrationDraftConflictException(
+                    code="rp_configuration_progression_creation_conflict",
+                    message="The RP configuration progression could not be created.",
+                ) from None
+            source_id_result = await db.execute(
+                select(RPApplication.source_rp_configuration_id).where(
+                    RPApplication.id == existing["id"],
+                    RPApplication.is_deleted.is_(False),
+                )
+            )
+            if not self._progression_creation_matches(
+                existing=existing,
+                source_rp_configuration_id=source["id"],
+                existing_source_rp_configuration_id=source_id_result.scalar_one_or_none(),
+                workspace_id=workspace["id"],
+                application_information_id=application_information["id"],
+                payload=payload,
+            ):
+                raise RegistrationDraftConflictException(
+                    code="rp_configuration_progression_creation_conflict",
+                    message="The progression creation key is already in use.",
+                ) from None
+            target = existing
+
+        self._log_registration_operational_event(
+            event="progression_create",
+            current_user=current_user,
+            workspace_uuid=workspace["uuid"],
+            application_information_uuid=application_information["uuid"],
+            rp_application_uuid=target["uuid"],
+            step_id="basics",
+            save_mode="completeStep",
+            changed_field_names=[
+                "configuration_name",
+                "source_rp_configuration_uuid",
+                "target_environment",
+                *sorted(target_answers),
+            ],
+            result="success",
+            correlation_id=correlation_id,
+        )
+        return self._build_rp_configuration_progression_read(
+            workspace_uuid=workspace["uuid"],
+            application_information_uuid=application_information["uuid"],
+            source=source,
+            target=target,
+        )
+
+    @staticmethod
+    def _progression_creation_matches(
+        *,
+        existing: dict[str, Any],
+        source_rp_configuration_id: int,
+        existing_source_rp_configuration_id: int | None,
+        workspace_id: int,
+        application_information_id: int,
+        payload: ApplicationRPConfigurationProgressionCreate,
+    ) -> bool:
+        return (
+            existing.get("workspace_id") == workspace_id
+            and existing.get("application_information_id") == application_information_id
+            and existing_source_rp_configuration_id == source_rp_configuration_id
+            and existing.get("configuration_name") == payload.target_configuration_name
+            and existing.get("partner_environment") == payload.target_partner_environment
+            and existing.get("canada_login_environment") == payload.target_environment
+        )
+
+    @staticmethod
+    def _build_rp_configuration_progression_read(
+        *,
+        workspace_uuid: uuid_pkg.UUID | str,
+        application_information_uuid: uuid_pkg.UUID | str,
+        source: dict[str, Any],
+        target: dict[str, Any],
+    ) -> dict[str, Any]:
+        source_environment = str(source["canada_login_environment"])
+        target_environment = str(target["canada_login_environment"])
+        read = ApplicationRPConfigurationProgressionRead(
+            workspace_uuid=uuid_pkg.UUID(str(workspace_uuid)),
+            application_information_uuid=uuid_pkg.UUID(str(application_information_uuid)),
+            source_rp_configuration_uuid=source["uuid"],
+            source_configuration_name=source["configuration_name"],
+            source_partner_environment=source.get("partner_environment"),
+            source_environment=cast(CanadaLoginEnvironment, source_environment),
+            target_rp_configuration_uuid=target["uuid"],
+            target_configuration_name=target["configuration_name"],
+            target_partner_environment=target.get("partner_environment"),
+            target_environment=cast(PromotionRequestTargetEnvironment, target_environment),
+            target_registration_draft_version=int(target.get("registration_draft_version") or 0),
+            target_registration_last_completed_step=cast(
+                RegistrationDataStep | None,
+                target.get("registration_last_completed_step"),
+            ),
+            self_serve=target_environment == "staging",
+            promotion_status=(PROMOTION_REQUEST_REVIEW_TRACKED_STATUS if target_environment == "production" else None),
+        )
+        return read.model_dump(mode="json", by_alias=False)
 
     async def get_workspace_rp_application_registration_draft(
         self,
@@ -1104,11 +1535,17 @@ class WorkspaceService:
         )
         if self._normalize_onboarding_state(rp_application.get("onboarding_state")) != "draft":
             raise NotFoundException("Registration draft not found")
+        application_information_uuid = await self._resolve_workspace_application_information_uuid(
+            db=db,
+            workspace_id=workspace["id"],
+            application_information_id=rp_application.get("application_information_id"),
+        )
         completed_step = rp_application.get("registration_last_completed_step")
         if completed_step is None:
             completed_step = self._derive_registration_last_completed_step(dict(rp_application.get("oidc_registration_payload") or {}))
         return self._build_registration_draft_read(
             workspace_uuid=workspace["uuid"],
+            application_information_uuid=application_information_uuid,
             rp_application=rp_application,
             last_completed_step=completed_step,
         )
@@ -1148,6 +1585,12 @@ class WorkspaceService:
         )
         if self._normalize_onboarding_state(existing.get("onboarding_state")) != "draft":
             raise NotFoundException("Registration draft not found")
+        application_information_uuid = await self._resolve_workspace_application_information_uuid(
+            db=db,
+            workspace_id=workspace["id"],
+            application_information_id=existing.get("application_information_id"),
+            for_update=True,
+        )
 
         current_version = int(existing.get("registration_draft_version") or 0)
         if current_version != payload.expected_draft_version:
@@ -1155,6 +1598,7 @@ class WorkspaceService:
                 event="draft_save",
                 current_user=current_user,
                 workspace_uuid=workspace["uuid"],
+                application_information_uuid=application_information_uuid,
                 rp_application_uuid=rp_application_uuid,
                 step_id=payload.step_id,
                 save_mode=payload.save_mode,
@@ -1198,6 +1642,10 @@ class WorkspaceService:
             "registration_last_completed_step": next_completed_step,
             "updated_at": datetime.now(UTC),
         }
+        if payload.configuration_name is not None:
+            update_object["configuration_name"] = payload.configuration_name
+        if payload.partner_environment is not None:
+            update_object["partner_environment"] = payload.partner_environment
         if "service_name_en" in changed_answers:
             update_object["dnr_app_name"] = changed_answers["service_name_en"]
         if "canada_login_environment" in changed_answers:
@@ -1222,6 +1670,7 @@ class WorkspaceService:
                 event="draft_save",
                 current_user=current_user,
                 workspace_uuid=workspace["uuid"],
+                application_information_uuid=application_information_uuid,
                 rp_application_uuid=rp_application_uuid,
                 step_id=payload.step_id,
                 save_mode=payload.save_mode,
@@ -1236,15 +1685,23 @@ class WorkspaceService:
             event="draft_save",
             current_user=current_user,
             workspace_uuid=workspace["uuid"],
+            application_information_uuid=application_information_uuid,
             rp_application_uuid=rp_application_uuid,
             step_id=payload.step_id,
             save_mode=payload.save_mode,
-            changed_field_names=sorted(changed_answers),
+            changed_field_names=sorted(
+                [
+                    *changed_answers,
+                    *(["configuration_name"] if payload.configuration_name is not None else []),
+                    *(["partner_environment"] if payload.partner_environment is not None else []),
+                ]
+            ),
             result="success",
             correlation_id=correlation_id,
         )
         return self._build_registration_draft_read(
             workspace_uuid=workspace["uuid"],
+            application_information_uuid=application_information_uuid,
             rp_application=updated,
             last_completed_step=next_completed_step,
         )
@@ -1269,7 +1726,7 @@ class WorkspaceService:
         )
         registration_payload = payload.model_dump(
             mode="json",
-            exclude={"application_information_uuid"},
+            exclude={"application_information_uuid", "configuration_name", "partner_environment"},
         )
         created = await crud_rp_applications.create(
             db=db,
@@ -1278,6 +1735,8 @@ class WorkspaceService:
                 department_id=workspace["department_id"],
                 application_information_id=application_information_id,
                 dnr_app_name=payload.service_name_en,
+                configuration_name=payload.configuration_name,
+                partner_environment=payload.partner_environment,
                 canada_login_environment=payload.canada_login_environment,
                 status=None,
                 ibm_sv_application_id=None,
@@ -1335,6 +1794,259 @@ class WorkspaceService:
             workspace_id=workspace["id"],
             rp_application_uuid=rp_application_uuid,
         )
+        return self._build_rp_configuration_read(
+            workspace=workspace,
+            application=application,
+        )
+
+    async def get_application_rp_configuration_summary(
+        self,
+        db: AsyncSession,
+        workspace_uuid: uuid_pkg.UUID | str,
+        application_information_uuid: uuid_pkg.UUID | str,
+        rp_configuration_uuid: uuid_pkg.UUID | str,
+        current_user: dict[str, Any],
+    ) -> dict[str, Any]:
+        workspace, decision = await self._require_workspace_capability(
+            db=db,
+            workspace_uuid=workspace_uuid,
+            current_user=current_user,
+            capability=self._metadata_read_capability(
+                current_user=current_user,
+                partner_capability=Capability.RP_CONFIGURATION_READ,
+            ),
+        )
+        application_information = await self._get_workspace_application_information(
+            db=db,
+            workspace_id=workspace["id"],
+            application_information_uuid=application_information_uuid,
+        )
+        configuration = await self._get_application_rp_configuration(
+            db=db,
+            workspace_id=workspace["id"],
+            application_information_id=application_information["id"],
+            rp_configuration_uuid=rp_configuration_uuid,
+        )
+        assert decision.role is not None
+        return build_application_rp_configuration_summary(
+            application=configuration,
+            application_information=application_information,
+            workspace_uuid=workspace["uuid"],
+            workspace_name=str(workspace["name"]),
+            role=decision.role,
+            can_resume_registration=decision.role in {CanonicalRoleCode.RP_ADMIN, CanonicalRoleCode.RP_USER_EDIT},
+        )
+
+    async def update_application_rp_configuration_partner_environment(
+        self,
+        db: AsyncSession,
+        workspace_uuid: uuid_pkg.UUID | str,
+        application_information_uuid: uuid_pkg.UUID | str,
+        rp_configuration_uuid: uuid_pkg.UUID | str,
+        payload: ApplicationRPConfigurationPartnerEnvironmentUpdate,
+        current_user: dict[str, Any],
+    ) -> dict[str, Any]:
+        """Update only the public Partner-environment label for one nested RP configuration."""
+
+        workspace, _, configuration = await self._resolve_application_rp_configuration_access(
+            db=db,
+            workspace_uuid=workspace_uuid,
+            application_information_uuid=application_information_uuid,
+            rp_configuration_uuid=rp_configuration_uuid,
+            current_user=current_user,
+            capability=Capability.RP_CONFIGURATION_WRITE,
+        )
+        updated_at = datetime.now(UTC)
+        try:
+            updated = await crud_rp_applications.update(
+                db=db,
+                object={
+                    "partner_environment": payload.partner_environment,
+                    "updated_at": updated_at,
+                },
+                workspace_id=workspace["id"],
+                application_information_id=configuration["application_information_id"],
+                uuid=configuration["uuid"],
+                is_deleted=False,
+                return_columns=["uuid", "partner_environment", "updated_at"],
+                one_or_none=True,
+                commit=False,
+            )
+        except NoResultFound:
+            updated = None
+        if updated is None:
+            await db.rollback()
+            raise NotFoundException("RP configuration not found")
+
+        actor_uuid = current_user.get("uuid")
+        if not isinstance(actor_uuid, uuid_pkg.UUID):
+            actor_uuid = None
+        audit_event = {
+            "eventName": "rp_configuration.metadata_updated",
+            "eventVersion": 1,
+            "timestamp": updated_at.isoformat(),
+            "workspaceUuid": str(workspace["uuid"]),
+            "applicationInformationUuid": str(application_information_uuid),
+            "rpConfigurationUuid": str(configuration["uuid"]),
+            "fieldName": "partner_environment",
+            "result": "succeeded",
+        }
+        db.add(
+            AuditLog(
+                user="authorization_actor",
+                user_uuid=actor_uuid,
+                target="rp_configuration",
+                target_uuid=configuration["uuid"],
+                operation="metadata_update",
+                description=json.dumps(audit_event, separators=(",", ":")),
+                created_at=updated_at,
+            )
+        )
+        await db.commit()
+        return ApplicationRPConfigurationPartnerEnvironmentRead(
+            workspace_uuid=workspace["uuid"],
+            application_information_uuid=uuid_pkg.UUID(str(application_information_uuid)),
+            rp_configuration_uuid=updated["uuid"],
+            partner_environment=updated["partner_environment"],
+            updated_at=updated["updated_at"],
+        ).model_dump(mode="json", by_alias=True)
+
+    async def get_application_rp_configuration_configuration(
+        self,
+        db: AsyncSession,
+        workspace_uuid: uuid_pkg.UUID | str,
+        application_information_uuid: uuid_pkg.UUID | str,
+        rp_configuration_uuid: uuid_pkg.UUID | str,
+        current_user: dict[str, Any],
+    ) -> dict[str, Any]:
+        workspace, _ = await self._require_workspace_capability(
+            db=db,
+            workspace_uuid=workspace_uuid,
+            current_user=current_user,
+            capability=Capability.RP_CONFIGURATION_READ,
+        )
+        application_information = await self._get_workspace_application_information(
+            db=db,
+            workspace_id=workspace["id"],
+            application_information_uuid=application_information_uuid,
+        )
+        configuration = await self._get_application_rp_configuration(
+            db=db,
+            workspace_id=workspace["id"],
+            application_information_id=application_information["id"],
+            rp_configuration_uuid=rp_configuration_uuid,
+        )
+        configuration_read = self._build_rp_configuration_read(
+            workspace=workspace,
+            application=configuration,
+        )
+        configuration_read.update(
+            {
+                "serviceNameEn": application_information["service_name_en"],
+                "serviceNameFr": application_information["service_name_fr"],
+            }
+        )
+        return ApplicationRPConfigurationRead(
+            application_information_uuid=application_information["uuid"],
+            **configuration_read,
+        ).model_dump(by_alias=True)
+
+    async def get_application_rp_configuration_registration_draft(
+        self,
+        db: AsyncSession,
+        workspace_uuid: uuid_pkg.UUID | str,
+        application_information_uuid: uuid_pkg.UUID | str,
+        rp_configuration_uuid: uuid_pkg.UUID | str,
+        current_user: dict[str, Any],
+    ) -> dict[str, Any]:
+        await self._resolve_application_rp_configuration_access(
+            db=db,
+            workspace_uuid=workspace_uuid,
+            application_information_uuid=application_information_uuid,
+            rp_configuration_uuid=rp_configuration_uuid,
+            current_user=current_user,
+            capability=Capability.RP_CONFIGURATION_READ,
+        )
+        return await self.get_workspace_rp_application_registration_draft(
+            db=db,
+            workspace_uuid=workspace_uuid,
+            rp_application_uuid=rp_configuration_uuid,
+            current_user=current_user,
+        )
+
+    async def update_application_rp_configuration_registration_draft(
+        self,
+        db: AsyncSession,
+        workspace_uuid: uuid_pkg.UUID | str,
+        application_information_uuid: uuid_pkg.UUID | str,
+        rp_configuration_uuid: uuid_pkg.UUID | str,
+        payload: WorkspaceRPApplicationRegistrationDraftPatch,
+        current_user: dict[str, Any],
+        correlation_id: str | None = None,
+    ) -> dict[str, Any]:
+        workspace, _, _ = await self._resolve_application_rp_configuration_access(
+            db=db,
+            workspace_uuid=workspace_uuid,
+            application_information_uuid=application_information_uuid,
+            rp_configuration_uuid=rp_configuration_uuid,
+            current_user=current_user,
+            capability=Capability.RP_CONFIGURATION_WRITE,
+        )
+        application_information = await self._get_workspace_application_information(
+            db=db,
+            workspace_id=workspace["id"],
+            application_information_uuid=application_information_uuid,
+        )
+        safe_answers = payload.registration_answers.model_copy(
+            update={
+                "application_information_uuid": application_information["uuid"],
+                "service_name_en": application_information["service_name_en"],
+                "service_name_fr": application_information["service_name_fr"],
+            }
+        )
+        scoped_payload = payload.model_copy(update={"registration_answers": safe_answers})
+        return await self.update_workspace_rp_application_registration_draft(
+            db=db,
+            workspace_uuid=workspace_uuid,
+            rp_application_uuid=rp_configuration_uuid,
+            payload=scoped_payload,
+            current_user=current_user,
+            correlation_id=correlation_id,
+        )
+
+    async def transition_application_rp_configuration_onboarding_state(
+        self,
+        db: AsyncSession,
+        workspace_uuid: uuid_pkg.UUID | str,
+        application_information_uuid: uuid_pkg.UUID | str,
+        rp_configuration_uuid: uuid_pkg.UUID | str,
+        payload: WorkspaceRPApplicationOnboardingLifecycleTransitionRequest,
+        current_user: dict[str, Any],
+        correlation_id: str | None = None,
+    ) -> dict[str, Any]:
+        await self._resolve_application_rp_configuration_access(
+            db=db,
+            workspace_uuid=workspace_uuid,
+            application_information_uuid=application_information_uuid,
+            rp_configuration_uuid=rp_configuration_uuid,
+            current_user=current_user,
+            capability=(Capability.PRODUCTION_REVIEW if payload.target_state in REVIEW_ONLY_ONBOARDING_STATES else Capability.RP_CONFIGURATION_WRITE),
+        )
+        return await self.transition_workspace_rp_application_onboarding_state(
+            db=db,
+            workspace_uuid=workspace_uuid,
+            rp_application_uuid=rp_configuration_uuid,
+            payload=payload,
+            current_user=current_user,
+            correlation_id=correlation_id,
+        )
+
+    def _build_rp_configuration_read(
+        self,
+        *,
+        workspace: dict[str, Any],
+        application: dict[str, Any],
+    ) -> dict[str, Any]:
         payload = application.get("oidc_registration_payload")
         payload_data = payload if isinstance(payload, dict) else {}
         answers = self._registration_answers_for_read(payload_data)
@@ -1348,6 +2060,8 @@ class WorkspaceService:
             rp_application_uuid=application["uuid"],
             service_name_en=service_name_en,
             service_name_fr=service_name_fr,
+            configuration_name=application.get("configuration_name"),
+            partner_environment=application.get("partner_environment"),
             canada_login_environment=(answers.canada_login_environment or application.get("canada_login_environment")),
             onboarding_state=application.get("onboarding_state"),
             promotion_status=application.get("promotion_status"),
@@ -1420,6 +2134,110 @@ class WorkspaceService:
         return await self._build_rp_application_promotion_request_read(
             db=db,
             promotion_request=promotion_request,
+        )
+
+    async def get_application_rp_configuration_promotion_request(
+        self,
+        db: AsyncSession,
+        workspace_uuid: uuid_pkg.UUID | str,
+        application_information_uuid: uuid_pkg.UUID | str,
+        rp_configuration_uuid: uuid_pkg.UUID | str,
+        current_user: dict[str, Any],
+    ) -> dict[str, Any]:
+        workspace, _, target = await self._resolve_application_rp_configuration_access(
+            db=db,
+            workspace_uuid=workspace_uuid,
+            application_information_uuid=application_information_uuid,
+            rp_configuration_uuid=rp_configuration_uuid,
+            current_user=current_user,
+            capability=self._metadata_read_capability(
+                current_user=current_user,
+                partner_capability=Capability.RP_CONFIGURATION_READ,
+            ),
+        )
+        return await self._build_application_rp_configuration_promotion_request_read(
+            db=db,
+            workspace_id=workspace["id"],
+            application_information_uuid=application_information_uuid,
+            target=target,
+        )
+
+    async def upsert_application_rp_configuration_promotion_request(
+        self,
+        db: AsyncSession,
+        workspace_uuid: uuid_pkg.UUID | str,
+        application_information_uuid: uuid_pkg.UUID | str,
+        rp_configuration_uuid: uuid_pkg.UUID | str,
+        payload: PromotionRequestUpsert,
+        current_user: dict[str, Any],
+    ) -> dict[str, Any]:
+        workspace, _, _ = await self._resolve_application_rp_configuration_access(
+            db=db,
+            workspace_uuid=workspace_uuid,
+            application_information_uuid=application_information_uuid,
+            rp_configuration_uuid=rp_configuration_uuid,
+            current_user=current_user,
+            capability=Capability.PROMOTION_REQUEST_WRITE,
+        )
+        await self.upsert_workspace_rp_application_promotion_request(
+            db=db,
+            workspace_uuid=workspace_uuid,
+            rp_application_uuid=rp_configuration_uuid,
+            payload=payload,
+            current_user=current_user,
+        )
+        target = await self._get_application_rp_configuration(
+            db=db,
+            workspace_id=workspace["id"],
+            application_information_id=await self._resolve_workspace_application_information_id(
+                db=db,
+                workspace_id=workspace["id"],
+                application_information_uuid=application_information_uuid,
+            ),
+            rp_configuration_uuid=rp_configuration_uuid,
+        )
+        return await self._build_application_rp_configuration_promotion_request_read(
+            db=db,
+            workspace_id=workspace["id"],
+            application_information_uuid=application_information_uuid,
+            target=target,
+        )
+
+    async def review_application_rp_configuration_promotion_request(
+        self,
+        db: AsyncSession,
+        workspace_uuid: uuid_pkg.UUID | str,
+        application_information_uuid: uuid_pkg.UUID | str,
+        rp_configuration_uuid: uuid_pkg.UUID | str,
+        payload: PromotionReviewUpdate,
+        current_user: dict[str, Any],
+    ) -> dict[str, Any]:
+        workspace, _, target = await self._resolve_application_rp_configuration_access(
+            db=db,
+            workspace_uuid=workspace_uuid,
+            application_information_uuid=application_information_uuid,
+            rp_configuration_uuid=rp_configuration_uuid,
+            current_user=current_user,
+            capability=Capability.PRODUCTION_REVIEW,
+        )
+        await self.review_workspace_rp_application_promotion_request(
+            db=db,
+            workspace_uuid=workspace_uuid,
+            rp_application_uuid=rp_configuration_uuid,
+            payload=payload,
+            current_user=current_user,
+        )
+        target = await self._get_application_rp_configuration(
+            db=db,
+            workspace_id=workspace["id"],
+            application_information_id=target["application_information_id"],
+            rp_configuration_uuid=rp_configuration_uuid,
+        )
+        return await self._build_application_rp_configuration_promotion_request_read(
+            db=db,
+            workspace_id=workspace["id"],
+            application_information_uuid=application_information_uuid,
+            target=target,
         )
 
     async def upsert_workspace_rp_application_promotion_request(
@@ -1597,12 +2415,18 @@ class WorkspaceService:
         )
 
         if target_state == "submitted":
+            application_information_uuid = await self._resolve_workspace_application_information_uuid(
+                db=db,
+                workspace_id=workspace["id"],
+                application_information_id=rp_application.get("application_information_id"),
+            )
             current_version = int(rp_application.get("registration_draft_version") or 0)
             if payload.expected_draft_version != current_version:
                 self._log_registration_operational_event(
                     event="final_submit",
                     current_user=current_user,
                     workspace_uuid=workspace["uuid"],
+                    application_information_uuid=application_information_uuid,
                     rp_application_uuid=rp_application_uuid,
                     result="conflict",
                     correlation_id=correlation_id,
@@ -1612,12 +2436,21 @@ class WorkspaceService:
                     message="The registration draft was updated by another request.",
                 )
             try:
-                WorkspaceRPApplicationRegistrationCreate.model_validate(rp_application.get("oidc_registration_payload") or {})
+                WorkspaceRPApplicationRegistrationCreate.model_validate(
+                    {
+                        **(rp_application.get("oidc_registration_payload") or {}),
+                        "application_information_uuid": application_information_uuid,
+                        "configuration_name": rp_application.get("configuration_name"),
+                        "partner_environment": rp_application.get("partner_environment"),
+                        "canada_login_environment": rp_application.get("canada_login_environment"),
+                    }
+                )
             except ValidationError as exc:
                 self._log_registration_operational_event(
                     event="final_submit",
                     current_user=current_user,
                     workspace_uuid=workspace["uuid"],
+                    application_information_uuid=application_information_uuid,
                     rp_application_uuid=rp_application_uuid,
                     result="invalid",
                     correlation_id=correlation_id,
@@ -1650,6 +2483,7 @@ class WorkspaceService:
                     event="final_submit",
                     current_user=current_user,
                     workspace_uuid=workspace["uuid"],
+                    application_information_uuid=application_information_uuid,
                     rp_application_uuid=rp_application_uuid,
                     result="conflict",
                     correlation_id=correlation_id,
@@ -1662,6 +2496,7 @@ class WorkspaceService:
                 event="final_submit",
                 current_user=current_user,
                 workspace_uuid=workspace["uuid"],
+                application_information_uuid=application_information_uuid,
                 rp_application_uuid=rp_application_uuid,
                 result="success",
                 correlation_id=correlation_id,
@@ -1764,6 +2599,25 @@ class WorkspaceService:
         await crud_rp_applications.delete(db=db, uuid=rp_application_uuid)
         return {"message": "RP application deleted"}
 
+    async def delete_application_rp_configuration(
+        self,
+        db: AsyncSession,
+        workspace_uuid: uuid_pkg.UUID | str,
+        application_information_uuid: uuid_pkg.UUID | str,
+        rp_configuration_uuid: uuid_pkg.UUID | str,
+        current_user: dict[str, Any],
+    ) -> dict[str, str]:
+        await self._resolve_application_rp_configuration_access(
+            db=db,
+            workspace_uuid=workspace_uuid,
+            application_information_uuid=application_information_uuid,
+            rp_configuration_uuid=rp_configuration_uuid,
+            current_user=current_user,
+            capability=Capability.RP_CONFIGURATION_WRITE,
+        )
+        await crud_rp_applications.delete(db=db, uuid=rp_configuration_uuid)
+        return {"message": "RP configuration deleted"}
+
     async def get_workspace_rp_application_usage_summary(
         self,
         db: AsyncSession,
@@ -1785,6 +2639,33 @@ class WorkspaceService:
             rp_application_uuid=rp_application_uuid,
         )
         ibm_application_id = self._get_workspace_rp_application_ibm_application_id(rp_application)
+        from_date, to_date = self._resolve_selected_date_range(selected_date)
+        payload = await ibm_sv_admin_service.get_application_total_logins(
+            application_id=ibm_application_id,
+            from_date=from_date,
+            to_date=to_date,
+        )
+        return self._normalize_workspace_rp_application_usage_summary(payload)
+
+    async def get_application_rp_configuration_usage_summary(
+        self,
+        db: AsyncSession,
+        workspace_uuid: uuid_pkg.UUID | str,
+        application_information_uuid: uuid_pkg.UUID | str,
+        rp_configuration_uuid: uuid_pkg.UUID | str,
+        current_user: dict[str, Any],
+        ibm_sv_admin_service: IBMVerifyAdminService,
+        selected_date: str | None = None,
+    ) -> dict[str, int]:
+        _, _, configuration = await self._resolve_application_rp_configuration_access(
+            db=db,
+            workspace_uuid=workspace_uuid,
+            application_information_uuid=application_information_uuid,
+            rp_configuration_uuid=rp_configuration_uuid,
+            current_user=current_user,
+            capability=Capability.MAU_REPORT_READ,
+        )
+        ibm_application_id = self._get_workspace_rp_application_ibm_application_id(configuration)
         from_date, to_date = self._resolve_selected_date_range(selected_date)
         payload = await ibm_sv_admin_service.get_application_total_logins(
             application_id=ibm_application_id,
@@ -1824,6 +2705,35 @@ class WorkspaceService:
         )
         return self._redact_read_only_audit_payload(payload) if decision.role is CanonicalRoleCode.READ_ONLY else payload
 
+    async def get_application_rp_configuration_audit_events(
+        self,
+        db: AsyncSession,
+        workspace_uuid: uuid_pkg.UUID | str,
+        application_information_uuid: uuid_pkg.UUID | str,
+        rp_configuration_uuid: uuid_pkg.UUID | str,
+        current_user: dict[str, Any],
+        ibm_sv_admin_service: IBMVerifyAdminService,
+        selected_date: str | None = None,
+        size: int = 25,
+    ) -> dict[str, Any]:
+        _, decision, configuration = await self._resolve_application_rp_configuration_access(
+            db=db,
+            workspace_uuid=workspace_uuid,
+            application_information_uuid=application_information_uuid,
+            rp_configuration_uuid=rp_configuration_uuid,
+            current_user=current_user,
+            capability=Capability.PARTNER_AUDIT_READ,
+        )
+        ibm_application_id = self._get_workspace_rp_application_ibm_application_id(configuration)
+        from_date, to_date = self._resolve_selected_date_range(selected_date)
+        payload = await ibm_sv_admin_service.get_application_audit_trail(
+            application_id=ibm_application_id,
+            from_date=from_date,
+            to_date=to_date,
+            size=self._validate_audit_size(size),
+        )
+        return self._redact_read_only_audit_payload(payload) if decision.role is CanonicalRoleCode.READ_ONLY else payload
+
     async def get_workspace_rp_application_audit_events_search_after(
         self,
         db: AsyncSession,
@@ -1847,6 +2757,37 @@ class WorkspaceService:
             rp_application_uuid=rp_application_uuid,
         )
         ibm_application_id = self._get_workspace_rp_application_ibm_application_id(rp_application)
+        from_date, to_date = self._resolve_selected_date_range(selected_date)
+        payload = await ibm_sv_admin_service.get_application_audit_trail_search_after(
+            application_id=ibm_application_id,
+            from_date=from_date,
+            to_date=to_date,
+            size=self._validate_audit_size(size),
+            search_after=search_after,
+        )
+        return self._redact_read_only_audit_payload(payload) if decision.role is CanonicalRoleCode.READ_ONLY else payload
+
+    async def get_application_rp_configuration_audit_events_search_after(
+        self,
+        db: AsyncSession,
+        workspace_uuid: uuid_pkg.UUID | str,
+        application_information_uuid: uuid_pkg.UUID | str,
+        rp_configuration_uuid: uuid_pkg.UUID | str,
+        current_user: dict[str, Any],
+        ibm_sv_admin_service: IBMVerifyAdminService,
+        selected_date: str | None = None,
+        size: int = 25,
+        search_after: str | None = None,
+    ) -> dict[str, Any]:
+        _, decision, configuration = await self._resolve_application_rp_configuration_access(
+            db=db,
+            workspace_uuid=workspace_uuid,
+            application_information_uuid=application_information_uuid,
+            rp_configuration_uuid=rp_configuration_uuid,
+            current_user=current_user,
+            capability=Capability.PARTNER_AUDIT_READ,
+        )
+        ibm_application_id = self._get_workspace_rp_application_ibm_application_id(configuration)
         from_date, to_date = self._resolve_selected_date_range(selected_date)
         payload = await ibm_sv_admin_service.get_application_audit_trail_search_after(
             application_id=ibm_application_id,
@@ -1984,11 +2925,42 @@ class WorkspaceService:
             application_information_id=application_information_id,
             uuid=contact_uuid,
             is_deleted=False,
-            schema_to_select=ApplicationInformationContactRead,
+            schema_to_select=ApplicationInformationContactRecordRead,
         )
         if contact is None:
             raise NotFoundException("Application information contact not found")
         return contact
+
+    @staticmethod
+    async def _build_application_information_contact_read(
+        db: AsyncSession,
+        contact: dict[str, Any],
+    ) -> dict[str, Any]:
+        confirmation_actor_uuid: uuid_pkg.UUID | None = None
+        confirmation_actor_id = contact.get("identity_confirmed_by")
+        if isinstance(confirmation_actor_id, int):
+            result = await db.execute(select(User.uuid).where(User.id == confirmation_actor_id))
+            actor_uuid = result.scalar_one_or_none()
+            if actor_uuid is not None:
+                confirmation_actor_uuid = uuid_pkg.UUID(str(actor_uuid))
+
+        first_name = contact.get("first_name")
+        last_name = contact.get("last_name")
+        identity_confirmed_at = contact.get("identity_confirmed_at")
+        public_contact = {key: value for key, value in contact.items() if key != "identity_confirmed_by"}
+        public_contact.update(
+            {
+                "identity_confirmed_by_user_uuid": confirmation_actor_uuid,
+                "identity_confirmation_required": not (
+                    isinstance(first_name, str)
+                    and bool(first_name.strip())
+                    and isinstance(last_name, str)
+                    and bool(last_name.strip())
+                    and identity_confirmed_at is not None
+                ),
+            }
+        )
+        return ApplicationInformationContactRead.model_validate(public_contact).model_dump(mode="json")
 
     async def _build_application_information_review_context(
         self,
@@ -2144,15 +3116,47 @@ class WorkspaceService:
         db: AsyncSession,
         workspace_id: int,
         application_information_uuid: uuid_pkg.UUID | str | None,
-    ) -> int | None:
+    ) -> int:
         if application_information_uuid is None:
-            return None
-        application_information = await self._get_workspace_application_information(
-            db=db,
-            workspace_id=workspace_id,
-            application_information_uuid=application_information_uuid,
+            raise BadRequestException("Application is required")
+        result = await db.execute(
+            select(ApplicationInformation.id)
+            .where(
+                ApplicationInformation.workspace_id == workspace_id,
+                ApplicationInformation.uuid == application_information_uuid,
+                ApplicationInformation.is_deleted.is_(False),
+                ApplicationInformation.deleted_at.is_(None),
+            )
+            .with_for_update()
         )
-        return int(application_information["id"])
+        application_information_id = result.scalar_one_or_none()
+        if application_information_id is None:
+            raise NotFoundException("Application information not found")
+        return int(application_information_id)
+
+    async def _resolve_workspace_application_information_uuid(
+        self,
+        db: AsyncSession,
+        workspace_id: int,
+        application_information_id: int | None,
+        *,
+        for_update: bool = False,
+    ) -> uuid_pkg.UUID:
+        if application_information_id is None:
+            raise BadRequestException("Application is required")
+        statement = select(ApplicationInformation.uuid).where(
+            ApplicationInformation.id == application_information_id,
+            ApplicationInformation.workspace_id == workspace_id,
+            ApplicationInformation.is_deleted.is_(False),
+            ApplicationInformation.deleted_at.is_(None),
+        )
+        if for_update:
+            statement = statement.with_for_update()
+        result = await db.execute(statement)
+        application_information_uuid = result.scalar_one_or_none()
+        if application_information_uuid is None:
+            raise NotFoundException("Application information not found")
+        return uuid_pkg.UUID(str(application_information_uuid))
 
     async def _get_workspace_rp_application(
         self,
@@ -2174,6 +3178,56 @@ class WorkspaceService:
             db=db,
             rp_application=rp_application,
         )
+
+    async def _get_application_rp_configuration(
+        self,
+        db: AsyncSession,
+        workspace_id: int,
+        application_information_id: int,
+        rp_configuration_uuid: uuid_pkg.UUID | str,
+    ) -> dict[str, Any]:
+        configuration = await crud_rp_applications.get(
+            db=db,
+            workspace_id=workspace_id,
+            application_information_id=application_information_id,
+            uuid=rp_configuration_uuid,
+            is_deleted=False,
+            schema_to_select=RPApplicationRead,
+        )
+        if configuration is None:
+            raise NotFoundException("RP configuration not found")
+        return await self._attach_rp_application_promotion_request_summary(
+            db=db,
+            rp_application=self._without_legacy_application_owner(configuration),
+        )
+
+    async def _resolve_application_rp_configuration_access(
+        self,
+        db: AsyncSession,
+        workspace_uuid: uuid_pkg.UUID | str,
+        application_information_uuid: uuid_pkg.UUID | str,
+        rp_configuration_uuid: uuid_pkg.UUID | str,
+        current_user: dict[str, Any],
+        capability: Capability,
+    ) -> tuple[dict[str, Any], ResourceScopeDecision, dict[str, Any]]:
+        workspace, decision = await self._require_workspace_capability(
+            db=db,
+            workspace_uuid=workspace_uuid,
+            current_user=current_user,
+            capability=capability,
+        )
+        application_information = await self._get_workspace_application_information(
+            db=db,
+            workspace_id=workspace["id"],
+            application_information_uuid=application_information_uuid,
+        )
+        configuration = await self._get_application_rp_configuration(
+            db=db,
+            workspace_id=workspace["id"],
+            application_information_id=application_information["id"],
+            rp_configuration_uuid=rp_configuration_uuid,
+        )
+        return workspace, decision, configuration
 
     def _get_workspace_rp_application_ibm_application_id(
         self,
@@ -2483,6 +3537,53 @@ class WorkspaceService:
             decided_at=promotion_request.get("decided_at"),
             created_at=promotion_request["created_at"],
             updated_at=promotion_request.get("updated_at"),
+        ).model_dump()
+
+    async def _build_application_rp_configuration_promotion_request_read(
+        self,
+        db: AsyncSession,
+        workspace_id: int,
+        application_information_uuid: uuid_pkg.UUID | str,
+        target: dict[str, Any],
+    ) -> dict[str, Any]:
+        self._validate_rp_application_promotion_request_target(rp_application=target)
+        promotion_request = await self._get_rp_application_promotion_request_record(
+            db=db,
+            rp_application_id=target["id"],
+            required=True,
+        )
+        assert promotion_request is not None
+        promotion_read = await self._build_rp_application_promotion_request_read(
+            db=db,
+            promotion_request=promotion_request,
+        )
+
+        source_id_result = await db.execute(
+            select(RPApplication.source_rp_configuration_id).where(
+                RPApplication.id == target["id"],
+                RPApplication.workspace_id == workspace_id,
+                RPApplication.is_deleted.is_(False),
+            )
+        )
+        source_id = source_id_result.scalar_one_or_none()
+        source_uuid = None
+        if isinstance(source_id, int):
+            source_uuid_result = await db.execute(
+                select(RPApplication.uuid).where(
+                    RPApplication.id == source_id,
+                    RPApplication.workspace_id == workspace_id,
+                    RPApplication.application_information_id == target["application_information_id"],
+                    RPApplication.is_deleted.is_(False),
+                )
+            )
+            source_uuid = source_uuid_result.scalar_one_or_none()
+
+        return ApplicationRPConfigurationPromotionRequestRead(
+            **promotion_read,
+            application_information_uuid=uuid_pkg.UUID(str(application_information_uuid)),
+            source_rp_configuration_uuid=source_uuid,
+            target_rp_configuration_uuid=target["uuid"],
+            target_configuration_name=target["configuration_name"],
         ).model_dump()
 
     async def _attach_rp_application_promotion_request_summary(

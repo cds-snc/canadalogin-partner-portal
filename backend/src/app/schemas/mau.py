@@ -53,4 +53,5 @@ class MAUReportResponse(BaseModel):
     start_date: date
     end_date: date
     department_name: str | None = None
+    partner_environment: str | None = None
     records: list[MAUReportItem]

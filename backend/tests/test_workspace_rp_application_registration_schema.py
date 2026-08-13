@@ -1,6 +1,5 @@
 import pytest
 from pydantic import ValidationError
-
 from src.app.schemas.rp_application import (
     WorkspaceRPApplicationRegistrationCreate,
     WorkspaceRPApplicationRegistrationDraftCreate,
@@ -13,6 +12,8 @@ from src.app.schemas.rp_application import (
 def make_valid_registration_payload() -> dict[str, object]:
     return {
         "application_information_uuid": "018f6f83-0000-0000-0000-000000000501",
+        "configuration_name": "Staging integration A",
+        "partner_environment": "Partner QA 2",
         "canada_login_environment": "staging",
         "service_name_en": "Benefits Portal",
         "service_name_fr": "Portail des prestations",
@@ -51,12 +52,18 @@ def make_valid_registration_payload() -> dict[str, object]:
 class TestWorkspaceRPApplicationRegistrationSchemas:
     def test_draft_create_requires_only_valid_basics(self) -> None:
         payload = WorkspaceRPApplicationRegistrationDraftCreate(
+            applicationInformationUuid="018f6f83-0000-0000-0000-000000000501",
+            configurationName="Test integration A",
+            partnerEnvironment="  Cafe\N{COMBINING ACUTE ACCENT} QA  ",
             canadaLoginEnvironment="test",
             serviceNameEn="Benefits Portal",
             serviceNameFr="Portail des prestations",
         )
 
         assert payload.model_dump(mode="json", by_alias=True, exclude_none=True) == {
+            "applicationInformationUuid": "018f6f83-0000-0000-0000-000000000501",
+            "configurationName": "Test integration A",
+            "partnerEnvironment": "Café QA",
             "canadaLoginEnvironment": "test",
             "serviceNameEn": "Benefits Portal",
             "serviceNameFr": "Portail des prestations",
@@ -80,6 +87,9 @@ class TestWorkspaceRPApplicationRegistrationSchemas:
             {
                 "workspaceUuid": "018f6f83-0000-0000-0000-000000000201",
                 "rpApplicationUuid": "018f6f83-0000-0000-0000-000000000701",
+                "applicationInformationUuid": "018f6f83-0000-0000-0000-000000000501",
+                "configurationName": "Test integration A",
+                "partnerEnvironment": "QA 2",
                 "onboardingState": "draft",
                 "registrationDraftVersion": 2,
                 "registrationLastCompletedStep": "endpoints",
@@ -96,6 +106,8 @@ class TestWorkspaceRPApplicationRegistrationSchemas:
         serialized = payload.model_dump(mode="json", by_alias=True)
         assert serialized["workspaceUuid"] == "018f6f83-0000-0000-0000-000000000201"
         assert serialized["registrationAnswers"]["serviceNameEn"] == "Benefits Portal"
+        assert serialized["partnerEnvironment"] == "QA 2"
+        assert "partnerEnvironment" not in serialized["registrationAnswers"]
         assert "id" not in serialized
         assert "createdBy" not in serialized
         assert "oidcRegistrationPayload" not in serialized

@@ -179,6 +179,7 @@ export const AuditLogsPage = (): FunctionComponent => {
 				<div className="grid gap-300">
 					<DataTable
 						columns={auditLogColumns}
+						filter={false}
 						itemLabel={t("auditLogs.itemLabel")}
 						pagination={false}
 						rows={auditLogRows}

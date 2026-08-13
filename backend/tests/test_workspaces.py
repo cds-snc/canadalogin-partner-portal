@@ -5,7 +5,6 @@ from unittest.mock import AsyncMock, Mock
 import casbin
 from fastapi.testclient import TestClient
 from fastcrud.exceptions.http_exceptions import CustomException
-
 from src.app.api.dependencies import (
     get_current_user,
     get_ibm_sv_admin_service,
@@ -86,10 +85,16 @@ def sample_application_information_contact_payload(*, responsibility_en: str = "
         "created_by": 42,
         "name_en": "Jane Doe",
         "name_fr": "Jeanne Doe",
+        "first_name": None,
+        "last_name": None,
         "responsibility_en": responsibility_en,
         "responsibility_fr": "Responsable du produit" if responsibility_en == "Product owner" else "Responsabilite mise a jour",
         "email": "jane.doe@example.gc.ca",
         "phone_number": "555-555-5555",
+        "alternate_phone_number": None,
+        "identity_confirmed_at": None,
+        "identity_confirmed_by_user_uuid": None,
+        "identity_confirmation_required": True,
         "created_at": datetime(2026, 7, 30, 15, 15, tzinfo=UTC).isoformat(),
         "updated_at": None,
         "deleted_at": None,
@@ -142,6 +147,7 @@ def sample_rp_application_payload(*, dnr_app_name: str = "Benefits Portal") -> d
         "department_id": 7,
         "application_information_id": 17,
         "dnr_app_name": dnr_app_name,
+        "configuration_name": "Staging integration A",
         "canada_login_environment": "staging",
         "status": None,
         "created_by": 42,
@@ -170,6 +176,8 @@ def sample_rp_application_registration_draft_payload() -> dict[str, object]:
     return {
         "workspace_uuid": "018f6f83-0000-0000-0000-000000000201",
         "rp_application_uuid": "018f6f83-0000-0000-0000-000000000701",
+        "application_information_uuid": "018f6f83-0000-0000-0000-000000000501",
+        "configuration_name": "Staging integration A",
         "onboarding_state": "draft",
         "registration_draft_version": 1,
         "registration_last_completed_step": "basics",
@@ -201,6 +209,23 @@ def sample_rp_application_registration_submission_payload() -> dict[str, object]
         "registration_draft_version": 5,
         "service_name_en": "Benefits Portal",
         "service_name_fr": "Portail des prestations",
+    }
+
+
+def sample_rp_configuration_progression_payload() -> dict[str, object]:
+    return {
+        "workspace_uuid": "018f6f83-0000-0000-0000-000000000201",
+        "application_information_uuid": "018f6f83-0000-0000-0000-000000000501",
+        "source_rp_configuration_uuid": "018f6f83-0000-0000-0000-000000000701",
+        "source_configuration_name": "Partner staging A",
+        "source_environment": "staging",
+        "target_rp_configuration_uuid": "018f6f83-0000-0000-0000-000000000702",
+        "target_configuration_name": "Partner production A",
+        "target_environment": "production",
+        "target_registration_draft_version": 1,
+        "target_registration_last_completed_step": "basics",
+        "self_serve": False,
+        "promotion_status": "review_tracked",
     }
 
 
@@ -247,6 +272,16 @@ def sample_promotion_request_payload() -> dict[str, object]:
         "decided_at": datetime(2026, 8, 11, 12, 15, tzinfo=UTC).isoformat(),
         "created_at": datetime(2026, 8, 11, 11, 45, tzinfo=UTC).isoformat(),
         "updated_at": datetime(2026, 8, 11, 12, 15, tzinfo=UTC).isoformat(),
+    }
+
+
+def sample_application_rp_configuration_promotion_payload() -> dict[str, object]:
+    return {
+        **sample_promotion_request_payload(),
+        "application_information_uuid": "018f6f83-0000-0000-0000-000000000501",
+        "source_rp_configuration_uuid": "018f6f83-0000-0000-0000-000000000701",
+        "target_rp_configuration_uuid": "018f6f83-0000-0000-0000-000000000702",
+        "target_configuration_name": "Partner production A",
     }
 
 
@@ -685,8 +720,8 @@ class TestWorkspaceRoutes:
                 contact_create_response = client.post(
                     "/api/v1/workspaces/018f6f83-0000-0000-0000-000000000201/application-information/018f6f83-0000-0000-0000-000000000501/contacts",
                     json={
-                        "nameEn": "Jane Doe",
-                        "nameFr": "Jeanne Doe",
+                        "firstName": "Jane",
+                        "lastName": "Doe",
                         "responsibilityEn": "Product owner",
                         "responsibilityFr": "Responsable du produit",
                         "email": "jane.doe@example.gc.ca",
@@ -719,6 +754,7 @@ class TestWorkspaceRoutes:
         assert delete_response.json() == {"message": "Application information deleted"}
         assert contacts_list_response.status_code == 200
         assert contacts_list_response.json()[0]["nameEn"] == "Jane Doe"
+        assert contacts_list_response.json()[0]["identityConfirmationRequired"] is True
         assert contact_create_response.status_code == 201
         assert contact_create_response.json()["email"] == "jane.doe@example.gc.ca"
         assert contact_update_response.status_code == 200
@@ -962,6 +998,8 @@ class TestWorkspaceRoutes:
                     json={
                         "applicationInformationUuid": "018f6f83-0000-0000-0000-000000000501",
                         "canadaLoginEnvironment": "staging",
+                        "configurationName": "Staging integration A",
+                        "partnerEnvironment": "Partner staging",
                         "serviceNameEn": "Benefits Portal",
                         "serviceNameFr": "Portail des prestations",
                     },
@@ -1042,6 +1080,325 @@ class TestWorkspaceRoutes:
         assert transition_kwargs["current_user"] == current_user
         assert transition_kwargs["payload"].target_state == "submitted"
         assert transition_kwargs["payload"].expected_draft_version == 4
+
+    def test_application_rp_configuration_list_delegates_with_complete_ancestry(self) -> None:
+        service = Mock()
+        service.list_application_rp_configurations = AsyncMock(
+            return_value=[
+                {
+                    "uuid": "018f6f83-0000-0000-0000-000000000701",
+                    "workspaceUuid": "018f6f83-0000-0000-0000-000000000201",
+                    "workspaceName": "Benefits Workspace",
+                    "applicationInformationUuid": "018f6f83-0000-0000-0000-000000000501",
+                    "serviceNameEn": "Benefits Portal",
+                    "serviceNameFr": "Portail des prestations",
+                    "configurationName": "Partner staging A",
+                    "canadaLoginEnvironment": "staging",
+                    "onboardingState": "draft",
+                    "promotionStatus": None,
+                    "registrationLastCompletedStep": "basics",
+                    "resumeTaskPath": (
+                        "/workspaces/018f6f83-0000-0000-0000-000000000201/applications/018f6f83-0000-0000-0000-000000000701/registration/endpoints"
+                    ),
+                    "role": "rp_admin",
+                }
+            ]
+        )
+        current_user = {
+            "id": 42,
+            "username": "workspace-admin@example.gc.ca",
+            "is_superuser": False,
+        }
+        db = Mock()
+
+        app.dependency_overrides[get_current_user] = lambda: current_user
+        app.dependency_overrides[get_workspace_service] = lambda: service
+        app.dependency_overrides[async_get_db] = lambda: db
+
+        try:
+            with TestClient(app) as client:
+                response = client.get(
+                    "/api/v1/workspaces/018f6f83-0000-0000-0000-000000000201/"
+                    "application-information/018f6f83-0000-0000-0000-000000000501/"
+                    "rp-configurations"
+                )
+        finally:
+            app.dependency_overrides.clear()
+
+        assert response.status_code == 200
+        assert response.json()[0]["configurationName"] == "Partner staging A"
+        assert response.json()[0]["applicationInformationUuid"] == ("018f6f83-0000-0000-0000-000000000501")
+        assert "oidcRegistrationPayload" not in response.json()[0]
+        service.list_application_rp_configurations.assert_awaited_once_with(
+            db=db,
+            workspace_uuid=uuid_pkg.UUID("018f6f83-0000-0000-0000-000000000201"),
+            application_information_uuid=uuid_pkg.UUID("018f6f83-0000-0000-0000-000000000501"),
+            current_user=current_user,
+        )
+
+    def test_application_rp_configuration_detail_routes_delegate_with_complete_ancestry(self) -> None:
+        service = Mock()
+        service.get_application_rp_configuration_summary = AsyncMock(
+            return_value={
+                "uuid": "018f6f83-0000-0000-0000-000000000701",
+                "workspaceUuid": "018f6f83-0000-0000-0000-000000000201",
+                "workspaceName": "Benefits Workspace",
+                "applicationInformationUuid": "018f6f83-0000-0000-0000-000000000501",
+                "serviceNameEn": "Benefits Portal",
+                "serviceNameFr": "Portail des prestations",
+                "configurationName": "Partner staging A",
+                "canadaLoginEnvironment": "staging",
+                "onboardingState": "draft",
+                "promotionStatus": None,
+                "registrationLastCompletedStep": "basics",
+                "resumeTaskPath": None,
+                "role": "rp_admin",
+            }
+        )
+        service.get_application_rp_configuration_configuration = AsyncMock(
+            return_value={
+                "workspaceUuid": "018f6f83-0000-0000-0000-000000000201",
+                "applicationInformationUuid": "018f6f83-0000-0000-0000-000000000501",
+                "rpApplicationUuid": "018f6f83-0000-0000-0000-000000000701",
+                "serviceNameEn": "Benefits Portal",
+                "serviceNameFr": "Portail des prestations",
+                "configurationName": "Partner staging A",
+                "canadaLoginEnvironment": "staging",
+                "onboardingState": "draft",
+                "promotionStatus": None,
+                "registrationDraftVersion": 2,
+                "registrationLastCompletedStep": "basics",
+                "registrationAnswers": {},
+                "offlinePublicKeyProvided": False,
+            }
+        )
+        current_user = {
+            "id": 42,
+            "username": "workspace-admin@example.gc.ca",
+            "is_superuser": False,
+        }
+        db = Mock()
+        app.dependency_overrides[get_current_user] = lambda: current_user
+        app.dependency_overrides[get_workspace_service] = lambda: service
+        app.dependency_overrides[async_get_db] = lambda: db
+        base_path = (
+            "/api/v1/workspaces/018f6f83-0000-0000-0000-000000000201/"
+            "application-information/018f6f83-0000-0000-0000-000000000501/"
+            "rp-configurations/018f6f83-0000-0000-0000-000000000701"
+        )
+
+        try:
+            with TestClient(app) as client:
+                detail_response = client.get(base_path)
+                configuration_response = client.get(f"{base_path}/configuration")
+        finally:
+            app.dependency_overrides.clear()
+
+        assert detail_response.status_code == 200
+        assert detail_response.json()["configurationName"] == "Partner staging A"
+        assert configuration_response.status_code == 200
+        assert configuration_response.json()["applicationInformationUuid"] == ("018f6f83-0000-0000-0000-000000000501")
+        expected_arguments = {
+            "db": db,
+            "workspace_uuid": uuid_pkg.UUID("018f6f83-0000-0000-0000-000000000201"),
+            "application_information_uuid": uuid_pkg.UUID("018f6f83-0000-0000-0000-000000000501"),
+            "rp_configuration_uuid": uuid_pkg.UUID("018f6f83-0000-0000-0000-000000000701"),
+            "current_user": current_user,
+        }
+        service.get_application_rp_configuration_summary.assert_awaited_once_with(**expected_arguments)
+        service.get_application_rp_configuration_configuration.assert_awaited_once_with(**expected_arguments)
+
+    def test_partner_environment_route_normalizes_and_delegates_with_complete_ancestry(self) -> None:
+        service = Mock()
+        service.update_application_rp_configuration_partner_environment = AsyncMock(
+            return_value={
+                "workspaceUuid": "018f6f83-0000-0000-0000-000000000201",
+                "applicationInformationUuid": "018f6f83-0000-0000-0000-000000000501",
+                "rpConfigurationUuid": "018f6f83-0000-0000-0000-000000000701",
+                "partnerEnvironment": "Partnér QA 2",
+                "updatedAt": "2026-08-13T15:00:00Z",
+            }
+        )
+        current_user = {"id": 42, "username": "workspace-admin@example.gc.ca"}
+        db = Mock()
+        app.dependency_overrides[get_current_user] = lambda: current_user
+        app.dependency_overrides[get_workspace_service] = lambda: service
+        app.dependency_overrides[async_get_db] = lambda: db
+        path = (
+            "/api/v1/workspaces/018f6f83-0000-0000-0000-000000000201/"
+            "application-information/018f6f83-0000-0000-0000-000000000501/"
+            "rp-configurations/018f6f83-0000-0000-0000-000000000701/partner-environment"
+        )
+
+        try:
+            with TestClient(app) as client:
+                response = client.patch(
+                    path,
+                    json={"partnerEnvironment": "  Partne\u0301r QA 2  "},
+                )
+        finally:
+            app.dependency_overrides.clear()
+
+        assert response.status_code == 200
+        assert response.json()["partnerEnvironment"] == "Partnér QA 2"
+        arguments = service.update_application_rp_configuration_partner_environment.await_args.kwargs
+        assert arguments["workspace_uuid"] == uuid_pkg.UUID("018f6f83-0000-0000-0000-000000000201")
+        assert arguments["application_information_uuid"] == uuid_pkg.UUID("018f6f83-0000-0000-0000-000000000501")
+        assert arguments["rp_configuration_uuid"] == uuid_pkg.UUID("018f6f83-0000-0000-0000-000000000701")
+        assert arguments["payload"].partner_environment == "Partnér QA 2"
+        assert arguments["current_user"] is current_user
+
+    def test_application_rp_configuration_create_uses_parent_scoped_basics(self) -> None:
+        service = Mock()
+        service.create_application_rp_configuration_registration_draft = AsyncMock(return_value=sample_rp_application_registration_draft_payload())
+        current_user = {
+            "id": 42,
+            "username": "workspace-admin@example.gc.ca",
+            "is_superuser": False,
+        }
+        db = Mock()
+        app.dependency_overrides[get_current_user] = lambda: current_user
+        app.dependency_overrides[get_workspace_service] = lambda: service
+        app.dependency_overrides[async_get_db] = lambda: db
+
+        try:
+            with TestClient(app) as client:
+                response = client.post(
+                    "/api/v1/workspaces/018f6f83-0000-0000-0000-000000000201/"
+                    "application-information/018f6f83-0000-0000-0000-000000000501/"
+                    "rp-configurations",
+                    headers={"Idempotency-Key": "018f6f83-0000-0000-0000-000000000901"},
+                    json={
+                        "configurationName": " Partner staging A ",
+                        "partnerEnvironment": "  Partner QA 2  ",
+                        "canadaLoginEnvironment": "staging",
+                    },
+                )
+        finally:
+            app.dependency_overrides.clear()
+
+        assert response.status_code == 201
+        create_arguments = service.create_application_rp_configuration_registration_draft.await_args.kwargs
+        assert create_arguments["workspace_uuid"] == uuid_pkg.UUID("018f6f83-0000-0000-0000-000000000201")
+        assert create_arguments["application_information_uuid"] == uuid_pkg.UUID("018f6f83-0000-0000-0000-000000000501")
+        assert create_arguments["payload"].configuration_name == "Partner staging A"
+        assert create_arguments["payload"].partner_environment == "Partner QA 2"
+        assert create_arguments["payload"].canada_login_environment == "staging"
+        assert create_arguments["payload"].model_dump(by_alias=True) == {
+            "configurationName": "Partner staging A",
+            "partnerEnvironment": "Partner QA 2",
+            "canadaLoginEnvironment": "staging",
+        }
+        assert create_arguments["registration_creation_key"] == uuid_pkg.UUID("018f6f83-0000-0000-0000-000000000901")
+
+    def test_application_rp_configuration_progression_preserves_explicit_source_and_target(self) -> None:
+        service = Mock()
+        service.create_application_rp_configuration_progression = AsyncMock(return_value=sample_rp_configuration_progression_payload())
+        current_user = {
+            "id": 42,
+            "username": "workspace-admin@example.gc.ca",
+            "is_superuser": False,
+        }
+        db = Mock()
+        app.dependency_overrides[get_current_user] = lambda: current_user
+        app.dependency_overrides[get_workspace_service] = lambda: service
+        app.dependency_overrides[async_get_db] = lambda: db
+
+        try:
+            with TestClient(app) as client:
+                response = client.post(
+                    "/api/v1/workspaces/018f6f83-0000-0000-0000-000000000201/"
+                    "application-information/018f6f83-0000-0000-0000-000000000501/"
+                    "rp-configurations/018f6f83-0000-0000-0000-000000000701/progression",
+                    headers={"Idempotency-Key": "018f6f83-0000-0000-0000-000000000902"},
+                    json={
+                        "targetConfigurationName": " Partner production A ",
+                        "targetPartnerEnvironment": " Partner production ",
+                        "targetEnvironment": "production",
+                    },
+                )
+        finally:
+            app.dependency_overrides.clear()
+
+        assert response.status_code == 201
+        assert response.json()["sourceRpConfigurationUuid"] == "018f6f83-0000-0000-0000-000000000701"
+        assert response.json()["targetRpConfigurationUuid"] == "018f6f83-0000-0000-0000-000000000702"
+        assert response.json()["targetConfigurationName"] == "Partner production A"
+        assert response.json()["targetPartnerEnvironment"] is None
+        assert response.json()["promotionStatus"] == "review_tracked"
+        arguments = service.create_application_rp_configuration_progression.await_args.kwargs
+        assert arguments["source_rp_configuration_uuid"] == uuid_pkg.UUID("018f6f83-0000-0000-0000-000000000701")
+        assert arguments["payload"].target_configuration_name == "Partner production A"
+        assert arguments["payload"].target_partner_environment == "Partner production"
+        assert arguments["payload"].target_environment == "production"
+        assert arguments["progression_creation_key"] == uuid_pkg.UUID("018f6f83-0000-0000-0000-000000000902")
+
+    def test_application_rp_configuration_registration_and_delete_routes_preserve_ancestry(self) -> None:
+        service = Mock()
+        service.get_application_rp_configuration_registration_draft = AsyncMock(return_value=sample_rp_application_registration_draft_payload())
+        service.update_application_rp_configuration_registration_draft = AsyncMock(return_value=sample_rp_application_registration_draft_payload())
+        service.transition_application_rp_configuration_onboarding_state = AsyncMock(
+            return_value=sample_rp_application_registration_submission_payload()
+        )
+        service.delete_application_rp_configuration = AsyncMock(return_value={"message": "RP configuration deleted"})
+        current_user = {
+            "id": 42,
+            "username": "workspace-admin@example.gc.ca",
+            "is_superuser": False,
+        }
+        db = Mock()
+        app.dependency_overrides[get_current_user] = lambda: current_user
+        app.dependency_overrides[get_workspace_service] = lambda: service
+        app.dependency_overrides[async_get_db] = lambda: db
+        base_path = (
+            "/api/v1/workspaces/018f6f83-0000-0000-0000-000000000201/"
+            "application-information/018f6f83-0000-0000-0000-000000000501/"
+            "rp-configurations/018f6f83-0000-0000-0000-000000000701"
+        )
+
+        try:
+            with TestClient(app) as client:
+                read_response = client.get(f"{base_path}/registration-draft")
+                patch_response = client.patch(
+                    f"{base_path}/registration-draft",
+                    json={
+                        "stepId": "basics",
+                        "saveMode": "partial",
+                        "expectedDraftVersion": 1,
+                        "configurationName": "Partner staging B",
+                        "registrationAnswers": {
+                            "canadaLoginEnvironment": "staging",
+                        },
+                    },
+                )
+                submit_response = client.post(
+                    f"{base_path}/onboarding-state",
+                    json={"targetState": "submitted", "expectedDraftVersion": 4},
+                )
+                delete_response = client.delete(base_path)
+        finally:
+            app.dependency_overrides.clear()
+
+        assert read_response.status_code == 200
+        assert patch_response.status_code == 200
+        assert submit_response.status_code == 200
+        assert delete_response.json() == {"message": "RP configuration deleted"}
+        common_arguments = {
+            "db": db,
+            "workspace_uuid": uuid_pkg.UUID("018f6f83-0000-0000-0000-000000000201"),
+            "application_information_uuid": uuid_pkg.UUID("018f6f83-0000-0000-0000-000000000501"),
+            "rp_configuration_uuid": uuid_pkg.UUID("018f6f83-0000-0000-0000-000000000701"),
+            "current_user": current_user,
+        }
+        service.get_application_rp_configuration_registration_draft.assert_awaited_once_with(**common_arguments)
+        patch_arguments = service.update_application_rp_configuration_registration_draft.await_args.kwargs
+        assert patch_arguments["application_information_uuid"] == common_arguments["application_information_uuid"]
+        assert patch_arguments["payload"].expected_draft_version == 1
+        assert patch_arguments["payload"].configuration_name == "Partner staging B"
+        submit_arguments = service.transition_application_rp_configuration_onboarding_state.await_args.kwargs
+        assert submit_arguments["application_information_uuid"] == common_arguments["application_information_uuid"]
+        assert submit_arguments["payload"].target_state == "submitted"
+        service.delete_application_rp_configuration.assert_awaited_once_with(**common_arguments)
 
     def test_workspace_rp_application_onboarding_state_transition_surfaces_bad_request(self) -> None:
         service = Mock()
@@ -1172,6 +1529,42 @@ class TestWorkspaceRoutes:
         assert patch_kwargs["payload"].status == "approved"
         assert patch_kwargs["payload"].external_reference == "CAB-123"
         assert patch_kwargs["payload"].reviewed_by_team == "CanadaLogin"
+
+    def test_nested_production_review_patch_preserves_application_and_target_ancestry(self) -> None:
+        service = Mock()
+        service.review_application_rp_configuration_promotion_request = AsyncMock(
+            return_value=sample_application_rp_configuration_promotion_payload()
+        )
+        current_user = cl_admin_user()
+        db = Mock()
+        app.dependency_overrides[get_current_user] = lambda: current_user
+        app.dependency_overrides[get_workspace_service] = lambda: service
+        app.dependency_overrides[async_get_db] = lambda: db
+
+        try:
+            with TestClient(app) as client:
+                response = client.patch(
+                    "/api/v1/workspaces/018f6f83-0000-0000-0000-000000000201/"
+                    "application-information/018f6f83-0000-0000-0000-000000000501/"
+                    "rp-configurations/018f6f83-0000-0000-0000-000000000702/promotion-request",
+                    json={
+                        "status": "approved",
+                        "externalReference": "CAB-123",
+                        "reviewedByTeam": "CanadaLogin",
+                    },
+                )
+        finally:
+            app.dependency_overrides.clear()
+
+        assert response.status_code == 200
+        assert response.json()["applicationInformationUuid"] == "018f6f83-0000-0000-0000-000000000501"
+        assert response.json()["sourceRpConfigurationUuid"] == "018f6f83-0000-0000-0000-000000000701"
+        assert response.json()["targetRpConfigurationUuid"] == "018f6f83-0000-0000-0000-000000000702"
+        arguments = service.review_application_rp_configuration_promotion_request.await_args.kwargs
+        assert arguments["workspace_uuid"] == uuid_pkg.UUID("018f6f83-0000-0000-0000-000000000201")
+        assert arguments["application_information_uuid"] == uuid_pkg.UUID("018f6f83-0000-0000-0000-000000000501")
+        assert arguments["rp_configuration_uuid"] == uuid_pkg.UUID("018f6f83-0000-0000-0000-000000000702")
+        assert arguments["payload"].status == "approved"
 
     def test_workspace_rp_application_denied_for_non_admin_actor(self) -> None:
         service = Mock()

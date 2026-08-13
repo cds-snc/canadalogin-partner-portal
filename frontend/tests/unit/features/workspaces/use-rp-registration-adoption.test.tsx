@@ -27,8 +27,10 @@ describe("useRPRegistrationAdoptionActions", () => {
 	beforeEach(() => {
 		vi.resetAllMocks();
 		vi.mocked(linkRPApplicationToWorkspace).mockResolvedValue({
-			applicationInformationUuid: null,
+			applicationInformationUuid: "application-information-1",
 			canadaLoginEnvironment: "production",
+			configurationName: "Benefits production",
+			partnerEnvironment: null,
 			conflictingFieldNames: [],
 			departmentUuid: "department-1",
 			filledFieldNames: ["redirectUris"],
@@ -58,6 +60,7 @@ describe("useRPRegistrationAdoptionActions", () => {
 
 		await act(async () => {
 			await result.current.linkToWorkspace(rpApplicationUuid, {
+				applicationInformationUuid: "application-information-uuid-1",
 				canadaLoginEnvironment: "production",
 				workspaceUuid,
 			});
@@ -66,6 +69,7 @@ describe("useRPRegistrationAdoptionActions", () => {
 		expect(linkRPApplicationToWorkspace).toHaveBeenCalledWith(
 			rpApplicationUuid,
 			{
+				applicationInformationUuid: "application-information-uuid-1",
 				canadaLoginEnvironment: "production",
 				workspaceUuid,
 			}

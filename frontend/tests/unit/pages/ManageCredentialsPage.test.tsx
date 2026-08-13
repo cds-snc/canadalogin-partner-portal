@@ -1,4 +1,8 @@
-import { createElement, type PropsWithChildren, type ReactElement } from "react";
+import {
+	createElement,
+	type PropsWithChildren,
+	type ReactElement,
+} from "react";
 import { render, screen, waitFor } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { ManageCredentialsPage } from "@/features/your-applications/pages/ManageCredentialsPage";
@@ -6,7 +10,7 @@ import { HttpRequestError } from "@/fetch/errors";
 import {
 	getAccessibleRPApplicationClientCredentials,
 	getAccessibleRPApplicationRotatedClientSecrets,
-	getRPApplication,
+	getApplicationRPConfiguration,
 } from "@/fetch/rp-applications";
 
 vi.mock("react-i18next", async (importOriginal) => ({
@@ -34,7 +38,8 @@ vi.mock("react-i18next", async (importOriginal) => ({
 
 vi.mock("@tanstack/react-router", () => ({
 	useParams: () => ({
-		rpApplicationUuid: "rp-application-uuid-1",
+		applicationInformationUuid: "application-information-uuid-1",
+		rpConfigurationUuid: "rp-application-uuid-1",
 		workspaceUuid: "workspace-uuid-1",
 	}),
 }));
@@ -48,11 +53,19 @@ vi.mock("@/components/ui", () => ({
 		children,
 		href,
 	}: PropsWithChildren<{ href?: string }>): ReactElement =>
-		href ? <a href={href}>{children}</a> : <button type="button">{children}</button>,
+		href ? (
+			<a href={href}>{children}</a>
+		) : (
+			<button type="button">{children}</button>
+		),
 	Checkboxes: (): null => null,
 	ConfirmDialog: (): null => null,
-	Container: ({ children }: PropsWithChildren): ReactElement => <section>{children}</section>,
-	Grid: ({ children }: PropsWithChildren): ReactElement => <div>{children}</div>,
+	Container: ({ children }: PropsWithChildren): ReactElement => (
+		<section>{children}</section>
+	),
+	Grid: ({ children }: PropsWithChildren): ReactElement => (
+		<div>{children}</div>
+	),
 	Heading: ({
 		children,
 		tag = "h1",
@@ -76,15 +89,17 @@ vi.mock("@/fetch/rp-applications", () => ({
 	deleteAccessibleRPApplicationRotatedClientSecret: vi.fn(),
 	getAccessibleRPApplicationClientCredentials: vi.fn(),
 	getAccessibleRPApplicationRotatedClientSecrets: vi.fn(),
-	getRPApplication: vi.fn(),
+	getApplicationRPConfiguration: vi.fn(),
 	rotateAccessibleRPApplicationClientSecret: vi.fn(),
 }));
 
 describe("ManageCredentialsPage", () => {
 	beforeEach(() => {
-		vi.mocked(getRPApplication).mockResolvedValue({
-			dnrAppName: "Benefits Portal",
-		} as Awaited<ReturnType<typeof getRPApplication>>);
+		vi.mocked(getApplicationRPConfiguration).mockResolvedValue({
+			configurationName: "Benefits Portal",
+			serviceNameEn: "Benefits service",
+			serviceNameFr: "Service de prestations",
+		} as Awaited<ReturnType<typeof getApplicationRPConfiguration>>);
 		const providerUnavailable = new HttpRequestError({ status: 503 });
 		vi.mocked(getAccessibleRPApplicationClientCredentials).mockRejectedValue(
 			providerUnavailable
@@ -111,6 +126,8 @@ describe("ManageCredentialsPage", () => {
 			screen
 				.getByRole("link", { name: "Back to the RP application" })
 				.getAttribute("href")
-		).toBe("/workspaces/workspace-uuid-1/applications/rp-application-uuid-1");
+		).toBe(
+			"/workspaces/workspace-uuid-1/applications/application-information-uuid-1/rp-configurations/rp-application-uuid-1"
+		);
 	});
 });

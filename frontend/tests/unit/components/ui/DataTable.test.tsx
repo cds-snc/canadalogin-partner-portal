@@ -11,24 +11,29 @@ const rows = [
 vi.mock("@gcds-core/components-react", () => ({
 	GcdsButton: ({
 		children,
+		href,
 		onClickCapture,
 		onKeyDownCapture,
 		onKeyUpCapture,
 	}: {
 		children: React.ReactNode;
+		href?: string;
 		onClickCapture?: React.MouseEventHandler<HTMLButtonElement>;
 		onKeyDownCapture?: React.KeyboardEventHandler<HTMLButtonElement>;
 		onKeyUpCapture?: React.KeyboardEventHandler<HTMLButtonElement>;
-	}): ReactElement => (
-		<button
-			type="button"
-			onClickCapture={onClickCapture}
-			onKeyDownCapture={onKeyDownCapture}
-			onKeyUpCapture={onKeyUpCapture}
-		>
-			{children}
-		</button>
-	),
+	}): ReactElement =>
+		href ? (
+			<a href={href}>{children}</a>
+		) : (
+			<button
+				type="button"
+				onClickCapture={onClickCapture}
+				onKeyDownCapture={onKeyDownCapture}
+				onKeyUpCapture={onKeyUpCapture}
+			>
+				{children}
+			</button>
+		),
 	GcdsInput: ({
 		inputId,
 		label,
@@ -63,17 +68,25 @@ vi.mock("@gcds-core/components-react", () => ({
 		data,
 		columns,
 		filter,
+		pagination,
+		sort,
 	}: {
 		captionSlot?: React.ReactNode;
 		data?: Array<Record<string, unknown>>;
 		columns?: Array<Record<string, unknown>>;
 		filter?: boolean;
+		pagination?: boolean;
+		sort?: boolean;
 	}): ReactElement => (
 		<div
 			data-caption={captionSlot ?? ""}
+			data-column-sort={String(columns?.[0]?.["sort"] ?? false)}
 			data-columns={columns?.length ?? 0}
 			data-filter={filter ? "true" : "false"}
+			data-pagination={pagination ? "true" : "false"}
+			data-row-header={String(columns?.[0]?.["rowHeader"] ?? false)}
 			data-rows={data?.length ?? 0}
+			data-sort={sort ? "true" : "false"}
 			data-testid="gcds-table"
 		>
 			{captionSlot ? <h2>{captionSlot}</h2> : null}
@@ -89,6 +102,19 @@ vi.mock("@gcds-core/components-react", () => ({
 			})}
 		</div>
 	),
+	GcdsLink: ({
+		children,
+		href,
+		onClickCapture,
+	}: {
+		children: React.ReactNode;
+		href: string;
+		onClickCapture?: React.MouseEventHandler<HTMLAnchorElement>;
+	}): ReactElement => (
+		<a href={href} onClickCapture={onClickCapture}>
+			{children}
+		</a>
+	),
 	ReactTableColumn: {},
 }));
 
@@ -97,7 +123,7 @@ describe("DataTable", () => {
 		render(
 			<DataTable
 				columns={[
-					{ field: "id", headerName: "ID" },
+					{ field: "id", headerName: "ID", rowHeader: true },
 					{ field: "name", headerName: "Name" },
 				]}
 				itemLabel="records"
@@ -108,7 +134,51 @@ describe("DataTable", () => {
 
 		const table = document.querySelector("[data-testid='gcds-table']");
 		expect(table).toBeTruthy();
+		expect(table?.getAttribute("data-filter")).toBe("false");
+		expect(table?.getAttribute("data-pagination")).toBe("false");
 		expect(table?.getAttribute("data-rows")).toBe("2");
+		expect(table?.getAttribute("data-row-header")).toBe("true");
+		expect(table?.getAttribute("data-column-sort")).toBe("true");
+		expect(table?.getAttribute("data-sort")).toBe("true");
+	});
+
+	it("removes sort controls when only one row is available", () => {
+		render(
+			<DataTable
+				columns={[{ field: "name", headerName: "Name" }]}
+				itemLabel="record"
+				rows={[rows[0]!]}
+			/>
+		);
+
+		expect(screen.getByTestId("gcds-table").getAttribute("data-sort")).toBe(
+			"false"
+		);
+		expect(
+			screen.getByTestId("gcds-table").getAttribute("data-column-sort")
+		).toBe("false");
+	});
+
+	it("adds collection controls only when a table is large enough to need them", () => {
+		const manyRows = Array.from({ length: 13 }, (_, index) => ({
+			id: String(index + 1),
+			name: `Record ${index + 1}`,
+		}));
+
+		render(
+			<DataTable
+				columns={[{ field: "name", headerName: "Name" }]}
+				itemLabel="records"
+				rows={manyRows}
+			/>
+		);
+
+		expect(screen.getByTestId("gcds-table").getAttribute("data-filter")).toBe(
+			"true"
+		);
+		expect(
+			screen.getByTestId("gcds-table").getAttribute("data-pagination")
+		).toBe("true");
 	});
 
 	it("allows a server-paginated directory to suppress client filtering", () => {
@@ -117,13 +187,24 @@ describe("DataTable", () => {
 				columns={[{ field: "name", headerName: "Name" }]}
 				filter={false}
 				itemLabel="records"
+				pagination={false}
 				rows={rows}
+				sort={false}
 			/>
 		);
 
 		expect(screen.getByTestId("gcds-table").getAttribute("data-filter")).toBe(
 			"false"
 		);
+		expect(
+			screen.getByTestId("gcds-table").getAttribute("data-pagination")
+		).toBe("false");
+		expect(screen.getByTestId("gcds-table").getAttribute("data-sort")).toBe(
+			"false"
+		);
+		expect(
+			screen.getByTestId("gcds-table").getAttribute("data-column-sort")
+		).toBe("false");
 	});
 
 	it("includes actions column when action prop is provided", () => {
@@ -177,6 +258,27 @@ describe("DataTable", () => {
 		expect(hiddenContext?.textContent).toBe("Jane Doe");
 	});
 
+	it("renders href actions as real GCDS links with row context", () => {
+		render(
+			<DataTable
+				actionHeader="Action"
+				columns={[{ field: "name", headerName: "Name", rowHeader: true }]}
+				itemLabel="records"
+				rows={rows}
+				action={{
+					buttonLabel: "View record",
+					href: (row) => `/records/${row.id}`,
+					screenReaderLabel: (row) => `for ${row.name}`,
+				}}
+			/>
+		);
+
+		const link = screen.getByRole("link", {
+			name: "View record for Jane Doe",
+		});
+		expect(link.getAttribute("href")).toBe("/records/1");
+	});
+
 	it("renders and invokes the primary table action", () => {
 		const handleCreate = vi.fn();
 
@@ -195,6 +297,29 @@ describe("DataTable", () => {
 
 		fireEvent.click(screen.getByRole("button", { name: "Create record" }));
 		expect(handleCreate).toHaveBeenCalledOnce();
+	});
+
+	it("places the primary action before collection search", () => {
+		render(
+			<DataTable
+				columns={[{ field: "name", headerName: "Name" }]}
+				itemLabel="records"
+				rows={rows}
+				searchLabel="Search records"
+				primaryAction={{
+					buttonLabel: "Create record",
+					onAction: vi.fn(),
+				}}
+				onSearchChange={vi.fn()}
+			/>
+		);
+
+		const action = screen.getByRole("button", { name: "Create record" });
+		const search = screen.getByRole("textbox", { name: "Search records" });
+
+		expect(
+			action.compareDocumentPosition(search) & Node.DOCUMENT_POSITION_FOLLOWING
+		).toBeTruthy();
 	});
 
 	it("renders a controlled search and filters the currently returned rows", () => {

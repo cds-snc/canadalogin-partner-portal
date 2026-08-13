@@ -189,6 +189,15 @@ export const TiersPage = (): FunctionComponent => {
 					noticeTitleTag="h2"
 				>
 					<Text>{t("tiers.emptyBody")}</Text>
+					<div className="mt-200">
+						<Button
+							buttonId="open-create-tier-modal-empty-state"
+							type="button"
+							onGcdsClick={openCreateModal}
+						>
+							{t("tiers.createAction")}
+						</Button>
+					</div>
 				</Notice>
 			) : null}
 

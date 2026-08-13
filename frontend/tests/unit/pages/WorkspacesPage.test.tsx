@@ -86,32 +86,50 @@ vi.mock("@/components/ui", () => ({
 			onAction: (row: {
 				name: string;
 				onboardingState: string;
-				slug: string;
 				uuid: string;
 			}) => void;
 		};
-		columns: Array<{ headerName: string }>;
+		columns: Array<{
+			field: "name" | "onboardingState";
+			headerName: string;
+			rowHeader?: boolean;
+		}>;
 		primaryAction?: { buttonLabel: string; onAction: () => void };
 		rows: Array<{
 			name: string;
 			onboardingState: string;
-			slug: string;
 			uuid: string;
 		}>;
 		title: string;
 	}): ReactElement => (
 		<section>
 			<h2>{title}</h2>
-			{columns.map((column) => (
-				<span key={column.headerName}>{column.headerName}</span>
-			))}
-			{rows.map((row) => (
-				<div key={row.uuid}>
-					<span>{row.name}</span>
-					<span>{row.slug}</span>
-					<span>{row.onboardingState}</span>
-				</div>
-			))}
+			<table>
+				<thead>
+					<tr>
+						{columns.map((column) => (
+							<th key={column.field} scope="col">
+								{column.headerName}
+							</th>
+						))}
+					</tr>
+				</thead>
+				<tbody>
+					{rows.map((row) => (
+						<tr key={row.uuid}>
+							{columns.map((column) =>
+								column.rowHeader ? (
+									<th key={column.field} scope="row">
+										{row[column.field]}
+									</th>
+								) : (
+									<td key={column.field}>{row[column.field]}</td>
+								)
+							)}
+						</tr>
+					))}
+				</tbody>
+			</table>
 			{primaryAction ? (
 				<button onClick={primaryAction.onAction} type="button">
 					{primaryAction.buttonLabel}
@@ -236,6 +254,9 @@ describe("WorkspacesPage", () => {
 
 		render(<WorkspacesPage />);
 		expect(screen.getByText(/under review/i)).toBeTruthy();
+		expect(screen.queryAllByRole("rowheader")).toHaveLength(0);
+		expect(screen.queryByText("Slug")).toBeNull();
+		expect(screen.queryByText("benefits-workspace")).toBeNull();
 		fireEvent.click(screen.getByRole("button", { name: /view workspace/i }));
 
 		expect(navigateMock).toHaveBeenCalledWith({

@@ -1,11 +1,10 @@
 from unittest.mock import AsyncMock, Mock
 
 import pytest
-from ibm_verify_community_sdk.applications.models import ListApplicationsResponse
-
 import src.app.core.worker.functions as worker_functions_module
 import src.app.core.worker.settings as worker_settings_module
 import src.app.services.rp_application_service as rp_application_sync_module
+from ibm_verify_community_sdk.applications.models import ListApplicationsResponse
 from src.app.core.config import settings
 from src.app.core.worker.functions import sync_ibm_verify_rp_applications
 from src.app.core.worker.settings import WorkerSettings
@@ -63,6 +62,7 @@ class TestRPApplicationServiceSync:
         created_object = create_mock.await_args.kwargs["object"]
         assert created_object.department_id is None
         assert created_object.dnr_app_name == "Example App"
+        assert created_object.configuration_name == (f"Example App [{created_object.uuid.hex[:8]}]")
         assert created_object.ibm_sv_application_id == "ibm-app-1"
         assert not hasattr(created_object, "application_owner")
 
