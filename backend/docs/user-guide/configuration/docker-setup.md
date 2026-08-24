@@ -31,7 +31,7 @@ services:
   # Optional services (commented out by default):
   # pgadmin:    # Database administration
   # nginx:      # Reverse proxy
-  # create_initial_cl_admin: # One-time canonical CL Admin assignment
+  # bootstrap_cl_admin: # One-time configured CL Admin roster bootstrap
   # create_tier:      # One-time tier creation
 ```
 
@@ -273,10 +273,10 @@ server {
 
 ### Initialization Services
 
-#### Create Initial CL Admin
+#### Bootstrap CL Admin Roster
 
 ```yaml
-create_initial_cl_admin:
+bootstrap_cl_admin:
   build:
     context: .
     dockerfile: Dockerfile
@@ -285,7 +285,7 @@ create_initial_cl_admin:
   depends_on:
     - db
     - web
-  command: python -m src.scripts.create_initial_cl_admin
+  command: python -m app.commands.bootstrap_cl_admin
   volumes:
     - ./src:/code/src
 ```

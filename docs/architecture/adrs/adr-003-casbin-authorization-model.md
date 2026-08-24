@@ -216,8 +216,8 @@ administrator grant.
 
 ### Bootstrap And Last-Administrator Invariant
 
-The first CL Admin is created by an idempotent, explicitly invoked assignment
-bootstrap using a clear configuration name such as INITIAL_CL_ADMIN_EMAIL.
+The configured CL Admin roster is created by an idempotent, explicitly invoked
+assignment bootstrap using `INITIAL_CL_ADMIN_EMAILS`.
 Bootstrap creates the same normalized cl_admin assignment used at runtime. It
 is neither a fifth role nor an authorization bypass, and it does not restore
 is_superuser.

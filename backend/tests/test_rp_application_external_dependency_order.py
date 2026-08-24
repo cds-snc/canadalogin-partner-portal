@@ -4,11 +4,12 @@ from unittest.mock import AsyncMock, Mock
 from uuid import UUID
 
 import pytest
-import src.app.repositories.dependencies as ibm_dependencies_module
-import src.app.services.rp_application_service as rp_application_module
 from fastapi.dependencies.models import Dependant
 from fastapi.routing import APIRoute
 from fastapi.testclient import TestClient
+
+import src.app.repositories.dependencies as ibm_dependencies_module
+import src.app.services.rp_application_service as rp_application_module
 from src.app.api.dependencies import get_current_user
 from src.app.core.authorization import CanonicalRoleCode
 from src.app.core.db.database import async_get_db

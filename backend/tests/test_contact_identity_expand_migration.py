@@ -3,6 +3,7 @@ from pathlib import Path
 from unittest.mock import MagicMock, patch
 
 import pytest
+
 from src.app.models.application_information_contact import ApplicationInformationContact
 from src.app.schemas.application_information import (
     ApplicationInformationContactCreate,

@@ -200,7 +200,13 @@ class PostgresSettings(DatabaseSettings):
 
 
 class FirstUserSettings(BaseSettings):
-    INITIAL_CL_ADMIN_EMAIL: str | None = None
+    """Explicit operational bootstrap configuration.
+
+    The value remains raw until the bootstrap command parses it so malformed
+    roster input cannot cause database activity before it is rejected.
+    """
+
+    INITIAL_CL_ADMIN_EMAILS: str | None = None
 
 
 class TestSettings(BaseSettings): ...

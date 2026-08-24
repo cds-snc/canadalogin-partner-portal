@@ -161,8 +161,8 @@ DEFAULT_RATE_LIMIT_PERIOD=3600   # period in seconds (1 hour)
 Initial CL Admin bootstrap configuration:
 
 ```env
-# Set only while explicitly running create_initial_cl_admin.
-INITIAL_CL_ADMIN_EMAIL="admin@example.test"
+# Set only while explicitly running app.commands.bootstrap_cl_admin.
+INITIAL_CL_ADMIN_EMAILS='["admin.one@example.test"]'
 ```
 
 ### CORS Configuration

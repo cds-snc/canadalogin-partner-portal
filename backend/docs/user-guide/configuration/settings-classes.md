@@ -121,7 +121,7 @@ Initial CL Admin assignment bootstrap:
 
 ```python
 class FirstUserSettings(BaseSettings):
-    INITIAL_CL_ADMIN_EMAIL: str | None = None
+    INITIAL_CL_ADMIN_EMAILS: str | None = None
 ```
 
 ## Creating Custom Settings

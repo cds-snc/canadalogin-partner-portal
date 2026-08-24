@@ -8,6 +8,7 @@ import os
 import pytest
 from sqlalchemy import delete, func, select
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
+
 from src.app.core.authorization import (
     CL_ADMIN_ROLE_UUID,
     AssignmentSource,
@@ -36,7 +37,6 @@ from src.app.services.local_persona_seed_service import (
     LocalPersonaSeedGate,
     LocalPersonaSeedService,
 )
-
 from tests.test_four_role_migrations_postgres import (
     TemporaryPostgresDatabase,
     _temporary_postgres_database,

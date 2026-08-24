@@ -1,7 +1,6 @@
 from unittest.mock import AsyncMock, Mock, patch
 
 import pytest
-
 from fastcrud.exceptions.http_exceptions import CustomException
 
 from src.app.repositories import dependencies

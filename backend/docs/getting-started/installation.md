@@ -170,10 +170,10 @@ For more control or development purposes, you can install everything manually.
    UV_PROJECT_ENVIRONMENT=../../.venv uv run alembic upgrade head
    ```
 
-1. **Create admin user**:
+1. **Bootstrap the configured CL Admin roster**:
 
    ```bash
-   INITIAL_CL_ADMIN_EMAIL=admin@example.test UV_PROJECT_ENVIRONMENT=../.venv uv run python -m src.scripts.create_initial_cl_admin
+   INITIAL_CL_ADMIN_EMAILS='["admin.one@example.test"]' UV_PROJECT_ENVIRONMENT=../.venv uv run python -m src.app.commands.bootstrap_cl_admin
    ```
 
 1. **Start the application**:

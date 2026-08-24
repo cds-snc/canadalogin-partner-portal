@@ -1,10 +1,11 @@
 from unittest.mock import AsyncMock, Mock
 
 import pytest
+from ibm_verify_community_sdk.applications.models import ListApplicationsResponse
+
 import src.app.core.worker.functions as worker_functions_module
 import src.app.core.worker.settings as worker_settings_module
 import src.app.services.rp_application_service as rp_application_sync_module
-from ibm_verify_community_sdk.applications.models import ListApplicationsResponse
 from src.app.core.config import settings
 from src.app.core.worker.functions import sync_ibm_verify_rp_applications
 from src.app.core.worker.settings import WorkerSettings

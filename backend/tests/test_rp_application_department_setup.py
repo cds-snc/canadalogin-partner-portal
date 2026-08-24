@@ -4,6 +4,7 @@ from uuid import UUID
 import casbin
 import pytest
 from fastapi.testclient import TestClient
+
 from src.app.api.dependencies import get_current_user, get_rp_application_service
 from src.app.core.access_control import CASBIN_MODEL_PATH, database_enforcer_provider
 from src.app.core.authorization import CanonicalRoleCode
@@ -614,8 +615,9 @@ class TestDepartmentPreflightServiceMethod:
     async def test_assignment_rejects_non_workspace_department_for_grant_user(self) -> None:
         import uuid as uuid_pkg
 
-        import src.app.services.rp_application_service as rp_module
         from fastcrud.exceptions.http_exceptions import CustomException
+
+        import src.app.services.rp_application_service as rp_module
         from src.app.schemas.rp_application import AccessibleRPApplicationDepartmentAssignRequest
 
         service = RPApplicationService()

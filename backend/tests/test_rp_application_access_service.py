@@ -4,6 +4,7 @@ from uuid import UUID
 import pytest
 from fastcrud.exceptions.http_exceptions import CustomException
 from sqlalchemy.ext.asyncio import AsyncSession
+
 from src.app.core.authorization import CanonicalRoleCode
 from src.app.core.exceptions.http_exceptions import NotFoundException
 from src.app.schemas.rp_application import AccessibleRPApplicationDepartmentAssignRequest

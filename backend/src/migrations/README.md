@@ -26,9 +26,9 @@ This directory uses Alembic's generic single-database configuration.
     `0002_seed_department_catalog.py`. It reads `app/data/gc_org_info.csv`.
   - Essential roles are seeded by `0004_seed_roles.py`.
   - Alembic does not create an authorization user. After the schema is current,
-    establish the first CL Admin only through the idempotent
-    `src.scripts.create_initial_cl_admin` command with
-    `INITIAL_CL_ADMIN_EMAIL` set for that invocation.
+    establish the configured CL Admin roster only through the idempotent
+    `app.commands.bootstrap_cl_admin` command with
+    `INITIAL_CL_ADMIN_EMAILS` set for that invocation.
 
 - Four-role authorization migration
   - `0019_four_role_expand.py` adds the nullable canonical role code,
@@ -58,7 +58,7 @@ This directory uses Alembic's generic single-database configuration.
     `clAdminAssignments` and `workspaceMemberDispositions` must remain empty:
     reconciliation validation and migration `0020` reject every non-empty
     value. Establish the initial CL Admin separately with
-    `python -m src.scripts.create_initial_cl_admin`, using a newly designated
+    `python -m app.commands.bootstrap_cl_admin`, using a newly designated
     internal identity rather than a legacy candidate or ad hoc SQL. Establish
     partner access later through canonical workspace and role management; a
     legacy `workspace_member` row never creates a grant.
@@ -197,12 +197,12 @@ Initial CL Admin bootstrap
 --------------------------
 
 After migration, run the explicit bootstrap from `backend/` with the selected
-identity set only for that invocation:
+local roster set only for that invocation:
 
 ```sh
-INITIAL_CL_ADMIN_EMAIL=admin@example.test \
+INITIAL_CL_ADMIN_EMAILS='["admin.one@example.test"]' \
   UV_PROJECT_ENVIRONMENT=../.venv \
-  uv run python -m src.scripts.create_initial_cl_admin
+  uv run python -m src.app.commands.bootstrap_cl_admin
 ```
 
 The command creates or reuses an enabled, non-deleted identity and writes the

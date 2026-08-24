@@ -27,7 +27,8 @@ Key targets:
 |---|---|---|---|
 | Install dependencies | `make install` | `make frontend-install` | `make all-install` |
 | Start Postgres and Redis | `make db-up` | — | — |
-| Reset local DB and reseed local access | `make db-reset-local` | — | — |
+| Reset local DB | `make db-reset-local` | — | — |
+| Bootstrap configured CL Admin roster | `make bootstrap-cl-admin` | — | — |
 | Build | — | `make frontend-build` | `make all-build` (frontend only) |
 | Development server | `make dev` or `make bk-dev` | `make frontend-dev` | `make start-dev` |
 | Test | `make test` | `make frontend-test` (unit) | `make all-test` (backend + frontend unit) |
@@ -111,9 +112,11 @@ make db-logs
 # Stop dependency services
 make db-down
 
-# Rebuild the local Postgres/Redis state, apply migrations, and rerun
-# the initial canonical CL Admin bootstrap
+# Rebuild the local Postgres/Redis state and apply migrations
 make db-reset-local
+
+# Explicitly bootstrap a configured local CL Admin roster without deleting data
+make bootstrap-cl-admin
 
 # Run backend tests
 make test

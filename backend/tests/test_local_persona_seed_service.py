@@ -8,6 +8,7 @@ from types import SimpleNamespace
 from unittest.mock import AsyncMock
 
 import pytest
+
 from src.app.core.local_persona_fixtures import LOCAL_ALPHA_WORKSPACE
 from src.app.models.department import Department
 from src.app.services.local_persona_seed_service import (

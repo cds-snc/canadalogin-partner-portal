@@ -108,7 +108,7 @@ OIDC_POST_LOGIN_REDIRECT="http://localhost:3000/auth-complete"
 - For split-origin local development, set `OIDC_POST_LOGIN_REDIRECT` to the frontend origin, for example `http://localhost:3000/auth-complete`, so the backend callback returns the browser to the SPA instead of the backend host.
 - OIDC claims establish identity and account linkage only. They never grant a portal role.
 - The callback admits an enabled user only when the portal has a current canonical assignment or the user has an eligible pending invitation.
-- Use the role-assignment API to manage canonical roles. For the first CL Admin only, explicitly run the idempotent bootstrap with `INITIAL_CL_ADMIN_EMAIL` set for that invocation.
+- Use the role-assignment API to manage canonical roles. For the initial CL Admin roster only, explicitly run the idempotent bootstrap with `INITIAL_CL_ADMIN_EMAILS` set for that invocation.
 - For local persona testing, use the exact local-only `AUTH_MODE=local_dev` gate described in the repository README; do not repurpose identity claims as roles.
 - `REDIS_SESSION_DB=1` keeps session records separate from the cache, queue, and rate-limit Redis keys while still allowing a shared local Redis server.
 - `REDIS_SESSION_PREFIX` lets you distinguish session keys during local inspection and cleanup.

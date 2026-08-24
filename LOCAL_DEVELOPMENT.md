@@ -106,8 +106,7 @@ Stop PostgreSQL and Redis without deleting local data:
 make db-down
 ```
 
-Delete the local PostgreSQL and Redis state, recreate it, apply all migrations,
-and rerun the initial local administrator bootstrap:
+Delete the local PostgreSQL and Redis state, recreate it, and apply all migrations:
 
 ```sh
 make db-reset-local
@@ -116,6 +115,16 @@ make db-reset-local
 `make db-reset-local` is destructive to local container data. Afterward, use
 `make start-local-personas` to recreate the fake local personas and start the
 application.
+
+To explicitly apply a CL Admin roster configured in ignored `backend/.env`, run:
+
+```sh
+make bootstrap-cl-admin
+```
+
+The command is non-destructive: it starts the local dependencies, applies
+migrations, and adds only eligible roster identities. It is a successful no-op
+when `INITIAL_CL_ADMIN_EMAILS` is absent.
 
 To recreate only the namespaced fake personas without resetting the whole
 database:

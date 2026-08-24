@@ -1,6 +1,7 @@
 from unittest.mock import AsyncMock, Mock
 
 from fastapi.testclient import TestClient
+
 from src.app.api.dependencies import (
     get_current_user,
     get_onboarding_oversight_service,

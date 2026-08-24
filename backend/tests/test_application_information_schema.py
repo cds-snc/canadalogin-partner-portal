@@ -1,5 +1,6 @@
 import pytest
 from pydantic import ValidationError
+
 from src.app.schemas.application_information import (
     ApplicationInformationContactCreate,
     ApplicationInformationCreate,
