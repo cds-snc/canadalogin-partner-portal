@@ -370,6 +370,28 @@ export type ApplicationRPConfigurationProgressionCreate = {
 	targetEnvironment: "staging" | "production";
 };
 
+export type ApplicationRPConfigurationCopyCreate = {
+	targetConfigurationName: string;
+	targetPartnerEnvironment: string;
+	targetEnvironment: CanadaLoginEnvironment;
+};
+
+export type ApplicationRPConfigurationCopyRead = {
+	applicationInformationUuid: string;
+	copyPolicyVersion: number;
+	sourceConfigurationName: string;
+	sourcePartnerEnvironment: string | null;
+	sourceEnvironment: CanadaLoginEnvironment;
+	sourceRpConfigurationUuid: string;
+	targetConfigurationName: string;
+	targetPartnerEnvironment: string;
+	targetEnvironment: CanadaLoginEnvironment;
+	targetRegistrationDraftVersion: number;
+	targetRegistrationLastCompletedStep?: RegistrationDataStep | null;
+	targetRpConfigurationUuid: string;
+	workspaceUuid: string;
+};
+
 export type ApplicationRPConfigurationProgressionRead = {
 	applicationInformationUuid: string;
 	promotionStatus: string | null;
@@ -720,6 +742,27 @@ export const createApplicationRPConfigurationProgression = async (
 		);
 	if (!result) {
 		throw new Error("Failed to create RP configuration progression target");
+	}
+	return result;
+};
+
+export const createApplicationRPConfigurationCopy = async (
+	workspaceUuid: string,
+	applicationInformationUuid: string,
+	sourceRpConfigurationUuid: string,
+	payload: ApplicationRPConfigurationCopyCreate,
+	copyCreationKey: string
+): Promise<ApplicationRPConfigurationCopyRead> => {
+	const result = await requestJson<ApplicationRPConfigurationCopyRead | null>(
+		`/api/v1/workspaces/${encodeURIComponent(workspaceUuid)}/application-information/${encodeURIComponent(applicationInformationUuid)}/rp-configurations/${encodeURIComponent(sourceRpConfigurationUuid)}/copy`,
+		{
+			body: JSON.stringify(payload),
+			headers: { "Idempotency-Key": copyCreationKey },
+			method: "POST",
+		}
+	);
+	if (!result) {
+		throw new Error("Failed to copy RP configuration");
 	}
 	return result;
 };

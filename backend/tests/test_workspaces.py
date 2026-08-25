@@ -5,6 +5,7 @@ from unittest.mock import AsyncMock, Mock
 import casbin
 from fastapi.testclient import TestClient
 from fastcrud.exceptions.http_exceptions import CustomException
+
 from src.app.api.dependencies import (
     get_current_user,
     get_ibm_sv_admin_service,
@@ -224,8 +225,26 @@ def sample_rp_configuration_progression_payload() -> dict[str, object]:
         "target_environment": "production",
         "target_registration_draft_version": 1,
         "target_registration_last_completed_step": "basics",
-        "self_serve": False,
-        "promotion_status": "review_tracked",
+        "self_serve": True,
+        "promotion_status": None,
+    }
+
+
+def sample_rp_configuration_copy_payload() -> dict[str, object]:
+    return {
+        "workspace_uuid": "018f6f83-0000-0000-0000-000000000201",
+        "application_information_uuid": "018f6f83-0000-0000-0000-000000000501",
+        "source_rp_configuration_uuid": "018f6f83-0000-0000-0000-000000000701",
+        "source_configuration_name": "Partner staging A",
+        "source_partner_environment": None,
+        "source_environment": "staging",
+        "target_rp_configuration_uuid": "018f6f83-0000-0000-0000-000000000702",
+        "target_configuration_name": "Partner test B",
+        "target_partner_environment": "Partner QA 2",
+        "target_environment": "test",
+        "target_registration_draft_version": 1,
+        "target_registration_last_completed_step": "basics",
+        "copy_policy_version": 1,
     }
 
 
@@ -363,6 +382,7 @@ class TestWorkspaceRoutes:
     ) -> None:
         invitation_service = Mock()
         invitation_service.list_developer_invitations = AsyncMock(return_value=[sample_developer_invitation_payload()])
+        invitation_service.get_developer_invitation = AsyncMock(return_value=sample_developer_invitation_payload())
         invitation_service.create_developer_invitation = AsyncMock(return_value=sample_developer_invitation_payload(with_acceptance_url=True))
         invitation_service.revoke_developer_invitation = AsyncMock(return_value=sample_developer_invitation_payload(status="revoked"))
         invitation_service.reissue_developer_invitation = AsyncMock(return_value=sample_developer_invitation_payload(with_acceptance_url=True))
@@ -386,6 +406,7 @@ class TestWorkspaceRoutes:
                         "inviteExpiresAt": "2026-08-20T12:00:00Z",
                     },
                 )
+                get_response = client.get(f"/api/v1/workspaces/{workspace_uuid}/invitations/{invitation_uuid}")
                 revoke_response = client.post(f"/api/v1/workspaces/{workspace_uuid}/invitations/{invitation_uuid}/revoke")
                 reissue_response = client.post(
                     f"/api/v1/workspaces/{workspace_uuid}/invitations/{invitation_uuid}/reissue",
@@ -396,12 +417,19 @@ class TestWorkspaceRoutes:
 
         assert list_response.status_code == 200
         assert create_response.status_code == 201
+        assert get_response.status_code == 200
         assert revoke_response.status_code == 200
         assert reissue_response.status_code == 200
         invitation_service.list_developer_invitations.assert_awaited_once_with(
             db=db,
             workspace_uuid=workspace_uuid,
             rp_application_uuid=None,
+            current_user=current_user,
+        )
+        invitation_service.get_developer_invitation.assert_awaited_once_with(
+            db=db,
+            workspace_uuid=workspace_uuid,
+            invitation_uuid=invitation_uuid,
             current_user=current_user,
         )
         create_kwargs = invitation_service.create_developer_invitation.await_args.kwargs
@@ -1325,13 +1353,54 @@ class TestWorkspaceRoutes:
         assert response.json()["targetRpConfigurationUuid"] == "018f6f83-0000-0000-0000-000000000702"
         assert response.json()["targetConfigurationName"] == "Partner production A"
         assert response.json()["targetPartnerEnvironment"] is None
-        assert response.json()["promotionStatus"] == "review_tracked"
+        assert response.json()["promotionStatus"] is None
+        assert response.json()["selfServe"] is True
         arguments = service.create_application_rp_configuration_progression.await_args.kwargs
         assert arguments["source_rp_configuration_uuid"] == uuid_pkg.UUID("018f6f83-0000-0000-0000-000000000701")
         assert arguments["payload"].target_configuration_name == "Partner production A"
         assert arguments["payload"].target_partner_environment == "Partner production"
         assert arguments["payload"].target_environment == "production"
         assert arguments["progression_creation_key"] == uuid_pkg.UUID("018f6f83-0000-0000-0000-000000000902")
+
+    def test_application_rp_configuration_copy_accepts_explicit_any_environment_target(self) -> None:
+        service = Mock()
+        service.create_application_rp_configuration_copy = AsyncMock(return_value=sample_rp_configuration_copy_payload())
+        current_user = {
+            "id": 42,
+            "username": "workspace-admin@example.gc.ca",
+            "is_superuser": False,
+        }
+        db = Mock()
+        app.dependency_overrides[get_current_user] = lambda: current_user
+        app.dependency_overrides[get_workspace_service] = lambda: service
+        app.dependency_overrides[async_get_db] = lambda: db
+
+        try:
+            with TestClient(app) as client:
+                response = client.post(
+                    "/api/v1/workspaces/018f6f83-0000-0000-0000-000000000201/"
+                    "application-information/018f6f83-0000-0000-0000-000000000501/"
+                    "rp-configurations/018f6f83-0000-0000-0000-000000000701/copy",
+                    headers={"Idempotency-Key": "018f6f83-0000-0000-0000-000000000902"},
+                    json={
+                        "targetConfigurationName": " Partner test B ",
+                        "targetPartnerEnvironment": " Partner QA 2 ",
+                        "targetEnvironment": "test",
+                    },
+                )
+        finally:
+            app.dependency_overrides.clear()
+
+        assert response.status_code == 201
+        assert response.json()["copyPolicyVersion"] == 1
+        assert response.json()["sourcePartnerEnvironment"] is None
+        assert response.json()["targetEnvironment"] == "test"
+        arguments = service.create_application_rp_configuration_copy.await_args.kwargs
+        assert arguments["source_rp_configuration_uuid"] == uuid_pkg.UUID("018f6f83-0000-0000-0000-000000000701")
+        assert arguments["payload"].target_configuration_name == "Partner test B"
+        assert arguments["payload"].target_partner_environment == "Partner QA 2"
+        assert arguments["payload"].target_environment == "test"
+        assert arguments["copy_creation_key"] == uuid_pkg.UUID("018f6f83-0000-0000-0000-000000000902")
 
     def test_application_rp_configuration_registration_and_delete_routes_preserve_ancestry(self) -> None:
         service = Mock()

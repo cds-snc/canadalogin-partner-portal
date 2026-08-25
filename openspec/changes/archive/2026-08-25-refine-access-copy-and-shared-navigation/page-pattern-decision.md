@@ -179,11 +179,13 @@ semantics.
 No custom page shell, table semantics, or second authorization model is
 approved.
 
-If the installed GCDS navigation components cannot satisfy immediate
-dismissal without a small state coordinator, record that coordinator as a
-shared-shell implementation exception before merging. It must retain GCDS
-roles, accessible names, keyboard semantics, focus behavior, tokens, and
-responsive presentation; it must not become a replacement custom menu.
+The installed GCDS navigation components defer focus-leave closure, which can
+race with a rapid reopen. A narrow shared-shell disclosure coordinator is the
+recorded implementation exception: it serializes close requests, clears stale
+focus-leave work, and closes the real GCDS groups on route, language, outside,
+and responsive-mode changes. It retains the GCDS roles, accessible names,
+keyboard semantics, focus behavior, tokens, and responsive presentation and
+does not replace or restyle the component menu.
 
 ## Verification
 

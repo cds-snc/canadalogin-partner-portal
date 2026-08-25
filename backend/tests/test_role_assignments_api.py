@@ -145,6 +145,9 @@ class TestWorkspaceRoleAssignmentApi:
         service.assign_partner_role_by_uuid = AsyncMock(return_value=read_only_assignment)
         service.replace_partner_role_by_uuid = AsyncMock(return_value=edit_assignment)
         service.revoke_partner_role_by_uuid = AsyncMock(return_value=None)
+        service.get_workspace_role_assignment_by_uuid = AsyncMock(return_value=read_only_assignment)
+        service.replace_partner_role_by_assignment_uuid = AsyncMock(return_value=edit_assignment)
+        service.revoke_partner_role_by_assignment_uuid = AsyncMock(return_value=None)
         db = _database()
         _install_overrides(service=service, db=db)
         base = f"/api/v1/workspaces/{WORKSPACE_UUID}"
@@ -168,6 +171,12 @@ class TestWorkspaceRoleAssignmentApi:
                     json={"role": "rp_user_edit"},
                 )
                 revoke_response = client.delete(f"{base}/role-assignments/{TARGET_USER_UUID}")
+                focused_response = client.get(f"{base}/access/assignments/{ASSIGNMENT_UUID}")
+                focused_replace_response = client.patch(
+                    f"{base}/access/assignments/{ASSIGNMENT_UUID}",
+                    json={"role": "rp_user_edit"},
+                )
+                focused_revoke_response = client.delete(f"{base}/access/assignments/{ASSIGNMENT_UUID}")
         finally:
             app.dependency_overrides.clear()
 
@@ -187,6 +196,12 @@ class TestWorkspaceRoleAssignmentApi:
         assert replace_response.json()["role"] == "rp_user_edit"
         assert revoke_response.status_code == 200
         assert revoke_response.json() == {"message": "Workspace role assignment revoked."}
+        assert focused_response.status_code == 200
+        assert focused_response.json()["assignmentUuid"] == str(ASSIGNMENT_UUID)
+        assert focused_replace_response.status_code == 200
+        assert focused_replace_response.json()["role"] == "rp_user_edit"
+        assert focused_revoke_response.status_code == 200
+        assert focused_revoke_response.json() == {"message": "Workspace role assignment revoked."}
         service.search_workspace_role_assignment_candidates.assert_awaited_once_with(
             db,
             workspace_uuid=WORKSPACE_UUID,
@@ -213,7 +228,26 @@ class TestWorkspaceRoleAssignmentApi:
             target_user_uuid=TARGET_USER_UUID,
             revoked_by_user_id=ACTOR_USER_ID,
         )
-        assert db.commit.await_count == 3
+        service.get_workspace_role_assignment_by_uuid.assert_awaited_once_with(
+            db,
+            workspace_uuid=WORKSPACE_UUID,
+            assignment_uuid=ASSIGNMENT_UUID,
+            actor_user_id=ACTOR_USER_ID,
+        )
+        service.replace_partner_role_by_assignment_uuid.assert_awaited_once_with(
+            db,
+            workspace_uuid=WORKSPACE_UUID,
+            assignment_uuid=ASSIGNMENT_UUID,
+            role="rp_user_edit",
+            replaced_by_user_id=ACTOR_USER_ID,
+        )
+        service.revoke_partner_role_by_assignment_uuid.assert_awaited_once_with(
+            db,
+            workspace_uuid=WORKSPACE_UUID,
+            assignment_uuid=ASSIGNMENT_UUID,
+            revoked_by_user_id=ACTOR_USER_ID,
+        )
+        assert db.commit.await_count == 5
         db.rollback.assert_not_awaited()
 
     def test_failed_mutation_rolls_back_and_returns_safe_error(self) -> None:
@@ -302,11 +336,21 @@ class TestRoleAssignmentOpenApi:
             "post",
         }
         assert set(paths["/api/v1/workspaces/{workspaceUuid}/role-assignments/{userUuid}"]) >= {"patch", "delete"}
+        assert set(paths["/api/v1/workspaces/{workspaceUuid}/access/assignments/{assignmentUuid}"]) >= {
+            "get",
+            "patch",
+            "delete",
+        }
         assert "/api/v1/workspaces/{workspaceUuid}/role-assignment-candidates" in paths
 
         path_parameters = paths["/api/v1/workspaces/{workspaceUuid}/role-assignments/{userUuid}"]["patch"]["parameters"]
         assert {parameter["name"] for parameter in path_parameters} == {
             "userUuid",
+            "workspaceUuid",
+        }
+        focused_path_parameters = paths["/api/v1/workspaces/{workspaceUuid}/access/assignments/{assignmentUuid}"]["patch"]["parameters"]
+        assert {parameter["name"] for parameter in focused_path_parameters} == {
+            "assignmentUuid",
             "workspaceUuid",
         }
 

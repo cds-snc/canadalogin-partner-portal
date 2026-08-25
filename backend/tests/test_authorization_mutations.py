@@ -276,6 +276,66 @@ async def test_partner_role_replacement_is_atomic_and_creates_new_history_row() 
 
 
 @pytest.mark.asyncio
+async def test_focused_partner_replacement_rejects_a_stale_assignment_uuid() -> None:
+    db = Mock()
+    db.add = Mock()
+    db.flush = AsyncMock()
+    service = AuthorizationService()
+    workspace = SimpleNamespace(id=7, uuid=WORKSPACE_UUID)
+    actor = SimpleNamespace(id=11, uuid=ACTOR_UUID)
+    target = SimpleNamespace(id=12, uuid=TARGET_UUID)
+    active_grant = SimpleNamespace(
+        uuid=UUID("018f6f83-0000-0000-0000-000000000399"),
+        status="active",
+        revoked_at=None,
+        revoked_by_user_id=None,
+        updated_at=None,
+    )
+    target_state = ResolvedAuthorizationState(
+        partner_access=(
+            ResolvedPartnerAccess(
+                workspace_id=7,
+                workspace_uuid=WORKSPACE_UUID,
+                role=CanonicalRoleCode.READ_ONLY,
+            ),
+        )
+    )
+
+    with (
+        patch(
+            "src.app.services.authorization_service.lock_authorization_target_user",
+            new=AsyncMock(),
+        ),
+        patch.object(service, "_require_active_workspace", new=AsyncMock(return_value=workspace)),
+        patch.object(service, "_require_active_user", new=AsyncMock(return_value=target)),
+        patch.object(service, "resolve_for_user", new=AsyncMock(return_value=target_state)),
+        patch.object(
+            service,
+            "_require_partner_mutation_authority",
+            new=AsyncMock(return_value=actor),
+        ),
+        patch.object(
+            service,
+            "_get_active_partner_grant_for_update",
+            new=AsyncMock(return_value=active_grant),
+        ),
+        pytest.raises(NotFoundException, match="Active partner role assignment not found"),
+    ):
+        await service.replace_partner_role(
+            db,
+            target_user_id=12,
+            workspace_id=7,
+            role=CanonicalRoleCode.RP_USER_EDIT,
+            replaced_by_user_id=11,
+            expected_assignment_uuid=UUID("018f6f83-0000-0000-0000-000000000301"),
+        )
+
+    assert active_grant.status == "active"
+    db.add.assert_not_called()
+    db.flush.assert_not_awaited()
+
+
+@pytest.mark.asyncio
 async def test_same_workspace_rp_admin_cannot_manage_rp_admin_assignment() -> None:
     db = Mock()
     service = AuthorizationService()

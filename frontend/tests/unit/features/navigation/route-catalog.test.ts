@@ -68,6 +68,7 @@ describe("route catalog", () => {
 		);
 
 		expect(isRouteVisible(ROUTE_CATALOG.home, noAccessContext)).toBe(true);
+		expect(isRouteVisible(ROUTE_CATALOG.account, noAccessContext)).toBe(true);
 		expect(isRouteVisible(ROUTE_CATALOG.workspaces, noAccessContext)).toBe(
 			false
 		);
@@ -88,6 +89,7 @@ describe("route catalog", () => {
 		expect(getActiveTaskArea("/support")).toBeNull();
 		expect(isRouteActive(ROUTE_CATALOG.home, "/support")).toBe(false);
 		expect(findRouteByPath("/users")?.id).toBe("usersAndAccess");
+		expect(findRouteByPath("/account")?.id).toBe("account");
 		expect(findRouteByPath("/users/invite")?.id).toBe("usersAndAccess");
 		expect(findRouteByPath("/reports/workspaces")?.id).toBe("reports");
 		expect(findRouteByPath("/users/user-uuid")?.id).toBe("usersAndAccess");
@@ -128,6 +130,10 @@ describe("route catalog", () => {
 			"administration",
 		]);
 		expect(getReturnRoute("usersAndAccess")?.id).toBe("administration");
+		expect(getBreadcrumbRoutes("account").map(({ id }) => id)).toEqual([
+			"home",
+		]);
+		expect(getReturnRoute("account")?.id).toBe("home");
 		expect(
 			getBreadcrumbRoutes("rpRegistrationAdoption").map(({ id }) => id)
 		).toEqual(["home", "workspaces"]);

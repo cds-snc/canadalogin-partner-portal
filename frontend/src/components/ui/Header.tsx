@@ -7,7 +7,6 @@ import {
 	GcdsBreadcrumbsItem,
 	GcdsLangToggle,
 	GcdsLink,
-	GcdsNavGroup,
 	GcdsNavLink,
 	GcdsTopNav,
 } from "@gcds-core/components-react";
@@ -16,7 +15,6 @@ import { useAppPreferencesState, useSession } from "@/hooks";
 import { getOidcLoginUrl } from "@/fetch/auth";
 import {
 	getBreadcrumbRoutes,
-	getTaskAreaRoutes,
 	findRouteByPath,
 	isRouteActive,
 	isRouteVisible,
@@ -30,10 +28,12 @@ import {
 	getWorkspaceRoutePath,
 	getWorkspaceUuidFromPath,
 } from "@/features/workspaces/workspace-route-catalog";
+import { ROLE_LABEL_KEYS } from "@/features/auth/authorization";
 import {
 	allowNextPendingNavigation,
 	confirmPendingNavigation,
 } from "@/features/navigation/pending-navigation-guard";
+import { useNavigationDisclosureCoordinator } from "@/features/navigation/use-navigation-disclosure-coordinator";
 import type { RouteBackLink } from "@/types/route-breadcrumbs";
 import { UserNavGroup } from "./UserNavGroup";
 
@@ -91,9 +91,13 @@ const Header = (): FunctionComponent => {
 	const backLink = useRouterState({
 		select: (state) => selectBackLink(state.matches),
 	});
-	const serviceName = t("home.title");
-
 	const lang = i18n.language?.startsWith("fr") ? "fr" : "en";
+	const { closeOpenNavigation, topNavRef, userNavGroupRef } =
+		useNavigationDisclosureCoordinator({
+			languageKey: lang,
+			routeKey: pathname,
+		});
+	const serviceName = t("home.title");
 	const targetLanguage = lang === "en" ? "fr" : "en";
 	const languageToggleHref = getEquivalentLanguageHref(
 		currentHref,
@@ -101,6 +105,7 @@ const Header = (): FunctionComponent => {
 	);
 	const handleLangToggle = async (): Promise<void> => {
 		if (!confirmPendingNavigation()) return;
+		await closeOpenNavigation();
 		const clearNavigationAllowance = allowNextPendingNavigation();
 		try {
 			await setLanguage(targetLanguage);
@@ -125,7 +130,6 @@ const Header = (): FunctionComponent => {
 	};
 
 	const authorizationContext = currentUser?.authorizationContext;
-	const partnerRoutes = getTaskAreaRoutes("partnerWork", authorizationContext);
 	const currentCatalogRoute = findRouteByPath(pathname);
 	const isCatalogLanding =
 		currentCatalogRoute !== null &&
@@ -206,10 +210,28 @@ const Header = (): FunctionComponent => {
 			key={route.id}
 			current={isRouteActive(route, pathname)}
 			href={route.path}
+			onGcdsClick={() => {
+				void closeOpenNavigation();
+			}}
 		>
 			{String(t(route.labelKey as never))}
 		</GcdsNavLink>
 	);
+	const activePartnerAccess = workspaceUuid
+		? authorizationContext?.partnerAccess.find(
+				(access) => access.workspaceUuid === workspaceUuid
+			)
+		: null;
+	const userContextLabel = authorizationContext?.globalRole
+		? String(t(ROLE_LABEL_KEYS[authorizationContext.globalRole] as never))
+		: activePartnerAccess
+			? t("nav.accountWorkspaceContext", {
+					role: t(ROLE_LABEL_KEYS[activePartnerAccess.role] as never),
+					workspace: workspace?.name.trim() || t("workspaces.workspaceLabel"),
+				})
+			: authorizationContext?.partnerAccess.length
+				? t("nav.partnerAccess")
+				: null;
 
 	return (
 		<GcdsHeader signatureHasLink lang={lang} skipToHref="#main-content">
@@ -235,25 +257,27 @@ const Header = (): FunctionComponent => {
 				</div>
 			) : null}
 			<GcdsTopNav
+				ref={topNavRef}
 				alignment="end"
 				label={t("nav.label")}
 				lang={lang}
 				slot="menu"
 			>
-				<GcdsNavLink href="/" slot="home">
+				<GcdsNavLink
+					href="/"
+					slot="home"
+					onGcdsClick={() => {
+						void closeOpenNavigation();
+					}}
+				>
 					{serviceName}
 				</GcdsNavLink>
 				{!isLoading ? renderRouteLink(ROUTE_CATALOG.home) : null}
-				{isAuthenticated && !isLoading && partnerRoutes.length > 0 ? (
-					<GcdsNavGroup
-						closeTrigger={t("nav.partnerWorkClose")}
-						lang={lang}
-						menuLabel={t("nav.partnerWork")}
-						openTrigger={t("nav.partnerWork")}
-					>
-						{partnerRoutes.map(renderRouteLink)}
-					</GcdsNavGroup>
-				) : null}
+				{isAuthenticated &&
+				!isLoading &&
+				isRouteVisible(ROUTE_CATALOG.workspaces, authorizationContext)
+					? renderRouteLink(ROUTE_CATALOG.workspaces)
+					: null}
 				{isAuthenticated &&
 				!isLoading &&
 				isRouteVisible(ROUTE_CATALOG.reports, authorizationContext)
@@ -270,9 +294,24 @@ const Header = (): FunctionComponent => {
 					? renderRouteLink(ROUTE_CATALOG.administration)
 					: null}
 				{!isAuthenticated && !isLoading ? (
-					<GcdsNavLink href={getOidcLoginUrl()}>{t("nav.login")}</GcdsNavLink>
+					<GcdsNavLink
+						href={getOidcLoginUrl()}
+						onGcdsClick={() => {
+							void closeOpenNavigation();
+						}}
+					>
+						{t("nav.login")}
+					</GcdsNavLink>
 				) : null}
-				{isAuthenticated && !isLoading ? <UserNavGroup /> : null}
+				{isAuthenticated && !isLoading ? (
+					<UserNavGroup
+						contextLabel={userContextLabel}
+						navGroupRef={userNavGroupRef}
+						onRequestClose={(returnFocus) => {
+							void closeOpenNavigation(returnFocus);
+						}}
+					/>
+				) : null}
 			</GcdsTopNav>
 		</GcdsHeader>
 	);

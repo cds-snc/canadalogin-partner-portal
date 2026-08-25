@@ -36,6 +36,11 @@ vi.mock("react-i18next", () => ({
 	} => ({
 		t: (key: string): string => {
 			const translations: Record<string, string> = {
+				"authorization.roles.clAdmin": "CanadaLogin admin",
+				"authorization.roles.rpAdmin": "RP Admin",
+				"nav.account": "Account",
+				"nav.accountMenuTrigger": "Account menu",
+				"nav.accountWorkspaceContext": "RP Admin, Benefits Workspace",
 				"nav.administration": "Administration",
 				"nav.dashboard": "Dashboard",
 				"nav.health": "Health",
@@ -45,15 +50,15 @@ vi.mock("react-i18next", () => ({
 				"nav.login": "Sign in",
 				"nav.logout": "Sign out",
 				"nav.onboardingOversight": "Onboarding oversight",
+				"nav.partnerAccess": "Partner access",
 				"nav.partnerWork": "Partner work",
-				"nav.partnerWorkClose": "Close Partner work menu",
 				"nav.reports": "Reports",
 				"nav.rpRegistrationAdoption": "Adopt existing RP registrations",
 				"nav.policies": "Policies",
 				"nav.roles": "Roles",
 				"nav.tiers": "Tiers",
 				"nav.users": "Users",
-				"nav.workspaces": "Workspaces",
+				"nav.workspaces": "Partner workspaces",
 				"workspaces.navigation.rpApplications": "RP applications",
 				"workspaces.navigation.applications": "Applications",
 			};
@@ -285,7 +290,7 @@ describe("Header", () => {
 		).toBeTruthy();
 		expect(
 			document.querySelector("a[data-href='/workspaces']")?.textContent
-		).toBe("Workspaces");
+		).toBe("Partner workspaces");
 		expect(
 			document.querySelector("a[data-href='/administration']")?.textContent
 		).toBe("Administration");
@@ -304,7 +309,7 @@ describe("Header", () => {
 		).toBe("page");
 	});
 
-	it("groups only the authorized Partner work destinations", () => {
+	it("renders Partner workspaces as a direct authorized destination", () => {
 		vi.mocked(useSession).mockReturnValue({
 			currentUser: {
 				acceptedTermsAt: "2026-06-11T12:00:00Z",
@@ -333,9 +338,7 @@ describe("Header", () => {
 
 		render(<Header />);
 
-		expect(
-			document.querySelector("ul[aria-label='Partner work']")
-		).toBeTruthy();
+		expect(document.querySelector("ul[aria-label='Partner work']")).toBeNull();
 		expect(
 			document.querySelector("a[data-href='/your-applications']")
 		).toBeNull();
@@ -344,7 +347,7 @@ describe("Header", () => {
 		expect(document.querySelector("a[data-href='/administration']")).toBeNull();
 	});
 
-	it("leaves Partner work expansion uncontrolled across rerenders", () => {
+	it("marks the direct Partner workspaces destination active", () => {
 		routerState.pathname = "/workspaces";
 		routerState.matches = [];
 		vi.mocked(useSession).mockReturnValue({
@@ -363,14 +366,8 @@ describe("Header", () => {
 			refreshSession: vi.fn(),
 		} as never);
 
-		const { rerender } = render(<Header />);
+		render(<Header />);
 
-		const partnerWorkGroup = screen.getByRole("list", {
-			name: "Partner work",
-		});
-		expect(partnerWorkGroup.getAttribute("data-open")).toBe("uncontrolled");
-		rerender(<Header />);
-		expect(partnerWorkGroup.getAttribute("data-open")).toBe("uncontrolled");
 		expect(
 			document
 				.querySelector("a[data-href='/workspaces']")
@@ -449,7 +446,7 @@ describe("Header", () => {
 		render(<Header />);
 
 		expect(screen.getByTestId("gcds-breadcrumbs").textContent).toBe(
-			"HomeWorkspaces"
+			"HomePartner workspaces"
 		);
 		expect(useWorkspace).toHaveBeenCalledWith("");
 	});
@@ -481,7 +478,7 @@ describe("Header", () => {
 		render(<Header />);
 
 		expect(screen.getByTestId("gcds-breadcrumbs").textContent).toBe(
-			"HomeWorkspacesAdopt existing RP registrations"
+			"HomePartner workspacesAdopt existing RP registrations"
 		);
 	});
 

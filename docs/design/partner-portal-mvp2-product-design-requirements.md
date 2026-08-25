@@ -89,14 +89,17 @@ less duplicate entry, clearer ownership, and traceable governance.
   workspace, application, access, report, and support tasks.
 - CanadaLogin and partner authority is explicit through four immutable roles
   and server-owned workspace assignments.
-- Application information and environment-specific OIDC registration can be
-  captured once, recovered safely, and reused during progression.
-- Test and staging work remains partner-driven; staging-to-production review is
-  traceable without turning the portal into a full approval engine.
+- Application information and reviewed reusable OIDC answers can be captured
+  once, recovered safely, and copied into an independent named draft for any
+  CanadaLogin environment.
+- Test and staging work remains partner-driven; Production review is an
+  explicit action on one selected Production configuration and is traceable
+  without turning the portal into a full approval engine.
 - Secret access is available only to partner editors, while CL Admin retains
   oversight without credential or secret visibility.
 - Onboarding queues and aggregate reports make workload, invitation conversion,
-  secret hygiene, and progression visible within the caller's scope.
+  secret hygiene, and Production-review activity visible within the caller's
+  scope.
 - MVP1 registrations can be adopted into the canonical workspace model without
   changing their stable portal identity or importing unsafe provider data.
 
@@ -106,7 +109,7 @@ less duplicate entry, clearer ownership, and traceable governance.
 |---|---|
 | CL Admin | Global governance, workspace bootstrap, initial RP Admin assignment, cross-workspace oversight/review/reporting, and allowlisted IBM Verify administration. Never reads RP secrets or edits partner configuration. |
 | RP Admin | Administers one or more assigned workspaces, configuration, credentials, reports, audit views, and invitations for lower partner roles. |
-| RP User (Edit) | Edits application and RP configuration, uses secret workflows, submits partner-owned progression metadata, and reads reports. Cannot administer roles or invitations. |
+| RP User (Edit) | Edits application and RP configuration, uses secret workflows, copies reviewed reusable answers into independent drafts, requests Production review, and reads reports. Cannot administer roles or invitations. |
 | Read Only | Reads safe workspace, OAuth, usage, report, and redacted audit information. Cannot mutate data or access secrets. |
 | Invitee | A prospective partner user who gains one canonical workspace role only after valid, identity-matched acceptance. |
 | Operator/support | Uses health, readiness, request identifiers, logs, and external support processes; no separate operator product role is defined. |
@@ -246,12 +249,19 @@ completion and overall readiness must be visible, but missing contacts,
 checklist items, or evidence references remain advisory rather than hard portal
 gates in MVP 2.
 
-### BR-16 - Environment progression [CURRENT]
+### BR-16 - Configuration copy and Production review [CURRENT]
 
-Test may be skipped when not needed. Test-to-staging progression is self-serve
-and reuses earlier answers. Staging-to-production creates a review-tracked
-promotion request and must not appear approved or launched until CL Admin has
-recorded the out-of-band outcome and external reference.
+An authorized partner editor may copy one selected Test, Staging, or Production
+configuration into a distinct named draft in any CanadaLogin environment,
+including the source environment. Copying uses a reviewed allowlist of
+reusable non-secret answers, requires an explicit target name and Partner
+environment, preserves optional lineage, and excludes endpoints, URLs,
+redirect and logout URIs, credentials, secrets, provider identifiers,
+certificates, key material, review outcomes, and audit history. Copying never
+requests, approves, deploys, launches, mutates, or overwrites a configuration.
+Production review is requested separately for one selected Production
+configuration and must remain traceable through the CL Admin-recorded
+out-of-band outcome and external reference.
 
 ### BR-17 - MVP1 RP registration adoption [TARGET]
 
@@ -307,7 +317,7 @@ filter, and aggregate-only export states.
 
 CL Admin must have a separate onboarding queue and reports area covering
 authorized cross-workspace metadata. Filters include lifecycle, record type,
-department, workspace, environment, and promotion status. Submitted and
+department, workspace, environment, and Production-review status. Submitted and
 under-review work is prioritized. Internal notes and checklist outcomes are
 restricted to CL Admin; partner users receive only permitted status and
 readiness summaries.
@@ -359,9 +369,12 @@ pseudonymized user identity, and failure-safe logging behavior.
    advisory completion.
 4. The editor creates or resumes an environment-specific OIDC registration,
    reviews it, and submits exactly once.
-5. Test can be skipped; test-to-staging can reuse prior answers.
-6. Staging-to-production creates a promotion request. The external decision is
-   recorded by CL Admin with a traceable reference.
+5. When reuse is helpful, the editor copies one selected configuration into an
+   independent named Test, Staging, or Production draft and completes all
+   excluded environment-specific fields separately.
+6. For a selected Production configuration, the editor explicitly requests
+   Production review. The external decision is recorded by CL Admin with a
+   traceable reference.
 7. After launch, authorized roles use OAuth setup, credentials, MAU, reports,
    and bounded audit views according to their role.
 
@@ -428,7 +441,7 @@ portal as part of the end-user sign-in path described here.
 | React/Vite SPA | GC Design System page shell, TanStack routing/query, bilingual task flows, status/recovery presentation, and typed BFF calls. |
 | FastAPI BFF/API | OIDC/session authority, authorization, API contracts, business workflows, validation, audit, reporting, and external orchestration. |
 | ARQ worker | Separately running scheduled and retryable IBM/MAU jobs through Redis queueing. |
-| PostgreSQL | Durable identity, assignments, workspaces, application information, RP registrations/drafts, invitations, grants, lifecycle, promotion, review, and audit records. |
+| PostgreSQL | Durable identity, assignments, workspaces, application information, RP registrations/drafts, copy lineage, invitations, grants, lifecycle, Production review, and audit records. |
 | Redis | Logically separated session, cache, queue, and rate-limit state; critical to authenticated availability. |
 
 ### 8.2 Dependency direction
@@ -447,7 +460,7 @@ Identity and governance include users, canonical assignments, departments,
 tiers, and access history. Partner onboarding includes workspaces, application
 information, contacts, environment-specific RP registrations and server-backed
 draft progress. Collaboration includes invitations and workspace grants.
-Governance includes lifecycle states, promotion requests, append-only review
+Governance includes lifecycle states, Production-review requests, append-only review
 notes, current checklist outcomes, and audit events. Provider tokens and RP
 secret values are not ordinary portal business records.
 
@@ -538,7 +551,7 @@ authority.
 
 ### QR-06 - Audit and records
 
-Assignment, invitation, onboarding, promotion, adoption, secret lifecycle,
+Assignment, invitation, onboarding, configuration copy, Production review, adoption, secret lifecycle,
 and privileged review activity must retain actor, target, scope, time, outcome,
 and correlation context without secret values. Historical authorization data
 does not grant access. Final retention and disposition schedules remain a
@@ -606,7 +619,8 @@ requirements and need product analytics definitions before use:
    evidence-reference schema, and process-link ownership.
 5. Define report formulas precisely: invitation creation versus delivery,
    rotation policy window, grouping, columns, localization, and retention.
-6. Specify progression clone/prefill behavior and promotion-status values.
+6. Name the shared-rollout owner, telemetry, and sunset decision for the
+   bounded legacy progression adapter before removing it.
 7. Close questionnaire limits for URLs, sector identifiers, certificates/JWKs,
    dates, and repeated fields.
 8. Confirm the exact IBM Verify operation allowlist and safe projections.
@@ -640,7 +654,7 @@ scenarios remain authoritative.
 | BR-13 | CURRENT + TARGET | Workspace/RP management | Workspace-scoped RP application registration follows the current OIDC questionnaire |
 | BR-14 | TARGET | Workspace/RP management | Workspace RP application registration uses a recoverable multi-step flow |
 | BR-15 | CURRENT | Workspace/RP management | Onboarding lifecycle state is tracked across core onboarding records; Application information records show advisory readiness indicators |
-| BR-16 | CURRENT | Workspace/RP management | Environment progression rules remain explicit per RP application environment; Out-of-band production review remains traceable; Checklist readiness and process links are visible before production progression |
+| BR-16 | CURRENT | Workspace/RP management | RP configuration copying creates an independent named draft; Production review targets one selected Production configuration; Checklist readiness supports an explicit Production review request |
 | BR-17 | TARGET | Workspace/RP management | CL Admin reviews unassigned MVP1 RP registration candidates; CL Admin previews safe missing metadata from IBM Verify; CL Admin explicitly links one retained RP to one workspace; RP registration adoption is auditable and fail closed |
 
 High-risk scenario anchors include `Partner role does not cross workspace

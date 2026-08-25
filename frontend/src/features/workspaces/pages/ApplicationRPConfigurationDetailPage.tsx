@@ -86,10 +86,6 @@ export const ApplicationRPConfigurationDetailPage = (): FunctionComponent => {
 		configuration.resumeTaskPath?.trim()
 			? configuration.resumeTaskPath
 			: null;
-	const canProgress =
-		configuration?.canadaLoginEnvironment === "test" ||
-		configuration?.canadaLoginEnvironment === "staging";
-
 	return (
 		<div className="grid gap-400">
 			<div>
@@ -188,6 +184,24 @@ export const ApplicationRPConfigurationDetailPage = (): FunctionComponent => {
 						</div>
 					) : null}
 
+					{canWriteConfiguration ? (
+						<section className="grid gap-100">
+							<Heading tag="h2">
+								{t("workspaces.rpLifecycleActionsTitle")}
+							</Heading>
+							<Text>{t("workspaces.rpCopyTaskDescription")}</Text>
+							<div>
+								<Button
+									buttonRole="secondary"
+									href={`${basePath}/copy`}
+									type="link"
+								>
+									{t("workspaces.rpCopyTaskTitle")}
+								</Button>
+							</div>
+						</section>
+					) : null}
+
 					<section className="grid gap-200">
 						<Heading tag="h2">{t("workspaces.rpOverviewTasksTitle")}</Heading>
 						<Grid columns="1fr" columnsDesktop="repeat(3, 1fr)">
@@ -231,14 +245,6 @@ export const ApplicationRPConfigurationDetailPage = (): FunctionComponent => {
 									cardTitleTag="h3"
 									description={t("workspaces.rpOverviewSettingsDescription")}
 									href={`${basePath}/settings`}
-								/>
-							) : null}
-							{canWriteConfiguration && canProgress ? (
-								<Card
-									cardTitle={t("workspaces.rpProgressionTaskTitle")}
-									cardTitleTag="h3"
-									description={t("workspaces.rpProgressionTaskDescription")}
-									href={`${basePath}/progression`}
 								/>
 							) : null}
 							{canManageProductionReview &&

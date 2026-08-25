@@ -1514,6 +1514,154 @@
         "title": "ApplicationInformationUpdate",
         "type": "object"
       },
+      "ApplicationRPConfigurationCopyCreate": {
+        "additionalProperties": false,
+        "description": "Create one independent named draft from one selected source.",
+        "properties": {
+          "targetConfigurationName": {
+            "maxLength": 128,
+            "minLength": 1,
+            "title": "Targetconfigurationname",
+            "type": "string"
+          },
+          "targetEnvironment": {
+            "enum": [
+              "test",
+              "staging",
+              "production"
+            ],
+            "title": "Targetenvironment",
+            "type": "string"
+          },
+          "targetPartnerEnvironment": {
+            "maxLength": 128,
+            "minLength": 1,
+            "title": "Targetpartnerenvironment",
+            "type": "string"
+          }
+        },
+        "required": [
+          "targetConfigurationName",
+          "targetPartnerEnvironment",
+          "targetEnvironment"
+        ],
+        "title": "ApplicationRPConfigurationCopyCreate",
+        "type": "object"
+      },
+      "ApplicationRPConfigurationCopyRead": {
+        "additionalProperties": false,
+        "description": "Public source/target lineage for a newly copied draft.",
+        "properties": {
+          "applicationInformationUuid": {
+            "format": "uuid",
+            "title": "Applicationinformationuuid",
+            "type": "string"
+          },
+          "copyPolicyVersion": {
+            "minimum": 1.0,
+            "title": "Copypolicyversion",
+            "type": "integer"
+          },
+          "sourceConfigurationName": {
+            "title": "Sourceconfigurationname",
+            "type": "string"
+          },
+          "sourceEnvironment": {
+            "enum": [
+              "test",
+              "staging",
+              "production"
+            ],
+            "title": "Sourceenvironment",
+            "type": "string"
+          },
+          "sourcePartnerEnvironment": {
+            "anyOf": [
+              {
+                "maxLength": 128,
+                "minLength": 1,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Sourcepartnerenvironment"
+          },
+          "sourceRpConfigurationUuid": {
+            "format": "uuid",
+            "title": "Sourcerpconfigurationuuid",
+            "type": "string"
+          },
+          "targetConfigurationName": {
+            "title": "Targetconfigurationname",
+            "type": "string"
+          },
+          "targetEnvironment": {
+            "enum": [
+              "test",
+              "staging",
+              "production"
+            ],
+            "title": "Targetenvironment",
+            "type": "string"
+          },
+          "targetPartnerEnvironment": {
+            "maxLength": 128,
+            "minLength": 1,
+            "title": "Targetpartnerenvironment",
+            "type": "string"
+          },
+          "targetRegistrationDraftVersion": {
+            "minimum": 0.0,
+            "title": "Targetregistrationdraftversion",
+            "type": "integer"
+          },
+          "targetRegistrationLastCompletedStep": {
+            "anyOf": [
+              {
+                "enum": [
+                  "basics",
+                  "endpoints",
+                  "client-and-access",
+                  "signing",
+                  "encryption"
+                ],
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Targetregistrationlastcompletedstep"
+          },
+          "targetRpConfigurationUuid": {
+            "format": "uuid",
+            "title": "Targetrpconfigurationuuid",
+            "type": "string"
+          },
+          "workspaceUuid": {
+            "format": "uuid",
+            "title": "Workspaceuuid",
+            "type": "string"
+          }
+        },
+        "required": [
+          "workspaceUuid",
+          "applicationInformationUuid",
+          "sourceRpConfigurationUuid",
+          "sourceConfigurationName",
+          "sourceEnvironment",
+          "targetRpConfigurationUuid",
+          "targetConfigurationName",
+          "targetPartnerEnvironment",
+          "targetEnvironment",
+          "targetRegistrationDraftVersion",
+          "copyPolicyVersion"
+        ],
+        "title": "ApplicationRPConfigurationCopyRead",
+        "type": "object"
+      },
       "ApplicationRPConfigurationPartnerEnvironmentRead": {
         "additionalProperties": false,
         "description": "Public result of the focused Partner-environment metadata update.",
@@ -16151,6 +16299,316 @@
         ]
       }
     },
+    "/api/v1/workspaces/{workspaceUuid}/access/assignments/{assignmentUuid}": {
+      "delete": {
+        "operationId": "erase_workspace_role_assignment_by_assignment_uuid_api_v1_workspaces__workspaceUuid__access_assignments__assignmentUuid__delete",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "workspaceUuid",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Workspaceuuid",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "assignmentUuid",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Assignmentuuid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RoleAssignmentMutationMessage"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Forbidden"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unprocessable Entity"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Internal Server Error"
+          }
+        },
+        "security": [
+          {
+            "SessionCookie": []
+          }
+        ],
+        "summary": "Erase Workspace Role Assignment By Assignment Uuid",
+        "tags": [
+          "role assignments"
+        ]
+      },
+      "get": {
+        "operationId": "read_workspace_role_assignment_api_v1_workspaces__workspaceUuid__access_assignments__assignmentUuid__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "workspaceUuid",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Workspaceuuid",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "assignmentUuid",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Assignmentuuid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RoleAssignmentRead"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Forbidden"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unprocessable Entity"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Internal Server Error"
+          }
+        },
+        "security": [
+          {
+            "SessionCookie": []
+          }
+        ],
+        "summary": "Read Workspace Role Assignment",
+        "tags": [
+          "role assignments"
+        ]
+      },
+      "patch": {
+        "operationId": "patch_workspace_role_assignment_by_assignment_uuid_api_v1_workspaces__workspaceUuid__access_assignments__assignmentUuid__patch",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "workspaceUuid",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Workspaceuuid",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "assignmentUuid",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Assignmentuuid",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PartnerRoleAssignmentUpdate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RoleAssignmentRead"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Bad Request"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Forbidden"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unprocessable Entity"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Internal Server Error"
+          }
+        },
+        "security": [
+          {
+            "SessionCookie": []
+          }
+        ],
+        "summary": "Patch Workspace Role Assignment By Assignment Uuid",
+        "tags": [
+          "role assignments"
+        ]
+      }
+    },
     "/api/v1/workspaces/{workspaceUuid}/role-assignment-candidates": {
       "get": {
         "operationId": "read_workspace_role_assignment_candidates_api_v1_workspaces__workspaceUuid__role_assignment_candidates_get",
@@ -20373,6 +20831,154 @@
         ]
       }
     },
+    "/api/v1/workspaces/{workspace_uuid}/application-information/{application_information_uuid}/rp-configurations/{source_rp_configuration_uuid}/copy": {
+      "post": {
+        "operationId": "copy_application_rp_configuration_api_v1_workspaces__workspace_uuid__application_information__application_information_uuid__rp_configurations__source_rp_configuration_uuid__copy_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "workspace_uuid",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Workspace Uuid",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "application_information_uuid",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Application Information Uuid",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "source_rp_configuration_uuid",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Source Rp Configuration Uuid",
+              "type": "string"
+            }
+          },
+          {
+            "in": "header",
+            "name": "Idempotency-Key",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Idempotency-Key",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ApplicationRPConfigurationCopyCreate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApplicationRPConfigurationCopyRead"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Bad Request"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Forbidden"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unprocessable Entity"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Internal Server Error"
+          }
+        },
+        "security": [
+          {
+            "SessionCookie": []
+          }
+        ],
+        "summary": "Copy Application Rp Configuration",
+        "tags": [
+          "workspaces"
+        ]
+      }
+    },
     "/api/v1/workspaces/{workspace_uuid}/application-information/{application_information_uuid}/rp-configurations/{source_rp_configuration_uuid}/progression": {
       "post": {
         "operationId": "write_application_rp_configuration_progression_api_v1_workspaces__workspace_uuid__application_information__application_information_uuid__rp_configurations__source_rp_configuration_uuid__progression_post",
@@ -23008,6 +23614,104 @@
           }
         ],
         "summary": "Write Workspace Developer Invitation",
+        "tags": [
+          "workspaces"
+        ]
+      }
+    },
+    "/api/v1/workspaces/{workspace_uuid}/invitations/{invitation_uuid}": {
+      "get": {
+        "operationId": "read_workspace_developer_invitation_api_v1_workspaces__workspace_uuid__invitations__invitation_uuid__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "workspace_uuid",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Workspace Uuid",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "invitation_uuid",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Invitation Uuid",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RPApplicationDeveloperInvitationRead"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Forbidden"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unprocessable Entity"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Internal Server Error"
+          }
+        },
+        "security": [
+          {
+            "SessionCookie": []
+          }
+        ],
+        "summary": "Read Workspace Developer Invitation",
         "tags": [
           "workspaces"
         ]

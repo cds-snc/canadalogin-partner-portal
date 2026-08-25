@@ -2,6 +2,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import {
 	assignAccessibleRPApplicationDepartment,
 	createAccessibleRPApplicationRotatedClientSecret,
+	createApplicationRPConfigurationCopy,
 	createApplicationRPConfigurationProgression,
 	createApplicationRPConfigurationRegistrationDraft,
 	deleteAccessibleRPApplicationRotatedClientSecret,
@@ -379,8 +380,8 @@ describe("rp_application-api", () => {
 			json: () =>
 				Promise.resolve({
 					applicationInformationUuid,
-					promotionStatus: "review_tracked",
-					selfServe: false,
+					promotionStatus: null,
+					selfServe: true,
 					sourceConfigurationName: "Partner staging A",
 					sourceEnvironment: "staging",
 					sourceRpConfigurationUuid: sourceUuid,
@@ -424,6 +425,62 @@ describe("rp_application-api", () => {
 		expect(response.targetRpConfigurationUuid).toBe(
 			"rp-configuration-target-1"
 		);
+	});
+
+	it("copies one explicit source to any selected environment", async () => {
+		const workspaceUuid = "workspace-uuid-1";
+		const applicationInformationUuid = "application-information-uuid-1";
+		const sourceUuid = "rp-configuration-source-1";
+		const creationKey = "018f6f83-0000-0000-0000-000000000903";
+		const fetchMock = vi.spyOn(globalThis, "fetch").mockResolvedValue({
+			headers: new Headers({ "content-type": "application/json" }),
+			json: () =>
+				Promise.resolve({
+					applicationInformationUuid,
+					copyPolicyVersion: 1,
+					sourceConfigurationName: "Partner production A",
+					sourceEnvironment: "production",
+					sourcePartnerEnvironment: null,
+					sourceRpConfigurationUuid: sourceUuid,
+					targetConfigurationName: "Partner test B",
+					targetEnvironment: "test",
+					targetPartnerEnvironment: "Partner QA",
+					targetRegistrationDraftVersion: 1,
+					targetRegistrationLastCompletedStep: "basics",
+					targetRpConfigurationUuid: "rp-configuration-target-1",
+					workspaceUuid,
+				}),
+			ok: true,
+			status: 201,
+		} as Response);
+
+		const response = await createApplicationRPConfigurationCopy(
+			workspaceUuid,
+			applicationInformationUuid,
+			sourceUuid,
+			{
+				targetConfigurationName: "Partner test B",
+				targetEnvironment: "test",
+				targetPartnerEnvironment: "Partner QA",
+			},
+			creationKey
+		);
+
+		expect(fetchMock).toHaveBeenCalledWith(
+			`http://localhost:8000/api/v1/workspaces/${workspaceUuid}/application-information/${applicationInformationUuid}/rp-configurations/${sourceUuid}/copy`,
+			expect.objectContaining({
+				body: JSON.stringify({
+					targetConfigurationName: "Partner test B",
+					targetEnvironment: "test",
+					targetPartnerEnvironment: "Partner QA",
+				}),
+				credentials: "include",
+				headers: expect.objectContaining({ "Idempotency-Key": creationKey }),
+				method: "POST",
+			})
+		);
+		expect(response.copyPolicyVersion).toBe(1);
+		expect(response.targetEnvironment).toBe("test");
 	});
 
 	it("updates only the nested RP configuration Partner environment", async () => {

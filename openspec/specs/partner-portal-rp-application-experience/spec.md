@@ -238,6 +238,13 @@ under Workspace Access; Application details, contacts, readiness, and review
 SHALL remain under the Application; and bounded RP audit SHALL use a focused
 audit/report route rather than another primary card.
 
+`Copy configuration` SHALL be a secondary lifecycle action for one selected
+RP configuration. It SHALL open a focused copy form, SHALL NOT execute from a
+task-hub card or table row without review of its explicit target fields, and
+SHALL NOT be labelled or presented as Promote, Progress, deployment, approval,
+or movement to a derived next environment. Requesting Production review SHALL
+remain a separate focused action for the selected Production configuration.
+
 #### Scenario: Existing detail actions are inventoried before removal
 
 - **WHEN** implementation replaces an existing RP detail page
@@ -252,9 +259,31 @@ audit/report route rather than another primary card.
 
 #### Scenario: Consequential actions remain focused and confirmed
 
-- **WHEN** an authorized partner editor chooses to clone or delete an RP configuration
-- **THEN** the action occurs through the focused Configuration lifecycle flow with authorization, dependency, and confirmation protections
-- **AND** it is not executed from a task-hub card or summary link
+- **WHEN** an authorized partner editor chooses to copy or delete an RP configuration
+- **THEN** the action opens its focused Configuration lifecycle flow with current authorization, ancestry, dependency, input-review, and safe failure protections
+- **AND** deletion retains explicit confirmation before mutation
+- **AND** copy requires explicit target configuration name, Partner environment, and CanadaLogin environment before creating a new draft
+- **AND** neither action executes from a task-hub card or summary link
+
+#### Scenario: Copy configuration remains discoverable without becoming a primary task
+
+- **WHEN** an authorized editor opens one selected RP-configuration hub
+- **THEN** a quiet Configuration management section provides `Copy configuration` when the source is eligible
+- **AND** the action opens the canonical focused `/copy` route
+- **AND** Copy does not appear as a peer destination card beside Configuration, Usage, or Manage credentials
+
+#### Scenario: Copy and Production review remain distinct
+
+- **WHEN** an authorized editor copies a configuration to a Production target
+- **THEN** the resulting draft is not presented as promoted, submitted for review, approved, launched, or deployed
+- **AND** any later `Request Production review` action identifies that selected target and follows its own readiness and authorization contract
+
+#### Scenario: Legacy progression link resolves without mutation
+
+- **WHEN** an authorized user follows a saved progression browser link for one in-scope configuration during the compatibility period
+- **THEN** the portal redirects to the equivalent focused Copy configuration form
+- **AND** the redirect creates no target or review request
+- **AND** a missing, revoked, parent-mismatched, or out-of-scope source uses the same safe unavailable result
 
 #### Scenario: Partner-visible configuration cannot be orphaned
 

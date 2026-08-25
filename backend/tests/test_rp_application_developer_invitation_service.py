@@ -522,6 +522,73 @@ class TestInvitationCreationAndDelegation:
 
 class TestInvitationTransitions:
     @pytest.mark.asyncio
+    async def test_focused_workspace_invitation_revalidates_parent_and_role_scope(
+        self,
+        mock_db,
+    ) -> None:
+        service = RPApplicationDeveloperInvitationService()
+        workspace = _workspace_record()
+        lower_role_invitation = _invitation_record(
+            workspace_id=int(workspace["id"]),
+            rp_application_id=None,
+            role=READ_ONLY_ROLE,
+        )
+
+        with _mock_service_dependencies() as mocks:
+            mocks.workspaces.get = AsyncMock(return_value=workspace)
+            mocks.grants.get = AsyncMock(
+                return_value=_access_grant_record(
+                    workspace_id=int(workspace["id"]),
+                    user_id=51,
+                    role=RP_ADMIN_ROLE,
+                )
+            )
+            mocks.invitations.get = AsyncMock(return_value=lower_role_invitation)
+
+            result = await service.get_developer_invitation(
+                db=mock_db,
+                workspace_uuid=workspace["uuid"],
+                invitation_uuid=lower_role_invitation["uuid"],
+                current_user=_partner_user(workspace),
+            )
+
+        assert result["uuid"] == lower_role_invitation["uuid"]
+        assert mocks.invitations.get.await_args.kwargs["workspace_id"] == workspace["id"]
+        assert mocks.invitations.get.await_args.kwargs["uuid"] == lower_role_invitation["uuid"]
+
+    @pytest.mark.asyncio
+    async def test_focused_workspace_invitation_hides_an_unmanageable_rp_admin_record(
+        self,
+        mock_db,
+    ) -> None:
+        service = RPApplicationDeveloperInvitationService()
+        workspace = _workspace_record()
+        rp_admin_invitation = _invitation_record(
+            workspace_id=int(workspace["id"]),
+            rp_application_id=None,
+            role=RP_ADMIN_ROLE,
+        )
+
+        with _mock_service_dependencies() as mocks:
+            mocks.workspaces.get = AsyncMock(return_value=workspace)
+            mocks.grants.get = AsyncMock(
+                return_value=_access_grant_record(
+                    workspace_id=int(workspace["id"]),
+                    user_id=51,
+                    role=RP_ADMIN_ROLE,
+                )
+            )
+            mocks.invitations.get = AsyncMock(return_value=rp_admin_invitation)
+
+            with pytest.raises(NotFoundException, match="Developer invitation not found"):
+                await service.get_developer_invitation(
+                    db=mock_db,
+                    workspace_uuid=workspace["uuid"],
+                    invitation_uuid=rp_admin_invitation["uuid"],
+                    current_user=_partner_user(workspace),
+                )
+
+    @pytest.mark.asyncio
     async def test_list_marks_expired_pending_invitation(self, mock_db) -> None:
         service = RPApplicationDeveloperInvitationService()
         workspace = _workspace_record()

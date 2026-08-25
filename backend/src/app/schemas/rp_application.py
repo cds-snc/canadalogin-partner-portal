@@ -547,6 +547,40 @@ class ApplicationRPConfigurationRegistrationDraftCreate(BaseModel):
         return normalized
 
 
+class ApplicationRPConfigurationCopyCreate(BaseModel):
+    """Create one independent named draft from one selected source."""
+
+    model_config = ConfigDict(
+        extra="forbid",
+        validate_by_name=True,
+        validate_by_alias=True,
+        alias_generator=to_camel,
+        populate_by_name=True,
+    )
+
+    target_configuration_name: str = Field(..., min_length=1, max_length=128)
+    target_partner_environment: str = Field(..., min_length=1, max_length=128)
+    target_environment: CanadaLoginEnvironment
+
+    @field_validator("target_configuration_name", mode="before")
+    @classmethod
+    def normalize_target_configuration_name(cls, value: object) -> str:
+        if not isinstance(value, str):
+            raise ValueError("target configuration name must be text")
+        normalized = normalize_configuration_name(value)
+        assert normalized is not None
+        return normalized
+
+    @field_validator("target_partner_environment", mode="before")
+    @classmethod
+    def normalize_target_partner_environment(cls, value: object) -> str:
+        if not isinstance(value, str):
+            raise ValueError("target partner environment must be text")
+        normalized = normalize_partner_environment(value)
+        assert normalized is not None
+        return normalized
+
+
 class ApplicationRPConfigurationProgressionCreate(BaseModel):
     """Create one explicitly named target from one selected source."""
 
@@ -579,6 +613,34 @@ class ApplicationRPConfigurationProgressionCreate(BaseModel):
         normalized = normalize_partner_environment(value)
         assert normalized is not None
         return normalized
+
+
+class ApplicationRPConfigurationCopyRead(BaseModel):
+    """Public source/target lineage for a newly copied draft."""
+
+    model_config = ConfigDict(
+        extra="forbid",
+        frozen=True,
+        validate_by_name=True,
+        validate_by_alias=True,
+        alias_generator=to_camel,
+        populate_by_name=True,
+        serialize_by_alias=True,
+    )
+
+    workspace_uuid: uuid_pkg.UUID
+    application_information_uuid: uuid_pkg.UUID
+    source_rp_configuration_uuid: uuid_pkg.UUID
+    source_configuration_name: str
+    source_partner_environment: str | None = Field(default=None, min_length=1, max_length=128)
+    source_environment: CanadaLoginEnvironment
+    target_rp_configuration_uuid: uuid_pkg.UUID
+    target_configuration_name: str
+    target_partner_environment: str = Field(..., min_length=1, max_length=128)
+    target_environment: CanadaLoginEnvironment
+    target_registration_draft_version: int = Field(..., ge=0)
+    target_registration_last_completed_step: RegistrationDataStep | None = None
+    copy_policy_version: int = Field(..., ge=1)
 
 
 class ApplicationRPConfigurationProgressionRead(BaseModel):

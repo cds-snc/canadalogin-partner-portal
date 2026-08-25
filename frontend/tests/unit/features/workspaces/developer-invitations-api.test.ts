@@ -3,6 +3,7 @@ import {
 	acceptRPApplicationDeveloperInvitation,
 	createWorkspaceDeveloperInvitation,
 	createWorkspaceRPApplicationDeveloperInvitation,
+	getWorkspaceDeveloperInvitation,
 	getWorkspaceDeveloperInvitations,
 	getWorkspaceRPApplicationDeveloperInvitations,
 	reissueWorkspaceDeveloperInvitation,
@@ -88,6 +89,30 @@ describe("developer-invitations-api", () => {
 			})
 		);
 		expect(response).toEqual([invitation]);
+	});
+
+	it("loads one workspace invitation by its public UUID", async () => {
+		const fetchMock = vi.spyOn(globalThis, "fetch").mockResolvedValue({
+			headers: new Headers({ "content-type": "application/json" }),
+			json: () => Promise.resolve(invitation),
+			ok: true,
+			status: 200,
+		} as Response);
+
+		const response = await getWorkspaceDeveloperInvitation(
+			"workspace/uuid",
+			"invitation/uuid"
+		);
+
+		expect(fetchMock).toHaveBeenCalledWith(
+			"http://localhost:8000/api/v1/workspaces/workspace%2Fuuid/invitations/invitation%2Fuuid",
+			expect.objectContaining({
+				cache: "no-store",
+				credentials: "include",
+				method: "GET",
+			})
+		);
+		expect(response).toEqual(invitation);
 	});
 
 	it("creates a workspace-owned invitation without an IBM or application field", async () => {

@@ -203,6 +203,12 @@ relationship, many-per-environment cardinality, and optional source-lineage
 reference support the new behavior. Implementation must verify that assumption
 against the active schema before closing the backend task.
 
+Schema verification confirmed that `RPApplication` has no uniqueness rule on
+Application plus CanadaLogin environment, keeps `source_rp_configuration_id`
+as an optional self-reference, and already has a unique nullable
+`registration_creation_key` for idempotent creation. No migration is needed
+for the copy slice.
+
 ### Production review separation
 
 - A copy to Production creates a draft and no review request.

@@ -92,12 +92,15 @@ Accepted invitations SHALL grant exactly one canonical partner role for the
 invitation workspace and SHALL NOT create CL Admin, a reusable role, an
 Application-specific grant, an RP-configuration-specific grant, or a second
 workspace membership role. The active workspace grant SHALL authorize only the
-permitted workspace metadata, Applications, RP configurations, secrets,
-reporting, and invitation actions defined by the four-role matrix.
+permitted workspace metadata, Applications, RP configurations, configuration
+copy, Production-review request metadata, secrets, reporting, and invitation
+actions defined by the four-role matrix.
 
 The role SHALL apply consistently to every Application and RP configuration in
 the assigned workspace. Separate child-specific permission assignments SHALL
-NOT be required for this phase.
+NOT be required for this phase. Copy authority SHALL NOT imply Production-
+review outcome authority, and an invitation SHALL NOT grant CL Admin review
+transitions.
 
 #### Scenario: Accepted invitee sees partner-scoped RP applications in current-user scope
 
@@ -120,20 +123,20 @@ NOT be required for this phase.
 #### Scenario: RP Admin manages partner-scoped application collaboration and secrets
 
 - **WHEN** an accepted user holds RP Admin for one Partner workspace
-- **THEN** the portal allows permitted workspace and Application administration, contact management, RP-configuration management, secrets, reports, bounded partner audit, and RP User (Edit) or Read Only invitations in that workspace
-- **AND** the RP Admin cannot assign another RP Admin
+- **THEN** the portal allows permitted workspace and Application administration, contact management, RP-configuration management and copy, Production-review request metadata, secrets, reports, bounded partner audit, and RP User (Edit) or Read Only invitations in that workspace
+- **AND** the RP Admin cannot assign another RP Admin or record a Production-review outcome
 
 #### Scenario: RP User (Edit) manages partner-scoped application configuration but not invitations
 
 - **WHEN** an accepted user holds RP User (Edit) for one Partner workspace
-- **THEN** the portal allows permitted Application, contact, RP-configuration, secret, promotion-request, report, and bounded-audit operations in that workspace
-- **AND** the user cannot manage invitations or role assignments
+- **THEN** the portal allows permitted Application, contact, RP-configuration create/edit/copy, secret, Production-review request, report, and bounded-audit operations in that workspace
+- **AND** the user cannot manage invitations, role assignments, or Production-review outcomes
 
 #### Scenario: Read Only can view partner-scoped application details without secret access
 
 - **WHEN** an accepted user holds Read Only for one Partner workspace
-- **THEN** the portal allows permitted Application details, contacts, readiness, RP Configuration, Usage, aggregate reports, and redacted bounded audit in that workspace
-- **AND** the user cannot mutate data, view or change secrets, view internal review notes, or manage invitations
+- **THEN** the portal allows permitted Application details, contacts, readiness, RP Configuration, copy lineage, Production-review status, Usage, aggregate reports, and redacted bounded audit in that workspace
+- **AND** the user cannot mutate or copy data, request Production review, view or change secrets, view internal review notes, or manage invitations
 
 #### Scenario: Invitation-backed users do not use department self-setup
 
@@ -149,7 +152,7 @@ NOT be required for this phase.
 
 #### Scenario: Unauthorized invited-role subresources resolve as unavailable
 
-- **WHEN** an accepted partner user requests credentials, invitations, internal review, or another protected subresource outside the canonical role matrix
+- **WHEN** an accepted partner user requests credentials, invitations, internal review, Production-review outcomes, or another protected subresource outside the canonical role matrix
 - **THEN** the portal resolves it as unavailable
 - **AND** it does not confirm the protected subresource exists
 

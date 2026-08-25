@@ -813,6 +813,50 @@ class RPApplicationDeveloperInvitationService:
             reverse=True,
         )
 
+    async def get_developer_invitation(
+        self,
+        db: AsyncSession,
+        workspace_uuid: uuid_pkg.UUID | str,
+        invitation_uuid: uuid_pkg.UUID | str,
+        current_user: Mapping[str, Any],
+    ) -> dict[str, Any]:
+        """Read one workspace invitation without revealing mismatched ancestry."""
+
+        normalized_workspace_uuid = self._preauthorize_workspace_management_scope(
+            current_user,
+            workspace_uuid,
+        )
+        workspace_data, _ = await self._get_invitation_context(
+            db=db,
+            workspace_uuid=normalized_workspace_uuid,
+            rp_application_uuid=None,
+        )
+        await self._ensure_management_access(
+            db=db,
+            current_user=current_user,
+            workspace_id=workspace_data["id"],
+            workspace_uuid=workspace_data["uuid"],
+        )
+        invitation = await crud_rp_application_developer_invitations.get(
+            db=db,
+            uuid=invitation_uuid,
+            workspace_id=workspace_data["id"],
+            is_deleted=False,
+            schema_to_select=RPApplicationDeveloperInvitationReadInternal,
+        )
+        if invitation is None:
+            raise NotFoundException("Developer invitation not found")
+        invitation_data = await self._mark_invitation_expired_if_needed(
+            db=db,
+            invitation=self._as_dict(invitation),
+        )
+        authorization_state = get_resolved_authorization_state(current_user)
+        if authorization_state is None:
+            raise ForbiddenException("Canonical authorization state is required to manage developer invitations")
+        if not authorization_state.is_cl_admin and self._canonicalize_invitation_role(invitation_data.get("role")) not in DELEGATED_INVITATION_ROLES:
+            raise NotFoundException("Developer invitation not found")
+        return invitation_data
+
     async def create_developer_invitation(
         self,
         db: AsyncSession,

@@ -32,6 +32,8 @@ from ...schemas.onboarding import (
     WorkspaceRPApplicationOnboardingLifecycleTransitionRequest,
 )
 from ...schemas.rp_application import (
+    ApplicationRPConfigurationCopyCreate,
+    ApplicationRPConfigurationCopyRead,
     ApplicationRPConfigurationPartnerEnvironmentRead,
     ApplicationRPConfigurationPartnerEnvironmentUpdate,
     ApplicationRPConfigurationProgressionCreate,
@@ -543,6 +545,35 @@ async def patch_application_rp_configuration_partner_environment(
         rp_configuration_uuid=rp_configuration_uuid,
         payload=payload,
         current_user=current_user,
+    )
+
+
+@router.post(
+    "/workspaces/{workspace_uuid}/application-information/{application_information_uuid}/rp-configurations/{source_rp_configuration_uuid}/copy",
+    response_model=ApplicationRPConfigurationCopyRead,
+    status_code=201,
+    responses=error_responses(400, 401, 403, 404, 409, 422, 500),
+)
+async def copy_application_rp_configuration(
+    request: Request,
+    workspace_uuid: uuid_pkg.UUID,
+    application_information_uuid: uuid_pkg.UUID,
+    source_rp_configuration_uuid: uuid_pkg.UUID,
+    payload: ApplicationRPConfigurationCopyCreate,
+    db: Annotated[AsyncSession, Depends(async_get_db)],
+    service: Annotated[WorkspaceService, Depends(get_workspace_service)],
+    current_user: Annotated[dict[str, Any], Depends(get_current_user)],
+    copy_creation_key: Annotated[uuid_pkg.UUID, Header(alias="Idempotency-Key")],
+) -> dict[str, Any]:
+    return await service.create_application_rp_configuration_copy(
+        db=db,
+        workspace_uuid=workspace_uuid,
+        application_information_uuid=application_information_uuid,
+        source_rp_configuration_uuid=source_rp_configuration_uuid,
+        payload=payload,
+        current_user=current_user,
+        copy_creation_key=copy_creation_key,
+        correlation_id=str(getattr(request.state, "request_id", "")) or None,
     )
 
 
@@ -1180,6 +1211,30 @@ async def write_workspace_developer_invitation(
         invited_email=payload.invited_email,
         role=payload.role,
         invite_expires_at=payload.invite_expires_at,
+    )
+
+
+@router.get(
+    "/workspaces/{workspace_uuid}/invitations/{invitation_uuid}",
+    response_model=RPApplicationDeveloperInvitationRead,
+    responses=error_responses(401, 403, 404, 422, 500),
+)
+async def read_workspace_developer_invitation(
+    request: Request,
+    workspace_uuid: uuid_pkg.UUID,
+    invitation_uuid: uuid_pkg.UUID,
+    db: Annotated[AsyncSession, Depends(async_get_db)],
+    service: Annotated[
+        RPApplicationDeveloperInvitationService,
+        Depends(get_rp_application_developer_invitation_service),
+    ],
+    current_user: Annotated[dict[str, Any], Depends(get_current_user)],
+) -> dict[str, Any]:
+    return await service.get_developer_invitation(
+        db=db,
+        workspace_uuid=workspace_uuid,
+        invitation_uuid=invitation_uuid,
+        current_user=current_user,
     )
 
 

@@ -139,9 +139,9 @@ describe("ApplicationRPConfigurationDetailPage", () => {
 		).toBe(`${basePath}/settings`);
 		expect(
 			screen
-				.getByRole("link", { name: "workspaces.rpProgressionTaskTitle" })
+				.getByRole("link", { name: "workspaces.rpCopyTaskTitle" })
 				.getAttribute("href")
-		).toBe(`${basePath}/progression`);
+		).toBe(`${basePath}/copy`);
 		expect(
 			screen
 				.getByRole("link", {

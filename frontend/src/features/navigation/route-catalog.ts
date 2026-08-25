@@ -7,6 +7,7 @@ import {
 
 export const ROUTE_IDS = [
 	"home",
+	"account",
 	"workspaces",
 	"rpRegistrationAdoption",
 	"reports",
@@ -73,6 +74,18 @@ const platformGovernance: RouteVisibility = {
 };
 
 export const ROUTE_CATALOG = {
+	account: {
+		activePathPrefixes: ["/account"],
+		breadcrumbRouteIds: ["home"],
+		hiddenReasonKey: "navigation.hidden.authenticationRequired",
+		id: "account",
+		labelKey: "nav.account",
+		parentTaskArea: null,
+		path: "/account",
+		returnRouteId: "home",
+		surfaces: ["breadcrumb"],
+		visibility: authenticated,
+	},
 	administration: {
 		activePathPrefixes: [
 			"/administration",

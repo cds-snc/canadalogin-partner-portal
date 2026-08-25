@@ -26,6 +26,10 @@ from ..core.exceptions.http_exceptions import (
     RegistrationDraftConflictException,
 )
 from ..core.logging_privacy import hash_log_value
+from ..core.rp_configuration_copy_policy import (
+    RP_CONFIGURATION_COPY_POLICY_VERSION,
+    copy_reusable_rp_configuration_answers,
+)
 from ..core.utils.slugify import slugify
 from ..models.application_information import ApplicationInformation
 from ..models.audit_log import AuditLog
@@ -70,6 +74,8 @@ from ..schemas.onboarding import (
     WorkspaceRPApplicationOnboardingLifecycleTransitionRequest,
 )
 from ..schemas.rp_application import (
+    ApplicationRPConfigurationCopyCreate,
+    ApplicationRPConfigurationCopyRead,
     ApplicationRPConfigurationPartnerEnvironmentRead,
     ApplicationRPConfigurationPartnerEnvironmentUpdate,
     ApplicationRPConfigurationProgressionCreate,
@@ -176,45 +182,6 @@ REGISTRATION_STEP_REQUIRED_FIELDS: dict[str, tuple[str, ...]] = {
         "message_decryption_supported",
     ),
 }
-PROGRESSION_REUSABLE_ANSWER_FIELDS = (
-    "client_type",
-    "supports_authorization_code_flow",
-    "client_auth_method",
-    "requested_scopes",
-    "sector_identifier",
-    "shares_pairwise_identifiers",
-    "pkce_supported",
-    "pkce_algorithms",
-    "pkce_other_algorithm",
-    "request_signing_supported",
-    "request_signing_targets",
-    "request_signing_algorithms",
-    "request_signing_other_algorithm",
-    "request_signing_roadmap",
-    "request_signing_revisit_on",
-    "signature_validation_supported",
-    "signature_validation_targets",
-    "signature_validation_algorithms",
-    "signature_validation_other_algorithm",
-    "signature_validation_roadmap",
-    "signature_validation_revisit_on",
-    "request_encryption_supported",
-    "request_encryption_targets",
-    "request_encryption_key_management_algorithms",
-    "request_encryption_other_key_management_algorithm",
-    "request_encryption_content_algorithms",
-    "request_encryption_other_content_algorithm",
-    "request_encryption_roadmap",
-    "request_encryption_revisit_on",
-    "message_decryption_supported",
-    "message_decryption_targets",
-    "message_decryption_key_management_algorithms",
-    "message_decryption_other_key_management_algorithm",
-    "message_decryption_content_algorithms",
-    "message_decryption_other_content_algorithm",
-    "message_decryption_roadmap",
-    "message_decryption_revisit_on",
-)
 logger = logging.getLogger(__name__)
 
 
@@ -1289,6 +1256,33 @@ class WorkspaceService:
             correlation_id=correlation_id,
         )
 
+    async def create_application_rp_configuration_copy(
+        self,
+        db: AsyncSession,
+        workspace_uuid: uuid_pkg.UUID | str,
+        application_information_uuid: uuid_pkg.UUID | str,
+        source_rp_configuration_uuid: uuid_pkg.UUID | str,
+        payload: ApplicationRPConfigurationCopyCreate,
+        current_user: dict[str, Any],
+        copy_creation_key: uuid_pkg.UUID,
+        correlation_id: str | None = None,
+    ) -> dict[str, Any]:
+        """Copy one selected RP configuration to an independent draft."""
+
+        return await self._create_application_rp_configuration_copy(
+            db=db,
+            workspace_uuid=workspace_uuid,
+            application_information_uuid=application_information_uuid,
+            source_rp_configuration_uuid=source_rp_configuration_uuid,
+            payload=payload,
+            current_user=current_user,
+            copy_creation_key=copy_creation_key,
+            correlation_id=correlation_id,
+            require_legacy_progression_transition=False,
+            conflict_code="rp_configuration_copy_creation_conflict",
+            conflict_message="The copy creation key is already in use.",
+        )
+
     async def create_application_rp_configuration_progression(
         self,
         db: AsyncSession,
@@ -1300,7 +1294,58 @@ class WorkspaceService:
         progression_creation_key: uuid_pkg.UUID,
         correlation_id: str | None = None,
     ) -> dict[str, Any]:
-        """Create one new target draft from one explicitly selected source."""
+        """Compatibility adapter for the retired next-environment contract."""
+
+        copied = await self._create_application_rp_configuration_copy(
+            db=db,
+            workspace_uuid=workspace_uuid,
+            application_information_uuid=application_information_uuid,
+            source_rp_configuration_uuid=source_rp_configuration_uuid,
+            payload=ApplicationRPConfigurationCopyCreate(
+                target_configuration_name=payload.target_configuration_name,
+                target_partner_environment=payload.target_partner_environment,
+                target_environment=payload.target_environment,
+            ),
+            current_user=current_user,
+            copy_creation_key=progression_creation_key,
+            correlation_id=correlation_id,
+            require_legacy_progression_transition=True,
+            conflict_code="rp_configuration_progression_creation_conflict",
+            conflict_message="The progression creation key is already in use.",
+        )
+        return ApplicationRPConfigurationProgressionRead(
+            workspace_uuid=copied["workspace_uuid"],
+            application_information_uuid=copied["application_information_uuid"],
+            source_rp_configuration_uuid=copied["source_rp_configuration_uuid"],
+            source_configuration_name=copied["source_configuration_name"],
+            source_partner_environment=copied["source_partner_environment"],
+            source_environment=copied["source_environment"],
+            target_rp_configuration_uuid=copied["target_rp_configuration_uuid"],
+            target_configuration_name=copied["target_configuration_name"],
+            target_partner_environment=copied["target_partner_environment"],
+            target_environment=copied["target_environment"],
+            target_registration_draft_version=copied["target_registration_draft_version"],
+            target_registration_last_completed_step=copied["target_registration_last_completed_step"],
+            self_serve=True,
+            promotion_status=None,
+        ).model_dump(mode="json", by_alias=False)
+
+    async def _create_application_rp_configuration_copy(
+        self,
+        *,
+        db: AsyncSession,
+        workspace_uuid: uuid_pkg.UUID | str,
+        application_information_uuid: uuid_pkg.UUID | str,
+        source_rp_configuration_uuid: uuid_pkg.UUID | str,
+        payload: ApplicationRPConfigurationCopyCreate,
+        current_user: dict[str, Any],
+        copy_creation_key: uuid_pkg.UUID,
+        correlation_id: str | None,
+        require_legacy_progression_transition: bool,
+        conflict_code: str,
+        conflict_message: str,
+    ) -> dict[str, Any]:
+        """Canonical source-scoped implementation shared by new and legacy APIs."""
 
         workspace, _, source = await self._resolve_application_rp_configuration_access(
             db=db,
@@ -1317,18 +1362,19 @@ class WorkspaceService:
         )
 
         source_environment = str(source.get("canada_login_environment") or "").strip().lower()
-        expected_target_environment = {
-            "test": "staging",
-            "staging": "production",
-        }.get(source_environment)
-        if expected_target_environment is None:
-            raise BadRequestException("Only Test or Staging RP configurations can progress")
-        if payload.target_environment != expected_target_environment:
-            raise BadRequestException(f"A {source_environment} RP configuration can progress only to {expected_target_environment}")
+        if require_legacy_progression_transition:
+            expected_target_environment = {
+                "test": "staging",
+                "staging": "production",
+            }.get(source_environment)
+            if expected_target_environment is None:
+                raise BadRequestException("Only Test or Staging RP configurations can progress")
+            if payload.target_environment != expected_target_environment:
+                raise BadRequestException(f"A {source_environment} RP configuration can progress only to {expected_target_environment}")
 
         existing = await crud_rp_applications.get(
             db=db,
-            registration_creation_key=progression_creation_key,
+            registration_creation_key=copy_creation_key,
             is_deleted=False,
             schema_to_select=RPApplicationRead,
         )
@@ -1340,7 +1386,7 @@ class WorkspaceService:
                 )
             )
             existing_source_id = source_id_result.scalar_one_or_none()
-            if not self._progression_creation_matches(
+            if not self._copy_creation_matches(
                 existing=existing,
                 source_rp_configuration_id=source["id"],
                 existing_source_rp_configuration_id=existing_source_id,
@@ -1349,10 +1395,10 @@ class WorkspaceService:
                 payload=payload,
             ):
                 raise RegistrationDraftConflictException(
-                    code="rp_configuration_progression_creation_conflict",
-                    message="The progression creation key is already in use.",
+                    code=conflict_code,
+                    message=conflict_message,
                 )
-            return self._build_rp_configuration_progression_read(
+            return self._build_rp_configuration_copy_read(
                 workspace_uuid=workspace["uuid"],
                 application_information_uuid=application_information["uuid"],
                 source=source,
@@ -1360,9 +1406,7 @@ class WorkspaceService:
             )
 
         source_answers = dict(source.get("oidc_registration_payload") or {})
-        target_answers = {
-            key: source_answers[key] for key in PROGRESSION_REUSABLE_ANSWER_FIELDS if key in source_answers and source_answers[key] is not None
-        }
+        target_answers = copy_reusable_rp_configuration_answers(source_answers)
         target_answers.update(
             {
                 "canada_login_environment": payload.target_environment,
@@ -1386,7 +1430,7 @@ class WorkspaceService:
                     status=None,
                     ibm_sv_application_id=None,
                     oidc_registration_payload=target_answers,
-                    registration_creation_key=progression_creation_key,
+                    registration_creation_key=copy_creation_key,
                     registration_draft_version=1,
                     registration_last_completed_step="basics",
                     created_by=current_user.get("id"),
@@ -1395,31 +1439,51 @@ class WorkspaceService:
                 schema_to_select=RPApplicationRead,
             )
             if target is None:
-                raise NotFoundException("Failed to create RP configuration progression target")
-            if payload.target_environment == "production":
-                await crud_rp_application_promotion_requests.create(
-                    db=db,
-                    object=RPApplicationPromotionRequestCreateInternal(
-                        rp_application_id=target["id"],
-                        target_environment="production",
-                        status=PROMOTION_REQUEST_REVIEW_TRACKED_STATUS,
-                        requested_at=datetime.now(UTC),
-                    ),
-                    commit=False,
+                raise NotFoundException("Failed to create RP configuration copy target")
+
+            copied_at = datetime.now(UTC)
+            actor_uuid_value = current_user.get("uuid")
+            try:
+                actor_uuid = uuid_pkg.UUID(str(actor_uuid_value)) if actor_uuid_value is not None else None
+            except ValueError:
+                actor_uuid = None
+            audit_event = {
+                "applicationInformationUuid": str(application_information["uuid"]),
+                "copyPolicyVersion": RP_CONFIGURATION_COPY_POLICY_VERSION,
+                "correlationId": correlation_id,
+                "eventName": "rp_configuration_copy",
+                "eventVersion": 1,
+                "outcome": "succeeded",
+                "sourceRpConfigurationUuid": str(source["uuid"]),
+                "targetEnvironment": payload.target_environment,
+                "targetRpConfigurationUuid": str(target["uuid"]),
+                "timestamp": copied_at.isoformat(),
+                "workspaceUuid": str(workspace["uuid"]),
+            }
+            db.add(
+                AuditLog(
+                    user="authorization_actor",
+                    user_uuid=actor_uuid,
+                    target="rp_configuration",
+                    target_uuid=target["uuid"],
+                    operation="copy",
+                    description=json.dumps(audit_event, separators=(",", ":")),
+                    created_at=copied_at,
                 )
+            )
             await db.commit()
         except IntegrityError:
             await db.rollback()
             existing = await crud_rp_applications.get(
                 db=db,
-                registration_creation_key=progression_creation_key,
+                registration_creation_key=copy_creation_key,
                 is_deleted=False,
                 schema_to_select=RPApplicationRead,
             )
             if existing is None:
                 raise RegistrationDraftConflictException(
-                    code="rp_configuration_progression_creation_conflict",
-                    message="The RP configuration progression could not be created.",
+                    code=conflict_code,
+                    message="The RP configuration copy could not be created.",
                 ) from None
             source_id_result = await db.execute(
                 select(RPApplication.source_rp_configuration_id).where(
@@ -1427,7 +1491,7 @@ class WorkspaceService:
                     RPApplication.is_deleted.is_(False),
                 )
             )
-            if not self._progression_creation_matches(
+            if not self._copy_creation_matches(
                 existing=existing,
                 source_rp_configuration_id=source["id"],
                 existing_source_rp_configuration_id=source_id_result.scalar_one_or_none(),
@@ -1436,29 +1500,24 @@ class WorkspaceService:
                 payload=payload,
             ):
                 raise RegistrationDraftConflictException(
-                    code="rp_configuration_progression_creation_conflict",
-                    message="The progression creation key is already in use.",
+                    code=conflict_code,
+                    message=conflict_message,
                 ) from None
             target = existing
 
         self._log_registration_operational_event(
-            event="progression_create",
+            event="rp_configuration_copy",
             current_user=current_user,
             workspace_uuid=workspace["uuid"],
             application_information_uuid=application_information["uuid"],
             rp_application_uuid=target["uuid"],
             step_id="basics",
             save_mode="completeStep",
-            changed_field_names=[
-                "configuration_name",
-                "source_rp_configuration_uuid",
-                "target_environment",
-                *sorted(target_answers),
-            ],
+            changed_field_names=[],
             result="success",
             correlation_id=correlation_id,
         )
-        return self._build_rp_configuration_progression_read(
+        return self._build_rp_configuration_copy_read(
             workspace_uuid=workspace["uuid"],
             application_information_uuid=application_information["uuid"],
             source=source,
@@ -1466,14 +1525,14 @@ class WorkspaceService:
         )
 
     @staticmethod
-    def _progression_creation_matches(
+    def _copy_creation_matches(
         *,
         existing: dict[str, Any],
         source_rp_configuration_id: int,
         existing_source_rp_configuration_id: int | None,
         workspace_id: int,
         application_information_id: int,
-        payload: ApplicationRPConfigurationProgressionCreate,
+        payload: ApplicationRPConfigurationCopyCreate,
     ) -> bool:
         return (
             existing.get("workspace_id") == workspace_id
@@ -1485,7 +1544,7 @@ class WorkspaceService:
         )
 
     @staticmethod
-    def _build_rp_configuration_progression_read(
+    def _build_rp_configuration_copy_read(
         *,
         workspace_uuid: uuid_pkg.UUID | str,
         application_information_uuid: uuid_pkg.UUID | str,
@@ -1494,7 +1553,7 @@ class WorkspaceService:
     ) -> dict[str, Any]:
         source_environment = str(source["canada_login_environment"])
         target_environment = str(target["canada_login_environment"])
-        read = ApplicationRPConfigurationProgressionRead(
+        read = ApplicationRPConfigurationCopyRead(
             workspace_uuid=uuid_pkg.UUID(str(workspace_uuid)),
             application_information_uuid=uuid_pkg.UUID(str(application_information_uuid)),
             source_rp_configuration_uuid=source["uuid"],
@@ -1504,14 +1563,13 @@ class WorkspaceService:
             target_rp_configuration_uuid=target["uuid"],
             target_configuration_name=target["configuration_name"],
             target_partner_environment=target.get("partner_environment"),
-            target_environment=cast(PromotionRequestTargetEnvironment, target_environment),
+            target_environment=cast(CanadaLoginEnvironment, target_environment),
             target_registration_draft_version=int(target.get("registration_draft_version") or 0),
             target_registration_last_completed_step=cast(
                 RegistrationDataStep | None,
                 target.get("registration_last_completed_step"),
             ),
-            self_serve=target_environment == "staging",
-            promotion_status=(PROMOTION_REQUEST_REVIEW_TRACKED_STATUS if target_environment == "production" else None),
+            copy_policy_version=RP_CONFIGURATION_COPY_POLICY_VERSION,
         )
         return read.model_dump(mode="json", by_alias=False)
 

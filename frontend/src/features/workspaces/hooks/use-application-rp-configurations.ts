@@ -1,10 +1,13 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
+	createApplicationRPConfigurationCopy,
 	createApplicationRPConfigurationProgression,
 	getApplicationRPConfiguration,
 	getApplicationRPConfigurationConfiguration,
 	getApplicationRPConfigurations,
 	updateApplicationRPConfigurationPartnerEnvironment,
+	type ApplicationRPConfigurationCopyCreate,
+	type ApplicationRPConfigurationCopyRead,
 	type ApplicationRPConfigurationPartnerEnvironmentRead,
 	type ApplicationRPConfigurationPartnerEnvironmentUpdate,
 	type ApplicationRPConfigurationRead,
@@ -53,6 +56,17 @@ export type ApplicationRPConfigurationProgressionActions = {
 		progressionCreationKey: string
 	) => Promise<ApplicationRPConfigurationProgressionRead>;
 	isCreating: boolean;
+};
+
+export type ApplicationRPConfigurationCopyActions = {
+	copyConfiguration: (
+		workspaceUuid: string,
+		applicationInformationUuid: string,
+		sourceRpConfigurationUuid: string,
+		payload: ApplicationRPConfigurationCopyCreate,
+		copyCreationKey: string
+	) => Promise<ApplicationRPConfigurationCopyRead>;
+	isCopying: boolean;
 };
 
 export type ApplicationRPConfigurationPartnerEnvironmentActions = {
@@ -205,6 +219,60 @@ export const useApplicationRPConfigurationProgressionActions =
 					workspaceUuid,
 				}),
 			isCreating: mutation.isPending,
+		};
+	};
+
+export const useApplicationRPConfigurationCopyActions =
+	(): ApplicationRPConfigurationCopyActions => {
+		const queryClient = useQueryClient();
+		const mutation = useMutation({
+			mutationFn: ({
+				applicationInformationUuid,
+				copyCreationKey,
+				payload,
+				sourceRpConfigurationUuid,
+				workspaceUuid,
+			}: {
+				applicationInformationUuid: string;
+				copyCreationKey: string;
+				payload: ApplicationRPConfigurationCopyCreate;
+				sourceRpConfigurationUuid: string;
+				workspaceUuid: string;
+			}) =>
+				createApplicationRPConfigurationCopy(
+					workspaceUuid,
+					applicationInformationUuid,
+					sourceRpConfigurationUuid,
+					payload,
+					copyCreationKey
+				),
+			onSuccess: async (copied) => {
+				await queryClient.invalidateQueries({
+					exact: true,
+					queryKey: applicationRPConfigurationsQueryKey(
+						copied.workspaceUuid,
+						copied.applicationInformationUuid
+					),
+				});
+			},
+		});
+
+		return {
+			copyConfiguration: (
+				workspaceUuid,
+				applicationInformationUuid,
+				sourceRpConfigurationUuid,
+				payload,
+				copyCreationKey
+			): Promise<ApplicationRPConfigurationCopyRead> =>
+				mutation.mutateAsync({
+					applicationInformationUuid,
+					copyCreationKey,
+					payload,
+					sourceRpConfigurationUuid,
+					workspaceUuid,
+				}),
+			isCopying: mutation.isPending,
 		};
 	};
 

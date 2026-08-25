@@ -80,6 +80,21 @@ export const createWorkspaceDeveloperInvitation = async (
 	return result;
 };
 
+export const getWorkspaceDeveloperInvitation = async (
+	workspaceUuid: string,
+	invitationUuid: string
+): Promise<RPApplicationDeveloperInvitationRead> => {
+	const result = await requestJson<RPApplicationDeveloperInvitationRead | null>(
+		`/api/v1/workspaces/${encodeURIComponent(workspaceUuid)}/invitations/${encodeURIComponent(invitationUuid)}`,
+		{ cache: "no-store", method: "GET" },
+		{ redirectOnForbidden: false }
+	);
+	if (!result) {
+		throw new Error("Failed to load developer invitation");
+	}
+	return result;
+};
+
 export const revokeWorkspaceDeveloperInvitation = async (
 	workspaceUuid: string,
 	invitationUuid: string

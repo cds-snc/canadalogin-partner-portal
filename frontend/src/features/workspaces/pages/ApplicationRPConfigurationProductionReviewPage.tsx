@@ -210,7 +210,7 @@ export const ApplicationRPConfigurationProductionReviewPage =
 							{promotion?.sourceRpConfigurationUuid ? (
 								<>
 									<dt>
-										<strong>{t("workspaces.rpProgressionSourceLabel")}</strong>
+										<strong>{t("workspaces.rpCopySourceLabel")}</strong>
 									</dt>
 									<dd>
 										<Link

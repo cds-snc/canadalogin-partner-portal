@@ -5,18 +5,17 @@ import {
 } from "react";
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { ApplicationRPConfigurationProgressionPage } from "@/features/workspaces/pages/ApplicationRPConfigurationProgressionPage";
+import { ApplicationRPConfigurationCopyPage } from "@/features/workspaces/pages/ApplicationRPConfigurationCopyPage";
 import {
 	useApplicationRPConfiguration,
-	useApplicationRPConfigurationProgressionActions,
+	useApplicationRPConfigurationCopyActions,
 } from "@/features/workspaces/hooks/use-application-rp-configurations";
 
 const navigateMock = vi.fn(() => Promise.resolve());
-const createProgressionMock = vi.fn(() =>
+const copyConfigurationMock = vi.fn(() =>
 	Promise.resolve({
 		applicationInformationUuid: "application-1",
-		promotionStatus: "review_tracked",
-		selfServe: false,
+		copyPolicyVersion: 1,
 		sourceConfigurationName: "Partner staging A",
 		sourcePartnerEnvironment: "Partner staging",
 		sourceEnvironment: "staging" as const,
@@ -47,13 +46,23 @@ vi.mock("@tanstack/react-router", () => ({
 vi.mock("@/components/ui", () => ({
 	Button: ({
 		children,
+		disabled,
 		href,
 		type,
-	}: PropsWithChildren<{ href?: string; type?: string }>): ReactElement =>
+	}: PropsWithChildren<{
+		disabled?: boolean;
+		href?: string;
+		type?: string;
+	}>): ReactElement =>
 		type === "link" ? (
 			<a href={href}>{children}</a>
 		) : (
-			<button type={type === "submit" ? "submit" : "button"}>{children}</button>
+			<button
+				disabled={disabled}
+				type={type === "submit" ? "submit" : "button"}
+			>
+				{children}
+			</button>
 		),
 	ErrorSummary: (): ReactElement => <div role="alert">Check your answer</div>,
 	Grid: ({
@@ -92,6 +101,26 @@ vi.mock("@/components/ui", () => ({
 	Notice: ({ children }: PropsWithChildren): ReactElement => (
 		<section>{children}</section>
 	),
+	Select: ({
+		children,
+		label,
+		onInput,
+		value,
+	}: PropsWithChildren<{
+		label: string;
+		onInput: (event: { target: HTMLSelectElement }) => void;
+		value: string;
+	}>): ReactElement => (
+		<label>
+			{label}
+			<select
+				value={value}
+				onChange={(event) => onInput({ target: event.target })}
+			>
+				{children}
+			</select>
+		</label>
+	),
 	Text: ({ children }: PropsWithChildren): ReactElement => <p>{children}</p>,
 }));
 
@@ -99,11 +128,11 @@ vi.mock(
 	"@/features/workspaces/hooks/use-application-rp-configurations",
 	() => ({
 		useApplicationRPConfiguration: vi.fn(),
-		useApplicationRPConfigurationProgressionActions: vi.fn(),
+		useApplicationRPConfigurationCopyActions: vi.fn(),
 	})
 );
 
-describe("ApplicationRPConfigurationProgressionPage", () => {
+describe("ApplicationRPConfigurationCopyPage", () => {
 	beforeEach(() => {
 		vi.clearAllMocks();
 		vi.mocked(useApplicationRPConfiguration).mockReturnValue({
@@ -125,41 +154,56 @@ describe("ApplicationRPConfigurationProgressionPage", () => {
 			isLoading: false,
 			refetch: vi.fn(async () => null),
 		});
-		vi.mocked(useApplicationRPConfigurationProgressionActions).mockReturnValue({
-			createProgression: createProgressionMock,
-			isCreating: false,
+		vi.mocked(useApplicationRPConfigurationCopyActions).mockReturnValue({
+			copyConfiguration: copyConfigurationMock,
+			isCopying: false,
 		});
 	});
 
-	it("creates a named Production target from the displayed source", async () => {
-		render(<ApplicationRPConfigurationProgressionPage />);
+	it("defaults to the source environment but allows any explicit target", () => {
+		render(<ApplicationRPConfigurationCopyPage />);
+
+		const environment = screen.getByLabelText(
+			"workspaces.rpCopyEnvironmentLabel"
+		) as HTMLSelectElement;
+		expect(environment.value).toBe("staging");
+		expect(
+			screen
+				.getAllByRole("option")
+				.map((option) => option.getAttribute("value"))
+		).toEqual(["test", "staging", "production"]);
+	});
+
+	it("copies a named Production draft and resumes at endpoints", async () => {
+		render(<ApplicationRPConfigurationCopyPage />);
 
 		expect(screen.getByText("Partner staging A")).toBeTruthy();
-		expect(screen.getByText("Partner staging")).toBeTruthy();
-		expect(screen.getByText("workspaces.rpProgressionReviewBody")).toBeTruthy();
+		expect(screen.getByText("workspaces.rpCopyReusableBody")).toBeTruthy();
+		expect(screen.getByText("workspaces.rpCopyExcludedBody")).toBeTruthy();
+		fireEvent.change(screen.getByLabelText("workspaces.rpCopyNameLabel"), {
+			target: { value: "Partner production A" },
+		});
 		fireEvent.change(
-			screen.getByLabelText("workspaces.rpProgressionNameLabel"),
-			{ target: { value: "Partner production A" } }
-		);
-		fireEvent.change(
-			screen.getByLabelText("workspaces.rpProgressionPartnerEnvironmentLabel"),
+			screen.getByLabelText("workspaces.rpCopyPartnerEnvironmentLabel"),
 			{ target: { value: "Partner production" } }
 		);
+		fireEvent.change(
+			screen.getByLabelText("workspaces.rpCopyEnvironmentLabel"),
+			{ target: { value: "production" } }
+		);
 		fireEvent.click(
-			screen.getByRole("button", {
-				name: "workspaces.rpProgressionCreateAction",
-			})
+			screen.getByRole("button", { name: "workspaces.rpCopyCreateAction" })
 		);
 
-		await waitFor(() => expect(createProgressionMock).toHaveBeenCalled());
-		expect(createProgressionMock.mock.calls[0]?.slice(0, 4)).toEqual([
+		await waitFor(() => expect(copyConfigurationMock).toHaveBeenCalled());
+		expect(copyConfigurationMock.mock.calls[0]?.slice(0, 4)).toEqual([
 			"workspace-1",
 			"application-1",
 			"source-1",
 			{
 				targetConfigurationName: "Partner production A",
-				targetPartnerEnvironment: "Partner production",
 				targetEnvironment: "production",
+				targetPartnerEnvironment: "Partner production",
 			},
 		]);
 		await waitFor(() =>

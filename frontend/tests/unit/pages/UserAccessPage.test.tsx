@@ -1,26 +1,13 @@
 import type { PropsWithChildren, ReactElement } from "react";
-import {
-	fireEvent,
-	render,
-	screen,
-	waitFor,
-	within,
-} from "@testing-library/react";
+import { render, screen } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { UserAccessPage } from "@/features/users/pages/UserAccessPage";
 import { useUserAccessAdministration } from "@/features/users/hooks/use-user-access-administration";
-import { useWorkspaces } from "@/features/workspaces/hooks/use-workspaces";
-
-const accessActions = vi.hoisted(() => ({
-	assignGlobal: vi.fn(() => Promise.resolve()),
-	assignWorkspace: vi.fn(() => Promise.resolve()),
-	replaceWorkspace: vi.fn(() => Promise.resolve()),
-	revokeGlobal: vi.fn(() => Promise.resolve()),
-	revokeInvitation: vi.fn(() => Promise.resolve()),
-	revokeWorkspace: vi.fn(() => Promise.resolve()),
-}));
 
 vi.mock("@tanstack/react-router", () => ({
+	Link: ({ children, to }: PropsWithChildren<{ to: string }>): ReactElement => (
+		<a href={to}>{children}</a>
+	),
 	useParams: () => ({ userUuid: "user-uuid-1" }),
 }));
 
@@ -29,80 +16,44 @@ vi.mock("react-i18next", () => ({
 		t: (key: string, options?: Record<string, unknown>): string =>
 			key === "users.accessTitle"
 				? `Access for ${String(options?.["name"])}`
-				: ({
-						"authorization.roles.readOnly": "Read Only",
-						"authorization.roles.rpAdmin": "RP Admin",
-						"authorization.roles.rpUserEdit": "RP User (Edit)",
-						"common.cancel": "Cancel",
-						"users.accessAssignedSuccess": "Workspace access assigned",
-						"users.accessRevokedSuccess": "Access revoked",
-						"users.accessSavedSuccess": "Access saved",
-						"users.accountStatusActive": "Active",
-						"users.addWorkspaceAccessTitle": "Add workspace access",
-						"users.assignAction": "Assign",
-						"users.assignClAdminAction": "Assign CL Admin",
-						"users.backToUsersAction": "Back to users",
-						"users.clAdminAssignedBody": "CL Admin is assigned.",
-						"users.clAdminAssignedSuccess": "CL Admin assigned",
-						"users.globalAccessTitle": "Global access",
-						"users.inviteWorkspaceLabel": "Workspace",
-						"users.inviteWorkspacePlaceholder": "Select a workspace",
-						"users.noCanonicalGlobalRole":
-							"No canonical global role is assigned.",
-						"users.noPendingInvitations": "No pending invitations",
-						"users.pendingInvitationsTitle": "Pending invitations",
-						"users.profileSummaryTitle": "User",
-						"users.revokeAccessConfirmBody": "This access will be removed.",
-						"users.revokeAccessConfirmTitle": "Revoke access?",
-						"users.revokeAction": "Revoke",
-						"users.roleLabel": "Role",
-						"users.saveActionShort": "Save",
-						"users.workspaceAccessTitle": "Workspace access",
-					}[key] ?? key),
+				: key === "users.pendingInvitationsTaskDescription"
+					? `Review ${String(options?.["count"])} pending invitation.`
+					: ({
+							"users.accessTasksTitle": "Access tasks",
+							"users.accountStatusActive": "Active",
+							"users.addWorkspaceAccessAction": "Add workspace access",
+							"users.addWorkspaceAccessTaskDescription":
+								"Assign access in another workspace.",
+							"users.globalAccessTaskDescription": "Review global access.",
+							"users.manageGlobalAccessAction": "Manage global access",
+							"users.manageWorkspaceAccessAction": "Manage workspace access",
+							"users.profileSummaryTitle": "User",
+							"users.returnToUsersAction": "Return to users and access",
+							"users.reviewPendingInvitationsAction":
+								"Review pending invitations",
+							"users.workspaceAccessTaskDescription":
+								"Review workspace access.",
+						}[key] ?? key),
 	}),
 }));
 
 vi.mock("@/components/ui", () => ({
-	Button: ({
-		children,
-		disabled,
-		href,
-		onGcdsClick,
-		type,
-	}: PropsWithChildren<{
-		disabled?: boolean;
-		href?: string;
-		onGcdsClick?: () => void;
-		type?: string;
-	}>): ReactElement =>
-		type === "link" ? (
-			<a href={href}>{children}</a>
-		) : (
-			<button disabled={disabled} onClick={onGcdsClick} type="button">
-				{children}
-			</button>
-		),
-	ConfirmDialog: ({
-		confirmLabel,
+	Card: ({
+		cardTitle,
 		description,
-		isOpen,
-		onConfirm,
-		title,
+		href,
 	}: {
-		confirmLabel: string;
+		cardTitle: string;
 		description: string;
-		isOpen: boolean;
-		onConfirm: () => void;
-		title: string;
-	}): ReactElement | null =>
-		isOpen ? (
-			<section aria-label={title} role="dialog">
-				<p>{description}</p>
-				<button onClick={onConfirm} type="button">
-					{confirmLabel}
-				</button>
-			</section>
-		) : null,
+		href: string;
+	}): ReactElement => (
+		<article>
+			<h3>
+				<a href={href}>{cardTitle}</a>
+			</h3>
+			<p>{description}</p>
+		</article>
+	),
 	Heading: ({
 		children,
 		tag,
@@ -111,33 +62,8 @@ vi.mock("@/components/ui", () => ({
 		if (tag === "h3") return <h3>{children}</h3>;
 		return <h2>{children}</h2>;
 	},
-	Notice: ({
-		children,
-		noticeTitle,
-	}: PropsWithChildren<{ noticeTitle: string }>): ReactElement => (
-		<section>
-			<h2>{noticeTitle}</h2>
-			{children}
-		</section>
-	),
-	Select: ({
-		children,
-		label,
-		onInput,
-		selectId,
-		value,
-	}: PropsWithChildren<{
-		label: string;
-		onInput: (event: React.FormEvent<HTMLSelectElement>) => void;
-		selectId: string;
-		value: string;
-	}>): ReactElement => (
-		<label htmlFor={selectId}>
-			{label}
-			<select id={selectId} onInput={onInput} value={value}>
-				{children}
-			</select>
-		</label>
+	Notice: ({ children }: PropsWithChildren): ReactElement => (
+		<section>{children}</section>
 	),
 	Text: ({ children }: PropsWithChildren): ReactElement => <p>{children}</p>,
 }));
@@ -145,132 +71,61 @@ vi.mock("@/components/ui", () => ({
 vi.mock("@/features/users/hooks/use-user-access-administration", () => ({
 	useUserAccessAdministration: vi.fn(),
 }));
-vi.mock("@/features/workspaces/hooks/use-workspaces", () => ({
-	useWorkspaces: vi.fn(),
-}));
 
-const baseAccess = {
+const access = {
 	globalAssignment: null,
-	pendingInvitations: [
-		{
-			createdAt: "2026-08-12T12:00:00Z",
-			invitationUuid: "invitation-uuid-1",
-			inviteExpiresAt: "2026-08-19T12:00:00Z",
-			role: "read_only" as const,
-			status: "pending" as const,
-			workspaceName: "Gamma",
-			workspaceUuid: "workspace-uuid-3",
-		},
-	],
+	pendingInvitations: [{ invitationUuid: "invitation-uuid-1" }],
 	user: {
 		email: "person@example.test",
 		enabled: true,
 		name: "Person One",
-		username: "person@example.test",
 		uuid: "user-uuid-1",
 	},
-	workspaceAssignments: [
-		{
-			assignedAt: "2026-08-12T12:00:00Z",
-			assignmentUuid: "assignment-uuid-1",
-			role: "read_only" as const,
-			workspaceName: "Alpha",
-			workspaceUuid: "workspace-uuid-1",
-		},
-	],
-};
-
-const setState = (access: typeof baseAccess = baseAccess): void => {
-	vi.mocked(useUserAccessAdministration).mockReturnValue({
-		access,
-		...accessActions,
-		error: null,
-		isLoading: false,
-		isMutating: false,
-		refetch: vi.fn(),
-	});
-	vi.mocked(useWorkspaces).mockReturnValue({
-		workspaces: [
-			{ name: "Alpha", uuid: "workspace-uuid-1" },
-			{ name: "Beta", uuid: "workspace-uuid-2" },
-		],
-	} as never);
+	workspaceAssignments: [{ assignmentUuid: "assignment-uuid-1" }],
 };
 
 describe("UserAccessPage", () => {
 	beforeEach(() => {
-		vi.clearAllMocks();
+		vi.mocked(useUserAccessAdministration).mockReturnValue({
+			access,
+			error: null,
+			isLoading: false,
+		} as never);
 	});
 
-	it("manages existing, new, and pending workspace access without provider metadata", async () => {
-		setState();
+	it("renders a compact selected-user hub with focused task links", () => {
 		render(<UserAccessPage />);
 
 		expect(
-			screen.getByRole("heading", { name: "Access for Person One", level: 1 })
+			screen.getByRole("heading", { level: 1, name: "Access for Person One" })
 		).toBeTruthy();
 		expect(screen.getByText("person@example.test")).toBeTruthy();
-		expect(screen.queryByText(/auth provider/i)).toBeNull();
+		expect(screen.queryByRole("button")).toBeNull();
 		expect(
-			screen.queryByRole("button", { name: "Assign CL Admin" })
-		).toBeNull();
-
-		fireEvent.input(document.querySelector("#role-workspace-uuid-1")!, {
-			target: { value: "rp_admin" },
-		});
-		fireEvent.click(screen.getByRole("button", { name: "Save" }));
-		await waitFor(() =>
-			expect(accessActions.replaceWorkspace).toHaveBeenCalledWith(
-				"workspace-uuid-1",
-				"rp_admin"
-			)
-		);
-
-		fireEvent.input(screen.getByLabelText("Workspace"), {
-			target: { value: "workspace-uuid-2" },
-		});
-		fireEvent.input(document.querySelector("#new-workspace-role")!, {
-			target: { value: "rp_user_edit" },
-		});
-		fireEvent.click(screen.getByRole("button", { name: "Assign" }));
-		await waitFor(() =>
-			expect(accessActions.assignWorkspace).toHaveBeenCalledWith(
-				"workspace-uuid-2",
-				"rp_user_edit"
-			)
-		);
-
-		const invitation = screen
-			.getByRole("heading", { name: "Gamma" })
-			.closest("div");
-		expect(invitation).not.toBeNull();
-		fireEvent.click(
-			within(invitation!).getByRole("button", { name: "Revoke" })
-		);
-		fireEvent.click(
-			within(screen.getByRole("dialog", { name: "Revoke access?" })).getByRole(
-				"button",
-				{ name: "Revoke" }
-			)
-		);
-		await waitFor(() =>
-			expect(accessActions.revokeInvitation).toHaveBeenCalledWith(
-				"workspace-uuid-3",
-				"invitation-uuid-1"
-			)
-		);
+			screen
+				.getByRole("link", { name: "Manage global access" })
+				.getAttribute("href")
+		).toBe("/users/user-uuid-1/global-access");
+		expect(
+			screen
+				.getByRole("link", { name: "Manage workspace access" })
+				.getAttribute("href")
+		).toBe("/users/user-uuid-1/workspace-access");
+		expect(
+			screen
+				.getByRole("link", { name: "Add workspace access" })
+				.getAttribute("href")
+		).toBe("/users/user-uuid-1/workspace-access/new");
+		expect(
+			screen
+				.getByRole("link", { name: "Review pending invitations" })
+				.getAttribute("href")
+		).toBe("/users/user-uuid-1/invitations");
 	});
 
-	it("offers CL Admin only when the user has no partner access", async () => {
-		setState({
-			...baseAccess,
-			pendingInvitations: [],
-			workspaceAssignments: [],
-		});
+	it("summarizes the pending invitation count", () => {
 		render(<UserAccessPage />);
 
-		fireEvent.click(screen.getByRole("button", { name: "Assign CL Admin" }));
-
-		await waitFor(() => expect(accessActions.assignGlobal).toHaveBeenCalled());
+		expect(screen.getByText("Review 1 pending invitation.")).toBeTruthy();
 	});
 });
