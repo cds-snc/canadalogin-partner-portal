@@ -60,9 +60,11 @@ OIDC establishes identity only. Upstream group claims and application-owner
 metadata do not grant portal authorization. Each protected request resolves
 active canonical CL Admin assignments and workspace-scoped partner grants from
 the local database; unknown, legacy, mixed, or duplicate active state fails
-closed. Use `INITIAL_CL_ADMIN_EMAIL` only during controlled environment setup
-to bootstrap the first normalized CL Admin assignment. It creates a new enabled
-identity when needed, but fails closed for an existing disabled or deleted user.
+closed. The explicit `python -m app.commands.bootstrap_cl_admin` command uses
+the JSON `INITIAL_CL_ADMIN_EMAILS` roster only when invoked. It creates an
+enabled identity when needed, but fails closed for existing disabled, deleted,
+or conflicting identities. See [CL Admin roster bootstrap](../docs/reference/cl-admin-roster-bootstrap.md)
+for the local and deferred pipeline contract.
 
 ## Deterministic local role sessions
 

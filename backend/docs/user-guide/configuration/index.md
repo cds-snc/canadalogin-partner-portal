@@ -121,8 +121,8 @@ DEFAULT_RATE_LIMIT_PERIOD=3600  # 1 hour in seconds
 
 ### Admin User
 ```env
-# Set only while explicitly running create_initial_cl_admin.
-INITIAL_CL_ADMIN_EMAIL="admin@example.test"
+# Set only while explicitly running app.commands.bootstrap_cl_admin.
+INITIAL_CL_ADMIN_EMAILS='["admin.one@example.test"]'
 ```
 
 ## Environment-Specific Configurations

@@ -2,6 +2,7 @@ from unittest.mock import AsyncMock, Mock, patch
 from uuid import uuid4
 
 import pytest
+
 from src.app.core.authorization import CanonicalRoleCode
 from src.app.core.exceptions.http_exceptions import NotFoundException
 from src.app.services.authorization_service import (

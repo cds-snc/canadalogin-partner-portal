@@ -3,6 +3,7 @@ from types import SimpleNamespace
 from unittest.mock import AsyncMock, patch
 
 import pytest
+
 from src.app.core.authorization import CanonicalRoleCode, Capability
 from src.app.services.rp_application_summary import build_rp_application_summary
 from src.app.services.workspace_service import WorkspaceService

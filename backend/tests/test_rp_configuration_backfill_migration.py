@@ -4,6 +4,7 @@ from pathlib import Path
 from unittest.mock import MagicMock, patch
 
 import pytest
+
 from src.app.core.rp_configuration import build_default_configuration_name
 
 MIGRATION_PATH = Path(__file__).parents[1] / "src" / "migrations" / "versions" / "0028_rp_configuration_backfill.py"

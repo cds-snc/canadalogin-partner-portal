@@ -3,8 +3,9 @@ from uuid import UUID
 
 import casbin
 import pytest
-import src.app.services.rp_application_service as rp_application_module
 from fastapi.testclient import TestClient
+
+import src.app.services.rp_application_service as rp_application_module
 from src.app.api.dependencies import get_current_user, get_rp_application_service
 from src.app.core.access_control import CASBIN_MODEL_PATH, database_enforcer_provider
 from src.app.core.authorization import CanonicalRoleCode

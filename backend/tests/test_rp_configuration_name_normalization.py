@@ -2,6 +2,7 @@ from datetime import UTC, datetime
 
 import pytest
 from pydantic import ValidationError
+
 from src.app.core.rp_configuration import normalize_configuration_name, normalize_partner_environment
 from src.app.schemas.rp_application import (
     RPApplicationCreateInternal,

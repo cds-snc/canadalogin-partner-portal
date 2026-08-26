@@ -4,6 +4,7 @@ from pathlib import Path
 from unittest.mock import AsyncMock, Mock
 
 from fastapi.testclient import TestClient
+
 from src.app.api.dependencies import get_current_user, get_workspace_service
 from src.app.core.db.database import async_get_db
 from src.app.core.exceptions.http_exceptions import RegistrationDraftConflictException

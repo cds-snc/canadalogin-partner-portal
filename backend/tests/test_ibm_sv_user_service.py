@@ -3,6 +3,7 @@ from uuid import UUID
 
 import pytest
 from ibm_verify_community_sdk.applications.models import Application, GetApplicationsResponse
+
 from src.app.core.authorization import CanonicalRoleCode
 from src.app.schemas.rp_application import RPApplicationRead
 from src.app.services.authorization_service import (

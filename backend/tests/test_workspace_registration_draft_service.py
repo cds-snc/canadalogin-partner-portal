@@ -4,6 +4,7 @@ from pathlib import Path
 from unittest.mock import AsyncMock, patch
 
 import pytest
+
 from src.app.core.exceptions.http_exceptions import (
     BadRequestException,
     RegistrationDraftConflictException,

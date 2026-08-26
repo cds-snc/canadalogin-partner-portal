@@ -93,7 +93,7 @@ LOAD_NVM = nvm_dir="$${NVM_DIR:-$$HOME/.nvm}"; \
 		nvm use "$(NODE_VERSION)" >/dev/null 2>&1 || nvm use default >/dev/null 2>&1 || true; \
 	fi
 
-.PHONY: help help-all doctor setup setup-delorean setup-local-env install-node check-node setup-python-venv install test lint format typecheck install-python install-dev-python install-frontend-deps install-backend-deps install-openspec-cli check-openspec-cli validate-openspec-change pick-openspec-change validate-active-openspec-change check-delorean-setup start start-dev start-local-personas seed-local-personas reset-local-personas dev backend-dev worker start-frontend start-backend frontend-install frontend-build frontend-dev frontend-test frontend-lint frontend-format frontend-preview all-install all-build all-test all-lint all-format bk-install bk-test bk-lint bk-format bk-typecheck bk-dev bk-worker bk-migration ft-install ft-build ft-dev ft-test ft-lint ft-format ft-preview backend-image frontend-image bk-image ft-image db-up db-wait db-down db-logs db-upgrade db-downgrade db-revision db-reset-local ensure-local-db-ready migration update-from-template update-from-template-dry-run update-existing-solution update-existing-solution-dry-run update-architecture-docs update-architecture-docs-dry-run update-agent-configs update-agent-configs-dry-run check-codex-assets collect-agent-run new-openspec-change fix autofix format-fix fmt-python fmt-ci-python format-python check-python-format lint-python run-pytest pytest export-openapi check-openapi container-checks build-backend-container run-backend-container stop-backend-container test-backend-container scan-backend-container setup-hooks uninstall-hooks
+.PHONY: help help-all doctor setup setup-delorean setup-local-env install-node check-node setup-python-venv install test lint format typecheck install-python install-dev-python install-frontend-deps install-backend-deps install-openspec-cli check-openspec-cli validate-openspec-change pick-openspec-change validate-active-openspec-change check-delorean-setup start start-dev start-local-personas seed-local-personas reset-local-personas dev backend-dev worker start-frontend start-backend frontend-install frontend-build frontend-dev frontend-test frontend-lint frontend-format frontend-preview all-install all-build all-test all-lint all-format bk-install bk-test bk-lint bk-format bk-typecheck bk-dev bk-worker bk-migration ft-install ft-build ft-dev ft-test ft-lint ft-format ft-preview backend-image frontend-image bk-image ft-image db-up db-wait db-down db-logs db-upgrade db-downgrade db-revision db-reset-local bootstrap-cl-admin ensure-local-db-ready migration update-from-template update-from-template-dry-run update-existing-solution update-existing-solution-dry-run update-architecture-docs update-architecture-docs-dry-run update-agent-configs update-agent-configs-dry-run check-codex-assets collect-agent-run new-openspec-change fix autofix format-fix fmt-python fmt-ci-python format-python check-python-format lint-python run-pytest pytest export-openapi check-openapi container-checks build-backend-container run-backend-container stop-backend-container test-backend-container scan-backend-container setup-hooks uninstall-hooks
 
 help:
 	@echo "Starter commands (Delorean Level $(HELP_LEVEL); override with LEVEL=2|3|4; use make help-all for the full list):"
@@ -122,6 +122,7 @@ help:
 	@echo "  make start-backend"
 	@echo "  make db-up"
 	@echo "  make db-reset-local"
+	@echo "  make bootstrap-cl-admin"
 	@echo "  make db-upgrade"
 	@echo "  make db-down"
 	@echo ""
@@ -616,9 +617,12 @@ db-reset-local:
 	docker compose -f $(DATABASE_COMPOSE_FILE) up -d db redis
 	@$(MAKE) --no-print-directory db-wait
 	$(ALEMBIC_CMD) upgrade head
-	$(BACKEND_CMD) python -m src.scripts.create_initial_cl_admin
 	@echo "Local database reset complete."
-	@echo "Next step: make start-dev"
+	@echo "Next step: make bootstrap-cl-admin (when a roster is configured), or make start-dev"
+
+bootstrap-cl-admin: ensure-local-db-ready
+	@echo "Bootstrapping configured CL Admin roster without resetting local data"
+	$(BACKEND_CMD) python -m src.app.commands.bootstrap_cl_admin
 
 
 seed-local-personas:

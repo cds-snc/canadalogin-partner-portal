@@ -37,7 +37,7 @@ The workflow runs:
 
 ## Code Quality Checks
 
-Formatting, Markdown checks, shell checks, lint checks, secret checks, and fast tests are part of the starter local quality loop.
+Formatting, Markdown checks, shell checks, lint checks, secret checks, and fast tests are part of the starter local quality loop. Generic text checks cover tracked solution-owned Markdown, configuration, and shell files. They exclude inherited backend reference material, managed agent-skill content, and archived OpenSpec records; stack-native tooling remains responsible for source formatting.
 
 Linting rules live in stack-native config files, not in shell scripts:
 

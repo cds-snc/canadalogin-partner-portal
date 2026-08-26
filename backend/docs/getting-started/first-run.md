@@ -98,15 +98,15 @@ and the first tier.
 
 !!! warning "Prerequisites"
     Make sure migrations are current before running the bootstrap. Set
-    `INITIAL_CL_ADMIN_EMAIL` only for the explicit bootstrap invocation.
+    `INITIAL_CL_ADMIN_EMAILS` only for the explicit bootstrap invocation.
 
 #### Using Docker Compose
 
 If using Docker Compose, uncomment this section in your `docker-compose.yml`:
 
 ```yaml
-#-------- uncomment to create the initial CL Admin assignment --------
-create_initial_cl_admin:
+#-------- uncomment to bootstrap the configured CL Admin roster --------
+bootstrap_cl_admin:
   build:
     context: .
     dockerfile: Dockerfile
@@ -114,7 +114,7 @@ create_initial_cl_admin:
     - ./src/.env
   depends_on:
     - db
-  command: python -m src.scripts.create_initial_cl_admin
+  command: python -m app.commands.bootstrap_cl_admin
   volumes:
     - ./src:/code/src
 ```
@@ -126,10 +126,10 @@ Then run:
 docker compose up -d
 
 # Or run it manually
-docker compose run --rm create_initial_cl_admin
+docker compose run --rm bootstrap_cl_admin
 
 # Stop the bootstrap service when done
-docker compose stop create_initial_cl_admin
+docker compose stop bootstrap_cl_admin
 ```
 
 #### From Scratch
@@ -138,7 +138,7 @@ If running manually, use:
 
 ```bash
 # Make sure you're in the root folder
-INITIAL_CL_ADMIN_EMAIL=admin@example.test uv run python -m src.scripts.create_initial_cl_admin
+INITIAL_CL_ADMIN_EMAILS='["admin.one@example.test"]' uv run python -m src.app.commands.bootstrap_cl_admin
 ```
 
 ### Creating the First Tier
@@ -185,7 +185,7 @@ user has a current canonical assignment or an eligible pending invitation.
 
 Common local fixes:
 
-- bootstrap the first CL Admin with `INITIAL_CL_ADMIN_EMAIL` for that invocation;
+- bootstrap the configured CL Admin roster with `INITIAL_CL_ADMIN_EMAILS` for that invocation;
 - use the authorized role-assignment API for subsequent assignments; or
 - use the exact local-only persona gate when testing without an identity provider.
 

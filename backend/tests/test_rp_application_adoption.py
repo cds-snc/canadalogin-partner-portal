@@ -4,6 +4,7 @@ from uuid import UUID
 
 import pytest
 from fastapi.testclient import TestClient
+
 from src.app.api.dependencies import (
     get_current_user,
     get_rp_application_adoption_metadata_provider,

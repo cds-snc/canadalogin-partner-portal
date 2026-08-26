@@ -46,10 +46,11 @@ The portal owns four fixed role codes: `cl_admin`, `rp_admin`,
 each protected request, including workspace scope, so revocation takes effect
 on the next request.
 
-Bootstrap the first CL Admin through the explicitly invoked, idempotent
-`create_initial_cl_admin` script with `INITIAL_CL_ADMIN_EMAIL` set for that
-invocation. Manage later assignments through the authorized role-assignment
-API. Do not repurpose identity claims as application roles.
+Bootstrap the configured CL Admin roster through the explicitly invoked,
+idempotent `app.commands.bootstrap_cl_admin` command with
+`INITIAL_CL_ADMIN_EMAILS` set for that invocation. Manage later assignments
+through the authorized role-assignment API. Do not repurpose identity claims as
+application roles.
 
 ### Authorization Overview
 
@@ -134,8 +135,8 @@ OIDC_CLIENT_ID="your-client-id"
 OIDC_CLIENT_SECRET="your-client-secret"
 ```
 
-Set `INITIAL_CL_ADMIN_EMAIL` only during the explicit initial-assignment
-bootstrap; do not keep it in long-lived runtime configuration.
+Set `INITIAL_CL_ADMIN_EMAILS` only during the explicit roster-bootstrap
+command; do not keep it in long-lived runtime configuration.
 
 For local development without Docker, run a Redis server before starting the backend. If you already use Redis locally for caching, queues, or rate limiting, you can reuse it and isolate session data with `REDIS_SESSION_DB`.
 

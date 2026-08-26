@@ -75,19 +75,13 @@ trap 'rm -f "${tmp_file}"' EXIT
 if [ "${has_target_files}" -eq 1 ]; then
   printf '%s\0' "${target_files[@]}" > "${tmp_file}"
 else
-  find "${repo_root}" \
-    -path "${repo_root}/.git" -prune -o \
-    -path "*/node_modules" -prune -o \
-    -path "*/dist" -prune -o \
-    -path "*/build" -prune -o \
-    -path "*/coverage" -prune -o \
-    -path "*/storybook-static" -prune -o \
-    -path "*/.venv" -prune -o \
-    -path "*/venv" -prune -o \
-    -path "*/__MACOSX" -prune -o \
-    -path "*/__pycache__" -prune -o \
-    -path "*/.pytest_cache" -prune -o \
-    -type f -name "*.md" -print0 > "${tmp_file}"
+  while IFS= read -r -d '' rel_path; do
+    case "${rel_path}" in
+      *.md)
+        printf '%s\0' "${repo_root}/${rel_path}"
+        ;;
+    esac
+  done < <(git -C "${repo_root}" ls-files -z) > "${tmp_file}"
 fi
 
 status=0
@@ -103,13 +97,18 @@ while IFS= read -r -d '' file; do
   fi
 
   if [ "${first_line}" = "---" ]; then
-    first_line="$(awk '
-      BEGIN { in_frontmatter = 1; next_line = 0 }
-      NR == 1 { next }
-      in_frontmatter && $0 == "---" { in_frontmatter = 0; next_line = 1; next }
-      next_line && $0 !~ /^[[:space:]]*$/ { print; exit }
-    ' "${file}")"
+    # Prompt, skill, and issue-template instructions use YAML frontmatter as
+    # their document header. Their body format is tool-defined, not prose.
+    continue
   fi
+
+  case "${rel_path}" in
+    */LICENSE.md | */CHANGELOG.md | */_archive/* | openspec/changes/archive/*)
+      # Licences, changelogs, migration archives, and archived OpenSpec
+      # artifacts have established formats that do not require an H1.
+      continue
+      ;;
+  esac
 
   if [[ ! "${first_line}" =~ ^#\  ]]; then
     echo "Markdown file should start with a level-one heading: ${rel_path}"
