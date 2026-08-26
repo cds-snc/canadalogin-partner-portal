@@ -29,11 +29,7 @@ import {
 // landing page instead of assuming partner access.
 const defaultPostLoginPath = "/";
 
-export const getPostLoginPath = (): string =>
-	sanitizeAppPath(
-		import.meta.env.VITE_AUTH_POST_LOGIN_PATH,
-		defaultPostLoginPath
-	);
+export const getPostLoginPath = (): string => defaultPostLoginPath;
 
 export const getAuthorizationLandingPath = (
 	authorizationContext: AuthorizationContext

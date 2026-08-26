@@ -1,10 +1,9 @@
-from typing import Annotated
 from urllib.parse import urlencode
 
 from fastapi import APIRouter, Depends, Request
 from starlette.responses import RedirectResponse
 
-from ...api.dependencies import get_auth_service, get_current_user
+from ...api.dependencies import get_auth_service
 from ...core.config import settings
 from ...schemas.auth import LogoutOidcResponse, LogoutResponse
 from ...services.auth_service import AuthService
@@ -35,7 +34,6 @@ async def logout(
 @router.get("/logout", include_in_schema=False)
 async def logout_get(
     request: Request,
-    current_user: Annotated[dict, Depends(get_current_user)],
     service: AuthService = Depends(get_auth_service),
 ) -> RedirectResponse:
 

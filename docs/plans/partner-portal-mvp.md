@@ -8,9 +8,9 @@
 
 ## 1. Executive Summary
 
-The CanadaLogin Partner Portal MVP is a focused first release that lets a partner developer sign in with a Government of Canada email and link their profile to the relying party (RP) applications they already own in IBM Security Verify, manage the client secrets for those applications, view monthly active user (MAU) metrics, and reach support. 
+The CanadaLogin Partner Portal MVP is a focused first release that lets a partner developer sign in with a Government of Canada email and link their profile to the relying party (RP) applications they already own in IBM Security Verify, manage the client secrets for those applications, view monthly active user (MAU) metrics, and reach support.
 
-This MVP intentionally narrows the broader portal vision to four user journeys: onboarding and setup, secret management, usage reporting, and support. 
+This MVP intentionally narrows the broader portal vision to four user journeys: onboarding and setup, secret management, usage reporting, and support.
 
 It removes workflow features that are not required to deliver value at launch, including external developer invitations, structured multi-section application information intake, departments and tiers administration UIs, and platform-wide governance modules. The goal is to ship a small, secure, and self-service portal that proves the core onboarding-to-operations loop for partner teams.
 
@@ -48,7 +48,7 @@ The MVP addresses these gaps with a single authenticated portal that links a ver
 1. Keep the partner profile data model thin so that future onboarding intake can extend it without rework.
 2. Use IBM Verify to support our sign-in and sign-up flows for service owners.
 3. Preserve a clean backend contract with standardized error envelopes and reusable authorization patterns.
-4. Implement basic monitoring, logs, and alarms for system health and security. 
+4. Implement basic monitoring, logs, and alarms for system health and security.
 
 ## 5. Non-Goals
 
@@ -75,7 +75,7 @@ The MVP delivers the following capabilities, organized to mirror the four journe
 - Require the user to register a passkey as a second factor.
 - Require the user to associate themself with a GC department, or discern it from their email domain. (Optional)
 - Require the user to accept the Partner Portal terms and conditions.
-- Set up the partner profile by treating IBM Security Verify as the source of truth for the Verify Owner field, and RP department (var: Company Name - FOR DECISION). 
+- Set up the partner profile by treating IBM Security Verify as the source of truth for the Verify Owner field, and RP department (var: Company Name - FOR DECISION).
 - Import the user's RP IDs based on their user email in IBM Security Verify.
 - Apply a reviewed and implemented session timeout across authenticated routes.
 
@@ -116,7 +116,7 @@ Receives support requests submitted through the Jira intake linked from the port
 
 ### Journey A: First-Time Partner Sign-Up And Profile Setup
 
-1. Content informs users who can sign-up and create an account right now - only people with a live RP. 
+1. Content informs users who can sign-up and create an account right now - only people with a live RP.
 2. User navigates to the Partner Portal and signs up or signs in with a valid GC email address.
 3. Back-end validates that their domain name is on our allow list for GC departments
 4. User sets a password that meets complexity requirements.
@@ -126,14 +126,14 @@ Receives support requests submitted through the Jira intake linked from the port
 8. User selects a GC department to associate with their account. OR we prompt the user to decide on a department based on their domain
 9. The system checks the Verify Owner field in IBM Security Verify to see if they have an existing RP they own.
   a. Happy: If the Verify Owner field matches an existing RP they can view their account
-  b. unhappy: If the Verify Owner field does NOT match an existing RP, inform them that they cannot sign-up right now. 
+  b. unhappy: If the Verify Owner field does NOT match an existing RP, inform them that they cannot sign-up right now.
 
 ### Journey B: Partner Views, Generates, or Rotates A Client Secret
 
 1. Application owner lands in the portal and can see their RP metadata, including: application name, client ID, application URL, call-back URL, and department name and MAU.
 2. Application owner can open the secrets view for an owned RP application.
 3. In the secrets view, they can initiate a "rotation", specifying a time at which the old secret will expire. The system creates a new secret while keeping the old secret valid until expiry.
-4. In the secrets view, they can initiate a "generate new secret". This immediately invalidates the old secret and replaces it with a new one. 
+4. In the secrets view, they can initiate a "generate new secret". This immediately invalidates the old secret and replaces it with a new one.
 
 ### Journey D: Partner Views MAU For Their RP Application
 

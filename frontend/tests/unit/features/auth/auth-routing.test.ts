@@ -2,6 +2,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
 	completeLoginRedirect,
 	getAuthorizationLandingPath,
+	getPostLoginPath,
 	loadHomeAdmission,
 	requireAnyCapability,
 	requireCapability,
@@ -62,6 +63,7 @@ describe("auth-routing", () => {
 
 	afterEach(() => {
 		vi.clearAllMocks();
+		vi.unstubAllEnvs();
 		vi.unstubAllGlobals();
 	});
 
@@ -86,6 +88,12 @@ describe("auth-routing", () => {
 		expect(
 			getAuthorizationLandingPath({ globalRole: null, partnerAccess: [] })
 		).toBe("/access-denied");
+	});
+
+	it("uses Home as the post-login default regardless of local configuration", () => {
+		vi.stubEnv("VITE_AUTH_POST_LOGIN_PATH", "/your-applications");
+
+		expect(getPostLoginPath()).toBe("/");
 	});
 
 	it("returns the authenticated user for protected routes", async () => {

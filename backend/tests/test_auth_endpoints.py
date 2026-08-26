@@ -120,3 +120,12 @@ class TestLogoutSessionStoreInvalidation:
             assert any(
                 settings.SESSION_COOKIE_NAME in cookie for cookie in logout_response.headers.get_list("set-cookie")
             )
+
+    def test_get_logout_without_session_redirects_without_401(self) -> None:
+        store = TrackingInMemoryStore()
+
+        with build_logout_app(store) as client:
+            logout_response = client.get("/logout", follow_redirects=False)
+
+            assert logout_response.status_code == 307
+            assert logout_response.headers["location"] == settings.OIDC_POST_LOGOUT_REDIRECT_URI

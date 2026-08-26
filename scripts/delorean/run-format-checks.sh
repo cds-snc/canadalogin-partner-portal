@@ -21,6 +21,12 @@ if [ "$#" -gt 0 ]; then
     rel_path="${normalized_path#${repo_root}/}"
 
     case "${rel_path}" in
+      backend/docs/* | backend/scripts/* | backend/.github/* | backend/DNR_READ.md | \
+      .github/skills/* | openspec/changes/archive/*)
+        # These artifacts are inherited reference material or completed
+        # historical records, maintained outside the solution quality scope.
+        continue
+        ;;
       *.md | *.yml | *.yaml | *.json | *.sh | \
       .github/hooks/pre-commit | .github/hooks/commit-msg | .github/hooks/pre-push | \
       agent-configs/shared/hooks/pre-commit | agent-configs/shared/hooks/commit-msg | agent-configs/shared/hooks/pre-push)
@@ -42,32 +48,22 @@ trap 'rm -f "${tmp_file}" "${grep_file}"' EXIT
 if [ "${#target_files[@]}" -gt 0 ]; then
   printf '%s\0' "${target_files[@]}" > "${tmp_file}"
 else
-  find "${repo_root}" \
-    -path "${repo_root}/.git" -prune -o \
-    -path "*/node_modules" -prune -o \
-    -path "*/dist" -prune -o \
-    -path "*/build" -prune -o \
-    -path "*/coverage" -prune -o \
-    -path "*/storybook-static" -prune -o \
-    -path "*/.playwright-mcp" -prune -o \
-    -path "*/.venv" -prune -o \
-    -path "*/venv" -prune -o \
-    -path "*/__MACOSX" -prune -o \
-    -path "*/__pycache" -prune -o \
-    -path "*/.pytest_cache" -prune -o \
-    -type f \( \
-      -name "*.md" -o \
-      -name "*.yml" -o \
-      -name "*.yaml" -o \
-      -name "*.json" -o \
-      -name "*.sh" -o \
-      -path "${repo_root}/.github/hooks/pre-commit" -o \
-      -path "${repo_root}/.github/hooks/commit-msg" -o \
-      -path "${repo_root}/.github/hooks/pre-push" -o \
-      -path "${repo_root}/agent-configs/shared/hooks/pre-commit" -o \
-      -path "${repo_root}/agent-configs/shared/hooks/commit-msg" -o \
-      -path "${repo_root}/agent-configs/shared/hooks/pre-push" \
-    \) -print0 > "${tmp_file}"
+  while IFS= read -r -d '' rel_path; do
+    case "${rel_path}" in
+      backend/docs/* | backend/scripts/* | backend/.github/* | backend/DNR_READ.md | \
+      .github/skills/* | openspec/changes/archive/*)
+        # The backend starter's reference material is inherited and maintained
+        # outside the solution repository. Archived OpenSpec packages are
+        # historical records and agent skills are managed as external tooling.
+        continue
+        ;;
+      *.md | *.yml | *.yaml | *.json | *.sh | \
+      .github/hooks/pre-commit | .github/hooks/commit-msg | .github/hooks/pre-push | \
+      agent-configs/shared/hooks/pre-commit | agent-configs/shared/hooks/commit-msg | agent-configs/shared/hooks/pre-push)
+        printf '%s\0' "${repo_root}/${rel_path}"
+        ;;
+    esac
+  done < <(git -C "${repo_root}" ls-files -z) > "${tmp_file}"
 fi
 
 status=0

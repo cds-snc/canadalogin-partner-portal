@@ -128,7 +128,7 @@ These should be stored in AWS Secrets Manager or an equivalent secret store, not
 - OIDC metadata and client ID values
 - IBM Security Verify base URL and client ID
 - GC Notify template IDs and invite expiry settings
-- Frontend variables: `VITE_APP_ENVIRONMENT`, `VITE_API_BASE_URL`, `VITE_AUTH_POST_LOGIN_PATH`
+- Frontend variables: `VITE_APP_ENVIRONMENT`, `VITE_API_BASE_URL`
 
 ### 7.3 Production Recommendations
 
@@ -179,7 +179,7 @@ Monthly Active User (MAU) data is stored as CSV files on S3 and loaded into Redi
 
 ### 7.5 Frontend Routing Recommendation
 
-The frontend sample shows that post-login routing is client-side.
+The frontend routes post-login users through the client-side admission guard.
 
-- `VITE_AUTH_POST_LOGIN_PATH` should remain a frontend route such as `/dashboard`.
+- Home (`/`) is the default after admission; a safe, authorized intended route takes precedence.
 - `VITE_API_BASE_URL` should point to the backend origin, not the frontend S3 origin.
