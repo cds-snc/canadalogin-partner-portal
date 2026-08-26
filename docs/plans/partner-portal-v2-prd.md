@@ -1,4 +1,4 @@
-# Product Requirements Document: CanadaLogin Partner Portal Onboarding
+# Product Requirements Document: CanadaLogin Partner Portal V2 - Onboarding
 
 ## Document Status
 Draft
