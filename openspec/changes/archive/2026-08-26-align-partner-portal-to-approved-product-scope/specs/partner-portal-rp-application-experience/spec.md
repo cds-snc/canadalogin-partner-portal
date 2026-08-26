@@ -191,4 +191,3 @@ remain a separate focused action for the selected Production configuration.
 - **WHEN** a caller attempts to unlink an RP configuration from its Application without an atomic authorized reparent, archive, or delete operation defined by a future contract
 - **THEN** the portal rejects the operation and preserves the current hierarchy
 - **AND** no partner-visible configuration is left without its workspace-owned Application parent
-

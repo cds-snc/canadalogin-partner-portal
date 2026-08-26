@@ -128,4 +128,3 @@ families, but it SHALL advertise only MAU/usage behavior that currently exists.
 - **THEN** authenticated Home and the shared menu omit Reports
 - **AND** a direct request to `/reports` fails through the standard safe authorization behavior
 - **AND** the response does not reveal report types, workspaces, Applications, RP configurations, or scope identifiers
-

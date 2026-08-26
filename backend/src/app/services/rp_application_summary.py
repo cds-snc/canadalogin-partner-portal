@@ -10,6 +10,7 @@ from ..schemas.rp_application import (
     RegistrationDataStep,
     RPApplicationSummaryRead,
 )
+from ..schemas.rp_application_promotion_request import ProductionReviewStatus
 
 _REGISTRATION_STEPS: tuple[RegistrationDataStep | str, ...] = (
     "basics",
@@ -84,7 +85,10 @@ def build_rp_application_summary(
         partner_environment=_text(_value(application, "partner_environment", "partnerEnvironment")) or None,
         canada_login_environment=_value(application, "canada_login_environment", "canadaLoginEnvironment"),
         registration_completed_at=registration_completed_at,
-        production_review_status=(_text(_value(application, "production_review_status", "productionReviewStatus")) or None),
+        production_review_status=cast(
+            ProductionReviewStatus | None,
+            _text(_value(application, "production_review_status", "productionReviewStatus")) or None,
+        ),
         production_review_reconciliation_required=bool(
             _value(
                 application,

@@ -4,6 +4,16 @@ from fastcrud import FastCRUD
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from ..models.department import Department
+from ..schemas.department import DepartmentRead
+
+DepartmentReadCRUD = FastCRUD[
+    Department,
+    DepartmentRead,
+    DepartmentRead,
+    DepartmentRead,
+    DepartmentRead,
+    DepartmentRead,
+]
 
 
 class DepartmentReadRepository:
@@ -14,7 +24,7 @@ class DepartmentReadRepository:
     """
 
     def __init__(self) -> None:
-        self._repository = FastCRUD(Department)
+        self._repository: DepartmentReadCRUD = DepartmentReadCRUD(Department)
 
     async def get(
         self,

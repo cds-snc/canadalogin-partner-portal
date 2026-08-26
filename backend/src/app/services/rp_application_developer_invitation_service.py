@@ -4,7 +4,7 @@ import secrets
 import uuid as uuid_pkg
 from collections.abc import Mapping
 from datetime import UTC, datetime
-from typing import Any, cast
+from typing import Any, Literal, TypeAlias, cast
 
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -86,6 +86,11 @@ VALID_INVITATION_STATUSES = frozenset(
     }
 )
 logger = logging.getLogger(__name__)
+
+_InvitationAttemptAuditResult: TypeAlias = Literal[
+    AuthorizationAuditResult.DENIED,
+    AuthorizationAuditResult.FAILED,
+]
 
 
 class RPApplicationDeveloperInvitationService:
@@ -539,7 +544,7 @@ class RPApplicationDeveloperInvitationService:
         target_user_uuid: uuid_pkg.UUID | None,
         role: PartnerRoleCode,
         current_status: InvitationStatus,
-        result: AuthorizationAuditResult,
+        result: _InvitationAttemptAuditResult,
         reason_code: str,
         correlation_id: str | None,
         timestamp: datetime,
@@ -584,7 +589,7 @@ class RPApplicationDeveloperInvitationService:
         target_user_uuid: uuid_pkg.UUID,
         role: PartnerRoleCode,
         current_status: InvitationStatus,
-        result: AuthorizationAuditResult,
+        result: _InvitationAttemptAuditResult,
         reason_code: str,
         correlation_id: str | None,
     ) -> None:
@@ -1136,7 +1141,7 @@ class RPApplicationDeveloperInvitationService:
 
         return await self._accept_developer_invitation_by_lookup(
             db=db,
-            invitation_lookup={"token_hash": self._hash_token(normalized_token)},
+            lookup_token_hash=self._hash_token(normalized_token),
             current_user=current_user,
             correlation_id=correlation_id,
         )
@@ -1152,26 +1157,49 @@ class RPApplicationDeveloperInvitationService:
 
         return await self._accept_developer_invitation_by_lookup(
             db=db,
-            invitation_lookup={"uuid": invitation_uuid},
+            lookup_invitation_uuid=invitation_uuid,
             current_user=current_user,
             correlation_id=correlation_id,
         )
+
+    async def _get_invitation_for_acceptance(
+        self,
+        db: AsyncSession,
+        *,
+        lookup_token_hash: str | None,
+        lookup_invitation_uuid: uuid_pkg.UUID | None,
+    ) -> dict[str, Any] | None:
+        if lookup_token_hash is not None:
+            return await crud_rp_application_developer_invitations.get(
+                db=db,
+                token_hash=lookup_token_hash,
+                is_deleted=False,
+                schema_to_select=RPApplicationDeveloperInvitationReadInternal,
+            )
+        if lookup_invitation_uuid is not None:
+            return await crud_rp_application_developer_invitations.get(
+                db=db,
+                uuid=lookup_invitation_uuid,
+                is_deleted=False,
+                schema_to_select=RPApplicationDeveloperInvitationReadInternal,
+            )
+        return None
 
     async def _accept_developer_invitation_by_lookup(
         self,
         db: AsyncSession,
         *,
-        invitation_lookup: Mapping[str, object],
+        lookup_token_hash: str | None = None,
+        lookup_invitation_uuid: uuid_pkg.UUID | None = None,
         current_user: Mapping[str, Any],
         correlation_id: str | None,
     ) -> dict[str, Any]:
         """Run the shared locked acceptance flow for a token or prepared UUID."""
 
-        invitation = await crud_rp_application_developer_invitations.get(
-            db=db,
-            **invitation_lookup,
-            is_deleted=False,
-            schema_to_select=RPApplicationDeveloperInvitationReadInternal,
+        invitation = await self._get_invitation_for_acceptance(
+            db,
+            lookup_token_hash=lookup_token_hash,
+            lookup_invitation_uuid=lookup_invitation_uuid,
         )
         if invitation is None:
             raise NotFoundException("Developer invitation not found")
@@ -1200,7 +1228,7 @@ class RPApplicationDeveloperInvitationService:
         attempt_recorded = False
 
         async def record_attempt(
-            result: AuthorizationAuditResult,
+            result: _InvitationAttemptAuditResult,
             reason_code: str,
         ) -> None:
             nonlocal attempt_recorded
@@ -1228,11 +1256,10 @@ class RPApplicationDeveloperInvitationService:
         try:
             # Re-read after the lifecycle lock so concurrent acceptance/reissue
             # cannot reuse a stale status or token outcome.
-            locked_invitation = await crud_rp_application_developer_invitations.get(
-                db=db,
-                **invitation_lookup,
-                is_deleted=False,
-                schema_to_select=RPApplicationDeveloperInvitationReadInternal,
+            locked_invitation = await self._get_invitation_for_acceptance(
+                db,
+                lookup_token_hash=lookup_token_hash,
+                lookup_invitation_uuid=lookup_invitation_uuid,
             )
             if locked_invitation is None:
                 raise NotFoundException("Developer invitation not found")

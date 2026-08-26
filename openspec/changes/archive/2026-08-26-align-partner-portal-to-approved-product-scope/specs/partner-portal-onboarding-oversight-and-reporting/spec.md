@@ -158,4 +158,3 @@ are not in the approved product sources.
 anchor`. Keep the dashboard shell, Access/Invitation destinations, secret
 boundary, and minimal explicit Production-review work; remove generic backlog
 states, internal notes, and aggregate analytics.
-

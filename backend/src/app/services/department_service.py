@@ -1,5 +1,5 @@
 import uuid as uuid_pkg
-from typing import Any
+from typing import Any, cast
 
 from fastcrud import compute_offset, paginated_response
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -30,7 +30,7 @@ class DepartmentService:
         )
         if db_department is None:
             raise NotFoundException("Department not found")
-        return db_department
+        return cast(dict[str, Any], db_department)
 
     async def get_department_by_id(self, db: AsyncSession, department_id: int) -> dict[str, Any]:
         db_department = await crud_departments.get(
@@ -41,4 +41,4 @@ class DepartmentService:
         )
         if db_department is None:
             raise NotFoundException("Department not found")
-        return db_department
+        return cast(dict[str, Any], db_department)

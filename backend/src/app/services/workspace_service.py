@@ -44,6 +44,7 @@ from ..repositories.crud_rp_applications import crud_rp_applications
 from ..repositories.crud_users import crud_users
 from ..repositories.crud_workspaces import crud_workspaces
 from ..schemas.application_information import (
+    ApplicationChecklistStatus,
     ApplicationInformationChecklistItemRead,
     ApplicationInformationChecklistRead,
     ApplicationInformationContactCreate,
@@ -516,9 +517,11 @@ class WorkspaceService:
             )
         )
         contact_rows = contact_result.all()
-        contact_status = "missing" if not contact_rows else ("provided" if all(bool(row[1]) for row in contact_rows) else "attention_required")
+        contact_status: ApplicationChecklistStatus = (
+            "missing" if not contact_rows else ("provided" if all(bool(row[1]) for row in contact_rows) else "attention_required")
+        )
 
-        def field_status(*values: object) -> str:
+        def field_status(*values: object) -> ApplicationChecklistStatus:
             return "provided" if all(isinstance(value, str) and bool(value.strip()) for value in values) else "missing"
 
         checklist = ApplicationInformationChecklistRead(
@@ -1409,7 +1412,7 @@ class WorkspaceService:
             source_environment=cast(CanadaLoginEnvironment, source_environment),
             target_rp_configuration_uuid=target["uuid"],
             target_configuration_name=target["configuration_name"],
-            target_partner_environment=target.get("partner_environment"),
+            target_partner_environment=cast(str, target.get("partner_environment")),
             target_environment=cast(CanadaLoginEnvironment, target_environment),
             target_registration_draft_version=int(target.get("registration_draft_version") or 0),
             target_registration_last_completed_step=cast(

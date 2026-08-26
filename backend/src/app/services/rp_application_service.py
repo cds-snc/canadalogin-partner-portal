@@ -181,7 +181,7 @@ class RPApplicationService:
             if isinstance(record.get("rp_application_id"), int) and record.get("review_status") not in {"pending", "approved", "rejected"}
         }
         for application in applications:
-            application_id = application.get("id")
+            application_id = cast(int, application.get("id"))
             application["production_review_status"] = canonical_by_application_id.get(application_id)
             application["production_review_reconciliation_required"] = application_id in reconciliation_required_ids
 

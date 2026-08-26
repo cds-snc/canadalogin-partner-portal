@@ -4,7 +4,13 @@ This repo includes a small local verification baseline. It catches common issues
 
 ## Active Workflow
 
-`template-validation.yml` is the only starter workflow meant to run by default. In the upstream template, its source is `repo-configs/github/workflows/template-validation.yml`; scaffolded solution repos receive it at `.github/workflows/template-validation.yml`. It uses read-only repository permissions, installs starter frontend or backend dependencies when those folders exist, and calls [scripts/delorean/run-local-verification.sh](../../scripts/delorean/run-local-verification.sh).
+`template-validation.yml` is the only starter workflow meant to run by
+default. In the upstream template, its source is
+`repo-configs/github/workflows/template-validation.yml`; scaffolded solution
+repos receive it at `.github/workflows/template-validation.yml`. It uses
+read-only repository permissions, installs locked frontend and backend
+development dependencies when those stacks exist, and calls
+[scripts/delorean/run-ci-verification.sh](../../scripts/delorean/run-ci-verification.sh).
 
 The active workflow is intentionally light and safe for a generic template. It does not use secrets, deployment environments, external reporting, paid tools, Slack, S3, release bots, or organization-specific labels.
 
@@ -19,7 +25,25 @@ workflow links, and required files. It also rejects deprecated
 
 Use `make doctor` for a non-mutating setup diagnostic before installing dependencies or starting services. It reports missing local tools, dependency readiness, OpenSpec and change-state status, Docker reachability, and optional scanner availability without changing files.
 
-When [frontend/package-lock.json](../../frontend/package-lock.json) exists, the active workflow installs frontend dependencies with `npm ci --ignore-scripts --prefix frontend`. `npm ci` keeps verification repeatable from the lockfile. `--ignore-scripts` is intentional for this generic template so dependency lifecycle scripts do not run in the starter workflow.
+When [frontend/pnpm-lock.yaml](../../frontend/pnpm-lock.yaml) exists, the
+active workflow enables the `pnpm` version declared by the frontend package
+and installs dependencies with
+`pnpm install --frozen-lockfile --ignore-scripts`. When
+[backend/uv.lock](../../backend/uv.lock) and
+[backend/pyproject.toml](../../backend/pyproject.toml) exist, it creates the
+repo virtual environment with Python 3.12 and syncs backend development
+dependencies from the lockfile with `uv`. These lockfile-backed installs keep
+CI verification repeatable.
+
+For pull requests, the CI wrapper compares the base and head revisions.
+Format whitespace checks inspect changed patch lines, while Markdown and
+ShellCheck adapters inspect changed files, Prettier formatting inspects changed
+frontend source files, and Ruff formatting inspects changed backend Python
+files. Repository structure, Delorean state, semantic lint, type, GC Design
+System, page-shell, secret, test, and contract checks remain repository-wide.
+This prevents unrelated inherited formatting debt from blocking a change
+without weakening behavioural verification. A manual run without a comparison
+base performs the full-repository content audit.
 
 The workflow runs:
 
@@ -44,9 +68,27 @@ Linting rules live in stack-native config files, not in shell scripts:
 - Frontend linting lives in [frontend/eslint.config.js](../../frontend/eslint.config.js).
 - Frontend formatting lives in [frontend/.prettierrc](../../frontend/.prettierrc) and [frontend/.prettierignore](../../frontend/.prettierignore).
 - Frontend type checks use the TypeScript config files under `frontend/`.
-- Backend formatting and linting use the root [Makefile](../../Makefile), [.flake8](../../.flake8), and [pytest.ini](../../pytest.ini).
+- Backend formatting, linting, and test configuration use the root
+  [Makefile](../../Makefile) and
+  [backend/pyproject.toml](../../backend/pyproject.toml).
 
-The shell scripts under `scripts/delorean/` are adapters for hooks and CI. They detect configured commands and call project commands such as `npm run lint --prefix frontend`, `npm run typecheck --prefix frontend`, `npm run format:check --prefix frontend`, `make lint-python`, `make fmt-ci-python`, and `make run-pytest`. Backend Python checks use the repo `.venv` by default; run `make install-dev-python` to create it with Python 3.12.
+The shell scripts under `scripts/delorean/` are adapters for hooks and CI.
+They detect configured commands and call project commands such as frontend
+lint, type, format, and test scripts, plus `make lint-python`,
+`make fmt-ci-python`, `make typecheck`, and `make run-pytest`. Frontend
+dependencies come from the committed `pnpm` lockfile. Backend Python checks use
+the repo `.venv` by default; run `make install-dev-python` to create it with
+Python 3.12 and sync
+the committed `uv` lockfile.
+
+Backend Ruff lint is non-mutating. Production source keeps the complete Ruff
+rule set. Tests retain an explicit style-only baseline: import-order rule
+`I001` is not enforced for test files, and `W191` is excluded only for the
+legacy `test_department_seed.py` file. All other Ruff rules still run across
+the full test suite. PR validation applies Prettier and Ruff formatting to
+changed frontend and backend source files; a manual full-repository run
+continues to report the inherited formatting backlog until a dedicated cleanup
+is approved.
 
 `run-frontend-standards-checks.sh` is a lightweight GC Design System guard. When `frontend/` exists, it checks that GC Design System packages are present, GC Design System CSS is imported, and frontend UI source uses GC Design System components. It fails by default when frontend UI source contains possible custom links, buttons, inputs, selects, textareas, labels, fieldsets, legends, alerts, headers, footers, or navigation. Use GC Design System components where they fit, or record the custom UI exception in the page pattern decision. Set `GCDS_CUSTOM_UI_POLICY=warn` only for a temporary migration or reviewed exception path.
 
@@ -58,7 +100,7 @@ For formatter-only failures, use the root auto-fix command:
 make fix
 ```
 
-`make fix` calls [scripts/delorean/run-autofix.sh](../../scripts/delorean/run-autofix.sh). It runs configured safe fixers, including frontend `npm run fix` when available, backend Black through `make fmt-python`, Ruff fixes when a Ruff config exists, and basic trailing-whitespace or final-newline cleanup for text files covered by the format checks. It does not stage files. Review and stage rewritten files before committing.
+`make fix` calls [scripts/delorean/run-autofix.sh](../../scripts/delorean/run-autofix.sh). It runs configured safe fixers, including frontend `npm run fix` when available, backend Ruff formatting and lint fixes through `make fmt-python`, and basic trailing-whitespace or final-newline cleanup for text files covered by the format checks. It does not stage files. Review and stage rewritten files before committing.
 
 To limit the scope:
 
@@ -122,6 +164,8 @@ This unsets the local `core.hooksPath`. The upstream template keeps hook source 
 | `pre-push` | full local verification, plus an OpenAPI freshness check when backend API or OpenAPI files changed |
 
 `pre-commit` is meant to stay fast. It does not run slow tests by default.
+It passes only the staged or changed shell files to the ShellCheck adapter, so
+unrelated repository shell debt is not rechecked during a focused commit.
 
 Hooks do not auto-rewrite files by default. When a hook fails for a formatter-only issue, run `make fix`, review the changed files, stage them, and retry the commit or push.
 
@@ -169,6 +213,19 @@ Run the full local loop directly:
 scripts/delorean/run-local-verification.sh
 ```
 
+CI should call the comparison-aware wrapper:
+
+```bash
+DELOREAN_BASE_SHA=<base-sha> \
+DELOREAN_HEAD_SHA=<head-sha> \
+scripts/delorean/run-ci-verification.sh
+```
+
+`run-ci-verification.sh` obtains the changed-file list from the supplied Git
+range and delegates to the same local wrapper. It scopes content-only checks
+to the pull-request change while keeping repository-wide checks intact. If no
+base SHA is supplied, it deliberately runs the full-repository loop.
+
 The wrapper calls:
 
 - `run-structure-checks.sh`
@@ -182,6 +239,12 @@ The wrapper calls:
 - `run-secret-checks.sh`
 - `run-fast-tests.sh`
 - `run-container-checks.sh`
+
+When `run-local-verification.sh` receives file arguments, it passes matching
+Markdown and shell files to their adapters. Format checks can additionally use
+`DELOREAN_FORMAT_DIFF_BASE` and `DELOREAN_FORMAT_DIFF_HEAD` to apply
+`git diff --check` to changed patch lines. Running it without file arguments
+retains the normal full-repository content scan.
 
 `run-autofix.sh` is intentionally separate from the verification wrapper. It runs through `make fix` only when a developer asks for repair.
 
@@ -349,12 +412,29 @@ For meaningful backend changes, record container build, health check, image scan
 
 ## CI Behavior
 
-`template-validation.yml` installs starter frontend dependencies when [frontend/package-lock.json](../../frontend/package-lock.json) exists, installs starter backend dependencies when [backend/requirements-dev.txt](../../backend/requirements-dev.txt) exists, then runs [scripts/delorean/run-local-verification.sh](../../scripts/delorean/run-local-verification.sh).
+`template-validation.yml` installs frontend dependencies from
+[frontend/pnpm-lock.yaml](../../frontend/pnpm-lock.yaml) with a frozen
+lockfile, and syncs backend development dependencies from
+[backend/uv.lock](../../backend/uv.lock) with `uv`. It then runs
+[scripts/delorean/run-ci-verification.sh](../../scripts/delorean/run-ci-verification.sh)
+with the event base and head revisions.
+
+On pull requests, the CI wrapper applies format whitespace checks to changed
+patch lines, runs Markdown and ShellCheck adapters only for changed files, and
+applies Prettier and Ruff formatting to changed frontend and backend source
+files. Structure, state, semantic lint, type, standards, secret, fast-test, and
+optional container adapters keep their repository-wide behaviour.
+Protected-branch pushes use the event's previous revision as their comparison
+base. Manual runs without a usable base perform a full-repository audit.
 
 The workflow also calls the OpenAPI adapter. It checks freshness when backend
 API or OpenAPI files changed and a committed contract exists.
 
-Real solution repos should make CI stricter based on their actual technology and risk. For example, a frontend repo should install frontend dependencies and run lint, typecheck, format checks, and fast tests. A backend repo should install backend dev dependencies and run Black checks, Flake8, pytest, and any relevant contract checks.
+Real solution repos should make CI stricter based on their actual technology
+and risk. For example, a frontend repo should install locked frontend
+dependencies and run lint, typecheck, format checks, and fast tests. A backend
+repo should install locked backend development dependencies and run Ruff,
+pytest, type checks, and relevant contract checks.
 
 ## Future checks for solution repos
 

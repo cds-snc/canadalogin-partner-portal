@@ -75,4 +75,3 @@ tests. Keep bounded Verify interactions only in the capabilities that own
 authentication, safe identity binding, retained-RP metadata/adoption, and
 authorized RP operations. None of those interactions grants portal roles or
 crosses the CL Admin RP-secret boundary.
-

@@ -6,15 +6,21 @@ repo_root="$(git rev-parse --show-toplevel)"
 scripts_dir="${repo_root}/scripts/delorean"
 status=0
 
-changed_files="$(git -C "${repo_root}" diff --cached --name-only --diff-filter=ACMRT || true)"
+changed_files=()
 changed_source="staged"
 
-if [ -z "${changed_files}" ]; then
-  changed_files="$(git -C "${repo_root}" diff --name-only --diff-filter=ACMRT || true)"
+while IFS= read -r -d '' file; do
+  changed_files+=("${file}")
+done < <(git -C "${repo_root}" diff --cached --name-only --diff-filter=ACMRT -z)
+
+if [ "${#changed_files[@]}" -eq 0 ]; then
   changed_source="changed"
+  while IFS= read -r -d '' file; do
+    changed_files+=("${file}")
+  done < <(git -C "${repo_root}" diff --name-only --diff-filter=ACMRT -z)
 fi
 
-if [ -z "${changed_files}" ]; then
+if [ "${#changed_files[@]}" -eq 0 ]; then
   echo "No staged or changed files detected. Skipping pre-commit checks."
   exit 0
 fi
@@ -28,16 +34,21 @@ needs_secret=0
 needs_codex_assets=0
 format_files=()
 markdown_files=()
+shell_files=()
+backend_files=()
+frontend_files=()
 
-while IFS= read -r file; do
+for file in "${changed_files[@]}"; do
   [ -z "${file}" ] && continue
 
   case "${file}" in
     frontend/*)
       needs_frontend=1
+      frontend_files+=("${file}")
       ;;
-    backend/*.py | backend/requirements*.txt | .flake8 | pytest.ini | Makefile)
+    backend/*.py | backend/requirements*.txt | backend/pyproject.toml | backend/uv.lock | .flake8 | pytest.ini | Makefile)
       needs_backend=1
+      backend_files+=("${file}")
       ;;
   esac
 
@@ -55,8 +66,9 @@ while IFS= read -r file; do
   esac
 
   case "${file}" in
-    *.sh | .github/hooks/* | agent-configs/shared/hooks/* | scripts/delorean/*)
+    *.sh | .github/hooks/* | agent-configs/shared/hooks/*)
       needs_shell=1
+      shell_files+=("${file}")
       ;;
   esac
 
@@ -77,9 +89,7 @@ while IFS= read -r file; do
       esac
       ;;
   esac
-done <<EOF
-${changed_files}
-EOF
+done
 
 run_check() {
   local description="$1"
@@ -102,15 +112,29 @@ if [ "${needs_markdown}" -eq 1 ]; then
 fi
 
 if [ "${needs_shell}" -eq 1 ]; then
-  run_check "ShellCheck adapter" "${scripts_dir}/run-shellcheck.sh"
+  run_check "ShellCheck adapter" "${scripts_dir}/run-shellcheck.sh" "${shell_files[@]}"
 fi
 
 if [ "${needs_frontend}" -eq 1 ]; then
-  run_check "frontend lint and format adapter" env DELOREAN_LINT_SCOPE=frontend DELOREAN_LINT_MODE=quick "${scripts_dir}/run-lint.sh"
+  run_check \
+    "frontend lint and format adapter" \
+    env \
+    DELOREAN_LINT_SCOPE=frontend \
+    DELOREAN_LINT_MODE=quick \
+    DELOREAN_FILE_SCOPE=changed \
+    "${scripts_dir}/run-lint.sh" \
+    "${frontend_files[@]}"
 fi
 
 if [ "${needs_backend}" -eq 1 ]; then
-  run_check "backend lint and format adapter" env DELOREAN_LINT_SCOPE=backend DELOREAN_LINT_MODE=quick "${scripts_dir}/run-lint.sh"
+  run_check \
+    "backend lint and format adapter" \
+    env \
+    DELOREAN_LINT_SCOPE=backend \
+    DELOREAN_LINT_MODE=quick \
+    DELOREAN_FILE_SCOPE=changed \
+    "${scripts_dir}/run-lint.sh" \
+    "${backend_files[@]}"
 fi
 
 if [ "${needs_secret}" -eq 1 ]; then
