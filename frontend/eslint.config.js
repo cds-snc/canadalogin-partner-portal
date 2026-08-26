@@ -51,7 +51,7 @@ const typescriptConfig = {
 		parserOptions: {
 			ecmaFeatures: { modules: true },
 			ecmaVersion: "latest",
-			project: "./tsconfig.json",
+			project: ["./tsconfig.json", "./e2e/walkthroughs/tsconfig.json"],
 			createDefaultProgram: true,
 		},
 		globals: {
@@ -97,7 +97,7 @@ const typescriptConfig = {
 		"import/resolver": {
 			typescript: {
 				alwaysTryTypes: true,
-				project: "./tsconfig.json",
+				project: ["./tsconfig.json", "./e2e/walkthroughs/tsconfig.json"],
 			},
 		},
 	},
@@ -182,9 +182,17 @@ const eslintConfig = typescriptEslint.config(
 );
 
 eslintConfig.map((config) => {
-	config.files = ["src/**/*.ts", "src/**/*.tsx"];
+	config.files = ["src/**/*.ts", "src/**/*.tsx", "e2e/walkthroughs/**/*.ts"];
 	// Ignore demo files intentionally kept out of tsconfig includes
 	config.ignores = ["src/demo/**"];
+});
+
+eslintConfig.push({
+	name: "walkthrough-sequential-interactions",
+	files: ["e2e/walkthroughs/**/*.ts"],
+	rules: {
+		"no-await-in-loop": "off",
+	},
 });
 
 export default eslintConfig;

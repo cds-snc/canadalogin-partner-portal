@@ -1,13 +1,6 @@
-import { createFileRoute } from "@tanstack/react-router";
-import { lazy } from "react";
+import { createFileRoute, Outlet } from "@tanstack/react-router";
 import i18n from "@/common/i18n";
 import type { RouteBackLinkContext } from "@/types/route-breadcrumbs";
-
-const ApplicationInformationDetailsPage = lazy(async () => ({
-	default: (
-		await import("../../../../../features/workspaces/pages/ApplicationInformationDetailsPage")
-	).ApplicationInformationDetailsPage,
-}));
 
 export const Route = createFileRoute(
 	"/workspaces/$workspaceUuid/applications/$applicationInformationUuid/details"
@@ -19,5 +12,5 @@ export const Route = createFileRoute(
 				label: i18n.t("workspaces.appInfoBackToApplication"),
 			},
 		}) satisfies RouteBackLinkContext,
-	component: ApplicationInformationDetailsPage,
+	component: Outlet,
 });

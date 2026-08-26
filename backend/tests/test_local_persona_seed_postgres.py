@@ -8,6 +8,7 @@ import os
 import pytest
 from sqlalchemy import delete, func, select
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
+
 from src.app.core.authorization import (
     CL_ADMIN_ROLE_UUID,
     AssignmentSource,
@@ -15,15 +16,26 @@ from src.app.core.authorization import (
 )
 from src.app.core.local_persona_fixtures import (
     LOCAL_ALPHA_WORKSPACE,
+    LOCAL_APPLICATION_CONTACT_FIXTURES,
     LOCAL_BETA_WORKSPACE,
+    LOCAL_INVITATION_FIXTURES,
     LOCAL_PERSONA_FIXTURES,
+    LOCAL_PRODUCTION_REVIEW_FIXTURES,
     LOCAL_WORKSPACE_FIXTURES,
+    local_mau_cache_catalog,
 )
 from src.app.models.application_information import ApplicationInformation
+from src.app.models.application_information_contact import ApplicationInformationContact
 from src.app.models.department import Department
 from src.app.models.role import Role
 from src.app.models.rp_application import RPApplication
 from src.app.models.rp_application_access_grant import RPApplicationAccessGrant
+from src.app.models.rp_application_developer_invitation import (
+    RPApplicationDeveloperInvitation,
+)
+from src.app.models.rp_application_promotion_request import (
+    RPApplicationPromotionRequest,
+)
 from src.app.models.user import User
 from src.app.models.user_role import UserRole
 from src.app.models.workspace import Workspace
@@ -36,7 +48,6 @@ from src.app.services.local_persona_seed_service import (
     LocalPersonaSeedGate,
     LocalPersonaSeedService,
 )
-
 from tests.test_four_role_migrations_postgres import (
     TemporaryPostgresDatabase,
     _temporary_postgres_database,
@@ -58,6 +69,36 @@ def _gate() -> LocalPersonaSeedGate:
     )
 
 
+class InMemoryMAURedis:
+    def __init__(self) -> None:
+        self.hashes: dict[str, dict[str, str]] = {}
+        self.strings: dict[str, str] = {"unrelated:developer-data": "preserve"}
+
+    async def type(self, key: str) -> bytes:
+        if key in self.hashes:
+            return b"hash"
+        if key in self.strings:
+            return b"string"
+        return b"none"
+
+    async def hgetall(self, key: str) -> dict[bytes, bytes]:
+        return {field.encode(): value.encode() for field, value in self.hashes.get(key, {}).items()}
+
+    async def hset(self, key: str, *, mapping: dict[str, str]) -> int:
+        target = self.hashes.setdefault(key, {})
+        created = sum(field not in target for field in mapping)
+        target.update(mapping)
+        return created
+
+    async def delete(self, *keys: str) -> int:
+        removed = 0
+        for key in keys:
+            removed += int(key in self.hashes or key in self.strings)
+            self.hashes.pop(key, None)
+            self.strings.pop(key, None)
+        return removed
+
+
 async def _fixture_counts(db: AsyncSession) -> LocalPersonaRecordCounts:
     department_uuids = tuple(workspace.department.uuid for workspace in LOCAL_WORKSPACE_FIXTURES)
     user_uuids = tuple(fixture.user_uuid for fixture in LOCAL_PERSONA_FIXTURES)
@@ -66,6 +107,8 @@ async def _fixture_counts(db: AsyncSession) -> LocalPersonaRecordCounts:
     application_uuids = tuple(application.uuid for workspace in LOCAL_WORKSPACE_FIXTURES for application in workspace.applications)
     assignment_uuids = tuple(fixture.global_assignment_uuid for fixture in LOCAL_PERSONA_FIXTURES if fixture.global_assignment_uuid is not None)
     grant_uuids = tuple(access.grant_uuid for fixture in LOCAL_PERSONA_FIXTURES for access in fixture.partner_access)
+    contact_uuids = tuple(fixture.uuid for fixture in LOCAL_APPLICATION_CONTACT_FIXTURES)
+    invitation_uuids = tuple(fixture.uuid for fixture in LOCAL_INVITATION_FIXTURES)
 
     return LocalPersonaRecordCounts(
         departments=int(await db.scalar(select(func.count()).select_from(Department).where(Department.uuid.in_(department_uuids))) or 0),
@@ -82,14 +125,35 @@ async def _fixture_counts(db: AsyncSession) -> LocalPersonaRecordCounts:
         partner_grants=int(
             await db.scalar(select(func.count()).select_from(RPApplicationAccessGrant).where(RPApplicationAccessGrant.uuid.in_(grant_uuids))) or 0
         ),
+        contacts=int(
+            await db.scalar(
+                select(func.count()).select_from(ApplicationInformationContact).where(ApplicationInformationContact.uuid.in_(contact_uuids))
+            )
+            or 0
+        ),
+        invitations=int(
+            await db.scalar(
+                select(func.count()).select_from(RPApplicationDeveloperInvitation).where(RPApplicationDeveloperInvitation.uuid.in_(invitation_uuids))
+            )
+            or 0
+        ),
+        production_reviews=int(
+            await db.scalar(
+                select(func.count())
+                .select_from(RPApplicationPromotionRequest)
+                .where(RPApplicationPromotionRequest.rp_application_id.in_(select(RPApplication.id).where(RPApplication.uuid.in_(application_uuids))))
+            )
+            or 0
+        ),
     )
 
 
 async def _assert_seeded_authorization_and_records(
     session_factory: async_sessionmaker[AsyncSession],
+    redis: InMemoryMAURedis,
 ) -> None:
     async with session_factory() as db:
-        assert await _fixture_counts(db) == EXPECTED_LOCAL_PERSONA_COUNTS
+        assert await _fixture_counts(db) == EXPECTED_LOCAL_PERSONA_COUNTS.with_mau_records(0)
 
         users = list((await db.scalars(select(User).where(User.uuid.in_(tuple(fixture.user_uuid for fixture in LOCAL_PERSONA_FIXTURES))))).all())
         users_by_uuid = {user.uuid: user for user in users}
@@ -137,7 +201,7 @@ async def _assert_seeded_authorization_and_records(
         assert len(departments) == 2
         assert len(workspaces) == 2
         assert len(application_information) == 2
-        assert len(applications) == 2
+        assert len(applications) == 7
         workspace_ids_by_uuid = {workspace.uuid: workspace.id for workspace in workspaces}
         application_ids_by_uuid = {application.uuid: application.id for application in application_information}
         application_workspace_ids = {application.uuid: application.workspace_id for application in applications}
@@ -191,6 +255,46 @@ async def _assert_seeded_authorization_and_records(
         )
         assert legacy_memberships == 0
 
+        contacts = list(
+            (
+                await db.scalars(
+                    select(ApplicationInformationContact).where(
+                        ApplicationInformationContact.uuid.in_(tuple(fixture.uuid for fixture in LOCAL_APPLICATION_CONTACT_FIXTURES))
+                    )
+                )
+            ).all()
+        )
+        assert len(contacts) == 3
+        assert all(contact.email.endswith("@local.example") for contact in contacts)
+
+        invitations = list(
+            (
+                await db.scalars(
+                    select(RPApplicationDeveloperInvitation).where(
+                        RPApplicationDeveloperInvitation.uuid.in_(tuple(fixture.uuid for fixture in LOCAL_INVITATION_FIXTURES))
+                    )
+                )
+            ).all()
+        )
+        assert {invitation.status for invitation in invitations} == {
+            "pending",
+            "accepted",
+            "expired",
+            "revoked",
+        }
+        assert all(invitation.gc_notify_notification_id is None and len(invitation.token_hash) == 64 for invitation in invitations)
+
+        production_reviews = list(
+            (
+                await db.scalars(
+                    select(RPApplicationPromotionRequest).where(
+                        RPApplicationPromotionRequest.rp_application_id.in_(tuple(application.id for application in applications))
+                    )
+                )
+            ).all()
+        )
+        assert {review.review_status for review in production_reviews} == {fixture.status for fixture in LOCAL_PRODUCTION_REVIEW_FIXTURES}
+
         authorization_service = AuthorizationService()
         for fixture in LOCAL_PERSONA_FIXTURES:
             user = users_by_uuid[fixture.user_uuid]
@@ -204,12 +308,15 @@ async def _assert_seeded_authorization_and_records(
             )
             assert all(access.workspace_uuid != LOCAL_BETA_WORKSPACE.uuid for access in state.partner_access)
 
+    assert redis.hashes == local_mau_cache_catalog()
+
 
 async def _exercise_seed(database: TemporaryPostgresDatabase) -> None:
     async_url = database.sync_url.set(drivername="postgresql+asyncpg")
     engine = create_async_engine(async_url, pool_pre_ping=True)
     session_factory = async_sessionmaker(engine, expire_on_commit=False)
-    service = LocalPersonaSeedService()
+    redis = InMemoryMAURedis()
+    service = LocalPersonaSeedService(redis=redis)  # type: ignore[arg-type]
     try:
         async with session_factory() as db:
             first_report = await service.seed(
@@ -231,16 +338,16 @@ async def _exercise_seed(database: TemporaryPostgresDatabase) -> None:
         assert second_report.outcome == "unchanged"
         assert second_report.to_dict()["counts"] == first_report.to_dict()["counts"]
 
-        await _assert_seeded_authorization_and_records(session_factory)
+        await _assert_seeded_authorization_and_records(session_factory, redis)
 
-        missing_grant_uuid = LOCAL_PERSONA_FIXTURES[1].partner_access[0].grant_uuid
+        missing_contact_uuid = LOCAL_APPLICATION_CONTACT_FIXTURES[0].uuid
         async with session_factory.begin() as db:
-            await db.execute(delete(RPApplicationAccessGrant).where(RPApplicationAccessGrant.uuid == missing_grant_uuid))
+            await db.execute(delete(ApplicationInformationContact).where(ApplicationInformationContact.uuid == missing_contact_uuid))
 
         async with session_factory() as db:
             with pytest.raises(
                 LocalPersonaFixtureStateError,
-                match="partner grants are incomplete",
+                match="contacts are incomplete",
             ):
                 await service.seed(
                     db,
@@ -249,7 +356,7 @@ async def _exercise_seed(database: TemporaryPostgresDatabase) -> None:
                 )
 
         async with session_factory() as db:
-            assert (await _fixture_counts(db)).partner_grants == 2
+            assert (await _fixture_counts(db)).contacts == 2
 
         async with session_factory() as db:
             cleanup_report = await service.cleanup(
@@ -265,15 +372,21 @@ async def _exercise_seed(database: TemporaryPostgresDatabase) -> None:
             users=5,
             workspaces=2,
             applications=2,
-            rp_applications=2,
+            rp_applications=7,
             user_roles=1,
-            partner_grants=2,
+            partner_grants=3,
+            contacts=2,
+            invitations=4,
+            production_reviews=2,
+            mau_records=21,
         )
 
         async with session_factory() as db:
             assert await _fixture_counts(db) == LocalPersonaRecordCounts()
             canonical_role_count = int(await db.scalar(select(func.count()).select_from(Role).where(Role.uuid == CL_ADMIN_ROLE_UUID)) or 0)
             assert canonical_role_count == 1
+        assert redis.hashes == {}
+        assert redis.strings == {"unrelated:developer-data": "preserve"}
 
         async with session_factory() as db:
             second_cleanup_report = await service.cleanup(

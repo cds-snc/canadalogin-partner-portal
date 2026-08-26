@@ -53,13 +53,13 @@ running so local data is preserved.
 
 Run these in separate terminals when you do not want the combined command:
 
-| What | Command | Notes |
-|---|---|---|
-| PostgreSQL and Redis | `make db-up` | Starts both dependency containers. |
-| Backend | `make bk-dev` | Also starts dependencies and applies migrations. |
-| Frontend | `make frontend-dev` | Requires the frontend dependencies from `make setup`. |
-| Background worker | `make bk-worker` | Run only when testing background jobs. |
-| Database and Redis logs | `make db-logs` | Follow logs; exit with `Ctrl-C`. |
+| What                    | Command             | Notes                                                 |
+| ----------------------- | ------------------- | ----------------------------------------------------- |
+| PostgreSQL and Redis    | `make db-up`        | Starts both dependency containers.                    |
+| Backend                 | `make bk-dev`       | Also starts dependencies and applies migrations.      |
+| Frontend                | `make frontend-dev` | Requires the frontend dependencies from `make setup`. |
+| Background worker       | `make bk-worker`    | Run only when testing background jobs.                |
+| Database and Redis logs | `make db-logs`      | Follow logs; exit with `Ctrl-C`.                      |
 
 ## Update After Pulling Changes
 
@@ -128,6 +128,11 @@ Normal persona startup preserves department selections made through the UI and
 their resulting update timestamps. Those profile fields are not authorization;
 the seed still fails closed when fixture identities, lifecycle state, canonical
 role assignments, or partner access differ from the recorded catalog.
+
+For role-based designer videos, use the separate, loopback-pinned walkthrough
+profile in
+[Designer Walkthrough Recordings](docs/reference/designer-walkthrough-recordings.md).
+It preserves the normal developer database and cache profile.
 
 Run `make help` for the shorter command menu or `make help-all` for every
 available target.

@@ -9,6 +9,8 @@ import logging
 import os
 from collections.abc import Mapping, Sequence
 
+from redis.asyncio import Redis as AsyncRedis
+
 from ..app.core.config import settings
 from ..app.core.db.database import local_session
 from ..app.services.local_persona_seed_service import (
@@ -44,20 +46,25 @@ async def _execute(
     confirm_cleanup: bool,
     gate: LocalPersonaSeedGate,
 ) -> LocalPersonaSeedReport:
-    service = LocalPersonaSeedService()
-    async with local_session() as session:
-        if cleanup:
-            return await service.cleanup(
+    gate.require_enabled()
+    redis = AsyncRedis.from_url(settings.REDIS_CACHE_URL)
+    service = LocalPersonaSeedService(redis=redis)
+    try:
+        async with local_session() as session:
+            if cleanup:
+                return await service.cleanup(
+                    session,
+                    gate=gate,
+                    confirmed=confirm_cleanup,
+                    terms_version=settings.TERMS_VERSION,
+                )
+            return await service.seed(
                 session,
                 gate=gate,
-                confirmed=confirm_cleanup,
                 terms_version=settings.TERMS_VERSION,
             )
-        return await service.seed(
-            session,
-            gate=gate,
-            terms_version=settings.TERMS_VERSION,
-        )
+    finally:
+        await redis.aclose()  # type: ignore[attr-defined]
 
 
 def main(

@@ -14,6 +14,7 @@ Starter reference:
 - [approval-routing-and-reentry.md](approval-routing-and-reentry.md)
 - [container-local-build-and-run.md](container-local-build-and-run.md)
 - [delorean-workflows.md](delorean-workflows.md)
+- [designer-walkthrough-recordings.md](designer-walkthrough-recordings.md)
 - [first-tester-quickstart.md](first-tester-quickstart.md)
 - [local-verification.md](local-verification.md)
 - [openspec-lifecycle.md](openspec-lifecycle.md)

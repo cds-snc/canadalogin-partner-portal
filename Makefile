@@ -50,6 +50,36 @@ LOCAL_PERSONA_ENV := \
 	CORS_ORIGINS='["http://127.0.0.1:3000","http://localhost:3000"]' \
 	CORS_METHODS='["GET","POST","PUT","PATCH","DELETE","OPTIONS"]' \
 	CORS_HEADERS='["Accept","Authorization","Content-Type","Idempotency-Key","Origin","X-Requested-With","X-Request-ID"]'
+WALKTHROUGH_POSTGRES_DB := partner_portal_walkthroughs
+WALKTHROUGH_PERSONA_ENV := \
+	POSTGRES_USER=postgres \
+	POSTGRES_PASSWORD=postgres \
+	POSTGRES_SERVER=127.0.0.1 \
+	POSTGRES_PORT=5432 \
+	POSTGRES_DB=$(WALKTHROUGH_POSTGRES_DB) \
+	POSTGRES_SYNC_PREFIX=postgresql:// \
+	POSTGRES_ASYNC_PREFIX=postgresql+asyncpg:// \
+	POSTGRES_URL= \
+	REDIS_CACHE_HOST=127.0.0.1 \
+	REDIS_CACHE_PORT=6379 \
+	REDIS_CACHE_DB=12 \
+	REDIS_CACHE_PASSWORD= \
+	REDIS_CACHE_SSL=false \
+	REDIS_SESSION_HOST=127.0.0.1 \
+	REDIS_SESSION_PORT=6379 \
+	REDIS_SESSION_DB=13 \
+	REDIS_SESSION_PASSWORD= \
+	REDIS_SESSION_SSL=false \
+	REDIS_QUEUE_HOST=127.0.0.1 \
+	REDIS_QUEUE_PORT=6379 \
+	REDIS_QUEUE_DB=14 \
+	REDIS_QUEUE_PASSWORD= \
+	REDIS_QUEUE_SSL=false \
+	REDIS_RATE_LIMIT_HOST=127.0.0.1 \
+	REDIS_RATE_LIMIT_PORT=6379 \
+	REDIS_RATE_LIMIT_DB=15 \
+	REDIS_RATE_LIMIT_PASSWORD= \
+	REDIS_RATE_LIMIT_SSL=false
 POSTGRES_USER ?= postgres
 POSTGRES_DB ?= postgres
 DB_MIGRATION_MESSAGE ?= change
@@ -93,7 +123,7 @@ LOAD_NVM = nvm_dir="$${NVM_DIR:-$$HOME/.nvm}"; \
 		nvm use "$(NODE_VERSION)" >/dev/null 2>&1 || nvm use default >/dev/null 2>&1 || true; \
 	fi
 
-.PHONY: help help-all doctor setup setup-delorean setup-local-env install-node check-node setup-python-venv install test lint format typecheck install-python install-dev-python install-frontend-deps install-backend-deps install-openspec-cli check-openspec-cli validate-openspec-change pick-openspec-change validate-active-openspec-change check-delorean-setup start start-dev start-local-personas seed-local-personas reset-local-personas dev backend-dev worker start-frontend start-backend frontend-install frontend-build frontend-dev frontend-test frontend-lint frontend-format frontend-preview all-install all-build all-test all-lint all-format bk-install bk-test bk-lint bk-format bk-typecheck bk-dev bk-worker bk-migration ft-install ft-build ft-dev ft-test ft-lint ft-format ft-preview backend-image frontend-image bk-image ft-image db-up db-wait db-down db-logs db-upgrade db-downgrade db-revision db-reset-local ensure-local-db-ready migration update-from-template update-from-template-dry-run update-existing-solution update-existing-solution-dry-run update-architecture-docs update-architecture-docs-dry-run update-agent-configs update-agent-configs-dry-run check-codex-assets collect-agent-run new-openspec-change fix autofix format-fix fmt-python fmt-ci-python format-python check-python-format lint-python run-pytest pytest export-openapi check-openapi container-checks build-backend-container run-backend-container stop-backend-container test-backend-container scan-backend-container setup-hooks uninstall-hooks
+.PHONY: help help-all doctor setup setup-delorean setup-local-env install-node check-node setup-python-venv install test lint format typecheck install-python install-dev-python install-frontend-deps install-backend-deps install-openspec-cli check-openspec-cli validate-openspec-change pick-openspec-change validate-active-openspec-change check-delorean-setup start start-dev start-local-personas prepare-walkthrough-personas start-walkthrough-personas seed-local-personas reset-local-personas dev backend-dev worker start-frontend start-backend frontend-install frontend-build frontend-dev frontend-test frontend-lint frontend-format frontend-preview all-install all-build all-test all-lint all-format bk-install bk-test bk-lint bk-format bk-typecheck bk-dev bk-worker bk-migration ft-install ft-build ft-dev ft-test ft-lint ft-format ft-preview backend-image frontend-image bk-image ft-image db-up db-wait db-down db-logs db-upgrade db-downgrade db-revision db-reset-local ensure-local-db-ready migration update-from-template update-from-template-dry-run update-existing-solution update-existing-solution-dry-run update-architecture-docs update-architecture-docs-dry-run update-agent-configs update-agent-configs-dry-run check-codex-assets collect-agent-run new-openspec-change fix autofix format-fix fmt-python fmt-ci-python format-python check-python-format lint-python run-pytest pytest export-openapi check-openapi container-checks build-backend-container run-backend-container stop-backend-container test-backend-container scan-backend-container setup-hooks uninstall-hooks
 
 help:
 	@echo "Starter commands (Delorean Level $(HELP_LEVEL); override with LEVEL=2|3|4; use make help-all for the full list):"
@@ -113,6 +143,7 @@ help:
 	@echo "Local app:"
 	@echo "  make start-dev"
 	@echo "  make start-local-personas"
+	@echo "  make start-walkthrough-personas"
 	@echo "  make seed-local-personas"
 	@echo "  make reset-local-personas"
 	@echo "  make dev"
@@ -678,6 +709,18 @@ start-dev:
 
 start-local-personas: seed-local-personas
 	env $(LOCAL_PERSONA_ENV) $(MAKE) --no-print-directory start-dev
+
+prepare-walkthrough-personas:
+	env $(WALKTHROUGH_PERSONA_ENV) docker compose -f $(DATABASE_COMPOSE_FILE) up -d db redis
+	@$(MAKE) --no-print-directory db-wait POSTGRES_USER=postgres POSTGRES_DB=postgres
+	@database_exists="$$(docker compose -f $(DATABASE_COMPOSE_FILE) exec -T db psql -U postgres -d postgres -Atc "SELECT 1 FROM pg_database WHERE datname = '$(WALKTHROUGH_POSTGRES_DB)'")"; \
+	if [ "$$database_exists" != "1" ]; then \
+		docker compose -f $(DATABASE_COMPOSE_FILE) exec -T db createdb -U postgres "$(WALKTHROUGH_POSTGRES_DB)"; \
+	fi
+	env $(WALKTHROUGH_PERSONA_ENV) $(MAKE) --no-print-directory seed-local-personas
+
+start-walkthrough-personas: prepare-walkthrough-personas
+	env $(LOCAL_PERSONA_ENV) $(WALKTHROUGH_PERSONA_ENV) $(MAKE) --no-print-directory start-dev
 
 update-from-template-dry-run:
 	LEVEL2_PROMPT_SET="$(LEVEL2_PROMPT_SET)" scripts/delorean/update-from-template.sh --repo "$(TEMPLATE_REPO)" --ref "$(TEMPLATE_REF)" --dry-run

@@ -32,6 +32,6 @@
 		"noUncheckedIndexedAccess": true
 	},
 	"include": ["src", "tests", "e2e"],
-	"exclude": ["src/demo/**"],
+	"exclude": ["src/demo/**", "e2e/walkthroughs/**"],
 	"references": [{ "path": "./tsconfig.node.json" }]
 }
