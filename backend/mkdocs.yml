@@ -74,6 +74,7 @@ nav:
           - Versioning: user-guide/api/versioning.md
       - Authentication:
           - Overview: user-guide/authentication/index.md
+          - Session Lifecycle: user-guide/authentication/session-lifecycle.md
           - JWT Tokens: user-guide/authentication/jwt-tokens.md
           - User Management: user-guide/authentication/user-management.md
           - Permissions: user-guide/authentication/permissions.md

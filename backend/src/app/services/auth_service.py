@@ -6,6 +6,7 @@ from starlette.requests import Request
 
 from ..core.config import settings
 from ..core.exceptions.http_exceptions import UnauthorizedException
+from ..core.logger import logging
 from ..core.oidc import get_oidc_client
 from ..core.security import (
     TokenType,
@@ -13,6 +14,8 @@ from ..core.security import (
     verify_token,
 )
 from .oidc_logout_service import OidcLogoutService
+
+logger = logging.getLogger(__name__)
 
 
 class AuthService:
@@ -37,8 +40,10 @@ class AuthService:
     ) -> dict[str, Any]:
         try:
             oidc_logout = None
+            user_uuid = None
             try:
                 oidc_logout = request.session.get("oidc_logout")
+                user_uuid = request.session.get("user_uuid")
                 request.session.clear()
             except AssertionError:
                 pass
@@ -57,6 +62,8 @@ class AuthService:
                 payload["oidc_logout"] = oidc_logout_payload
 
             if request.session == {}:
+                if user_uuid:
+                    logger.info("user logout: %s", user_uuid)
                 return payload
 
             raise UnauthorizedException("No authenticated session found.")

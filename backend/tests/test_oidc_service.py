@@ -35,6 +35,30 @@ class TestOidcService:
         assert response.headers["location"] == "/app"
 
     @pytest.mark.asyncio
+    async def test_callback_logs_successful_user_login(self, mock_db):
+        service = OidcService()
+        request = Mock(session={})
+        claims = {"sub": "subject-123", "email": "oidc.user@example.com"}
+        oidc_user = {
+            "uuid": "019cfc22-bff2-7168-ae43-387a301d8fcb",
+            "username": "oidcuser",
+            "email": "oidc.user@example.com",
+        }
+        client = Mock()
+        client.authorize_access_token = AsyncMock(return_value={"userinfo": claims})
+        client.server_metadata = {"issuer": "https://example.verify.ibm.com/oauth2"}
+
+        with patch("src.app.services.oidc_service.get_oidc_client", return_value=client):
+            with patch("src.app.services.oidc_service.sync_oidc_user", new_callable=AsyncMock) as mock_sync:
+                with patch("src.app.services.oidc_service.get_session_handler"):
+                    with patch("src.app.services.oidc_service.logger") as mock_logger:
+                        mock_sync.return_value = oidc_user
+
+                        await service.callback(request=request, db=mock_db)
+
+        mock_logger.info.assert_called_once_with("user login: %s", oidc_user["uuid"])
+
+    @pytest.mark.asyncio
     async def test_callback_redirects_to_access_denied_without_session_for_blocked_user(
         self, mock_db, monkeypatch
     ):
