@@ -34,7 +34,6 @@ describe("session-queries", () => {
 			name: "Jane Doe",
 			profileImageUrl: "",
 			termsVersion: "2026-01",
-			tierUuid: null,
 			uuid: "user-uuid-7",
 			username: "jane@example.com",
 		};

@@ -175,8 +175,7 @@ class TestRPApplicationServiceCurrentUserSync:
             "created_by": 2,
             "ibm_sv_application_id": "app-workspace-grant",
             "canada_login_environment": "production",
-            "onboarding_state": "under_review",
-            "promotion_status": "review_tracked",
+            "registration_completed_at": "2026-08-11T12:00:00Z",
             "application_owner": {
                 "owners": [
                     {"email": "someone.else@cds-snc.ca"},
@@ -212,6 +211,7 @@ class TestRPApplicationServiceCurrentUserSync:
         with (
             patch("src.app.services.rp_application_service.crud_rp_applications") as mock_crud,
             patch("src.app.services.rp_application_service.crud_workspaces") as mock_workspace_crud,
+            patch("src.app.services.rp_application_service.crud_rp_application_promotion_requests") as mock_review_crud,
         ):
             mock_crud.get_multi = AsyncMock(return_value={"data": [workspace_granted_row, unrelated_row]})
             mock_workspace_crud.get_multi = AsyncMock(
@@ -221,6 +221,16 @@ class TestRPApplicationServiceCurrentUserSync:
                             "id": 23,
                             "name": "Benefits Workspace",
                             "uuid": workspace_uuid,
+                        }
+                    ]
+                }
+            )
+            mock_review_crud.get_multi = AsyncMock(
+                return_value={
+                    "data": [
+                        {
+                            "rp_application_id": 5,
+                            "review_status": "pending",
                         }
                     ]
                 }
@@ -238,8 +248,10 @@ class TestRPApplicationServiceCurrentUserSync:
         assert result[0]["configurationName"] == "Production integration A"
         assert result[0]["workspaceName"] == "Benefits Workspace"
         assert result[0]["canadaLoginEnvironment"] == "production"
-        assert result[0]["onboardingState"] == "under_review"
-        assert result[0]["promotionStatus"] == "review_tracked"
+        assert result[0]["registrationCompletedAt"].isoformat() == "2026-08-11T12:00:00+00:00"
+        assert result[0]["productionReviewStatus"] == "pending"
+        assert "onboardingState" not in result[0]
+        assert "promotionStatus" not in result[0]
         assert result[0]["workspaceUuid"] == workspace_uuid
         assert result[0]["role"] is role
         assert "id" not in result[0]
@@ -291,6 +303,7 @@ class TestRPApplicationServiceCurrentUserSync:
         with (
             patch("src.app.services.rp_application_service.crud_rp_applications") as mock_crud,
             patch("src.app.services.rp_application_service.crud_workspaces") as mock_workspace_crud,
+            patch("src.app.services.rp_application_service.crud_rp_application_promotion_requests") as mock_review_crud,
         ):
             mock_crud.get_multi = AsyncMock(side_effect=get_multi_with_real_default_limit)
             mock_workspace_crud.get_multi = AsyncMock(
@@ -304,6 +317,7 @@ class TestRPApplicationServiceCurrentUserSync:
                     ]
                 }
             )
+            mock_review_crud.get_multi = AsyncMock(return_value={"data": []})
 
             result = await service.list_accessible_rp_applications(
                 db=mock_db,

@@ -29,8 +29,6 @@ vi.mock("react-i18next", () => ({
 				"workspaces.appInfoServiceNameLabel":
 					i18nState.resolvedLanguage.startsWith("fr") ? "Nom" : "Name",
 				"workspaces.appInfoViewAction": "View application",
-				"workspaces.onboardingStateColumn": "Onboarding status",
-				"workspaces.onboardingStateUnderReview": "Under review",
 				"workspaces.rpConfigurationAddAction": "Add RP configuration",
 			};
 
@@ -91,22 +89,13 @@ vi.mock("@/components/ui", () => ({
 		action: Array<{
 			buttonLabel: string;
 			isVisible?: () => boolean;
-			onAction: (row: {
-				name: string;
-				onboardingState: string;
-				uuid: string;
-			}) => void;
-			screenReaderLabel: (row: {
-				name: string;
-				onboardingState: string;
-				uuid: string;
-			}) => string;
+			onAction: (row: { name: string; uuid: string }) => void;
+			screenReaderLabel: (row: { name: string; uuid: string }) => string;
 		}>;
 		columns: Array<{ field: string; headerName: string; rowHeader?: boolean }>;
 		primaryAction: { buttonLabel: string; onAction: () => void };
 		rows: Array<{
 			name: string;
-			onboardingState: string;
 			uuid: string;
 		}>;
 	}): ReactElement => (
@@ -213,19 +202,14 @@ describe("ApplicationInformationListPage", () => {
 					isDeleted: false,
 					migrationOrTransitionPlan: "Phased transition",
 					overview: "Overview text",
-					onboardingState: "under_review",
 					securityAndPrivacy: "Protected B controls apply",
 					serviceNameEn: "Example service",
 					serviceNameFr: "Service exemple",
-					submittedAt: null,
 					technologyAndProtocol: "OIDC with backend mediation",
-					underReviewAt: null,
 					updatedAt: null,
 					usage: "Partner onboarding usage",
 					uuid: "application-information-uuid-1",
 					workspaceId: 9,
-					approvedAt: null,
-					launchedAt: null,
 				},
 			],
 			error: null,
@@ -236,10 +220,9 @@ describe("ApplicationInformationListPage", () => {
 		render(<ApplicationInformationListPage />);
 		expect(screen.getByRole("cell", { name: "Example service" })).toBeTruthy();
 		expect(screen.queryByText("Service exemple")).toBeNull();
-		expect(screen.getAllByRole("columnheader")).toHaveLength(2);
+		expect(screen.getAllByRole("columnheader")).toHaveLength(1);
 		expect(screen.getByRole("columnheader", { name: "Name" })).toBeTruthy();
 		expect(screen.queryAllByRole("rowheader")).toHaveLength(0);
-		expect(screen.getByText(/under review/i)).toBeTruthy();
 
 		expect(
 			screen.getByRole("heading", {
@@ -299,22 +282,17 @@ describe("ApplicationInformationListPage", () => {
 		vi.mocked(useWorkspaceApplicationInformationList).mockReturnValue({
 			applicationInformationRecords: [
 				{
-					approvedAt: null,
 					createdAt: "2026-07-30T15:00:00Z",
 					createdBy: 42,
 					deletedAt: null,
 					id: 17,
 					isDeleted: false,
-					launchedAt: null,
 					migrationOrTransitionPlan: "Phased transition",
-					onboardingState: "under_review",
 					overview: "Overview text",
 					securityAndPrivacy: "Protected B controls apply",
 					serviceNameEn: "Example service",
 					serviceNameFr: "Service exemple",
-					submittedAt: null,
 					technologyAndProtocol: "OIDC with backend mediation",
-					underReviewAt: null,
 					updatedAt: null,
 					usage: "Partner onboarding usage",
 					uuid: "application-information-uuid-1",

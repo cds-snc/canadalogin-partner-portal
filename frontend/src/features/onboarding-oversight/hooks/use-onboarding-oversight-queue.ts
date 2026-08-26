@@ -20,7 +20,7 @@ export const onboardingOversightQueueQueryKey = (
 ) =>
 	[
 		"onboarding-oversight",
-		"queue",
+		"production-reviews",
 		normalizeOnboardingOversightQueueFilters(filters),
 	] as const;
 

@@ -16,6 +16,11 @@ from ..schemas.user import UserCreateInternal, UserReadInternal
 from ..services.authorization_service import AuthorizationResolutionError, AuthorizationService
 from .config import settings
 from .exceptions.http_exceptions import CustomException, ForbiddenException, UnauthorizedException
+from .identity import (
+    email_satisfies_partner_access_policy,
+    normalize_email_identity,
+    resolve_verified_email_claim,
+)
 
 oauth = OAuth()
 _client_registered = False
@@ -158,6 +163,11 @@ async def _has_active_canonical_assignment(db: AsyncSession, user: dict[str, Any
 
 
 async def _has_pending_invitation_for_email(db: AsyncSession, normalized_email: str) -> bool:
+    if not email_satisfies_partner_access_policy(
+        normalized_email,
+        settings.PARTNER_ACCESS_ALLOWED_EMAIL_DOMAINS,
+    ):
+        return False
     invitations_data = await crud_rp_application_developer_invitations.get_multi(
         db=db,
         invited_email=normalized_email,
@@ -188,12 +198,6 @@ async def _has_local_portal_access_or_pending_invitation(
     if not email_is_verified:
         return False
     return await _has_pending_invitation_for_email(db=db, normalized_email=normalized_email)
-
-
-def _has_verified_email_claim(claims: dict[str, Any]) -> bool:
-    # OIDC defines email_verified as a JSON boolean. String-like values are not
-    # accepted because permissive coercion would weaken the identity boundary.
-    return claims.get("email_verified") is True
 
 
 def _is_unbound_local_identity(user: dict[str, Any]) -> bool:
@@ -230,9 +234,14 @@ async def sync_oidc_user(db: AsyncSession, claims: dict[str, Any]) -> dict[str, 
     if not email:
         raise ForbiddenException("User is not allowed to access this site")
 
-    normalized_email = str(email).strip().lower()
+    normalized_email = normalize_email_identity(email)
+    if normalized_email is None:
+        raise ForbiddenException("User is not allowed to access this site")
     provider = settings.OIDC_PROVIDER_NAME
-    email_is_verified = _has_verified_email_claim(claims)
+    verified_email = resolve_verified_email_claim(claims)
+    email_is_verified = verified_email is not None
+    if verified_email is not None:
+        normalized_email = verified_email
 
     existing_user = await crud_users.get(
         db=db,

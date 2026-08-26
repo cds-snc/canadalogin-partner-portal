@@ -12,13 +12,18 @@ from collections.abc import Awaitable, Callable
 from dataclasses import dataclass
 from datetime import UTC, datetime, timedelta
 from typing import Any
+from urllib.parse import parse_qs, urlsplit
 from uuid import UUID
 
 import pytest
 from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
-
 from src.app.core.authorization import CanonicalRoleCode, LifecycleStatus
+from src.app.core.identity import (
+    AUTHENTICATED_EMAIL_KEY,
+    AUTHENTICATED_EMAIL_VERIFIED_KEY,
+    AUTHENTICATION_PROVIDER_KEY,
+)
 from src.app.core.local_persona_fixtures import (
     LOCAL_ALPHA_WORKSPACE,
     LOCAL_PERSONA_FIXTURES,
@@ -44,6 +49,7 @@ from src.app.services.local_persona_seed_service import (
 from src.app.services.rp_application_developer_invitation_service import (
     RPApplicationDeveloperInvitationService,
 )
+
 from tests.test_four_role_migrations_postgres import (
     TemporaryPostgresDatabase,
     _temporary_postgres_database,
@@ -83,6 +89,9 @@ class _Context:
             "id": self.target_id,
             "uuid": self.target_uuid,
             "email": self.target_email,
+            AUTHENTICATED_EMAIL_KEY: self.target_email,
+            AUTHENTICATED_EMAIL_VERIFIED_KEY: True,
+            AUTHENTICATION_PROVIDER_KEY: "oidc",
             AUTHORIZATION_STATE_KEY: ResolvedAuthorizationState(),
         }
 
@@ -160,14 +169,23 @@ async def _run_assignment_acceptance_race(
             role=CanonicalRoleCode.READ_ONLY.value,
             invite_expires_at=datetime.now(UTC) + timedelta(days=1),
         )
-    raw_token = str(invitation["acceptance_url"]).rsplit("/", maxsplit=1)[-1]
+    fragment_parameters = parse_qs(
+        urlsplit(str(invitation["acceptance_url"])).fragment,
+        strict_parsing=True,
+    )
+    [raw_token] = fragment_parameters["token"]
+    async with session_factory() as db:
+        prepared_invitation_uuid = await invitation_service.prepare_developer_invitation(
+            db=db,
+            token=raw_token,
+        )
 
     async def accept(start: asyncio.Event) -> object:
         async with session_factory() as db:
             await start.wait()
-            return await RPApplicationDeveloperInvitationService().accept_developer_invitation(
+            return await RPApplicationDeveloperInvitationService().accept_prepared_developer_invitation(
                 db=db,
-                token=raw_token,
+                invitation_uuid=prepared_invitation_uuid,
                 current_user=context.target,
             )
 

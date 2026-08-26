@@ -447,6 +447,34 @@ class AuthorizationService:
             ) in rows
         ]
 
+    async def get_workspace_role_assignment_by_uuid(
+        self,
+        db: AsyncSession,
+        *,
+        workspace_uuid: UUID,
+        assignment_uuid: UUID,
+        actor_user_id: int,
+    ) -> RoleAssignmentRead:
+        """Read one active assignment after validating its workspace ancestry."""
+
+        await self._require_workspace_role_management_scope(
+            db,
+            actor_user_id=actor_user_id,
+            workspace_uuid=workspace_uuid,
+            managed_roles=frozenset(),
+        )
+        workspace = await self._require_active_workspace_by_uuid(db, workspace_uuid)
+        assignment, target_user = await self._require_active_partner_assignment_by_uuid(
+            db,
+            workspace_id=workspace.id,
+            assignment_uuid=assignment_uuid,
+        )
+        return self._partner_assignment_read(
+            assignment=assignment,
+            target_user=target_user,
+            workspace=workspace,
+        )
+
     async def search_workspace_role_assignment_candidates(
         self,
         db: AsyncSession,
@@ -592,6 +620,44 @@ class AuthorizationService:
             workspace=workspace,
         )
 
+    async def replace_partner_role_by_assignment_uuid(
+        self,
+        db: AsyncSession,
+        *,
+        workspace_uuid: UUID,
+        assignment_uuid: UUID,
+        role: CanonicalRoleCode | str,
+        replaced_by_user_id: int,
+    ) -> RoleAssignmentRead:
+        """Replace only the active assignment named by its public UUID."""
+
+        canonical_role = self._parse_partner_role(role)
+        await self._require_workspace_role_management_scope(
+            db,
+            actor_user_id=replaced_by_user_id,
+            workspace_uuid=workspace_uuid,
+            managed_roles=frozenset({canonical_role}),
+        )
+        workspace = await self._require_active_workspace_by_uuid(db, workspace_uuid)
+        assignment, target_user = await self._require_active_partner_assignment_by_uuid(
+            db,
+            workspace_id=workspace.id,
+            assignment_uuid=assignment_uuid,
+        )
+        replacement = await self.replace_partner_role(
+            db,
+            target_user_id=target_user.id,
+            workspace_id=workspace.id,
+            role=canonical_role,
+            replaced_by_user_id=replaced_by_user_id,
+            expected_assignment_uuid=assignment.uuid,
+        )
+        return self._partner_assignment_read(
+            assignment=replacement,
+            target_user=target_user,
+            workspace=workspace,
+        )
+
     async def revoke_partner_role_by_uuid(
         self,
         db: AsyncSession,
@@ -620,6 +686,36 @@ class AuthorizationService:
             target_user_id=target_user.id,
             workspace_id=workspace.id,
             revoked_by_user_id=revoked_by_user_id,
+        )
+
+    async def revoke_partner_role_by_assignment_uuid(
+        self,
+        db: AsyncSession,
+        *,
+        workspace_uuid: UUID,
+        assignment_uuid: UUID,
+        revoked_by_user_id: int,
+    ) -> None:
+        """Revoke only the active assignment named by its public UUID."""
+
+        await self._require_workspace_role_management_scope(
+            db,
+            actor_user_id=revoked_by_user_id,
+            workspace_uuid=workspace_uuid,
+            managed_roles=frozenset(),
+        )
+        workspace = await self._require_active_workspace_by_uuid(db, workspace_uuid)
+        assignment, target_user = await self._require_active_partner_assignment_by_uuid(
+            db,
+            workspace_id=workspace.id,
+            assignment_uuid=assignment_uuid,
+        )
+        await self.revoke_partner_role(
+            db,
+            target_user_id=target_user.id,
+            workspace_id=workspace.id,
+            revoked_by_user_id=revoked_by_user_id,
+            expected_assignment_uuid=assignment.uuid,
         )
 
     async def assign_cl_admin(
@@ -850,6 +946,7 @@ class AuthorizationService:
         workspace_id: int,
         role: CanonicalRoleCode | str,
         replaced_by_user_id: int,
+        expected_assignment_uuid: UUID | None = None,
     ) -> RPApplicationAccessGrant:
         """Atomically revoke the current partner role and create its replacement."""
 
@@ -878,6 +975,8 @@ class AuthorizationService:
             workspace_id=workspace_id,
         )
         if active_grant is None:
+            raise NotFoundException("Active partner role assignment not found")
+        if expected_assignment_uuid is not None and active_grant.uuid != expected_assignment_uuid:
             raise NotFoundException("Active partner role assignment not found")
 
         replaced_at = datetime.now(UTC)
@@ -923,6 +1022,7 @@ class AuthorizationService:
         target_user_id: int,
         workspace_id: int,
         revoked_by_user_id: int,
+        expected_assignment_uuid: UUID | None = None,
     ) -> RPApplicationAccessGrant:
         """Revoke the active canonical partner role while retaining history."""
 
@@ -949,6 +1049,8 @@ class AuthorizationService:
         )
         if active_grant is None:
             raise NotFoundException("Active partner role assignment not found")
+        if expected_assignment_uuid is not None and active_grant.uuid != expected_assignment_uuid:
+            raise NotFoundException("Active partner role assignment not found")
 
         revoked_at = datetime.now(UTC)
         active_grant.status = LifecycleStatus.REVOKED.value
@@ -966,6 +1068,32 @@ class AuthorizationService:
         )
         await db.flush()
         return active_grant
+
+    async def _require_active_partner_assignment_by_uuid(
+        self,
+        db: AsyncSession,
+        *,
+        workspace_id: int,
+        assignment_uuid: UUID,
+    ) -> tuple[RPApplicationAccessGrant, User]:
+        row = (
+            await db.execute(
+                select(RPApplicationAccessGrant, User)
+                .join(User, User.id == RPApplicationAccessGrant.user_id)
+                .where(
+                    RPApplicationAccessGrant.uuid == assignment_uuid,
+                    RPApplicationAccessGrant.workspace_id == workspace_id,
+                    RPApplicationAccessGrant.status == LifecycleStatus.ACTIVE.value,
+                    RPApplicationAccessGrant.is_deleted.is_(False),
+                    User.enabled.is_(True),
+                    User.is_deleted.is_(False),
+                )
+            )
+        ).one_or_none()
+        if row is None:
+            raise NotFoundException("Active partner role assignment not found")
+        assignment, target_user = row
+        return assignment, target_user
 
     async def _require_active_user_by_uuid(
         self,

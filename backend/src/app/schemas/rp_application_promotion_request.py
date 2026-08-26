@@ -1,25 +1,37 @@
 import uuid as uuid_pkg
 from datetime import datetime
-from typing import Literal
+from typing import Annotated, Literal
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, StringConstraints
 from pydantic.alias_generators import to_camel
 
 PromotionRequestTargetEnvironment = Literal["production"]
-PromotionRequestStatus = Literal[
-    "review_tracked",
-    "changes_requested",
+ProductionReviewStatus = Literal[
+    "pending",
     "approved",
-    "launched",
+    "rejected",
 ]
-PromotionReviewStatus = Literal[
-    "changes_requested",
+# Compatibility name for internal imports while the product contract uses
+# Production-review terminology.
+PromotionRequestStatus = ProductionReviewStatus
+ProductionReviewDecisionStatus = Literal[
     "approved",
-    "launched",
+    "rejected",
+]
+# Internal compatibility name for service and repository imports.
+PromotionReviewStatus = ProductionReviewDecisionStatus
+
+ExternalReference = Annotated[
+    str,
+    StringConstraints(strip_whitespace=True, min_length=1, max_length=255),
+]
+ReviewerTeam = Annotated[
+    str,
+    StringConstraints(strip_whitespace=True, min_length=1, max_length=128),
 ]
 
 
-class RPApplicationPromotionRequestRead(BaseModel):
+class RPApplicationProductionReviewRead(BaseModel):
     model_config = ConfigDict(
         validate_by_name=True,
         validate_by_alias=True,
@@ -28,7 +40,7 @@ class RPApplicationPromotionRequestRead(BaseModel):
     )
 
     target_environment: PromotionRequestTargetEnvironment
-    status: PromotionRequestStatus
+    status: ProductionReviewStatus
     external_reference: str | None = None
     reviewed_by_user_uuid: uuid_pkg.UUID | None = None
     reviewed_by_team: str | None = None
@@ -39,8 +51,8 @@ class RPApplicationPromotionRequestRead(BaseModel):
     updated_at: datetime | None = None
 
 
-class ApplicationRPConfigurationPromotionRequestRead(RPApplicationPromotionRequestRead):
-    """Promotion review context with public Application and lineage identifiers."""
+class ApplicationRPConfigurationProductionReviewRead(RPApplicationProductionReviewRead):
+    """Production-review context with public Application and lineage identifiers."""
 
     application_information_uuid: uuid_pkg.UUID
     source_rp_configuration_uuid: uuid_pkg.UUID | None = None
@@ -48,7 +60,7 @@ class ApplicationRPConfigurationPromotionRequestRead(RPApplicationPromotionReque
     target_configuration_name: str = Field(..., min_length=1, max_length=128)
 
 
-class PromotionRequestUpsert(BaseModel):
+class ProductionReviewRequest(BaseModel):
     model_config = ConfigDict(
         extra="forbid",
         validate_by_name=True,
@@ -57,10 +69,10 @@ class PromotionRequestUpsert(BaseModel):
         populate_by_name=True,
     )
 
-    external_reference: str | None = Field(default=None, min_length=1, max_length=255)
+    external_reference: ExternalReference
 
 
-class PromotionReviewUpdate(BaseModel):
+class ProductionReviewDecision(BaseModel):
     model_config = ConfigDict(
         extra="forbid",
         validate_by_name=True,
@@ -69,9 +81,16 @@ class PromotionReviewUpdate(BaseModel):
         populate_by_name=True,
     )
 
-    status: PromotionReviewStatus
-    external_reference: str | None = Field(default=None, min_length=1, max_length=255)
-    reviewed_by_team: str | None = Field(default=None, min_length=1, max_length=128)
+    status: ProductionReviewDecisionStatus
+    external_reference: ExternalReference | None = None
+    reviewed_by_team: ReviewerTeam | None = None
+
+
+# Internal source compatibility while service/repository names are migrated.
+RPApplicationPromotionRequestRead = RPApplicationProductionReviewRead
+ApplicationRPConfigurationPromotionRequestRead = ApplicationRPConfigurationProductionReviewRead
+PromotionRequestUpsert = ProductionReviewRequest
+PromotionReviewUpdate = ProductionReviewDecision
 
 
 class RPApplicationPromotionRequestCreateInternal(BaseModel):
@@ -79,10 +98,13 @@ class RPApplicationPromotionRequestCreateInternal(BaseModel):
 
     rp_application_id: int
     target_environment: PromotionRequestTargetEnvironment = "production"
-    status: PromotionRequestStatus = "review_tracked"
-    external_reference: str | None = Field(default=None, min_length=1, max_length=255)
+    review_status: ProductionReviewStatus = "pending"
+    # The non-null legacy column remains during the expand/compatibility phase.
+    # It is not exposed and is never used to derive a product outcome.
+    status: Literal["review_tracked"] = "review_tracked"
+    external_reference: ExternalReference | None = None
     reviewed_by_user_id: int | None = None
-    reviewed_by_team: str | None = Field(default=None, min_length=1, max_length=128)
+    reviewed_by_team: ReviewerTeam | None = None
     requested_at: datetime
     reviewed_at: datetime | None = None
     decided_at: datetime | None = None
@@ -91,10 +113,10 @@ class RPApplicationPromotionRequestCreateInternal(BaseModel):
 class RPApplicationPromotionRequestUpdate(BaseModel):
     model_config = ConfigDict(arbitrary_types_allowed=True)
 
-    status: PromotionRequestStatus | None = None
-    external_reference: str | None = Field(default=None, min_length=1, max_length=255)
+    review_status: ProductionReviewStatus | None = None
+    external_reference: ExternalReference | None = None
     reviewed_by_user_id: int | None = None
-    reviewed_by_team: str | None = Field(default=None, min_length=1, max_length=128)
+    reviewed_by_team: ReviewerTeam | None = None
     requested_at: datetime | None = None
     reviewed_at: datetime | None = None
     decided_at: datetime | None = None

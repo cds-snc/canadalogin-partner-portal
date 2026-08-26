@@ -239,13 +239,10 @@ export const UsersPage = (): FunctionComponent => {
 								{
 									buttonId: (row) => `manage-invitation-${row.invitationUuid}`,
 									buttonLabel: t("users.manageAction"),
-									onAction: (row): void => {
-										void navigate({
-											params: { workspaceUuid: row.workspaceUuid },
-											to: "/workspaces/$workspaceUuid/access",
-										});
-									},
+									href: (row) =>
+										`/workspaces/${row.workspaceUuid}/access/invitations/${row.invitationUuid}`,
 									screenReaderLabel: (row) => row.email,
+									variant: "link",
 								},
 							]}
 						/>

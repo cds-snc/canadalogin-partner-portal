@@ -199,6 +199,75 @@ async def write_workspace_role_assignment(
     )
 
 
+@router.get(
+    "/workspaces/{workspaceUuid}/access/assignments/{assignmentUuid}",
+    response_model=RoleAssignmentRead,
+    responses=error_responses(401, 403, 404, 422, 500),
+)
+async def read_workspace_role_assignment(
+    workspace_uuid: Annotated[UUID, Path(alias="workspaceUuid")],
+    assignment_uuid: Annotated[UUID, Path(alias="assignmentUuid")],
+    db: Annotated[AsyncSession, Depends(async_get_db)],
+    service: Annotated[AuthorizationService, Depends(get_authorization_service)],
+    current_user: Annotated[dict[str, Any], Depends(get_current_user)],
+) -> RoleAssignmentRead:
+    return await service.get_workspace_role_assignment_by_uuid(
+        db,
+        workspace_uuid=workspace_uuid,
+        assignment_uuid=assignment_uuid,
+        actor_user_id=_current_user_id(current_user),
+    )
+
+
+@router.patch(
+    "/workspaces/{workspaceUuid}/access/assignments/{assignmentUuid}",
+    response_model=RoleAssignmentRead,
+    responses=error_responses(400, 401, 403, 404, 422, 500),
+)
+async def patch_workspace_role_assignment_by_assignment_uuid(
+    workspace_uuid: Annotated[UUID, Path(alias="workspaceUuid")],
+    assignment_uuid: Annotated[UUID, Path(alias="assignmentUuid")],
+    payload: PartnerRoleAssignmentUpdate,
+    db: Annotated[AsyncSession, Depends(async_get_db)],
+    service: Annotated[AuthorizationService, Depends(get_authorization_service)],
+    current_user: Annotated[dict[str, Any], Depends(get_current_user)],
+) -> RoleAssignmentRead:
+    return await _commit_mutation(
+        db,
+        service.replace_partner_role_by_assignment_uuid(
+            db,
+            workspace_uuid=workspace_uuid,
+            assignment_uuid=assignment_uuid,
+            role=payload.role,
+            replaced_by_user_id=_current_user_id(current_user),
+        ),
+    )
+
+
+@router.delete(
+    "/workspaces/{workspaceUuid}/access/assignments/{assignmentUuid}",
+    response_model=RoleAssignmentMutationMessage,
+    responses=error_responses(401, 403, 404, 422, 500),
+)
+async def erase_workspace_role_assignment_by_assignment_uuid(
+    workspace_uuid: Annotated[UUID, Path(alias="workspaceUuid")],
+    assignment_uuid: Annotated[UUID, Path(alias="assignmentUuid")],
+    db: Annotated[AsyncSession, Depends(async_get_db)],
+    service: Annotated[AuthorizationService, Depends(get_authorization_service)],
+    current_user: Annotated[dict[str, Any], Depends(get_current_user)],
+) -> RoleAssignmentMutationMessage:
+    await _commit_mutation(
+        db,
+        service.revoke_partner_role_by_assignment_uuid(
+            db,
+            workspace_uuid=workspace_uuid,
+            assignment_uuid=assignment_uuid,
+            revoked_by_user_id=_current_user_id(current_user),
+        ),
+    )
+    return RoleAssignmentMutationMessage(message="Workspace role assignment revoked.")
+
+
 @router.patch(
     "/workspaces/{workspaceUuid}/role-assignments/{userUuid}",
     response_model=RoleAssignmentRead,

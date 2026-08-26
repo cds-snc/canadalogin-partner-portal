@@ -186,7 +186,7 @@ export const WorkspaceRPRegistrationStepPage = (): FunctionComponent => {
 			? parentApplication.serviceNameFr
 			: parentApplication.serviceNameEn
 		: "";
-	const { isSaving, isSubmitting, saveDraft, submit } =
+	const { complete, isCompleting, isSaving, saveDraft } =
 		useWorkspaceRPRegistrationActions();
 	const [failedSave, setFailedSave] = useState<FailedSave | null>(null);
 	const [formDraft, setFormDraft] = useState<FormDraft | null>(null);
@@ -496,7 +496,7 @@ export const WorkspaceRPRegistrationStepPage = (): FunctionComponent => {
 		setRequestError(null);
 	};
 
-	const handleSubmit = async (): Promise<void> => {
+	const handleComplete = async (): Promise<void> => {
 		if (!draft) return;
 		setRequestError(null);
 		const pendingValidation: Partial<
@@ -528,7 +528,7 @@ export const WorkspaceRPRegistrationStepPage = (): FunctionComponent => {
 			return;
 		}
 		try {
-			await submit(
+			await complete(
 				workspaceUuid,
 				rpApplicationUuid,
 				draft.registrationDraftVersion,
@@ -661,13 +661,13 @@ export const WorkspaceRPRegistrationStepPage = (): FunctionComponent => {
 						previousStep ? registrationStepPath(previousStep) : undefined
 					}
 					errorSummary={
-							showValidationSummary ? (
-								<ErrorSummary
-									focusOnRender
-									errorLinks={errorLinks}
-									heading={t("workspaces.registration.validationSummaryHeading")}
-									listen={false}
-								/>
+						showValidationSummary ? (
+							<ErrorSummary
+								focusOnRender
+								errorLinks={errorLinks}
+								heading={t("workspaces.registration.validationSummaryHeading")}
+								listen={false}
+							/>
 						) : undefined
 					}
 					submitLabel={
@@ -755,20 +755,20 @@ export const WorkspaceRPRegistrationStepPage = (): FunctionComponent => {
 					))}
 					<Notice
 						noticeRole="info"
-						noticeTitle={t("workspaces.registration.submitNoticeTitle")}
+						noticeTitle={t("workspaces.registration.completionNoticeTitle")}
 						noticeTitleTag="h2"
 					>
-						<Text>{t("workspaces.registration.submitNoticeBody")}</Text>
+						<Text>{t("workspaces.registration.completionNoticeBody")}</Text>
 					</Notice>
 					<div className="flex flex-wrap gap-200">
 						<Button
-							disabled={isSubmitting}
+							disabled={isCompleting}
 							type="button"
-							onGcdsClick={() => void handleSubmit()}
+							onGcdsClick={() => void handleComplete()}
 						>
-							{isSubmitting
-								? t("workspaces.registration.submittingAction")
-								: t("workspaces.registration.submitAction")}
+							{isCompleting
+								? t("workspaces.registration.completingAction")
+								: t("workspaces.registration.completeAction")}
 						</Button>
 						<Button
 							buttonRole="secondary"

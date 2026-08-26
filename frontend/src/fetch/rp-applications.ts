@@ -1,4 +1,4 @@
-import { requestJson } from "@/fetch";
+import { requestBlob, requestJson } from "@/fetch";
 import type { CanonicalRole, PartnerRole } from "@/features/auth/authorization";
 import type { ApiMessageResponse } from "./api-types";
 import { HttpRequestError } from "./errors";
@@ -244,7 +244,7 @@ export type WorkspaceRPApplicationRegistrationDraftRead = {
 	applicationInformationUuid: string;
 	configurationName?: string;
 	partnerEnvironment?: string | null;
-	onboardingState: "draft";
+	registrationCompletedAt: null;
 	registrationAnswers: WorkspaceRPApplicationRegistrationAnswers;
 	registrationDraftVersion: number;
 	registrationLastCompletedStep?: RegistrationDataStep | null;
@@ -252,40 +252,14 @@ export type WorkspaceRPApplicationRegistrationDraftRead = {
 	workspaceUuid: string;
 };
 
-export type WorkspaceRPApplicationRegistrationSubmissionRead = {
-	onboardingState: "submitted";
+export type WorkspaceRPApplicationRegistrationCompletionRead = {
+	applicationInformationUuid: string;
+	registrationCompletedAt: string;
 	registrationDraftVersion: number;
 	rpApplicationUuid: string;
 	serviceNameEn: string;
 	serviceNameFr: string;
 	workspaceUuid: string;
-};
-
-export type RPApplicationUpdate = WorkspaceRPApplicationRegistrationAnswers;
-
-export type RPApplicationRead = {
-	id: number;
-	uuid: string;
-	workspaceId: number | null;
-	departmentId?: number | null;
-	applicationInformationId?: number | null;
-	dnrAppName: string;
-	configurationName?: string | null;
-	partnerEnvironment?: string | null;
-	oidcRegistrationPayload?: Record<string, unknown> | null;
-	onboardingState?: string | null;
-	submittedAt?: string | null;
-	underReviewAt?: string | null;
-	approvedAt?: string | null;
-	launchedAt?: string | null;
-	promotionStatus?: string | null;
-	promotionRequestedAt?: string | null;
-	status: string | null;
-	createdBy: number | null;
-	createdAt: string;
-	isDeleted: boolean;
-	canadaLoginEnvironment?: string | null;
-	ibmSvApplicationId?: string | null;
 };
 
 export type AccessibleRPApplicationRead = {
@@ -294,11 +268,11 @@ export type AccessibleRPApplicationRead = {
 	dnrAppName: string;
 	configurationName?: string | null;
 	partnerEnvironment?: string | null;
-	ibmSvApplicationId?: string | null;
 	departmentUuid?: string | null;
 	canadaLoginEnvironment?: string | null;
-	onboardingState?: string | null;
-	promotionStatus?: string | null;
+	registrationCompletedAt?: string | null;
+	productionReviewStatus?: ProductionReviewStatus | null;
+	productionReviewReconciliationRequired?: boolean;
 	role: PartnerRole;
 	workspaceUuid: string;
 };
@@ -306,8 +280,9 @@ export type AccessibleRPApplicationRead = {
 export type RPApplicationSummaryRead = {
 	applicationInformationUuid?: string;
 	canadaLoginEnvironment?: string | null;
-	onboardingState?: string | null;
-	promotionStatus?: string | null;
+	registrationCompletedAt?: string | null;
+	productionReviewStatus?: ProductionReviewStatus | null;
+	productionReviewReconciliationRequired?: boolean;
 	registrationLastCompletedStep?: RegistrationDataStep | null;
 	resumeTaskPath?: string | null;
 	role?: CanonicalRole | null;
@@ -345,9 +320,10 @@ export type WorkspaceRPApplicationConfigurationRead = {
 	configurationName?: string | null;
 	partnerEnvironment?: string | null;
 	offlinePublicKeyProvided: boolean;
-	onboardingState?: string | null;
-	promotionStatus?: string | null;
+	productionReviewStatus?: ProductionReviewStatus | null;
+	productionReviewReconciliationRequired?: boolean;
 	registrationAnswers: WorkspaceRPApplicationRegistrationAnswers;
+	registrationCompletedAt?: string | null;
 	registrationDraftVersion: number;
 	registrationLastCompletedStep?: RegistrationDataStep | null;
 	rpApplicationUuid: string;
@@ -364,30 +340,31 @@ export type ApplicationRPConfigurationRead = Omit<
 	configurationName: string;
 };
 
-export type ApplicationRPConfigurationProgressionCreate = {
+export type ApplicationRPConfigurationCopyCreate = {
 	targetConfigurationName: string;
 	targetPartnerEnvironment: string;
-	targetEnvironment: "staging" | "production";
+	targetEnvironment: CanadaLoginEnvironment;
 };
 
-export type ApplicationRPConfigurationProgressionRead = {
+export type ApplicationRPConfigurationCopyRead = {
 	applicationInformationUuid: string;
-	promotionStatus: string | null;
-	selfServe: boolean;
+	copyPolicyVersion: number;
 	sourceConfigurationName: string;
 	sourcePartnerEnvironment: string | null;
 	sourceEnvironment: CanadaLoginEnvironment;
 	sourceRpConfigurationUuid: string;
 	targetConfigurationName: string;
-	targetPartnerEnvironment: string | null;
-	targetEnvironment: "staging" | "production";
+	targetPartnerEnvironment: string;
+	targetEnvironment: CanadaLoginEnvironment;
 	targetRegistrationDraftVersion: number;
 	targetRegistrationLastCompletedStep?: RegistrationDataStep | null;
 	targetRpConfigurationUuid: string;
 	workspaceUuid: string;
 };
 
-export type ApplicationRPConfigurationPromotionRequestRead = {
+export type ProductionReviewStatus = "pending" | "approved" | "rejected";
+
+export type ApplicationRPConfigurationProductionReviewRead = {
 	applicationInformationUuid: string;
 	createdAt: string;
 	decidedAt: string | null;
@@ -397,21 +374,21 @@ export type ApplicationRPConfigurationPromotionRequestRead = {
 	reviewedByUserUuid: string | null;
 	requestedAt: string;
 	sourceRpConfigurationUuid: string | null;
-	status: "review_tracked" | "changes_requested" | "approved" | "launched";
+	status: ProductionReviewStatus;
 	targetConfigurationName: string;
 	targetEnvironment: "production";
 	targetRpConfigurationUuid: string;
 	updatedAt: string | null;
 };
 
-export type ApplicationRPConfigurationPromotionRequestUpsert = {
-	externalReference?: string;
+export type ApplicationRPConfigurationProductionReviewRequest = {
+	externalReference: string;
 };
 
-export type ApplicationRPConfigurationPromotionReviewUpdate = {
+export type ApplicationRPConfigurationProductionReviewDecision = {
 	externalReference?: string;
 	reviewedByTeam?: string;
-	status: "changes_requested" | "approved" | "launched";
+	status: "approved" | "rejected";
 };
 
 export type RPApplicationClientCredentialsRead = {
@@ -445,45 +422,6 @@ export type RPApplicationUsageSummaryRead = {
 	succeeded: number;
 	total: number;
 };
-
-export type AccessibleRPApplicationSummaryRead = {
-	id: number;
-	uuid: string;
-	dnrAppName: string;
-	departmentId: number | null;
-};
-
-export type AccessibleRPApplicationDepartmentAssignRequest = {
-	departmentUuid: string;
-};
-
-export type RPApplicationUsageAuditEventRead = {
-	country: string;
-	ipVersion: number | null;
-	origin: string;
-	originDisplay: string;
-	result: string;
-	timeSeconds: number | null;
-	username: string;
-	usernameDisplay: string;
-	usernameKnown: boolean;
-};
-
-export type RPApplicationUsageAuditTrailRead = {
-	events: Array<RPApplicationUsageAuditEventRead>;
-	next: string | null;
-	total: number | null;
-};
-
-export type RPApplicationUsageAuditTrailRequest = {
-	selectedDate: string;
-	size?: number;
-};
-
-export type RPApplicationUsageAuditTrailSearchAfterRequest =
-	RPApplicationUsageAuditTrailRequest & {
-		searchAfter: string;
-	};
 
 const toUsageSelectedDateTimestamp = (selectedDate: string): string => {
 	const trimmedDate = selectedDate.trim();
@@ -584,39 +522,6 @@ export const getAccessibleRPApplication = async (
 	return result;
 };
 
-export const getAccessibleRPApplicationDepartment = async (
-	rpApplicationUuid: string
-): Promise<AccessibleRPApplicationSummaryRead> => {
-	const result = await requestJson<AccessibleRPApplicationSummaryRead | null>(
-		`/api/v1/rp-applications/accessible/${encodeURIComponent(rpApplicationUuid)}/department`,
-		{
-			cache: "no-store",
-			method: "GET",
-		}
-	);
-	if (!result) {
-		throw new Error("Failed to load RP application department");
-	}
-	return result;
-};
-
-export const assignAccessibleRPApplicationDepartment = async (
-	rpApplicationUuid: string,
-	payload: AccessibleRPApplicationDepartmentAssignRequest
-): Promise<AccessibleRPApplicationSummaryRead> => {
-	const result = await requestJson<AccessibleRPApplicationSummaryRead | null>(
-		`/api/v1/rp-applications/accessible/${encodeURIComponent(rpApplicationUuid)}/department`,
-		{
-			body: JSON.stringify(payload),
-			method: "PATCH",
-		}
-	);
-	if (!result) {
-		throw new Error("Failed to assign RP application department");
-	}
-	return result;
-};
-
 export const getRPApplications = async (
 	workspaceUuid: string
 ): Promise<Array<RPApplicationSummaryRead>> => {
@@ -702,43 +607,42 @@ export const getApplicationRPConfigurationConfiguration = async (
 	return result;
 };
 
-export const createApplicationRPConfigurationProgression = async (
+export const createApplicationRPConfigurationCopy = async (
 	workspaceUuid: string,
 	applicationInformationUuid: string,
 	sourceRpConfigurationUuid: string,
-	payload: ApplicationRPConfigurationProgressionCreate,
-	progressionCreationKey: string
-): Promise<ApplicationRPConfigurationProgressionRead> => {
-	const result =
-		await requestJson<ApplicationRPConfigurationProgressionRead | null>(
-			`/api/v1/workspaces/${encodeURIComponent(workspaceUuid)}/application-information/${encodeURIComponent(applicationInformationUuid)}/rp-configurations/${encodeURIComponent(sourceRpConfigurationUuid)}/progression`,
-			{
-				body: JSON.stringify(payload),
-				headers: { "Idempotency-Key": progressionCreationKey },
-				method: "POST",
-			}
-		);
+	payload: ApplicationRPConfigurationCopyCreate,
+	copyCreationKey: string
+): Promise<ApplicationRPConfigurationCopyRead> => {
+	const result = await requestJson<ApplicationRPConfigurationCopyRead | null>(
+		`/api/v1/workspaces/${encodeURIComponent(workspaceUuid)}/application-information/${encodeURIComponent(applicationInformationUuid)}/rp-configurations/${encodeURIComponent(sourceRpConfigurationUuid)}/copy`,
+		{
+			body: JSON.stringify(payload),
+			headers: { "Idempotency-Key": copyCreationKey },
+			method: "POST",
+		}
+	);
 	if (!result) {
-		throw new Error("Failed to create RP configuration progression target");
+		throw new Error("Failed to copy RP configuration");
 	}
 	return result;
 };
 
-const applicationRPConfigurationPromotionRequestPath = (
+const applicationRPConfigurationProductionReviewPath = (
 	workspaceUuid: string,
 	applicationInformationUuid: string,
 	rpConfigurationUuid: string
 ): string =>
-	`/api/v1/workspaces/${encodeURIComponent(workspaceUuid)}/application-information/${encodeURIComponent(applicationInformationUuid)}/rp-configurations/${encodeURIComponent(rpConfigurationUuid)}/promotion-request`;
+	`/api/v1/workspaces/${encodeURIComponent(workspaceUuid)}/application-information/${encodeURIComponent(applicationInformationUuid)}/rp-configurations/${encodeURIComponent(rpConfigurationUuid)}/production-review`;
 
-export const getApplicationRPConfigurationPromotionRequest = async (
+export const getApplicationRPConfigurationProductionReview = async (
 	workspaceUuid: string,
 	applicationInformationUuid: string,
 	rpConfigurationUuid: string
-): Promise<ApplicationRPConfigurationPromotionRequestRead> => {
+): Promise<ApplicationRPConfigurationProductionReviewRead> => {
 	const result =
-		await requestJson<ApplicationRPConfigurationPromotionRequestRead | null>(
-			applicationRPConfigurationPromotionRequestPath(
+		await requestJson<ApplicationRPConfigurationProductionReviewRead | null>(
+			applicationRPConfigurationProductionReviewPath(
 				workspaceUuid,
 				applicationInformationUuid,
 				rpConfigurationUuid
@@ -753,11 +657,11 @@ export const requestApplicationRPConfigurationProductionReview = async (
 	workspaceUuid: string,
 	applicationInformationUuid: string,
 	rpConfigurationUuid: string,
-	payload: ApplicationRPConfigurationPromotionRequestUpsert
-): Promise<ApplicationRPConfigurationPromotionRequestRead> => {
+	payload: ApplicationRPConfigurationProductionReviewRequest
+): Promise<ApplicationRPConfigurationProductionReviewRead> => {
 	const result =
-		await requestJson<ApplicationRPConfigurationPromotionRequestRead | null>(
-			applicationRPConfigurationPromotionRequestPath(
+		await requestJson<ApplicationRPConfigurationProductionReviewRead | null>(
+			applicationRPConfigurationProductionReviewPath(
 				workspaceUuid,
 				applicationInformationUuid,
 				rpConfigurationUuid
@@ -772,11 +676,11 @@ export const reviewApplicationRPConfigurationProductionRequest = async (
 	workspaceUuid: string,
 	applicationInformationUuid: string,
 	rpConfigurationUuid: string,
-	payload: ApplicationRPConfigurationPromotionReviewUpdate
-): Promise<ApplicationRPConfigurationPromotionRequestRead> => {
+	payload: ApplicationRPConfigurationProductionReviewDecision
+): Promise<ApplicationRPConfigurationProductionReviewRead> => {
 	const result =
-		await requestJson<ApplicationRPConfigurationPromotionRequestRead | null>(
-			applicationRPConfigurationPromotionRequestPath(
+		await requestJson<ApplicationRPConfigurationProductionReviewRead | null>(
+			applicationRPConfigurationProductionReviewPath(
 				workspaceUuid,
 				applicationInformationUuid,
 				rpConfigurationUuid
@@ -798,23 +702,6 @@ export const getWorkspaceRPApplicationConfiguration = async (
 		);
 	if (!result) {
 		throw new Error("Failed to load RP application configuration");
-	}
-	return result;
-};
-
-export const getRPApplication = async (
-	workspaceUuid: string,
-	rpApplicationUuid: string
-): Promise<RPApplicationRead> => {
-	const result = await requestJson<RPApplicationRead | null>(
-		`/api/v1/workspaces/${encodeURIComponent(workspaceUuid)}/applications/${encodeURIComponent(rpApplicationUuid)}`,
-		{
-			cache: "no-store",
-			method: "GET",
-		}
-	);
-	if (!result) {
-		throw new Error("Failed to load application");
 	}
 	return result;
 };
@@ -924,65 +811,45 @@ export const updateApplicationRPConfigurationRegistrationDraft = async (
 	return result;
 };
 
-export const submitWorkspaceRPApplicationRegistration = async (
+export const completeWorkspaceRPApplicationRegistration = async (
 	workspaceUuid: string,
 	rpApplicationUuid: string,
 	expectedDraftVersion: number
-): Promise<WorkspaceRPApplicationRegistrationSubmissionRead> => {
+): Promise<WorkspaceRPApplicationRegistrationCompletionRead> => {
 	const result =
-		await requestJson<WorkspaceRPApplicationRegistrationSubmissionRead | null>(
-			`/api/v1/workspaces/${encodeURIComponent(workspaceUuid)}/applications/${encodeURIComponent(rpApplicationUuid)}/onboarding-state`,
+		await requestJson<WorkspaceRPApplicationRegistrationCompletionRead | null>(
+			`/api/v1/workspaces/${encodeURIComponent(workspaceUuid)}/applications/${encodeURIComponent(rpApplicationUuid)}/registration/complete`,
 			{
 				body: JSON.stringify({
 					expectedDraftVersion,
-					targetState: "submitted",
 				}),
 				method: "POST",
 			}
 		);
 	if (!result) {
-		throw new Error("Failed to submit registration");
+		throw new Error("Failed to complete registration");
 	}
 	return result;
 };
 
-export const submitApplicationRPConfigurationRegistration = async (
+export const completeApplicationRPConfigurationRegistration = async (
 	workspaceUuid: string,
 	applicationInformationUuid: string,
 	rpConfigurationUuid: string,
 	expectedDraftVersion: number
-): Promise<WorkspaceRPApplicationRegistrationSubmissionRead> => {
+): Promise<WorkspaceRPApplicationRegistrationCompletionRead> => {
 	const result =
-		await requestJson<WorkspaceRPApplicationRegistrationSubmissionRead | null>(
-			`/api/v1/workspaces/${encodeURIComponent(workspaceUuid)}/application-information/${encodeURIComponent(applicationInformationUuid)}/rp-configurations/${encodeURIComponent(rpConfigurationUuid)}/onboarding-state`,
+		await requestJson<WorkspaceRPApplicationRegistrationCompletionRead | null>(
+			`/api/v1/workspaces/${encodeURIComponent(workspaceUuid)}/application-information/${encodeURIComponent(applicationInformationUuid)}/rp-configurations/${encodeURIComponent(rpConfigurationUuid)}/registration/complete`,
 			{
 				body: JSON.stringify({
 					expectedDraftVersion,
-					targetState: "submitted",
 				}),
 				method: "POST",
 			}
 		);
 	if (!result) {
-		throw new Error("Failed to submit RP configuration registration");
-	}
-	return result;
-};
-
-export const updateRPApplication = async (
-	workspaceUuid: string,
-	rpApplicationUuid: string,
-	payload: RPApplicationUpdate
-): Promise<RPApplicationRead> => {
-	const result = await requestJson<RPApplicationRead | null>(
-		`/api/v1/workspaces/${encodeURIComponent(workspaceUuid)}/applications/${encodeURIComponent(rpApplicationUuid)}`,
-		{
-			body: JSON.stringify(payload),
-			method: "PATCH",
-		}
-	);
-	if (!result) {
-		throw new Error("Failed to update application");
+		throw new Error("Failed to complete RP configuration registration");
 	}
 	return result;
 };
@@ -1150,6 +1017,25 @@ export const rotateAccessibleRPApplicationClientSecret = async (
 	return result;
 };
 
+export const getAccessibleRPApplicationSecretChangeLog = async (
+	rpApplicationUuid: string,
+	workspaceUuid?: string,
+	applicationInformationUuid?: string
+): Promise<Blob> => {
+	const ancestryQuery = buildAccessibleRPApplicationAncestryQuery(
+		workspaceUuid,
+		applicationInformationUuid
+	);
+	return requestBlob(
+		`/api/v1/rp-applications/accessible/${encodeURIComponent(rpApplicationUuid)}/client/secret-change-log${ancestryQuery}`,
+		{
+			cache: "no-store",
+			headers: { Accept: "text/csv" },
+			method: "GET",
+		}
+	);
+};
+
 export const getRPApplicationUsageSummary = async (
 	workspaceUuid: string,
 	rpApplicationUuid: string,
@@ -1194,120 +1080,6 @@ export const getApplicationRPConfigurationUsageSummary = async (
 	);
 	if (!result) {
 		throw new Error("Failed to load RP configuration usage summary");
-	}
-	return result;
-};
-
-export const getRPApplicationUsageAuditTrail = async (
-	workspaceUuid: string,
-	rpApplicationUuid: string,
-	request: RPApplicationUsageAuditTrailRequest
-): Promise<RPApplicationUsageAuditTrailRead> => {
-	const searchParameters = new URLSearchParams();
-	searchParameters.set(
-		"selected_date",
-		toUsageSelectedDateTimestamp(request.selectedDate)
-	);
-	if (typeof request.size === "number") {
-		searchParameters.set("size", String(request.size));
-	}
-
-	const result = await requestJson<RPApplicationUsageAuditTrailRead | null>(
-		`/api/v1/workspaces/${encodeURIComponent(workspaceUuid)}/applications/${encodeURIComponent(rpApplicationUuid)}/audit-events?${searchParameters.toString()}`,
-		{
-			cache: "no-store",
-			method: "GET",
-		}
-	);
-	if (!result) {
-		throw new Error("Failed to load application usage audit trail");
-	}
-	return result;
-};
-
-export const getApplicationRPConfigurationUsageAuditTrail = async (
-	workspaceUuid: string,
-	applicationInformationUuid: string,
-	rpConfigurationUuid: string,
-	request: RPApplicationUsageAuditTrailRequest
-): Promise<RPApplicationUsageAuditTrailRead> => {
-	const searchParameters = new URLSearchParams();
-	searchParameters.set(
-		"selected_date",
-		toUsageSelectedDateTimestamp(request.selectedDate)
-	);
-	if (typeof request.size === "number") {
-		searchParameters.set("size", String(request.size));
-	}
-	const result = await requestJson<RPApplicationUsageAuditTrailRead | null>(
-		`/api/v1/workspaces/${encodeURIComponent(workspaceUuid)}/application-information/${encodeURIComponent(applicationInformationUuid)}/rp-configurations/${encodeURIComponent(rpConfigurationUuid)}/audit-events?${searchParameters.toString()}`,
-		{
-			cache: "no-store",
-			method: "GET",
-		}
-	);
-	if (!result) {
-		throw new Error("Failed to load RP configuration audit trail");
-	}
-	return result;
-};
-
-export const getRPApplicationUsageAuditTrailSearchAfter = async (
-	workspaceUuid: string,
-	rpApplicationUuid: string,
-	request: RPApplicationUsageAuditTrailSearchAfterRequest
-): Promise<RPApplicationUsageAuditTrailRead> => {
-	const searchParameters = new URLSearchParams();
-	searchParameters.set(
-		"selected_date",
-		toUsageSelectedDateTimestamp(request.selectedDate)
-	);
-	searchParameters.set("search_after", request.searchAfter);
-	if (typeof request.size === "number") {
-		searchParameters.set("size", String(request.size));
-	}
-
-	const result = await requestJson<RPApplicationUsageAuditTrailRead | null>(
-		`/api/v1/workspaces/${encodeURIComponent(workspaceUuid)}/applications/${encodeURIComponent(rpApplicationUuid)}/audit-events/search-after?${searchParameters.toString()}`,
-		{
-			cache: "no-store",
-			method: "GET",
-		}
-	);
-	if (!result) {
-		throw new Error(
-			"Failed to load additional application usage audit trail events"
-		);
-	}
-	return result;
-};
-
-export const getApplicationRPConfigurationUsageAuditTrailSearchAfter = async (
-	workspaceUuid: string,
-	applicationInformationUuid: string,
-	rpConfigurationUuid: string,
-	request: RPApplicationUsageAuditTrailSearchAfterRequest
-): Promise<RPApplicationUsageAuditTrailRead> => {
-	const searchParameters = new URLSearchParams();
-	searchParameters.set(
-		"selected_date",
-		toUsageSelectedDateTimestamp(request.selectedDate)
-	);
-	searchParameters.set("search_after", request.searchAfter);
-	if (typeof request.size === "number") {
-		searchParameters.set("size", String(request.size));
-	}
-	const result = await requestJson<RPApplicationUsageAuditTrailRead | null>(
-		`/api/v1/workspaces/${encodeURIComponent(workspaceUuid)}/application-information/${encodeURIComponent(applicationInformationUuid)}/rp-configurations/${encodeURIComponent(rpConfigurationUuid)}/audit-events/search-after?${searchParameters.toString()}`,
-		{
-			cache: "no-store",
-			method: "GET",
-		}
-	);
-	if (!result) {
-		throw new Error(
-			"Failed to load additional RP configuration audit trail events"
-		);
 	}
 	return result;
 };

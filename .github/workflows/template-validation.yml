@@ -3,6 +3,9 @@ name: Template validation
 on:
   pull_request:
   push:
+    branches:
+      - main
+      - "release/**"
   workflow_dispatch:
 
 permissions:
@@ -12,6 +15,15 @@ jobs:
   validate-template:
     name: Validate template
     runs-on: ubuntu-latest
+    env:
+      APP_NAME: "CanadaLogin Partner Portal"
+      APP_DESCRIPTION: "CanadaLogin Partner Portal local development"
+      CONTACT_NAME: "CDS Auth Team"
+      CONTACT_EMAIL: "dev@example.com"
+      LICENSE_NAME: "MIT"
+      CORS_ORIGINS: '["http://127.0.0.1:3000","http://localhost:3000"]'
+      CORS_METHODS: '["GET","POST","PUT","PATCH","DELETE","OPTIONS"]'
+      CORS_HEADERS: '["Accept","Authorization","Content-Type","Idempotency-Key","Origin","X-Requested-With","X-Request-ID"]'
     steps:
       - name: Checkout
         uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
@@ -19,16 +31,38 @@ jobs:
           fetch-depth: 0
           persist-credentials: false
 
+      - name: Set up Node.js
+        if: ${{ hashFiles('frontend/pnpm-lock.yaml') != '' }}
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version: "22"
+
       - name: Install frontend dependencies
-        if: ${{ hashFiles('frontend/package-lock.json') != '' }}
-        run: npm ci --ignore-scripts --prefix frontend
+        if: ${{ hashFiles('frontend/pnpm-lock.yaml') != '' }}
+        run: |
+          corepack enable
+          corepack prepare pnpm@10.17.1 --activate
+          pnpm --dir frontend install --frozen-lockfile --ignore-scripts
+
+      - name: Set up Python
+        if: ${{ hashFiles('backend/uv.lock') != '' }}
+        uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5.6.0
+        with:
+          python-version: "3.12"
 
       - name: Install backend dependencies
-        if: ${{ hashFiles('backend/requirements-dev.txt') != '' }}
-        run: make install-dev-python
+        if: ${{ hashFiles('backend/uv.lock') != '' }}
+        env:
+          UV_LOCKED: "true"
+        run: |
+          python -m pip install uv==0.12.3
+          make install-dev-python PYTHON_BOOTSTRAP=python
 
       - name: Run local verification
-        run: scripts/delorean/run-local-verification.sh
+        env:
+          DELOREAN_BASE_SHA: ${{ github.event.pull_request.base.sha || github.event.before }}
+          DELOREAN_HEAD_SHA: ${{ github.sha }}
+        run: scripts/delorean/run-ci-verification.sh
 
       - name: Run OpenAPI checks
-        run: scripts/delorean/run-openapi-checks.sh
+        run: scripts/delorean/run-openapi-checks.sh --force

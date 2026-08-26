@@ -14,22 +14,26 @@ const defaultPostLoginPath = "/";
 const SAFE_APP_PATH_PREFIXES = [
 	"/accept-terms",
 	"/administration",
-	"/audit-logs",
-	"/departments",
-	"/invitations/rp-applications",
 	"/onboarding-oversight",
 	"/profile/setup",
+	"/reports",
 	"/roles",
 	"/support",
 	"/terms-and-conditions",
-	"/tiers",
 	"/users",
 	"/workspaces",
 	"/your-applications",
 ] as const;
 
+const SAFE_INVITATION_PATHS = new Set([
+	"/invitations/rp-applications",
+	"/invitations/rp-applications/accept",
+	"/invitations/rp-applications/prepare",
+]);
+
 const isSafeAppPathname = (pathname: string): boolean =>
 	pathname === "/" ||
+	SAFE_INVITATION_PATHS.has(pathname) ||
 	SAFE_APP_PATH_PREFIXES.some(
 		(prefix) => pathname === prefix || pathname.startsWith(`${prefix}/`)
 	);

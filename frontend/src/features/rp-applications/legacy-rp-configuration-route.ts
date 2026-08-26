@@ -7,10 +7,7 @@ import { getApplicationInformation } from "@/fetch/workspaces";
 
 const LEGACY_SUFFIX_MAP: Readonly<Record<string, string>> = {
 	"": "",
-	"/audit": "/audit",
 	"/configuration": "/configuration",
-	"/department-setup": "",
-	"/edit": "",
 	"/manage-credentials": "/manage-credentials",
 	"/mau-report": "/usage",
 	"/usage": "/usage",

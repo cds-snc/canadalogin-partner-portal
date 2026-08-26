@@ -1,10 +1,10 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import {
 	createWorkspaceRPApplicationRegistrationDraft,
+	completeWorkspaceRPApplicationRegistration,
 	getWorkspaceRPRegistrationValidationFieldNames,
 	getWorkspaceRPApplicationRegistrationDraft,
 	isWorkspaceRPRegistrationValidationError,
-	submitWorkspaceRPApplicationRegistration,
 	updateWorkspaceRPApplicationRegistrationDraft,
 	type WorkspaceRPApplicationRegistrationDraftPatch,
 } from "@/fetch/rp-applications";
@@ -13,7 +13,7 @@ import endpointsCompleteStepContract from "../../../../../tests/contracts/worksp
 const workspaceUuid = "018f6f83-0000-0000-0000-000000000201";
 const rpApplicationUuid = "018f6f83-0000-0000-0000-000000000701";
 const draft = {
-	onboardingState: "draft" as const,
+	registrationCompletedAt: null,
 	registrationAnswers: {
 		canadaLoginEnvironment: "test" as const,
 		serviceNameEn: "Benefits Portal",
@@ -174,10 +174,11 @@ describe("workspace RP registration API", () => {
 		).toEqual(["applicationEnvironmentUrlEn"]);
 	});
 
-	it("submits only the target state and expected draft version", async () => {
+	it("completes registration without creating a Production review", async () => {
 		const fetchMock = vi.spyOn(globalThis, "fetch").mockResolvedValue(
 			jsonResponse({
-				onboardingState: "submitted",
+				applicationInformationUuid: "application-information-uuid-1",
+				registrationCompletedAt: "2026-08-25T12:00:00Z",
 				registrationDraftVersion: 8,
 				rpApplicationUuid,
 				serviceNameEn: "Benefits Portal",
@@ -186,7 +187,7 @@ describe("workspace RP registration API", () => {
 			})
 		);
 
-		await submitWorkspaceRPApplicationRegistration(
+		await completeWorkspaceRPApplicationRegistration(
 			workspaceUuid,
 			rpApplicationUuid,
 			7
@@ -194,7 +195,9 @@ describe("workspace RP registration API", () => {
 
 		expect(JSON.parse(String(fetchMock.mock.calls[0]?.[1]?.body))).toEqual({
 			expectedDraftVersion: 7,
-			targetState: "submitted",
 		});
+		expect(fetchMock.mock.calls[0]?.[0]).toBe(
+			`http://localhost:8000/api/v1/workspaces/${workspaceUuid}/applications/${rpApplicationUuid}/registration/complete`
+		);
 	});
 });

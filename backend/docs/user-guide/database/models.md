@@ -28,8 +28,8 @@ src/app/models/
 ├── __init__.py          # Imports all models for Alembic discovery
 ├── user.py             # User authentication model
 ├── post.py             # Example content model with relationships
-├── tier.py             # User subscription tiers
-└── rate_limit.py       # API rate limiting configuration
+├── tier.py             # Legacy migration-compatible table model
+└── rate_limit.py       # Legacy migration-compatible table model
 ```
 
 **Import Requirement**: Models must be imported in `__init__.py` for Alembic to detect them during migration generation.
@@ -73,10 +73,6 @@ class Post(Base):
 The boilerplate uses this approach:
 ```python
 # DO - Explicit and controlled
-class User(Base):
-    # Only foreign key, no relationship
-    tier_id: Mapped[int | None] = mapped_column(ForeignKey("tier.id"), index=True, default=None)
-
 class Post(Base):
     # Only foreign key, no relationship  
     created_by_user_id: Mapped[int] = mapped_column(ForeignKey("user.id"), index=True)
@@ -198,8 +194,6 @@ class User(Base):
     is_deleted: Mapped[bool] = mapped_column(default=False, index=True)
     is_superuser: Mapped[bool] = mapped_column(default=False)
     
-    # Foreign key to tier system (no relationship defined)
-    tier_id: Mapped[int | None] = mapped_column(ForeignKey("tier.id"), index=True, default=None, init=False)
 ```
 
 ### Key Implementation Details
@@ -262,36 +256,13 @@ class Post(Base):
 
 **Usage**: When `crud_posts.delete()` is called, it sets `is_deleted=True` and `deleted_at=datetime.now(UTC)` instead of removing the database row.
 
-## Tier and Rate Limiting Models
+## Legacy compatibility tables
 
-### Tier Model
-
-```python
-# src/app/models/tier.py
-class Tier(Base):
-    __tablename__ = "tier"
-    
-    id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True, init=False)
-    name: Mapped[str] = mapped_column(String(50), unique=True, nullable=False)
-    created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow, nullable=False)
-```
-
-### Rate Limit Model
-
-```python
-# src/app/models/rate_limit.py
-class RateLimit(Base):
-    __tablename__ = "rate_limit"
-    
-    id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True, init=False)
-    tier_id: Mapped[int] = mapped_column(ForeignKey("tier.id"), nullable=False)
-    path: Mapped[str] = mapped_column(String(255), nullable=False)
-    limit: Mapped[int] = mapped_column(nullable=False)  # requests allowed
-    period: Mapped[int] = mapped_column(nullable=False)  # time period in seconds
-    name: Mapped[Optional[str]] = mapped_column(String(100), nullable=True)
-```
-
-**Purpose**: Links API endpoints (`path`) to rate limits (`limit` requests per `period` seconds) for specific user tiers.
+The `tier` and `rate_limit` SQLAlchemy models are retained so Alembic can
+represent the existing database history. They are not public product models:
+there is no tier/rate-limit catalog CRUD, tier-based authorization, or public
+tier response field. New rate-limit behaviour uses the Redis-backed global
+default policy rather than these tables.
 
 ## Creating New Models
 
@@ -339,8 +310,6 @@ class Post(Base):
 # src/app/models/__init__.py
 from .user import User
 from .post import Post
-from .tier import Tier
-from .rate_limit import RateLimit
 from .category import Category  # Add new model
 ```
 
@@ -481,4 +450,4 @@ Now that you understand model implementation:
 2. **[CRUD Operations](crud.md)** - Implement database operations with FastCRUD  
 3. **[Migrations](migrations.md)** - Manage schema changes with Alembic
 
-The next section covers how Pydantic schemas provide validation and API contracts separate from database models. 
+The next section covers how Pydantic schemas provide validation and API contracts separate from database models.

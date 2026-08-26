@@ -5,6 +5,7 @@ import {
 	deleteApplicationInformation,
 	deleteApplicationInformationContact,
 	getApplicationInformation,
+	getApplicationInformationChecklist,
 	getApplicationInformationContacts,
 	getApplicationInformationList,
 	updateApplicationInformation,
@@ -14,6 +15,42 @@ import {
 describe("application-information-api", () => {
 	afterEach(() => {
 		vi.restoreAllMocks();
+	});
+
+	it("loads the status-only checklist projection", async () => {
+		const workspaceUuid = "workspace-uuid-1";
+		const applicationInformationUuid = "application-information-uuid-1";
+		const fetchMock = vi.spyOn(globalThis, "fetch").mockResolvedValue({
+			headers: new Headers({ "content-type": "application/json" }),
+			json: () =>
+				Promise.resolve({
+					applicationInformationUuid,
+					applicationNameEn: "Benefits service",
+					applicationNameFr: "Service de prestations",
+					catsEvidenceStatus: "not_configured",
+					items: [{ key: "contacts", status: "provided" }],
+				}),
+			ok: true,
+			status: 200,
+		} as Response);
+
+		const checklist = await getApplicationInformationChecklist(
+			workspaceUuid,
+			applicationInformationUuid
+		);
+
+		expect(fetchMock).toHaveBeenCalledWith(
+			`http://localhost:8000/api/v1/workspaces/${workspaceUuid}/application-information/${applicationInformationUuid}/checklist`,
+			expect.objectContaining({
+				cache: "no-store",
+				credentials: "include",
+				method: "GET",
+			})
+		);
+		expect(checklist.items).toEqual([
+			{ key: "contacts", status: "provided" },
+		]);
+		expect(JSON.stringify(checklist)).not.toContain("email");
 	});
 
 	it("lists application information through the backend API", async () => {

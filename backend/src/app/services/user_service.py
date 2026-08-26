@@ -26,13 +26,9 @@ from ..models.user_role import UserRole
 from ..models.workspace import Workspace
 from ..repositories.crud_audit_log import crud_audit_log
 from ..repositories.crud_departments import crud_departments
-from ..repositories.crud_rate_limit import crud_rate_limits
-from ..repositories.crud_tier import crud_tiers
 from ..repositories.crud_users import crud_users
 from ..schemas.audit_log import AuditLogCreateInternal
 from ..schemas.department import DepartmentRead
-from ..schemas.rate_limit import RateLimitRead
-from ..schemas.tier import TierRead
 from ..schemas.user import (
     AuthenticatedUserRead,
     UserAccessAdministrationRead,
@@ -48,7 +44,6 @@ from ..schemas.user import (
     UserPendingInvitationDirectoryRead,
     UserPendingInvitationSummaryRead,
     UserReadInternal,
-    UserTierUpdate,
     UserUpdate,
     UserWorkspaceAccessSummaryRead,
 )
@@ -487,36 +482,6 @@ class UserService:
         await blacklist_token(token=token, db=db)
         return {"message": "User deleted from the database"}
 
-    async def get_user_rate_limits(self, db: AsyncSession, user_uuid: uuid_pkg.UUID | str) -> dict[str, Any]:
-        db_user = await self._get_user(db=db, user_uuid=user_uuid, include_deleted=True)
-        user_dict = await self._build_public_user(db=db, user=dict(db_user))
-        if db_user.get("tier_id") is None:
-            user_dict["tier_rate_limits"] = []
-            return user_dict
-
-        db_tier = await crud_tiers.get(db=db, id=db_user["tier_id"])
-        if db_tier is None:
-            raise NotFoundException("Tier not found")
-
-        db_rate_limits = await crud_rate_limits.get_multi(db=db, tier_id=db_tier["id"], schema_to_select=RateLimitRead)
-        user_dict["tier_rate_limits"] = db_rate_limits["data"]
-        return user_dict
-
-    async def get_user_tier(self, db: AsyncSession, user_uuid: uuid_pkg.UUID | str) -> dict[str, Any] | None:
-        db_user = await self._get_user(db=db, user_uuid=user_uuid, include_deleted=True)
-        if db_user.get("tier_id") is None:
-            return None
-
-        db_tier = await crud_tiers.get(db=db, id=db_user["tier_id"], schema_to_select=TierRead)
-        if db_tier is None:
-            raise NotFoundException("Tier not found")
-
-        user_dict = await self._build_public_user(db=db, user=dict(db_user))
-        user_dict["tier_uuid"] = db_tier["uuid"]
-        user_dict["tier_name"] = db_tier["name"]
-        user_dict["tier_created_at"] = db_tier["created_at"]
-        return user_dict
-
     async def get_user_department(self, db: AsyncSession, user_uuid: uuid_pkg.UUID | str) -> dict[str, Any] | None:
         db_user = await self._get_user(db=db, user_uuid=user_uuid, include_deleted=False)
         if db_user.get("department_id") is None:
@@ -538,15 +503,6 @@ class UserService:
         user_dict["department_name"] = db_department["name"]
         user_dict["department_created_at"] = db_department["created_at"]
         return user_dict
-
-    async def update_user_tier(self, db: AsyncSession, user_uuid: uuid_pkg.UUID | str, values: UserTierUpdate) -> dict[str, str]:
-        db_user = await self._get_user(db=db, user_uuid=user_uuid, include_deleted=True)
-        db_tier = await crud_tiers.get(db=db, uuid=values.tier_uuid, schema_to_select=TierRead)
-        if db_tier is None:
-            raise NotFoundException("Tier not found")
-
-        await crud_users.update(db=db, object={"tier_id": db_tier["id"]}, uuid=user_uuid)
-        return {"message": f"User {db_user['name']} Tier updated"}
 
     async def update_user_department(self, db: AsyncSession, user_uuid: uuid_pkg.UUID | str, values: UserDepartmentUpdate) -> dict[str, str]:
         db_user = await self._get_user(db=db, user_uuid=user_uuid, include_deleted=False)
@@ -586,12 +542,10 @@ class UserService:
             "enabled": user.get("enabled", False),
             "name": user["name"],
             "profile_image_url": user["profile_image_url"],
-            "tier_uuid": None,
             "uuid": user["uuid"],
             "username": user["username"],
         }
         department_id = user.get("department_id")
-        tier_id = user.get("tier_id")
 
         if department_id is None:
             public_user["department_abbreviation"] = None
@@ -605,12 +559,6 @@ class UserService:
             )
             public_user["department_abbreviation"] = None if db_department is None else db_department["abbreviation"]
             public_user["department_uuid"] = None if db_department is None else db_department["uuid"]
-
-        if tier_id is None:
-            public_user["tier_uuid"] = None
-        else:
-            db_tier = await crud_tiers.get(db=db, id=tier_id, schema_to_select=TierRead)
-            public_user["tier_uuid"] = None if db_tier is None else db_tier["uuid"]
 
         return public_user
 
@@ -731,17 +679,6 @@ class UserService:
                 department_abbreviation = department["abbreviation"]
                 department_uuid = department["uuid"]
 
-        tier_uuid: uuid_pkg.UUID | None = None
-        tier_id = current_user.get("tier_id")
-        if isinstance(tier_id, int):
-            tier = await crud_tiers.get(
-                db=db,
-                id=tier_id,
-                schema_to_select=TierRead,
-            )
-            if tier is not None:
-                tier_uuid = tier["uuid"]
-
         response = AuthenticatedUserRead(
             uuid=current_user["uuid"],
             name=current_user["name"],
@@ -749,7 +686,6 @@ class UserService:
             username=current_user["username"],
             department_abbreviation=department_abbreviation,
             department_uuid=department_uuid,
-            tier_uuid=tier_uuid,
             profile_image_url=current_user.get(
                 "profile_image_url",
                 "https://www.profileimageurl.com",

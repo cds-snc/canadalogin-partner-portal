@@ -6,7 +6,7 @@ from starlette.types import ASGIApp
 
 
 class ClientCacheMiddleware(BaseHTTPMiddleware):
-    """Default responses to non-cacheable; public caching requires path opt-in."""
+    """Apply safe browser defaults; public caching requires path opt-in."""
 
     def __init__(
         self,
@@ -38,6 +38,9 @@ class ClientCacheMiddleware(BaseHTTPMiddleware):
 
     async def dispatch(self, request: Request, call_next: RequestResponseEndpoint) -> Response:
         response: Response = await call_next(request)
+        # Invitation tokens can appear in a portal URL before OIDC login. Keep
+        # that URL out of Referer headers across redirects and external links.
+        response.headers["Referrer-Policy"] = "no-referrer"
         if self._may_cache_publicly(request, response):
             response.headers["Cache-Control"] = f"public, max-age={self.max_age}"
         else:

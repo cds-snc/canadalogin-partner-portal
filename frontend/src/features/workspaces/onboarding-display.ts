@@ -22,40 +22,39 @@ export const getCanadaLoginEnvironmentLabel = (
 	}
 };
 
-export const getWorkspaceOnboardingStateLabel = (
+export const getRegistrationStatusLabel = (
 	t: Translate,
-	state: string
-): string => {
-	switch (state.trim().toLowerCase()) {
-		case "draft":
-			return t("workspaces.onboardingStateDraft");
-		case "submitted":
-			return t("workspaces.onboardingStateSubmitted");
-		case "under_review":
-			return t("workspaces.onboardingStateUnderReview");
-		case "approved":
-			return t("workspaces.onboardingStateApproved");
-		case "launched":
-			return t("workspaces.onboardingStateLaunched");
-		default:
-			return formatTokenLabel(state);
-	}
-};
+	registrationCompletedAt: string | null | undefined
+): string =>
+	registrationCompletedAt
+		? t("workspaces.registrationStatusComplete")
+		: t("workspaces.registrationStatusIncomplete");
 
-export const getWorkspacePromotionStatusLabel = (
+export const getProductionReviewStatusLabel = (
 	t: Translate,
 	status: string
 ): string => {
 	switch (status.trim().toLowerCase()) {
-		case "review_tracked":
-			return t("workspaces.promotionStatusReviewTracked");
-		case "changes_requested":
-			return t("workspaces.promotionStatusChangesRequested");
+		case "pending":
+			return t("workspaces.productionReviewStatusPending");
 		case "approved":
-			return t("workspaces.promotionStatusApproved");
-		case "launched":
-			return t("workspaces.promotionStatusLaunched");
+			return t("workspaces.productionReviewStatusApproved");
+		case "rejected":
+			return t("workspaces.productionReviewStatusRejected");
 		default:
 			return formatTokenLabel(status);
 	}
+};
+
+export const getProductionReviewSummaryLabel = (
+	t: Translate,
+	status: string | null | undefined,
+	reconciliationRequired = false
+): string => {
+	if (reconciliationRequired) {
+		return t("workspaces.productionReviewReconciliationRequired");
+	}
+	return status
+		? getProductionReviewStatusLabel(t, status)
+		: t("workspaces.rpProductionReviewNotRequested");
 };

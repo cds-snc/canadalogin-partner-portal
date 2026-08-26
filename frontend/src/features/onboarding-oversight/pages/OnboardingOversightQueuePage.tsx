@@ -3,6 +3,7 @@ import {
 	useState,
 	type FormEvent,
 	type FormEventHandler,
+	type ReactNode,
 } from "react";
 import { useNavigate, useSearch } from "@tanstack/react-router";
 import { useTranslation } from "react-i18next";
@@ -19,20 +20,12 @@ import {
 } from "@/components/ui";
 import type { DataTableColumn } from "@/components/ui/DataTable";
 import { getRequestErrorNotice } from "@/fetch";
-import {
-	getWorkspaceOnboardingStateLabel,
-	getWorkspacePromotionStatusLabel,
-} from "@/features/workspaces/onboarding-display";
+import { getProductionReviewStatusLabel } from "@/features/workspaces/onboarding-display";
 import { useOnboardingOversightQueue } from "../hooks/use-onboarding-oversight-queue";
 import {
 	normalizeOnboardingOversightQueueFilters,
-	onboardingOversightQueueEnvironments,
-	onboardingOversightQueueLifecycleStates,
-	onboardingOversightQueuePromotionStatuses,
-	onboardingOversightQueueRecordTypes,
-	type OnboardingOversightQueueEnvironment,
+	onboardingOversightQueueReviewStatuses,
 	type OnboardingOversightQueueFilters,
-	type OnboardingOversightQueueRecordType,
 } from "../queue-filters";
 
 type Translate = (
@@ -40,65 +33,27 @@ type Translate = (
 	options?: Record<string, unknown>
 ) => string;
 
-type QueueTableRow = {
+type QueueTableRow = Record<string, unknown> & {
+	activityAt: string;
+	applicationName: string;
+	configurationName: string;
 	departmentName: string;
 	detailPath: string;
-	environment: string;
 	externalReviewReference: string;
-	lastActivityAt: string;
-	onboardingState: string;
-	primaryRecordLabel: string;
-	promotionStatus: string;
-	recordType: string;
-	recordUuid: string;
+	reviewer: string;
+	reviewStatus: string;
+	rpConfigurationUuid: string;
 	workspaceName: string;
-};
-
-const getRecordTypeLabel = (
-	t: Translate,
-	recordType: OnboardingOversightQueueRecordType
-): string => {
-	switch (recordType) {
-		case "workspace":
-			return t("onboardingOversight.queue.recordTypeWorkspace");
-		case "application_information":
-			return t("onboardingOversight.queue.recordTypeApplicationInformation");
-		case "rp_application":
-			return t("onboardingOversight.queue.recordTypeRpApplication");
-		case "production_progression":
-			return t("onboardingOversight.queue.recordTypeProductionProgression");
-	}
-};
-
-const getEnvironmentLabel = (
-	t: Translate,
-	environment: OnboardingOversightQueueEnvironment | null | undefined
-): string => {
-	switch (environment) {
-		case "test":
-			return t("yourApplications.environmentTest");
-		case "staging":
-			return t("yourApplications.environmentStaging");
-		case "production":
-			return t("yourApplications.environmentProduction");
-		default:
-			return t("onboardingOversight.queue.notApplicable");
-	}
 };
 
 const formatDateTime = (
 	value: string | null | undefined,
-	language: string
+	language: string,
+	fallback: string
 ): string => {
-	if (!value) {
-		return "-";
-	}
-
+	if (!value) return fallback;
 	const parsedValue = new Date(value);
-	if (Number.isNaN(parsedValue.getTime())) {
-		return value;
-	}
-
+	if (Number.isNaN(parsedValue.getTime())) return value;
 	return parsedValue.toLocaleString(language, {
 		dateStyle: "medium",
 		timeStyle: "short",
@@ -130,7 +85,6 @@ const QueueFiltersForm = ({
 }: QueueFiltersFormProps): FunctionComponent => {
 	const [draftFilters, setDraftFilters] =
 		useState<OnboardingOversightQueueFilters>(initialFilters);
-
 	const setDraftFilter = <Key extends keyof OnboardingOversightQueueFilters>(
 		key: Key,
 		value: OnboardingOversightQueueFilters[Key]
@@ -140,41 +94,24 @@ const QueueFiltersForm = ({
 			[key]: value,
 		}));
 	};
-
 	const handleTextFilterInput =
 		(key: "department" | "workspace"): FormEventHandler<Element> =>
 		(event): void => {
 			setDraftFilter(key, readInputValue(event.nativeEvent));
 		};
-
-	const handleSelectFilterInput = <
-		Key extends
-			"environment" | "onboardingState" | "promotionStatus" | "recordType",
-	>(
-		key: Key
-	): FormEventHandler<Element> => {
-		return (event): void => {
-			setDraftFilter(
-				key,
-				readInputValue(
-					event.nativeEvent
-				) as OnboardingOversightQueueFilters[Key]
-			);
-		};
-	};
-
 	const handleFilterSubmit = (event: FormEvent<HTMLFormElement>): void => {
 		event.preventDefault();
 		onSubmit(draftFilters);
 	};
 
 	return (
-		<form
-			className="flex flex-col gap-300 rounded-sm border border-[var(--gcds-border-default)] bg-[var(--gcds-bg-white)] p-300"
-			onSubmit={handleFilterSubmit}
-		>
+		<form className="grid gap-300" onSubmit={handleFilterSubmit}>
 			<Heading tag="h2">{t("onboardingOversight.queue.filtersTitle")}</Heading>
-			<div className="grid gap-300 md:grid-cols-2 xl:grid-cols-3">
+			<Grid
+				columns="1fr"
+				columnsDesktop="repeat(3, 1fr)"
+				columnsTablet="1fr 1fr"
+			>
 				<Input
 					inputId="oversight-queue-workspace"
 					label={t("onboardingOversight.queue.filtersWorkspaceLabel")}
@@ -192,62 +129,26 @@ const QueueFiltersForm = ({
 					onInput={handleTextFilterInput("department")}
 				/>
 				<Select
-					label={t("onboardingOversight.queue.filtersRecordTypeLabel")}
-					name="recordType"
-					selectId="oversight-queue-record-type"
-					value={draftFilters.recordType ?? ""}
-					onInput={handleSelectFilterInput("recordType")}
+					label={t("onboardingOversight.queue.filtersReviewStatusLabel")}
+					name="reviewStatus"
+					selectId="oversight-queue-review-status"
+					value={draftFilters.reviewStatus ?? ""}
+					onInput={(event): void => {
+						setDraftFilter(
+							"reviewStatus",
+							readInputValue(event.nativeEvent) as
+								OnboardingOversightQueueFilters["reviewStatus"] | undefined
+						);
+					}}
 				>
 					<option value="">{t("onboardingOversight.queue.anyOption")}</option>
-					{onboardingOversightQueueRecordTypes.map((value) => (
+					{onboardingOversightQueueReviewStatuses.map((value) => (
 						<option key={value} value={value}>
-							{getRecordTypeLabel(t, value)}
+							{getProductionReviewStatusLabel(t, value)}
 						</option>
 					))}
 				</Select>
-				<Select
-					label={t("onboardingOversight.queue.filtersOnboardingStateLabel")}
-					name="onboardingState"
-					selectId="oversight-queue-onboarding-state"
-					value={draftFilters.onboardingState ?? ""}
-					onInput={handleSelectFilterInput("onboardingState")}
-				>
-					<option value="">{t("onboardingOversight.queue.anyOption")}</option>
-					{onboardingOversightQueueLifecycleStates.map((value) => (
-						<option key={value} value={value}>
-							{getWorkspaceOnboardingStateLabel(t, value)}
-						</option>
-					))}
-				</Select>
-				<Select
-					label={t("onboardingOversight.queue.filtersEnvironmentLabel")}
-					name="environment"
-					selectId="oversight-queue-environment"
-					value={draftFilters.environment ?? ""}
-					onInput={handleSelectFilterInput("environment")}
-				>
-					<option value="">{t("onboardingOversight.queue.anyOption")}</option>
-					{onboardingOversightQueueEnvironments.map((value) => (
-						<option key={value} value={value}>
-							{getEnvironmentLabel(t, value)}
-						</option>
-					))}
-				</Select>
-				<Select
-					label={t("onboardingOversight.queue.filtersPromotionStatusLabel")}
-					name="promotionStatus"
-					selectId="oversight-queue-promotion-status"
-					value={draftFilters.promotionStatus ?? ""}
-					onInput={handleSelectFilterInput("promotionStatus")}
-				>
-					<option value="">{t("onboardingOversight.queue.anyOption")}</option>
-					{onboardingOversightQueuePromotionStatuses.map((value) => (
-						<option key={value} value={value}>
-							{getWorkspacePromotionStatusLabel(t, value)}
-						</option>
-					))}
-				</Select>
-			</div>
+			</Grid>
 			<div className="flex flex-wrap gap-200">
 				<Button type="submit">
 					{t("onboardingOversight.queue.applyAction")}
@@ -268,53 +169,59 @@ export const OnboardingOversightQueuePage = (): FunctionComponent => {
 	const navigate = useNavigate();
 	const search = useSearch({ from: "/onboarding-oversight/queue" });
 	const normalizedSearch = normalizeOnboardingOversightQueueFilters(search);
-	const filterFormKey = JSON.stringify(normalizedSearch);
 	const { error, isLoading, isRefetching, queueRows } =
-		useOnboardingOversightQueue(search);
+		useOnboardingOversightQueue(normalizedSearch);
 	const errorNotice = getRequestErrorNotice(error, {
 		bodyKey: "onboardingOversight.queue.errorBody",
 		titleKey: "onboardingOversight.queue.errorTitle",
 	});
 	const language = i18n.resolvedLanguage ?? "en";
+	const unavailable = t("onboardingOversight.queue.notApplicable");
 
 	const tableRows = useMemo<Array<QueueTableRow>>(
 		() =>
 			queueRows.map((row) => ({
-				departmentName:
-					row.departmentName ?? t("onboardingOversight.queue.notApplicable"),
+				activityAt: formatDateTime(
+					row.decidedAt ?? row.reviewedAt ?? row.updatedAt ?? row.requestedAt,
+					language,
+					unavailable
+				),
+				applicationName:
+					(language.toLowerCase().startsWith("fr")
+						? row.applicationNameFr
+						: row.applicationNameEn
+					).trim() ||
+					(language.toLowerCase().startsWith("fr")
+						? row.applicationNameEn
+						: row.applicationNameFr
+					).trim(),
+				configurationName: row.configurationName,
+				departmentName: row.departmentName ?? unavailable,
 				detailPath: row.detailPath,
-				environment: getEnvironmentLabel(
-					t,
-					row.targetEnvironment ?? row.currentEnvironment
-				),
 				externalReviewReference:
-					row.externalReviewReference ??
-					t("onboardingOversight.queue.notApplicable"),
-				lastActivityAt: formatDateTime(row.lastActivityAt, language),
-				onboardingState: getWorkspaceOnboardingStateLabel(
-					t,
-					row.onboardingState
-				),
-				primaryRecordLabel: row.primaryRecordLabel,
-				promotionStatus: row.promotionStatus
-					? getWorkspacePromotionStatusLabel(t, row.promotionStatus)
-					: t("onboardingOversight.queue.notApplicable"),
-				recordType: getRecordTypeLabel(t, row.recordType),
-				recordUuid: row.recordUuid,
+					row.externalReviewReference.trim() || unavailable,
+				reviewer:
+					row.reviewedByTeam?.trim() ||
+					row.reviewedByUserUuid?.trim() ||
+					unavailable,
+				reviewStatus: getProductionReviewStatusLabel(t, row.reviewStatus),
+				rpConfigurationUuid: row.rpConfigurationUuid,
 				workspaceName: row.workspaceName,
 			})),
-		[language, queueRows, t]
+		[language, queueRows, t, unavailable]
 	);
 
 	const columns = useMemo<Array<DataTableColumn<QueueTableRow>>>(
 		() => [
 			{
-				field: "recordType",
-				headerName: t("onboardingOversight.queue.recordTypeColumn"),
-			},
-			{
-				field: "primaryRecordLabel",
-				headerName: t("onboardingOversight.queue.primaryRecordLabelColumn"),
+				field: "applicationName",
+				headerName: t("onboardingOversight.queue.applicationColumn"),
+				cellRenderer: (row): ReactNode => (
+					<div className="grid gap-50">
+						<span>{row.applicationName}</span>
+						<small>{row.configurationName}</small>
+					</div>
+				),
 			},
 			{
 				field: "workspaceName",
@@ -325,16 +232,8 @@ export const OnboardingOversightQueuePage = (): FunctionComponent => {
 				headerName: t("onboardingOversight.queue.departmentColumn"),
 			},
 			{
-				field: "onboardingState",
-				headerName: t("onboardingOversight.queue.onboardingStateColumn"),
-			},
-			{
-				field: "environment",
-				headerName: t("onboardingOversight.queue.environmentColumn"),
-			},
-			{
-				field: "promotionStatus",
-				headerName: t("onboardingOversight.queue.promotionStatusColumn"),
+				field: "reviewStatus",
+				headerName: t("onboardingOversight.queue.reviewStatusColumn"),
 			},
 			{
 				field: "externalReviewReference",
@@ -343,7 +242,11 @@ export const OnboardingOversightQueuePage = (): FunctionComponent => {
 				),
 			},
 			{
-				field: "lastActivityAt",
+				field: "reviewer",
+				headerName: t("onboardingOversight.queue.reviewerColumn"),
+			},
+			{
+				field: "activityAt",
 				headerName: t("onboardingOversight.queue.lastActivityAtColumn"),
 			},
 		],
@@ -358,8 +261,7 @@ export const OnboardingOversightQueuePage = (): FunctionComponent => {
 			search: normalizeOnboardingOversightQueueFilters(filters),
 		});
 	};
-
-	const handleClearFilters = (): void => {
+	const handleFilterClear = (): void => {
 		void navigate({
 			to: "/onboarding-oversight/queue",
 			search: normalizeOnboardingOversightQueueFilters({}),
@@ -367,9 +269,11 @@ export const OnboardingOversightQueuePage = (): FunctionComponent => {
 	};
 
 	return (
-		<Grid columns="1fr" tag="div">
-			<Heading tag="h1">{t("onboardingOversight.queue.pageTitle")}</Heading>
-			<Text>{t("onboardingOversight.queue.summary")}</Text>
+		<div className="grid gap-400">
+			<div>
+				<Heading tag="h1">{t("onboardingOversight.queue.pageTitle")}</Heading>
+				<Text>{t("onboardingOversight.queue.summary")}</Text>
+			</div>
 			<Notice
 				noticeRole="info"
 				noticeTitle={t("onboardingOversight.queue.accessNoticeTitle")}
@@ -377,15 +281,13 @@ export const OnboardingOversightQueuePage = (): FunctionComponent => {
 			>
 				<Text>{t("onboardingOversight.queue.accessNoticeBody")}</Text>
 			</Notice>
-
 			<QueueFiltersForm
-				key={filterFormKey}
+				key={JSON.stringify(normalizedSearch)}
 				initialFilters={normalizedSearch}
 				t={t}
-				onClear={handleClearFilters}
+				onClear={handleFilterClear}
 				onSubmit={handleFilterSubmit}
 			/>
-
 			{isLoading || isRefetching ? (
 				<Notice
 					noticeRole="info"
@@ -395,7 +297,6 @@ export const OnboardingOversightQueuePage = (): FunctionComponent => {
 					<Text>{t("onboardingOversight.queue.loadingBody")}</Text>
 				</Notice>
 			) : null}
-
 			{errorNotice ? (
 				<Notice
 					noticeRole={errorNotice.noticeRole}
@@ -405,7 +306,6 @@ export const OnboardingOversightQueuePage = (): FunctionComponent => {
 					<Text>{errorNotice.bodyText ?? t(errorNotice.bodyKey)}</Text>
 				</Notice>
 			) : null}
-
 			{!isLoading && !isRefetching && !errorNotice && tableRows.length === 0 ? (
 				<Notice
 					noticeRole="info"
@@ -413,13 +313,12 @@ export const OnboardingOversightQueuePage = (): FunctionComponent => {
 					noticeTitleTag="h2"
 				>
 					<Text>
-						{hasActiveFilters(search)
+						{hasActiveFilters(normalizedSearch)
 							? t("onboardingOversight.queue.emptyFilteredBody")
 							: t("onboardingOversight.queue.emptyBody")}
 					</Text>
 				</Notice>
 			) : null}
-
 			{!errorNotice && tableRows.length > 0 ? (
 				<DataTable
 					columns={columns}
@@ -432,10 +331,11 @@ export const OnboardingOversightQueuePage = (): FunctionComponent => {
 						onAction: (row): void => {
 							void navigate({ to: row.detailPath });
 						},
-						screenReaderLabel: (row): string => row.primaryRecordLabel,
+						screenReaderLabel: (row): string =>
+							`${row.applicationName}: ${row.configurationName}`,
 					}}
 				/>
 			) : null}
-		</Grid>
+		</div>
 	);
 };

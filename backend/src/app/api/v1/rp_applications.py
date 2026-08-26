@@ -2,7 +2,7 @@ import uuid as uuid_pkg
 from datetime import date, timedelta
 from typing import Annotated
 
-from fastapi import APIRouter, Depends, Query, Request
+from fastapi import APIRouter, Depends, Query, Request, Response
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from ...api.dependencies import (
@@ -19,12 +19,14 @@ from ...repositories.dependencies import (
     IBMVerifyAdminClientFactory,
     get_ibm_sv_admin_client_factory,
 )
-from ...schemas.mau import MAUReportItem, MAUReportResponse
+from ...schemas.mau import (
+    MAUReportDestinationRead,
+    MAUReportItem,
+    MAUReportResponse,
+)
 from ...schemas.rp_application import (
-    AccessibleRPApplicationDepartmentAssignRequest,
     AccessibleRPApplicationOAuthSetupRead,
     AccessibleRPApplicationRead,
-    AccessibleRPApplicationSummaryRead,
     RPApplicationClientCredentialsRead,
     RPApplicationClientRotatedSecretCreateRequest,
     RPApplicationClientRotatedSecretDeleteRequest,
@@ -45,6 +47,10 @@ from ...services.rp_application_adoption_metadata_provider import (
 from ...services.rp_application_service import RPApplicationService
 
 router = APIRouter(tags=["rp-applications"])
+
+
+def _request_correlation_id(request: Request) -> str:
+    return str(getattr(request.state, "request_id", None) or request.headers.get("X-Request-ID") or "unavailable")
 
 
 @router.get(
@@ -139,6 +145,25 @@ async def read_accessible_rp_applications(
 
 
 @router.get(
+    "/rp-applications/accessible/mau-report-destinations",
+    response_model=list[MAUReportDestinationRead],
+    responses=error_responses(401, 403, 500),
+)
+async def read_accessible_mau_report_destinations(
+    request: Request,
+    db: Annotated[AsyncSession, Depends(async_get_db)],
+    current_user: Annotated[dict, Depends(get_current_user)],
+    service: Annotated[RPApplicationService, Depends(get_rp_application_service)],
+) -> list[MAUReportDestinationRead]:
+    del request
+    destinations = await service.list_accessible_mau_report_destinations(
+        db=db,
+        current_user=current_user,
+    )
+    return [MAUReportDestinationRead.model_validate(destination) for destination in destinations]
+
+
+@router.get(
     "/rp-applications/accessible/{rp_application_uuid}",
     response_model=AccessibleRPApplicationRead,
     responses=error_responses(401, 403, 404, 500),
@@ -156,50 +181,6 @@ async def read_accessible_rp_application(
         rp_application_uuid=rp_application_uuid,
     )
     return AccessibleRPApplicationRead.model_validate(application)
-
-
-@router.get(
-    "/rp-applications/accessible/{rp_application_uuid}/department",
-    response_model=AccessibleRPApplicationSummaryRead,
-    responses=error_responses(403, 404, 500),
-    deprecated=True,
-)
-async def read_accessible_rp_application_department(
-    request: Request,
-    rp_application_uuid: uuid_pkg.UUID,
-    db: Annotated[AsyncSession, Depends(async_get_db)],
-    current_user: Annotated[dict, Depends(get_current_user)],
-    service: Annotated[RPApplicationService, Depends(get_rp_application_service)],
-) -> AccessibleRPApplicationSummaryRead:
-    preflight = await service.get_accessible_rp_application_department_preflight(
-        db=db,
-        rp_application_uuid=rp_application_uuid,
-        current_user=current_user,
-    )
-    return AccessibleRPApplicationSummaryRead.model_validate(preflight)
-
-
-@router.patch(
-    "/rp-applications/accessible/{rp_application_uuid}/department",
-    response_model=AccessibleRPApplicationSummaryRead,
-    responses=error_responses(403, 404, 409, 500),
-    deprecated=True,
-)
-async def assign_accessible_rp_application_department(
-    request: Request,
-    rp_application_uuid: uuid_pkg.UUID,
-    payload: AccessibleRPApplicationDepartmentAssignRequest,
-    db: Annotated[AsyncSession, Depends(async_get_db)],
-    current_user: Annotated[dict, Depends(get_current_user)],
-    service: Annotated[RPApplicationService, Depends(get_rp_application_service)],
-) -> AccessibleRPApplicationSummaryRead:
-    result = await service.assign_accessible_rp_application_department(
-        db=db,
-        rp_application_uuid=rp_application_uuid,
-        current_user=current_user,
-        payload=payload,
-    )
-    return AccessibleRPApplicationSummaryRead.model_validate(result)
 
 
 @router.get(
@@ -256,8 +237,41 @@ async def read_accessible_rp_application_client_credentials(
         ibm_admin_client_factory=ibm_admin_client_factory,
         expected_workspace_uuid=workspace_uuid,
         expected_application_information_uuid=application_information_uuid,
+        correlation_id=_request_correlation_id(request),
     )
     return RPApplicationClientCredentialsRead.model_validate(credentials)
+
+
+@router.get(
+    "/rp-applications/accessible/{rp_application_uuid}/client/secret-change-log",
+    response_class=Response,
+    responses=error_responses(403, 404, 500),
+)
+async def download_accessible_rp_application_secret_change_log(
+    request: Request,
+    rp_application_uuid: uuid_pkg.UUID,
+    db: Annotated[AsyncSession, Depends(async_get_db)],
+    current_user: Annotated[dict, Depends(get_current_user)],
+    service: Annotated[RPApplicationService, Depends(get_rp_application_service)],
+    workspace_uuid: Annotated[uuid_pkg.UUID | None, Query(alias="workspaceUuid")] = None,
+    application_information_uuid: Annotated[
+        uuid_pkg.UUID | None,
+        Query(alias="applicationInformationUuid"),
+    ] = None,
+) -> Response:
+    del request
+    csv_content = await service.export_accessible_rp_application_secret_change_log(
+        db=db,
+        rp_application_uuid=rp_application_uuid,
+        current_user=current_user,
+        expected_workspace_uuid=workspace_uuid,
+        expected_application_information_uuid=application_information_uuid,
+    )
+    return Response(
+        content=csv_content,
+        media_type="text/csv; charset=utf-8",
+        headers={"Content-Disposition": (f'attachment; filename="secret-change-log-{rp_application_uuid}.csv"')},
+    )
 
 
 @router.get(
@@ -288,6 +302,7 @@ async def read_accessible_rp_application_rotated_secrets(
         ibm_admin_client_factory=ibm_admin_client_factory,
         expected_workspace_uuid=workspace_uuid,
         expected_application_information_uuid=application_information_uuid,
+        correlation_id=_request_correlation_id(request),
     )
     return [RPApplicationClientRotatedSecretRead.model_validate(secret) for secret in rotated_secrets]
 
@@ -322,6 +337,7 @@ async def rotate_accessible_rp_application_client_secret(
         ibm_admin_client_factory=ibm_admin_client_factory,
         expected_workspace_uuid=workspace_uuid,
         expected_application_information_uuid=application_information_uuid,
+        correlation_id=_request_correlation_id(request),
     )
     return RPApplicationClientCredentialsRead.model_validate(credentials)
 
@@ -356,6 +372,7 @@ async def create_accessible_rp_application_rotated_secret(
         ibm_admin_client_factory=ibm_admin_client_factory,
         expected_workspace_uuid=workspace_uuid,
         expected_application_information_uuid=application_information_uuid,
+        correlation_id=_request_correlation_id(request),
     )
     return [RPApplicationClientRotatedSecretRead.model_validate(secret) for secret in rotated_secrets]
 
@@ -389,6 +406,7 @@ async def delete_accessible_rp_application_rotated_secret(
         ibm_admin_client_factory=ibm_admin_client_factory,
         expected_workspace_uuid=workspace_uuid,
         expected_application_information_uuid=application_information_uuid,
+        correlation_id=_request_correlation_id(request),
     )
     return {"message": "Rotated client secret deleted"}
 
@@ -419,7 +437,7 @@ async def read_accessible_rp_application_mau_report(
         Query(alias="applicationInformationUuid"),
     ] = None,
 ) -> MAUReportResponse:
-    application = await service.get_accessible_rp_application_department_preflight(
+    application = await service.get_accessible_rp_application_mau_context(
         db=db,
         rp_application_uuid=rp_application_uuid,
         current_user=current_user,
@@ -435,11 +453,13 @@ async def read_accessible_rp_application_mau_report(
         raise BadRequestException("RP application does not have a mapped MAU application name")
 
     department_name: str | None = None
+    department_name_fr: str | None = None
     department_id = application.get("department_id") or application.get("departmentId")
     if department_id is not None:
         department = await crud_departments.get(db=db, id=department_id)
         if department:
             department_name = department.get("name")
+            department_name_fr = department.get("name_fr") or department_name
 
     resolved_end = end_date or date.today()
     resolved_start = start_date or (resolved_end - timedelta(days=30))
@@ -451,9 +471,18 @@ async def read_accessible_rp_application_mau_report(
 
     return MAUReportResponse(
         application_name=application_name,
+        workspace_uuid=application["workspace_uuid"],
+        workspace_name=application["workspace_name"],
+        application_information_uuid=application["application_information_uuid"],
+        application_name_en=application["application_name_en"],
+        application_name_fr=application["application_name_fr"],
+        rp_configuration_uuid=application["uuid"],
+        configuration_name=application["configuration_name"],
+        canada_login_environment=application.get("canada_login_environment"),
         start_date=resolved_start,
         end_date=resolved_end,
         department_name=department_name,
+        department_name_fr=department_name_fr,
         partner_environment=application.get("partner_environment") or application.get("partnerEnvironment"),
         records=[
             MAUReportItem(

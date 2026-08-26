@@ -9,6 +9,6 @@ const AdministrationPage = lazy(async () => ({
 
 export const Route = createFileRoute("/administration")({
 	beforeLoad: async () =>
-		requireCapability("/administration", "platform_governance"),
+		requireCapability("/administration", "access_administration"),
 	component: AdministrationPage,
 });

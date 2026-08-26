@@ -201,19 +201,6 @@ Wildcards are rejected for credentialed origins, methods, and headers in every
 environment. Cookie-authenticated state changes also enforce `Origin`,
 `Referer`, and browser Fetch Metadata checks.
 
-### User Tiers
-
-Initial tier configuration:
-
-```env
-# ------------- first tier -------------
-TIER_NAME="free"
-```
-
-**Variables Explained:**
-
-- `TIER_NAME`: Name of the default user tier
-
 ### Environment Type
 
 Controls API documentation visibility and behavior:

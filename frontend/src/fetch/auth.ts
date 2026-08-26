@@ -12,7 +12,6 @@ export type UserRead = {
 	name: string;
 	profileImageUrl: string;
 	termsVersion: string | null;
-	tierUuid: string | null;
 	uuid: string;
 	username: string;
 };

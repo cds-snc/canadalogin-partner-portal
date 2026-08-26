@@ -5,7 +5,7 @@ import { requireCapability } from "../features/auth/auth-routing";
 
 export const Route = createFileRoute("/users")({
 	beforeLoad: async () => {
-		await requireCapability("/users", "platform_governance");
+		await requireCapability("/users", "access_administration");
 
 		return {
 			backLink: {

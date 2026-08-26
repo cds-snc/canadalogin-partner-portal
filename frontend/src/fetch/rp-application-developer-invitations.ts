@@ -80,6 +80,21 @@ export const createWorkspaceDeveloperInvitation = async (
 	return result;
 };
 
+export const getWorkspaceDeveloperInvitation = async (
+	workspaceUuid: string,
+	invitationUuid: string
+): Promise<RPApplicationDeveloperInvitationRead> => {
+	const result = await requestJson<RPApplicationDeveloperInvitationRead | null>(
+		`/api/v1/workspaces/${encodeURIComponent(workspaceUuid)}/invitations/${encodeURIComponent(invitationUuid)}`,
+		{ cache: "no-store", method: "GET" },
+		{ redirectOnForbidden: false }
+	);
+	if (!result) {
+		throw new Error("Failed to load developer invitation");
+	}
+	return result;
+};
+
 export const revokeWorkspaceDeveloperInvitation = async (
 	workspaceUuid: string,
 	invitationUuid: string
@@ -174,22 +189,43 @@ export const revokeWorkspaceRPApplicationDeveloperInvitation = async (
 	return result;
 };
 
-export const acceptRPApplicationDeveloperInvitation = async (
+export const prepareRPApplicationDeveloperInvitation = async (
 	token: string
-): Promise<RPApplicationDeveloperInvitationAcceptResponse> => {
-	const result =
-		await requestJson<RPApplicationDeveloperInvitationAcceptResponse>(
-			"/api/v1/rp-application-developer-invitations/accept",
-			{
-				body: JSON.stringify({ token }),
-				method: "POST",
-			},
-			{ redirectOnForbidden: false }
-		);
+): Promise<void> => {
+	const result = await requestJson<{ prepared: boolean }>(
+		"/api/v1/rp-application-developer-invitations/prepare",
+		{
+			body: JSON.stringify({ token }),
+			cache: "no-store",
+			method: "POST",
+		},
+		{
+			redirectOnForbidden: false,
+			redirectOnUnauthorized: false,
+		}
+	);
 
-	if (result === null) {
-		throw new Error("Invitation acceptance returned no data");
+	if (result?.prepared !== true) {
+		throw new Error("Invitation preparation returned no confirmation");
 	}
-
-	return result;
 };
+
+export const acceptPreparedRPApplicationDeveloperInvitation =
+	async (): Promise<RPApplicationDeveloperInvitationAcceptResponse> => {
+		const result =
+			await requestJson<RPApplicationDeveloperInvitationAcceptResponse>(
+				"/api/v1/rp-application-developer-invitations/accept-prepared",
+				{
+					body: JSON.stringify({}),
+					cache: "no-store",
+					method: "POST",
+				},
+				{ redirectOnForbidden: false }
+			);
+
+		if (result === null) {
+			throw new Error("Invitation acceptance returned no data");
+		}
+
+		return result;
+	};

@@ -44,7 +44,7 @@ class ApplicationInformation(Base):
     onboarding_state: Mapped[str | None] = mapped_column(
         String(32),
         nullable=True,
-        default="draft",
+        default=None,
         index=True,
     )
     submitted_at: Mapped[datetime | None] = mapped_column(

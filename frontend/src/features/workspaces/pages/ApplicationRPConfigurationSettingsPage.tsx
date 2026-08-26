@@ -5,7 +5,10 @@ import type { FunctionComponent } from "@/common/types";
 import { Button, ConfirmDialog, Heading, Notice, Text } from "@/components/ui";
 import { deleteApplicationRPConfiguration } from "@/fetch/rp-applications";
 import { useApplicationRPConfiguration } from "../hooks/use-application-rp-configurations";
-import { getWorkspaceOnboardingStateLabel } from "../onboarding-display";
+import {
+	getProductionReviewSummaryLabel,
+	getRegistrationStatusLabel,
+} from "../onboarding-display";
 
 export const ApplicationRPConfigurationSettingsPage = (): FunctionComponent => {
 	const { t } = useTranslation();
@@ -72,14 +75,22 @@ export const ApplicationRPConfigurationSettingsPage = (): FunctionComponent => {
 				<section className="grid gap-200">
 					<Heading tag="h2">{t("workspaces.rpSettingsLifecycleTitle")}</Heading>
 					<Text>
-						{t("workspaces.onboardingStateLabel")}:{" "}
-						{configuration.onboardingState
-							? getWorkspaceOnboardingStateLabel(
-									t as never,
-									configuration.onboardingState
-								)
-							: t("common.notAvailable")}
+						{t("workspaces.registrationStatusLabel")}:{" "}
+						{getRegistrationStatusLabel(
+							t as never,
+							configuration.registrationCompletedAt
+						)}
 					</Text>
+					{configuration.canadaLoginEnvironment === "production" ? (
+						<Text>
+							{t("workspaces.productionReviewLabel")}:{" "}
+							{getProductionReviewSummaryLabel(
+								t as never,
+								configuration.productionReviewStatus,
+								configuration.productionReviewReconciliationRequired
+							)}
+						</Text>
+					) : null}
 				</section>
 			) : null}
 

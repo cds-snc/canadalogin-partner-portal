@@ -157,7 +157,6 @@ describe("WorkspaceCreatePage", () => {
 				name: "Member User",
 				profileImageUrl: "",
 				termsVersion: "2026-01",
-				tierUuid: null,
 				uuid: "user-uuid-1",
 				username: "member@example.gc.ca",
 			},

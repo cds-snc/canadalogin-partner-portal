@@ -16,6 +16,11 @@ from ...core.config import (
 )
 from ...core.db.database import async_get_db
 from ...core.exceptions.http_exceptions import BadRequestException, ForbiddenException, NotFoundException
+from ...core.identity import (
+    SESSION_AUTHENTICATED_EMAIL_KEY,
+    SESSION_AUTHENTICATED_EMAIL_VERIFIED_KEY,
+    SESSION_AUTHENTICATION_PROVIDER_KEY,
+)
 from ...core.local_persona_fixtures import (
     LOCAL_PERSONA_AUTH_PROVIDER,
     LOCAL_PERSONA_FIXTURES,
@@ -131,6 +136,9 @@ async def write_dev_session(
     request.session.clear()
     request.session["user_uuid"] = str(fixture.user_uuid)
     request.session[LOCAL_DEV_SESSION_FIXTURE_KEY] = fixture.fixture_id
+    request.session[SESSION_AUTHENTICATED_EMAIL_KEY] = fixture.email.strip().lower()
+    request.session[SESSION_AUTHENTICATED_EMAIL_VERIFIED_KEY] = True
+    request.session[SESSION_AUTHENTICATION_PROVIDER_KEY] = LOCAL_PERSONA_AUTH_PROVIDER
     return Response(status_code=status.HTTP_204_NO_CONTENT)
 
 
@@ -144,6 +152,9 @@ async def erase_dev_session(request: Request) -> Response:
     request.session.pop(LOCAL_DEV_SESSION_FIXTURE_KEY, None)
     if fixture is not None:
         request.session.pop("user_uuid", None)
+        request.session.pop(SESSION_AUTHENTICATED_EMAIL_KEY, None)
+        request.session.pop(SESSION_AUTHENTICATED_EMAIL_VERIFIED_KEY, None)
+        request.session.pop(SESSION_AUTHENTICATION_PROVIDER_KEY, None)
     return Response(status_code=status.HTTP_204_NO_CONTENT)
 
 

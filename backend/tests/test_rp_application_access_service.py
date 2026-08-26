@@ -2,11 +2,9 @@ from unittest.mock import AsyncMock, Mock, patch
 from uuid import UUID
 
 import pytest
-from fastcrud.exceptions.http_exceptions import CustomException
 from sqlalchemy.ext.asyncio import AsyncSession
 from src.app.core.authorization import CanonicalRoleCode
 from src.app.core.exceptions.http_exceptions import NotFoundException
-from src.app.schemas.rp_application import AccessibleRPApplicationDepartmentAssignRequest
 from src.app.services.authorization_service import ResolvedPartnerAccess
 from src.app.services.rp_application_service import RPApplicationService
 
@@ -36,59 +34,42 @@ def _unassigned_application() -> dict[str, object]:
 
 
 @pytest.mark.asyncio
-async def test_department_assignment_adapter_is_idempotent_for_workspace_department() -> None:
+async def test_production_review_summaries_distinguish_legacy_reconciliation_from_absence() -> None:
     service = RPApplicationService()
     db = Mock(spec=AsyncSession)
-    db.execute = AsyncMock()
-    service._resolve_accessible_rp_application_access = AsyncMock(  # type: ignore[method-assign]
-        return_value=(_unassigned_application(), _resolved_access())
-    )
-    service._get_effective_workspace_department = AsyncMock(  # type: ignore[method-assign]
-        return_value=(7, DEPARTMENT_UUID)
-    )
-    service._create_audit_log_entry = AsyncMock()  # type: ignore[method-assign]
+    applications = [{"id": 10}, {"id": 11}, {"id": 12}]
 
-    result = await service.assign_accessible_rp_application_department(
-        db=db,
-        rp_application_uuid=APPLICATION_UUID,
-        current_user={"id": 11, "name": "Local editor"},
-        payload=AccessibleRPApplicationDepartmentAssignRequest(
-            department_uuid=DEPARTMENT_UUID,
-        ),
-    )
-
-    assert result["departmentId"] == 7
-    db.execute.assert_not_awaited()
-    service._create_audit_log_entry.assert_not_awaited()
-
-
-@pytest.mark.asyncio
-async def test_department_assignment_adapter_rejects_non_workspace_department() -> None:
-    service = RPApplicationService()
-    db = Mock(spec=AsyncSession)
-    db.execute = AsyncMock()
-    service._resolve_accessible_rp_application_access = AsyncMock(  # type: ignore[method-assign]
-        return_value=(_unassigned_application(), _resolved_access())
-    )
-    service._get_effective_workspace_department = AsyncMock(  # type: ignore[method-assign]
-        return_value=(7, DEPARTMENT_UUID)
-    )
-    service._create_audit_log_entry = AsyncMock()  # type: ignore[method-assign]
-
-    with pytest.raises(CustomException) as exc_info:
-        await service.assign_accessible_rp_application_department(
+    with patch("src.app.services.rp_application_service.crud_rp_application_promotion_requests") as reviews:
+        reviews.get_multi = AsyncMock(
+            return_value={
+                "data": [
+                    {"rp_application_id": 10, "review_status": None},
+                    {"rp_application_id": 11, "review_status": "pending"},
+                ]
+            }
+        )
+        await service._attach_production_review_statuses(
             db=db,
-            rp_application_uuid=APPLICATION_UUID,
-            current_user={"id": 11, "name": "Local editor"},
-            payload=AccessibleRPApplicationDepartmentAssignRequest(
-                department_uuid=UUID("018f6f83-0000-0000-0000-000000000778"),
-            ),
+            applications=applications,
         )
 
-    assert exc_info.value.status_code == 409
-    assert exc_info.value.detail == "RP configuration Department is inherited from its workspace"
-    db.execute.assert_not_awaited()
-    service._create_audit_log_entry.assert_not_awaited()
+    assert applications == [
+        {
+            "id": 10,
+            "production_review_status": None,
+            "production_review_reconciliation_required": True,
+        },
+        {
+            "id": 11,
+            "production_review_status": "pending",
+            "production_review_reconciliation_required": False,
+        },
+        {
+            "id": 12,
+            "production_review_status": None,
+            "production_review_reconciliation_required": False,
+        },
+    ]
 
 
 @pytest.mark.asyncio

@@ -22,11 +22,6 @@ export type WorkspaceRead = {
 	slug: string;
 	departmentId: number;
 	description: string | null;
-	onboardingState?: string | null;
-	submittedAt?: string | null;
-	underReviewAt?: string | null;
-	approvedAt?: string | null;
-	launchedAt?: string | null;
 	createdAt: string;
 	updatedAt: string | null;
 	deletedAt: string | null;
@@ -66,15 +61,32 @@ export type ApplicationInformationRead = {
 	securityAndPrivacy: string;
 	usage: string;
 	migrationOrTransitionPlan: string;
-	onboardingState?: string | null;
-	submittedAt?: string | null;
-	underReviewAt?: string | null;
-	approvedAt?: string | null;
-	launchedAt?: string | null;
 	createdAt: string;
 	updatedAt: string | null;
 	deletedAt: string | null;
 	isDeleted: boolean;
+};
+
+export type ApplicationInformationChecklistKey =
+	| "business_context"
+	| "contacts"
+	| "migration_planning"
+	| "security_posture"
+	| "service_identity"
+	| "technical_integration";
+
+export type ApplicationInformationChecklistStatus =
+	"attention_required" | "missing" | "provided";
+
+export type ApplicationInformationChecklistRead = {
+	applicationInformationUuid: string;
+	applicationNameEn: string;
+	applicationNameFr: string;
+	catsEvidenceStatus: "not_configured";
+	items: Array<{
+		key: ApplicationInformationChecklistKey;
+		status: ApplicationInformationChecklistStatus;
+	}>;
 };
 
 export type ApplicationInformationContactCreate = {
@@ -118,62 +130,6 @@ export type ApplicationInformationContactRead = {
 	updatedAt: string | null;
 	deletedAt: string | null;
 	isDeleted: boolean;
-};
-
-export type ApplicationInformationReviewChecklistStatus =
-	"not_started" | "incomplete" | "complete";
-
-export type ApplicationInformationReviewDisposition =
-	"pending" | "changes_requested" | "ready_for_next_step";
-
-export type ApplicationInformationReviewNoteCreate = {
-	body: string;
-};
-
-export type ApplicationInformationReviewNoteRead = {
-	id: number;
-	uuid: string;
-	applicationInformationId: number;
-	body: string;
-	authorName: string | null;
-	authorEmail: string | null;
-	authorUserUuid: string | null;
-	createdAt: string;
-	updatedAt: string | null;
-};
-
-export type ApplicationInformationReviewChecklistSummaryWrite = {
-	reviewDisposition: ApplicationInformationReviewDisposition;
-	applicationInformationStatus: ApplicationInformationReviewChecklistStatus;
-	contactsStatus: ApplicationInformationReviewChecklistStatus;
-	environmentRegistrationStatus: ApplicationInformationReviewChecklistStatus;
-	promotionMetadataStatus: ApplicationInformationReviewChecklistStatus;
-	evidenceReferenceStatus: ApplicationInformationReviewChecklistStatus;
-	processLinksStatus: ApplicationInformationReviewChecklistStatus;
-	rationale?: string | null;
-};
-
-export type ApplicationInformationReviewChecklistSummaryRead = {
-	id: number;
-	uuid: string;
-	applicationInformationId: number;
-	reviewDisposition: ApplicationInformationReviewDisposition;
-	applicationInformationStatus: ApplicationInformationReviewChecklistStatus;
-	contactsStatus: ApplicationInformationReviewChecklistStatus;
-	environmentRegistrationStatus: ApplicationInformationReviewChecklistStatus;
-	promotionMetadataStatus: ApplicationInformationReviewChecklistStatus;
-	evidenceReferenceStatus: ApplicationInformationReviewChecklistStatus;
-	processLinksStatus: ApplicationInformationReviewChecklistStatus;
-	rationale: string | null;
-	reviewedByName: string | null;
-	reviewedByUserUuid: string | null;
-	createdAt: string;
-	updatedAt: string | null;
-};
-
-export type ApplicationInformationReviewContextRead = {
-	notes: Array<ApplicationInformationReviewNoteRead>;
-	checklistSummary: ApplicationInformationReviewChecklistSummaryRead | null;
 };
 
 export const getWorkspaces = async (): Promise<Array<WorkspaceRead>> => {
@@ -357,6 +313,23 @@ export const getApplicationInformationContacts = async (
 	return result ?? [];
 };
 
+export const getApplicationInformationChecklist = async (
+	workspaceUuid: string,
+	applicationInformationUuid: string
+): Promise<ApplicationInformationChecklistRead> => {
+	const result = await requestJson<ApplicationInformationChecklistRead | null>(
+		`/api/v1/workspaces/${encodeURIComponent(workspaceUuid)}/application-information/${encodeURIComponent(applicationInformationUuid)}/checklist`,
+		{
+			cache: "no-store",
+			method: "GET",
+		}
+	);
+	if (!result) {
+		throw new Error("Failed to load Application checklist status");
+	}
+	return result;
+};
+
 export const createApplicationInformationContact = async (
 	workspaceUuid: string,
 	applicationInformationUuid: string,
@@ -407,63 +380,6 @@ export const deleteApplicationInformationContact = async (
 	);
 	if (!result) {
 		throw new Error("Failed to delete application information contact");
-	}
-	return result;
-};
-
-export const getApplicationInformationReviewContext = async (
-	workspaceUuid: string,
-	applicationInformationUuid: string
-): Promise<ApplicationInformationReviewContextRead> => {
-	const result =
-		await requestJson<ApplicationInformationReviewContextRead | null>(
-			`/api/v1/workspaces/${encodeURIComponent(workspaceUuid)}/application-information/${encodeURIComponent(applicationInformationUuid)}/review`,
-			{
-				cache: "no-store",
-				method: "GET",
-			}
-		);
-	if (!result) {
-		throw new Error("Failed to load application information review context");
-	}
-	return result;
-};
-
-export const createApplicationInformationReviewNote = async (
-	workspaceUuid: string,
-	applicationInformationUuid: string,
-	payload: ApplicationInformationReviewNoteCreate
-): Promise<ApplicationInformationReviewNoteRead> => {
-	const result = await requestJson<ApplicationInformationReviewNoteRead | null>(
-		`/api/v1/workspaces/${encodeURIComponent(workspaceUuid)}/application-information/${encodeURIComponent(applicationInformationUuid)}/review/notes`,
-		{
-			body: JSON.stringify(payload),
-			method: "POST",
-		}
-	);
-	if (!result) {
-		throw new Error("Failed to create application information review note");
-	}
-	return result;
-};
-
-export const upsertApplicationInformationReviewChecklistSummary = async (
-	workspaceUuid: string,
-	applicationInformationUuid: string,
-	payload: ApplicationInformationReviewChecklistSummaryWrite
-): Promise<ApplicationInformationReviewChecklistSummaryRead> => {
-	const result =
-		await requestJson<ApplicationInformationReviewChecklistSummaryRead | null>(
-			`/api/v1/workspaces/${encodeURIComponent(workspaceUuid)}/application-information/${encodeURIComponent(applicationInformationUuid)}/review/checklist`,
-			{
-				body: JSON.stringify(payload),
-				method: "PUT",
-			}
-		);
-	if (!result) {
-		throw new Error(
-			"Failed to update application information review checklist"
-		);
 	}
 	return result;
 };

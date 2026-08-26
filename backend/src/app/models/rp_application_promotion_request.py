@@ -1,6 +1,6 @@
 from datetime import UTC, datetime
 
-from sqlalchemy import DateTime, ForeignKey, String, UniqueConstraint
+from sqlalchemy import CheckConstraint, DateTime, ForeignKey, String, UniqueConstraint
 from sqlalchemy.orm import Mapped, mapped_column
 
 from ..core.db.database import Base
@@ -9,6 +9,10 @@ from ..core.db.database import Base
 class RPApplicationPromotionRequest(Base):
     __tablename__ = "rp_application_promotion_request"
     __table_args__ = (
+        CheckConstraint(
+            "review_status IS NULL OR review_status IN ('pending', 'approved', 'rejected')",
+            name="ck_rp_application_promotion_request_review_status",
+        ),
         UniqueConstraint(
             "rp_application_id",
             "target_environment",
@@ -31,6 +35,14 @@ class RPApplicationPromotionRequest(Base):
     )
     target_environment: Mapped[str] = mapped_column(String(32), index=True, nullable=False)
     requested_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    review_status: Mapped[str | None] = mapped_column(
+        String(32),
+        index=True,
+        nullable=True,
+        default=None,
+    )
+    # Retained for historical compatibility. New API contracts use
+    # review_status and do not expose this ambiguous legacy value.
     status: Mapped[str] = mapped_column(String(32), index=True, nullable=False, default="review_tracked")
     external_reference: Mapped[str | None] = mapped_column(String(255), nullable=True, default=None)
     reviewed_by_user_id: Mapped[int | None] = mapped_column(

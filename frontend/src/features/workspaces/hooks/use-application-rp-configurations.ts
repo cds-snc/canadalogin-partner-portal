@@ -1,15 +1,15 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
-	createApplicationRPConfigurationProgression,
+	createApplicationRPConfigurationCopy,
 	getApplicationRPConfiguration,
 	getApplicationRPConfigurationConfiguration,
 	getApplicationRPConfigurations,
 	updateApplicationRPConfigurationPartnerEnvironment,
+	type ApplicationRPConfigurationCopyCreate,
+	type ApplicationRPConfigurationCopyRead,
 	type ApplicationRPConfigurationPartnerEnvironmentRead,
 	type ApplicationRPConfigurationPartnerEnvironmentUpdate,
 	type ApplicationRPConfigurationRead,
-	type ApplicationRPConfigurationProgressionCreate,
-	type ApplicationRPConfigurationProgressionRead,
 	type ApplicationRPConfigurationSummaryRead,
 } from "@/fetch/rp-applications";
 
@@ -44,15 +44,15 @@ export type ApplicationRPConfigurationConfigurationState = {
 	refetch: () => Promise<unknown>;
 };
 
-export type ApplicationRPConfigurationProgressionActions = {
-	createProgression: (
+export type ApplicationRPConfigurationCopyActions = {
+	copyConfiguration: (
 		workspaceUuid: string,
 		applicationInformationUuid: string,
 		sourceRpConfigurationUuid: string,
-		payload: ApplicationRPConfigurationProgressionCreate,
-		progressionCreationKey: string
-	) => Promise<ApplicationRPConfigurationProgressionRead>;
-	isCreating: boolean;
+		payload: ApplicationRPConfigurationCopyCreate,
+		copyCreationKey: string
+	) => Promise<ApplicationRPConfigurationCopyRead>;
+	isCopying: boolean;
 };
 
 export type ApplicationRPConfigurationPartnerEnvironmentActions = {
@@ -67,10 +67,14 @@ export type ApplicationRPConfigurationPartnerEnvironmentActions = {
 
 export const useApplicationRPConfigurations = (
 	workspaceUuid: string,
-	applicationInformationUuid: string
+	applicationInformationUuid: string,
+	enabled = true
 ): ApplicationRPConfigurationsState => {
 	const query = useQuery<Array<ApplicationRPConfigurationSummaryRead>, Error>({
-		enabled: workspaceUuid.length > 0 && applicationInformationUuid.length > 0,
+		enabled:
+			enabled &&
+			workspaceUuid.length > 0 &&
+			applicationInformationUuid.length > 0,
 		queryFn: () =>
 			getApplicationRPConfigurations(workspaceUuid, applicationInformationUuid),
 		queryKey: applicationRPConfigurationsQueryKey(
@@ -154,57 +158,57 @@ export const useApplicationRPConfigurationConfiguration = (
 	};
 };
 
-export const useApplicationRPConfigurationProgressionActions =
-	(): ApplicationRPConfigurationProgressionActions => {
+export const useApplicationRPConfigurationCopyActions =
+	(): ApplicationRPConfigurationCopyActions => {
 		const queryClient = useQueryClient();
 		const mutation = useMutation({
 			mutationFn: ({
 				applicationInformationUuid,
+				copyCreationKey,
 				payload,
-				progressionCreationKey,
 				sourceRpConfigurationUuid,
 				workspaceUuid,
 			}: {
 				applicationInformationUuid: string;
-				payload: ApplicationRPConfigurationProgressionCreate;
-				progressionCreationKey: string;
+				copyCreationKey: string;
+				payload: ApplicationRPConfigurationCopyCreate;
 				sourceRpConfigurationUuid: string;
 				workspaceUuid: string;
 			}) =>
-				createApplicationRPConfigurationProgression(
+				createApplicationRPConfigurationCopy(
 					workspaceUuid,
 					applicationInformationUuid,
 					sourceRpConfigurationUuid,
 					payload,
-					progressionCreationKey
+					copyCreationKey
 				),
-			onSuccess: async (progression) => {
+			onSuccess: async (copied) => {
 				await queryClient.invalidateQueries({
 					exact: true,
 					queryKey: applicationRPConfigurationsQueryKey(
-						progression.workspaceUuid,
-						progression.applicationInformationUuid
+						copied.workspaceUuid,
+						copied.applicationInformationUuid
 					),
 				});
 			},
 		});
 
 		return {
-			createProgression: (
+			copyConfiguration: (
 				workspaceUuid,
 				applicationInformationUuid,
 				sourceRpConfigurationUuid,
 				payload,
-				progressionCreationKey
-			) =>
+				copyCreationKey
+			): Promise<ApplicationRPConfigurationCopyRead> =>
 				mutation.mutateAsync({
 					applicationInformationUuid,
+					copyCreationKey,
 					payload,
-					progressionCreationKey,
 					sourceRpConfigurationUuid,
 					workspaceUuid,
 				}),
-			isCreating: mutation.isPending,
+			isCopying: mutation.isPending,
 		};
 	};
 

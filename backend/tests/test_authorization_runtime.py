@@ -3,7 +3,6 @@ from unittest.mock import AsyncMock, Mock, patch
 from uuid import UUID
 
 import pytest
-
 from src.app.api.dependencies import get_rp_application_service
 from src.app.core.authorization import CanonicalRoleCode
 from src.app.core.exceptions.http_exceptions import ForbiddenException
@@ -262,12 +261,12 @@ class TestAuthorizationOpenAPI:
             "/api/v1/rp-applications/accessible/{rp_application_uuid}/client",
             "/api/v1/rp-applications/accessible/{rp_application_uuid}/client/rotate-secret",
             "/api/v1/rp-applications/accessible/{rp_application_uuid}/client/rotated-secrets",
-            "/api/v1/rp-applications/accessible/{rp_application_uuid}/department",
             "/api/v1/rp-applications/accessible/{rp_application_uuid}/mau-report",
             "/api/v1/rp-applications/accessible/{rp_application_uuid}/oauth-setup",
         }
 
         assert expected_paths <= paths
+        assert "/api/v1/rp-applications/accessible/{rp_application_uuid}/department" not in paths
         assert not any(path.startswith("/api/v1/rp-applications/mine") for path in paths)
 
     def test_legacy_authorization_mutation_routes_are_absent(self) -> None:
@@ -284,9 +283,7 @@ class TestAuthorizationOpenAPI:
         assert "/api/v1/rp-application" not in paths
         assert "/api/v1/rp-application/{rp_application_uuid}" not in paths
         assert "/api/v1/rp-applications" not in paths
-        verify_application_path = "/api/v1/ibm-sv-admin/applications/{application_id}"
-        assert "put" not in paths[verify_application_path]
-        assert "delete" not in paths[verify_application_path]
+        assert not any(path.startswith("/api/v1/ibm-sv-admin") for path in paths)
         assert "/api/v1/workspaces/{workspace_uuid}/members" not in paths
         assert "/api/v1/workspaces/{workspace_uuid}/members/{user_uuid}" not in paths
 
@@ -313,7 +310,7 @@ class TestAuthorizationOpenAPI:
         assert all(response.status_code == 404 for response in responses)
         resolution_spy.assert_not_called()
 
-    def test_retired_verify_app_mutations_do_not_resolve_the_client(
+    def test_retired_verify_administration_does_not_resolve_the_client(
         self,
         client,
     ) -> None:
@@ -326,6 +323,8 @@ class TestAuthorizationOpenAPI:
         app.dependency_overrides[get_ibm_sv_admin_client] = resolve_client
         try:
             responses = (
+                client.get("/api/v1/ibm-sv-admin/users"),
+                client.get("/api/v1/ibm-sv-admin/applications"),
                 client.put(
                     "/api/v1/ibm-sv-admin/applications/verify-app-1",
                     json={},
@@ -335,5 +334,5 @@ class TestAuthorizationOpenAPI:
         finally:
             app.dependency_overrides.clear()
 
-        assert all(response.status_code == 405 for response in responses)
+        assert all(response.status_code == 404 for response in responses)
         resolution_spy.assert_not_called()

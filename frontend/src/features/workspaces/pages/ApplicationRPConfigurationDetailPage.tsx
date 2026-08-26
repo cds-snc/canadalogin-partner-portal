@@ -16,8 +16,8 @@ import { useSession } from "@/hooks";
 import { useApplicationRPConfiguration } from "../hooks/use-application-rp-configurations";
 import {
 	getCanadaLoginEnvironmentLabel,
-	getWorkspaceOnboardingStateLabel,
-	getWorkspacePromotionStatusLabel,
+	getProductionReviewSummaryLabel,
+	getRegistrationStatusLabel,
 } from "../onboarding-display";
 
 export const ApplicationRPConfigurationDetailPage = (): FunctionComponent => {
@@ -50,23 +50,27 @@ export const ApplicationRPConfigurationDetailPage = (): FunctionComponent => {
 			"partner_secret_lifecycle",
 			workspaceUuid
 		);
-	const canReadAudit = hasCapability(
-		authorizationContext,
-		"partner_audit_read",
-		workspaceUuid
-	);
 	const canWriteConfiguration = hasCapability(
 		authorizationContext,
 		"rp_configuration_write",
 		workspaceUuid
 	);
-	const canManageProductionReview =
+	const canViewProductionReview =
+		canReadConfiguration ||
 		hasCapability(
 			authorizationContext,
-			"promotion_request_write",
+			"production_review_request_write",
 			workspaceUuid
 		) ||
 		hasCapability(authorizationContext, "production_review", workspaceUuid);
+	const canViewProductionReviewTask =
+		canViewProductionReview &&
+		configuration?.canadaLoginEnvironment === "production";
+	const hasFocusedTask =
+		canReadConfiguration ||
+		canReadUsage ||
+		canManageCredentials ||
+		canViewProductionReviewTask;
 	const applicationName = configuration
 		? i18n.resolvedLanguage?.startsWith("fr")
 			? configuration.serviceNameFr
@@ -81,15 +85,12 @@ export const ApplicationRPConfigurationDetailPage = (): FunctionComponent => {
 	});
 	const basePath = `/workspaces/${workspaceUuid}/applications/${applicationInformationUuid}/rp-configurations/${rpConfigurationUuid}`;
 	const resumeSetupHref =
+		configuration &&
 		canWriteConfiguration &&
-		configuration?.onboardingState === "draft" &&
+		!configuration.registrationCompletedAt &&
 		configuration.resumeTaskPath?.trim()
 			? configuration.resumeTaskPath
 			: null;
-	const canProgress =
-		configuration?.canadaLoginEnvironment === "test" ||
-		configuration?.canadaLoginEnvironment === "staging";
-
 	return (
 		<div className="grid gap-400">
 			<div>
@@ -155,25 +156,24 @@ export const ApplicationRPConfigurationDetailPage = (): FunctionComponent => {
 								: t("common.notAvailable")}
 						</dd>
 						<dt>
-							<strong>{t("workspaces.onboardingStateLabel")}</strong>
+							<strong>{t("workspaces.registrationStatusLabel")}</strong>
 						</dt>
 						<dd>
-							{configuration.onboardingState?.trim()
-								? getWorkspaceOnboardingStateLabel(
-										t as never,
-										configuration.onboardingState
-									)
-								: t("common.notAvailable")}
+							{getRegistrationStatusLabel(
+								t as never,
+								configuration.registrationCompletedAt
+							)}
 						</dd>
-						{configuration.promotionStatus?.trim() ? (
+						{configuration.canadaLoginEnvironment === "production" ? (
 							<>
 								<dt>
 									<strong>{t("workspaces.productionReviewLabel")}</strong>
 								</dt>
 								<dd>
-									{getWorkspacePromotionStatusLabel(
+									{getProductionReviewSummaryLabel(
 										t as never,
-										configuration.promotionStatus
+										configuration.productionReviewStatus,
+										configuration.productionReviewReconciliationRequired
 									)}
 								</dd>
 							</>
@@ -188,80 +188,94 @@ export const ApplicationRPConfigurationDetailPage = (): FunctionComponent => {
 						</div>
 					) : null}
 
+					{canWriteConfiguration ? (
+						<section className="grid gap-100">
+							<Heading tag="h2">
+								{t("workspaces.rpLifecycleActionsTitle")}
+							</Heading>
+							<Text>{t("workspaces.rpCopyTaskDescription")}</Text>
+							<div className="flex flex-wrap gap-200">
+								<Button
+									buttonRole="secondary"
+									href={`${basePath}/copy`}
+									type="link"
+								>
+									{t("workspaces.rpCopyTaskTitle")}
+								</Button>
+								<Button
+									buttonRole="secondary"
+									href={`${basePath}/settings`}
+									type="link"
+								>
+									{t("workspaces.rpOverviewSettingsTitle")}
+								</Button>
+							</div>
+						</section>
+					) : null}
+
 					<section className="grid gap-200">
 						<Heading tag="h2">{t("workspaces.rpOverviewTasksTitle")}</Heading>
-						<Grid columns="1fr" columnsDesktop="repeat(3, 1fr)">
-							{canReadConfiguration ? (
-								<Card
-									cardTitle={t("workspaces.rpOverviewConfigurationTitle")}
-									cardTitleTag="h3"
-									href={`${basePath}/configuration`}
-									description={t(
-										"workspaces.rpOverviewConfigurationDescription"
-									)}
-								/>
-							) : null}
-							{canReadUsage ? (
-								<Card
-									cardTitle={t("workspaces.rpOverviewUsageTitle")}
-									cardTitleTag="h3"
-									description={t("workspaces.rpOverviewUsageDescription")}
-									href={`${basePath}/usage`}
-								/>
-							) : null}
-							{canManageCredentials ? (
-								<Card
-									cardTitle={t("workspaces.rpOverviewCredentialsTitle")}
-									cardTitleTag="h3"
-									description={t("workspaces.rpOverviewCredentialsDescription")}
-									href={`${basePath}/manage-credentials`}
-								/>
-							) : null}
-							{canReadAudit ? (
-								<Card
-									cardTitle={t("workspaces.applicationsAuditAction")}
-									cardTitleTag="h3"
-									description={t("workspaces.applicationsAuditSummary")}
-									href={`${basePath}/audit`}
-								/>
-							) : null}
-							{canWriteConfiguration ? (
-								<Card
-									cardTitle={t("workspaces.rpOverviewSettingsTitle")}
-									cardTitleTag="h3"
-									description={t("workspaces.rpOverviewSettingsDescription")}
-									href={`${basePath}/settings`}
-								/>
-							) : null}
-							{canWriteConfiguration && canProgress ? (
-								<Card
-									cardTitle={t("workspaces.rpProgressionTaskTitle")}
-									cardTitleTag="h3"
-									description={t("workspaces.rpProgressionTaskDescription")}
-									href={`${basePath}/progression`}
-								/>
-							) : null}
-							{canManageProductionReview &&
-							configuration.canadaLoginEnvironment === "production" ? (
-								<Card
-									cardTitle={t("workspaces.rpProductionReviewTaskTitle")}
-									cardTitleTag="h3"
-									href={`${basePath}/production-review`}
-									description={t(
-										"workspaces.rpProductionReviewTaskDescription"
-									)}
-								/>
-							) : null}
-						</Grid>
+						{hasFocusedTask ? (
+							<Grid columns="1fr" columnsDesktop="repeat(3, 1fr)">
+								{canReadConfiguration ? (
+									<Card
+										cardTitle={t("workspaces.rpOverviewConfigurationTitle")}
+										cardTitleTag="h3"
+										href={`${basePath}/configuration`}
+										description={t(
+											"workspaces.rpOverviewConfigurationDescription"
+										)}
+									/>
+								) : null}
+								{canReadUsage ? (
+									<Card
+										cardTitle={t("workspaces.rpOverviewUsageTitle")}
+										cardTitleTag="h3"
+										description={t("workspaces.rpOverviewUsageDescription")}
+										href={`${basePath}/usage`}
+									/>
+								) : null}
+								{canManageCredentials ? (
+									<Card
+										cardTitle={t("workspaces.rpOverviewCredentialsTitle")}
+										cardTitleTag="h3"
+										href={`${basePath}/manage-credentials`}
+										description={t(
+											"workspaces.rpOverviewCredentialsDescription"
+										)}
+									/>
+								) : null}
+								{canViewProductionReviewTask ? (
+									<Card
+										cardTitle={t("workspaces.rpProductionReviewTaskTitle")}
+										cardTitleTag="h3"
+										href={`${basePath}/production-review`}
+										description={t(
+											"workspaces.rpProductionReviewTaskDescription"
+										)}
+									/>
+								) : null}
+							</Grid>
+						) : (
+							<Text>{t("workspaces.rpOverviewNoPartnerActions")}</Text>
+						)}
 					</section>
 				</>
 			) : null}
 
 			<div>
 				<Link
-					href={`/workspaces/${workspaceUuid}/applications/${applicationInformationUuid}/rp-configurations`}
+					href={
+						canReadConfiguration
+							? `/workspaces/${workspaceUuid}/applications/${applicationInformationUuid}/rp-configurations`
+							: `/workspaces/${workspaceUuid}/applications/${applicationInformationUuid}`
+					}
 				>
-					{t("workspaces.rpConfigurationsBackToList")}
+					{t(
+						canReadConfiguration
+							? "workspaces.rpConfigurationsBackToList"
+							: "workspaces.appInfoBackToApplication"
+					)}
 				</Link>
 			</div>
 		</div>

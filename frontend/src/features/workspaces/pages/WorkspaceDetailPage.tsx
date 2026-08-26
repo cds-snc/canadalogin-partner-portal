@@ -2,10 +2,10 @@ import { useParams, useSearch } from "@tanstack/react-router";
 import { useTranslation } from "react-i18next";
 import type { FunctionComponent } from "@/common/types";
 import { Card, Grid, Heading, Link, Notice, Text } from "@/components/ui";
+import { hasCapability } from "@/features/auth/authorization";
 import { getRequestErrorNotice } from "@/fetch";
 import { useSession } from "@/hooks";
 import { useWorkspace } from "../hooks/use-workspace";
-import { getWorkspaceOnboardingStateLabel } from "../onboarding-display";
 import {
 	getWorkspaceRoutePath,
 	getWorkspaceRoutesForSurface,
@@ -15,7 +15,6 @@ import {
 const WORKSPACE_TASK_DESCRIPTION_KEYS = {
 	access: "workspaces.taskDescriptions.access",
 	applicationInformation: "workspaces.taskDescriptions.applications",
-	reports: "workspaces.taskDescriptions.reports",
 	settings: "workspaces.taskDescriptions.settings",
 } as const;
 
@@ -37,11 +36,6 @@ const WORKSPACE_TASK_GROUPS = [
 		id: "access",
 		routeIds: ["access"],
 		titleKey: "workspaces.taskGroups.access",
-	},
-	{
-		id: "insights",
-		routeIds: ["reports"],
-		titleKey: "workspaces.taskGroups.insights",
 	},
 	{
 		id: "workspaceManagement",
@@ -77,6 +71,11 @@ export const WorkspaceDetailPage = (): FunctionComponent => {
 		authorizationContext,
 		workspaceUuid
 	).filter(isWorkspaceTaskRoute);
+	const canDiscoverUsage = hasCapability(
+		authorizationContext,
+		"mau_report_read",
+		workspaceUuid
+	);
 
 	return (
 		<>
@@ -142,15 +141,25 @@ export const WorkspaceDetailPage = (): FunctionComponent => {
 							</section>
 						);
 					})}
-					<section>
-						<Heading tag="h2">{t("workspaces.statusTitle")}</Heading>
-						<Text>
-							{`${t("workspaces.onboardingStateLabel")}: ${workspace.onboardingState?.trim() ? getWorkspaceOnboardingStateLabel(t, workspace.onboardingState) : t("common.notAvailable")}`}
-						</Text>
-						{workspace.description?.trim() ? (
+					{canDiscoverUsage ? (
+						<section>
+							<Heading tag="h2">{t("workspaces.taskGroups.insights")}</Heading>
+							<Grid columns="1fr" columnsTablet="1fr 1fr" tag="div">
+								<Card
+									cardTitle={t("workspaces.navigation.reports")}
+									cardTitleTag="h3"
+									description={t("workspaces.taskDescriptions.reports")}
+									href="/reports/applications"
+								/>
+							</Grid>
+						</section>
+					) : null}
+					{workspace.description?.trim() ? (
+						<section>
+							<Heading tag="h2">{t("workspaces.detailsTitle")}</Heading>
 							<Text>{`${t("workspaces.descriptionLabel")}: ${workspace.description}`}</Text>
-						) : null}
-					</section>
+						</section>
+					) : null}
 					<Link href="/workspaces">{t("workspaces.chooseAnother")}</Link>
 				</div>
 			) : null}

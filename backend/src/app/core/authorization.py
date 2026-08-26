@@ -116,7 +116,7 @@ class RevocationActorSource(StrEnum):
 class Capability(StrEnum):
     """Application-owned capability keys; anything absent is denied."""
 
-    PLATFORM_GOVERNANCE = "platform_governance"
+    ACCESS_ADMINISTRATION = "access_administration"
     PARTNER_BOOTSTRAP = "partner_bootstrap"
     CL_ADMIN_ASSIGNMENT = "cl_admin_assignment"
     RP_ADMIN_ASSIGNMENT = "rp_admin_assignment"
@@ -132,12 +132,8 @@ class Capability(StrEnum):
     RP_CONFIGURATION_WRITE = "rp_configuration_write"
     PARTNER_SECRET_READ = "partner_secret_read"
     PARTNER_SECRET_LIFECYCLE = "partner_secret_lifecycle"
-    PROMOTION_REQUEST_WRITE = "promotion_request_write"
-    CATS_FIELDS_WRITE = "cats_fields_write"
+    PRODUCTION_REVIEW_REQUEST_WRITE = "production_review_request_write"
     MAU_REPORT_READ = "mau_report_read"
-    AGGREGATE_REPORT_READ = "aggregate_report_read"
-    PARTNER_AUDIT_READ = "partner_audit_read"
-    PARTNER_AUDIT_SENSITIVE_FIELDS_READ = "partner_audit_sensitive_fields_read"
     PARTNER_INVITATION_MANAGE = "partner_invitation_manage"
 
 
@@ -158,7 +154,7 @@ ROLE_PERMISSION_MATRIX: Mapping[CanonicalRoleCode, RolePermissionSet] = MappingP
         CanonicalRoleCode.CL_ADMIN: RolePermissionSet(
             allowed=frozenset(
                 {
-                    Capability.PLATFORM_GOVERNANCE,
+                    Capability.ACCESS_ADMINISTRATION,
                     Capability.PARTNER_BOOTSTRAP,
                     Capability.CL_ADMIN_ASSIGNMENT,
                     Capability.RP_ADMIN_ASSIGNMENT,
@@ -166,7 +162,6 @@ ROLE_PERMISSION_MATRIX: Mapping[CanonicalRoleCode, RolePermissionSet] = MappingP
                     Capability.CROSS_WORKSPACE_METADATA_READ,
                     Capability.ONBOARDING_OVERSIGHT_READ,
                     Capability.PRODUCTION_REVIEW,
-                    Capability.AGGREGATE_REPORT_READ,
                 }
             )
         ),
@@ -181,12 +176,8 @@ ROLE_PERMISSION_MATRIX: Mapping[CanonicalRoleCode, RolePermissionSet] = MappingP
                     Capability.RP_CONFIGURATION_WRITE,
                     Capability.PARTNER_SECRET_READ,
                     Capability.PARTNER_SECRET_LIFECYCLE,
-                    Capability.PROMOTION_REQUEST_WRITE,
-                    Capability.CATS_FIELDS_WRITE,
+                    Capability.PRODUCTION_REVIEW_REQUEST_WRITE,
                     Capability.MAU_REPORT_READ,
-                    Capability.AGGREGATE_REPORT_READ,
-                    Capability.PARTNER_AUDIT_READ,
-                    Capability.PARTNER_AUDIT_SENSITIVE_FIELDS_READ,
                     Capability.PARTNER_INVITATION_MANAGE,
                     Capability.PARTNER_STAFF_ASSIGNMENT,
                 }
@@ -202,12 +193,8 @@ ROLE_PERMISSION_MATRIX: Mapping[CanonicalRoleCode, RolePermissionSet] = MappingP
                     Capability.RP_CONFIGURATION_WRITE,
                     Capability.PARTNER_SECRET_READ,
                     Capability.PARTNER_SECRET_LIFECYCLE,
-                    Capability.PROMOTION_REQUEST_WRITE,
-                    Capability.CATS_FIELDS_WRITE,
+                    Capability.PRODUCTION_REVIEW_REQUEST_WRITE,
                     Capability.MAU_REPORT_READ,
-                    Capability.AGGREGATE_REPORT_READ,
-                    Capability.PARTNER_AUDIT_READ,
-                    Capability.PARTNER_AUDIT_SENSITIVE_FIELDS_READ,
                 }
             )
         ),
@@ -218,8 +205,6 @@ ROLE_PERMISSION_MATRIX: Mapping[CanonicalRoleCode, RolePermissionSet] = MappingP
                     Capability.APPLICATION_INFORMATION_READ,
                     Capability.RP_CONFIGURATION_READ,
                     Capability.MAU_REPORT_READ,
-                    Capability.AGGREGATE_REPORT_READ,
-                    Capability.PARTNER_AUDIT_READ,
                 }
             )
         ),
@@ -231,69 +216,6 @@ def role_allows(role: CanonicalRoleCode, capability: Capability) -> bool:
     """Return the immutable matrix decision; unknown values fail at parsing."""
 
     return ROLE_PERMISSION_MATRIX[role].allows(capability)
-
-
-class VerifyAdminOperation(StrEnum):
-    """Known Verify adapter operations, including explicitly excluded secrets."""
-
-    USER_LIST = "user.list"
-    USER_SEARCH = "user.search"
-    APPLICATION_LIST = "application.list"
-    APPLICATION_READ = "application.read"
-    APPLICATION_CREATE = "application.create"
-    APPLICATION_UPDATE = "application.update"
-    APPLICATION_DELETE = "application.delete"
-    APPLICATION_ENTITLEMENT_READ = "application.entitlement.read"
-    APPLICATION_LOGIN_QUERY = "application.login.query"
-    APPLICATION_AUDIT_QUERY = "application.audit.query"
-    GROUP_LIST = "group.list"
-    GROUP_SEARCH = "group.search"
-    GROUP_READ = "group.read"
-    GROUP_MEMBERSHIP_READ = "group.membership.read"
-    GROUP_MEMBERSHIP_ADD = "group.membership.add"
-    GROUP_MEMBERSHIP_REMOVE = "group.membership.remove"
-    CLIENT_CREDENTIAL_READ = "client_credential.read"
-    CLIENT_SECRET_READ = "client_secret.read"
-    CLIENT_SECRET_ROTATE = "client_secret.rotate"
-    CLIENT_SECRET_DELETE = "client_secret.delete"
-
-
-VERIFY_ADMIN_OPERATION_ALLOWLIST = frozenset(
-    {
-        VerifyAdminOperation.USER_LIST,
-        VerifyAdminOperation.USER_SEARCH,
-        VerifyAdminOperation.APPLICATION_LIST,
-        VerifyAdminOperation.APPLICATION_READ,
-        VerifyAdminOperation.APPLICATION_CREATE,
-        VerifyAdminOperation.APPLICATION_ENTITLEMENT_READ,
-        VerifyAdminOperation.APPLICATION_LOGIN_QUERY,
-        VerifyAdminOperation.APPLICATION_AUDIT_QUERY,
-        VerifyAdminOperation.GROUP_LIST,
-        VerifyAdminOperation.GROUP_SEARCH,
-        VerifyAdminOperation.GROUP_READ,
-        VerifyAdminOperation.GROUP_MEMBERSHIP_READ,
-        VerifyAdminOperation.GROUP_MEMBERSHIP_ADD,
-        VerifyAdminOperation.GROUP_MEMBERSHIP_REMOVE,
-    }
-)
-VERIFY_SECRET_OPERATIONS = frozenset(
-    {
-        VerifyAdminOperation.CLIENT_CREDENTIAL_READ,
-        VerifyAdminOperation.CLIENT_SECRET_READ,
-        VerifyAdminOperation.CLIENT_SECRET_ROTATE,
-        VerifyAdminOperation.CLIENT_SECRET_DELETE,
-    }
-)
-
-
-def is_verify_admin_operation_allowed(operation: VerifyAdminOperation | str) -> bool:
-    """Deny unknown and secret-bearing Verify operations by default."""
-
-    try:
-        known_operation = VerifyAdminOperation(operation)
-    except ValueError:
-        return False
-    return known_operation in VERIFY_ADMIN_OPERATION_ALLOWLIST
 
 
 @dataclass(frozen=True, slots=True)

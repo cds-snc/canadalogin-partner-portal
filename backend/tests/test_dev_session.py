@@ -7,18 +7,22 @@ import pytest
 from fastapi import APIRouter, Request
 from fastapi.testclient import TestClient
 from pydantic import ValidationError
-from starsessions.stores.memory import InMemoryStore
-
 from src.app.api.v1.users import router as users_router
 from src.app.core.config import (
     LOCAL_DEV_SESSION_FIXTURE_KEY,
     Settings,
 )
 from src.app.core.db.database import async_get_db
+from src.app.core.identity import (
+    SESSION_AUTHENTICATED_EMAIL_KEY,
+    SESSION_AUTHENTICATED_EMAIL_VERIFIED_KEY,
+    SESSION_AUTHENTICATION_PROVIDER_KEY,
+)
 from src.app.core.local_persona_fixtures import LOCAL_PERSONA_FIXTURES
 from src.app.core.setup import create_application
 from src.app.services.authorization_service import ResolvedAuthorizationState
 from src.app.services.oidc_service import OidcService
+from starsessions.stores.memory import InMemoryStore
 
 DEV_SESSION_PATH = "/api/v1/dev/session"
 EXACT_LOCAL_CONFIG = {
@@ -116,6 +120,7 @@ def _settings(**overrides: object) -> Settings:
         values.setdefault("SECRET_KEY", "unit-test-shared-environment-key-000000000000")
         values.setdefault("CORS_ORIGINS", ["https://portal.example.test"])
         values.setdefault("SESSION_COOKIE_DOMAIN", ".example.test")
+        values.setdefault("PARTNER_ACCESS_ALLOWED_EMAIL_DOMAINS", ["example.test"])
     return Settings(
         _env_file=None,
         **values,
@@ -246,6 +251,9 @@ def test_selecting_allowlisted_fixture_uses_normal_session_shape(
     assert session == {
         "user_uuid": str(fixture.user_uuid),
         LOCAL_DEV_SESSION_FIXTURE_KEY: fixture.fixture_id,
+        SESSION_AUTHENTICATED_EMAIL_KEY: fixture.email,
+        SESSION_AUTHENTICATED_EMAIL_VERIFIED_KEY: True,
+        SESSION_AUTHENTICATION_PROVIDER_KEY: "local_dev",
     }
     assert current["currentFixtureId"] == fixture.fixture_id
     assert len(database.statements) == 2
@@ -437,7 +445,11 @@ async def test_oidc_callback_removes_local_marker_before_storing_real_session(
     client = Mock(
         authorize_access_token=AsyncMock(
             return_value={
-                "userinfo": {"sub": "real-subject", "email": "real@example.gc.ca"},
+                "userinfo": {
+                    "sub": "real-subject",
+                    "email": "real@example.gc.ca",
+                    "email_verified": True,
+                },
                 "access_token": "fake-real-token",
             }
         ),
@@ -458,3 +470,4 @@ async def test_oidc_callback_removes_local_marker_before_storing_real_session(
     assert response.status_code == 307
     assert request.session["user_uuid"] == real_user_uuid
     assert LOCAL_DEV_SESSION_FIXTURE_KEY not in request.session
+    assert request.session[SESSION_AUTHENTICATED_EMAIL_KEY] == "real@example.gc.ca"

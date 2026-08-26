@@ -39,12 +39,15 @@ export type ApplicationInformationContactsState = {
 
 export const useApplicationInformationContacts = (
 	workspaceUuid: string,
-	applicationInformationUuid: string
+	applicationInformationUuid: string,
+	enabled = true
 ): ApplicationInformationContactsState => {
 	const queryClient = useQueryClient();
 	const query = useQuery<Array<ApplicationInformationContactRead>, Error>({
 		enabled:
-			workspaceUuid.length > 0 && applicationInformationUuid.length > 0,
+			enabled &&
+			workspaceUuid.length > 0 &&
+			applicationInformationUuid.length > 0,
 		queryFn: () =>
 			getApplicationInformationContacts(
 				workspaceUuid,

@@ -2,7 +2,6 @@ import pytest
 from fastapi import FastAPI, Request
 from fastapi.responses import JSONResponse, PlainTextResponse
 from fastapi.testclient import TestClient
-
 from src.app.middleware.client_cache_middleware import ClientCacheMiddleware
 from src.app.middleware.cookie_origin_middleware import CookieOriginMiddleware
 
@@ -42,6 +41,7 @@ def test_api_response_cannot_opt_itself_into_public_caching() -> None:
         response = client.get("/api/v1/user/me/")
 
     assert response.headers["Cache-Control"] == "private, no-store"
+    assert response.headers["Referrer-Policy"] == "no-referrer"
 
 
 def test_authenticated_non_api_response_is_never_public() -> None:

@@ -79,8 +79,8 @@ const configuration = {
 	canadaLoginEnvironment: "staging" as const,
 	partnerEnvironment: "Partner staging",
 	offlinePublicKeyProvided: true,
-	onboardingState: "draft",
-	promotionStatus: null,
+	productionReviewStatus: null,
+	registrationCompletedAt: null,
 	registrationAnswers: {
 		applicationEnvironmentUrlEn: "https://benefits.canada.ca",
 		applicationEnvironmentUrlFr: "https://prestations.canada.ca",

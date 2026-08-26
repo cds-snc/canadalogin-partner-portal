@@ -1,6 +1,6 @@
 import uuid as uuid_pkg
 from datetime import UTC, datetime
-from unittest.mock import AsyncMock, Mock
+from unittest.mock import ANY, AsyncMock, Mock
 
 import casbin
 from fastapi.testclient import TestClient
@@ -102,43 +102,6 @@ def sample_application_information_contact_payload(*, responsibility_en: str = "
     }
 
 
-def sample_application_information_review_note_payload(
-    *,
-    body: str = "Checklist evidence reference still missing",
-) -> dict[str, object]:
-    return {
-        "id": 2,
-        "uuid": "018f6f83-0000-0000-0000-000000000911",
-        "application_information_id": 17,
-        "body": body,
-        "author_name": "CL Admin",
-        "author_email": "admin@example.gc.ca",
-        "author_user_uuid": "018f6f83-0000-0000-0000-000000000001",
-        "created_at": datetime(2026, 8, 11, 12, 30, tzinfo=UTC).isoformat(),
-        "updated_at": None,
-    }
-
-
-def sample_application_information_review_checklist_payload() -> dict[str, object]:
-    return {
-        "id": 3,
-        "uuid": "018f6f83-0000-0000-0000-000000000912",
-        "application_information_id": 17,
-        "review_disposition": "changes_requested",
-        "application_information_status": "complete",
-        "contacts_status": "incomplete",
-        "environment_registration_status": "complete",
-        "promotion_metadata_status": "not_started",
-        "evidence_reference_status": "incomplete",
-        "process_links_status": "complete",
-        "rationale": "Need a linked evidence reference before approval",
-        "reviewed_by_name": "CL Admin",
-        "reviewed_by_user_uuid": "018f6f83-0000-0000-0000-000000000001",
-        "created_at": datetime(2026, 8, 11, 12, 10, tzinfo=UTC).isoformat(),
-        "updated_at": datetime(2026, 8, 11, 12, 35, tzinfo=UTC).isoformat(),
-    }
-
-
 def sample_rp_application_payload(*, dnr_app_name: str = "Benefits Portal") -> dict[str, object]:
     return {
         "id": 33,
@@ -161,14 +124,8 @@ def sample_rp_application_payload(*, dnr_app_name: str = "Benefits Portal") -> d
             "requested_scopes": ["openid", "profile"],
         },
         "application_owner": None,
-        "promotion_target_environment": None,
-        "promotion_status": None,
-        "promotion_external_reference": None,
-        "promotion_reviewed_by_user_uuid": None,
-        "promotion_reviewed_by_team": None,
-        "promotion_requested_at": None,
-        "promotion_reviewed_at": None,
-        "promotion_decided_at": None,
+        "registration_completed_at": None,
+        "production_review_status": None,
     }
 
 
@@ -178,9 +135,9 @@ def sample_rp_application_registration_draft_payload() -> dict[str, object]:
         "rp_application_uuid": "018f6f83-0000-0000-0000-000000000701",
         "application_information_uuid": "018f6f83-0000-0000-0000-000000000501",
         "configuration_name": "Staging integration A",
-        "onboarding_state": "draft",
         "registration_draft_version": 1,
         "registration_last_completed_step": "basics",
+        "registration_completed_at": None,
         "registration_answers": {
             "application_information_uuid": "018f6f83-0000-0000-0000-000000000501",
             "canada_login_environment": "staging",
@@ -204,8 +161,9 @@ def sample_submitted_rp_application_payload() -> dict[str, object]:
 def sample_rp_application_registration_submission_payload() -> dict[str, object]:
     return {
         "workspace_uuid": "018f6f83-0000-0000-0000-000000000201",
+        "application_information_uuid": "018f6f83-0000-0000-0000-000000000501",
         "rp_application_uuid": "018f6f83-0000-0000-0000-000000000701",
-        "onboarding_state": "submitted",
+        "registration_completed_at": datetime(2026, 8, 11, 12, 0, tzinfo=UTC).isoformat(),
         "registration_draft_version": 5,
         "service_name_en": "Benefits Portal",
         "service_name_fr": "Portail des prestations",
@@ -224,39 +182,25 @@ def sample_rp_configuration_progression_payload() -> dict[str, object]:
         "target_environment": "production",
         "target_registration_draft_version": 1,
         "target_registration_last_completed_step": "basics",
-        "self_serve": False,
-        "promotion_status": "review_tracked",
+        "self_serve": True,
     }
 
 
-def sample_review_tracked_production_rp_application_payload() -> dict[str, object]:
+def sample_rp_configuration_copy_payload() -> dict[str, object]:
     return {
-        **sample_rp_application_payload(),
-        "canada_login_environment": "production",
-        "onboarding_state": "under_review",
-        "submitted_at": datetime(2026, 8, 11, 11, 30, tzinfo=UTC).isoformat(),
-        "under_review_at": datetime(2026, 8, 11, 11, 45, tzinfo=UTC).isoformat(),
-        "approved_at": None,
-        "launched_at": None,
-        "promotion_target_environment": "production",
-        "promotion_status": "review_tracked",
-        "promotion_external_reference": "CAB-123",
-        "promotion_reviewed_by_user_uuid": None,
-        "promotion_reviewed_by_team": None,
-        "promotion_requested_at": datetime(2026, 8, 11, 11, 45, tzinfo=UTC).isoformat(),
-        "promotion_reviewed_at": None,
-        "promotion_decided_at": None,
-    }
-
-
-def sample_approved_production_rp_application_payload() -> dict[str, object]:
-    return {
-        **sample_review_tracked_production_rp_application_payload(),
-        "promotion_status": "approved",
-        "promotion_reviewed_by_user_uuid": "018f6f83-0000-0000-0000-000000000001",
-        "promotion_reviewed_by_team": "CanadaLogin",
-        "promotion_reviewed_at": datetime(2026, 8, 11, 12, 15, tzinfo=UTC).isoformat(),
-        "promotion_decided_at": datetime(2026, 8, 11, 12, 15, tzinfo=UTC).isoformat(),
+        "workspace_uuid": "018f6f83-0000-0000-0000-000000000201",
+        "application_information_uuid": "018f6f83-0000-0000-0000-000000000501",
+        "source_rp_configuration_uuid": "018f6f83-0000-0000-0000-000000000701",
+        "source_configuration_name": "Partner staging A",
+        "source_partner_environment": None,
+        "source_environment": "staging",
+        "target_rp_configuration_uuid": "018f6f83-0000-0000-0000-000000000702",
+        "target_configuration_name": "Partner test B",
+        "target_partner_environment": "Partner QA 2",
+        "target_environment": "test",
+        "target_registration_draft_version": 1,
+        "target_registration_last_completed_step": "basics",
+        "copy_policy_version": 1,
     }
 
 
@@ -275,6 +219,21 @@ def sample_promotion_request_payload() -> dict[str, object]:
     }
 
 
+def sample_pending_production_review_payload() -> dict[str, object]:
+    return {
+        "target_environment": "production",
+        "status": "pending",
+        "external_reference": "CAB-123",
+        "reviewed_by_user_uuid": None,
+        "reviewed_by_team": None,
+        "requested_at": datetime(2026, 8, 11, 11, 45, tzinfo=UTC).isoformat(),
+        "reviewed_at": None,
+        "decided_at": None,
+        "created_at": datetime(2026, 8, 11, 11, 45, tzinfo=UTC).isoformat(),
+        "updated_at": None,
+    }
+
+
 def sample_application_rp_configuration_promotion_payload() -> dict[str, object]:
     return {
         **sample_promotion_request_payload(),
@@ -286,22 +245,23 @@ def sample_application_rp_configuration_promotion_payload() -> dict[str, object]
 
 
 def assert_default_onboarding_fields(payload: dict[str, object]) -> None:
-    assert payload["onboardingState"] == "draft"
-    assert payload["submittedAt"] is None
-    assert payload["underReviewAt"] is None
-    assert payload["approvedAt"] is None
-    assert payload["launchedAt"] is None
+    assert "onboardingState" not in payload
+    assert "submittedAt" not in payload
+    assert "underReviewAt" not in payload
+    assert "approvedAt" not in payload
+    assert "launchedAt" not in payload
 
 
 def assert_default_promotion_fields(payload: dict[str, object]) -> None:
-    assert payload["promotionTargetEnvironment"] is None
-    assert payload["promotionStatus"] is None
-    assert payload["promotionExternalReference"] is None
-    assert payload["promotionReviewedByUserUuid"] is None
-    assert payload["promotionReviewedByTeam"] is None
-    assert payload["promotionRequestedAt"] is None
-    assert payload["promotionReviewedAt"] is None
-    assert payload["promotionDecidedAt"] is None
+    assert payload["productionReviewStatus"] is None
+    assert "promotionTargetEnvironment" not in payload
+    assert "promotionStatus" not in payload
+    assert "promotionExternalReference" not in payload
+    assert "promotionReviewedByUserUuid" not in payload
+    assert "promotionReviewedByTeam" not in payload
+    assert "promotionRequestedAt" not in payload
+    assert "promotionReviewedAt" not in payload
+    assert "promotionDecidedAt" not in payload
 
 
 def sample_submitted_workspace_payload() -> dict[str, object]:
@@ -353,7 +313,7 @@ def sample_developer_invitation_payload(
         "is_deleted": False,
     }
     if with_acceptance_url:
-        payload["acceptance_url"] = "http://localhost:3000/invitations/rp-applications/raw-token"
+        payload["acceptance_url"] = "http://localhost:3000/invitations/rp-applications/prepare#token=raw-token"
     return payload
 
 
@@ -363,6 +323,7 @@ class TestWorkspaceRoutes:
     ) -> None:
         invitation_service = Mock()
         invitation_service.list_developer_invitations = AsyncMock(return_value=[sample_developer_invitation_payload()])
+        invitation_service.get_developer_invitation = AsyncMock(return_value=sample_developer_invitation_payload())
         invitation_service.create_developer_invitation = AsyncMock(return_value=sample_developer_invitation_payload(with_acceptance_url=True))
         invitation_service.revoke_developer_invitation = AsyncMock(return_value=sample_developer_invitation_payload(status="revoked"))
         invitation_service.reissue_developer_invitation = AsyncMock(return_value=sample_developer_invitation_payload(with_acceptance_url=True))
@@ -386,6 +347,7 @@ class TestWorkspaceRoutes:
                         "inviteExpiresAt": "2026-08-20T12:00:00Z",
                     },
                 )
+                get_response = client.get(f"/api/v1/workspaces/{workspace_uuid}/invitations/{invitation_uuid}")
                 revoke_response = client.post(f"/api/v1/workspaces/{workspace_uuid}/invitations/{invitation_uuid}/revoke")
                 reissue_response = client.post(
                     f"/api/v1/workspaces/{workspace_uuid}/invitations/{invitation_uuid}/reissue",
@@ -396,6 +358,7 @@ class TestWorkspaceRoutes:
 
         assert list_response.status_code == 200
         assert create_response.status_code == 201
+        assert get_response.status_code == 200
         assert revoke_response.status_code == 200
         assert reissue_response.status_code == 200
         invitation_service.list_developer_invitations.assert_awaited_once_with(
@@ -404,21 +367,30 @@ class TestWorkspaceRoutes:
             rp_application_uuid=None,
             current_user=current_user,
         )
+        invitation_service.get_developer_invitation.assert_awaited_once_with(
+            db=db,
+            workspace_uuid=workspace_uuid,
+            invitation_uuid=invitation_uuid,
+            current_user=current_user,
+        )
         create_kwargs = invitation_service.create_developer_invitation.await_args.kwargs
         assert create_kwargs["workspace_uuid"] == workspace_uuid
         assert create_kwargs["rp_application_uuid"] is None
         assert create_kwargs["role"] == "rp_admin"
+        assert create_kwargs["correlation_id"]
         invitation_service.revoke_developer_invitation.assert_awaited_once_with(
             db=db,
             workspace_uuid=workspace_uuid,
             rp_application_uuid=None,
             invitation_uuid=invitation_uuid,
             current_user=current_user,
+            correlation_id=ANY,
         )
         reissue_kwargs = invitation_service.reissue_developer_invitation.await_args.kwargs
         assert reissue_kwargs["workspace_uuid"] == workspace_uuid
         assert reissue_kwargs["rp_application_uuid"] is None
         assert reissue_kwargs["invitation_uuid"] == invitation_uuid
+        assert reissue_kwargs["correlation_id"]
 
     def test_workspaces_list_allows_user_with_workspace_read_policy(self) -> None:
         service = Mock()
@@ -544,7 +516,7 @@ class TestWorkspaceRoutes:
             current_user=current_user,
         )
 
-    def test_workspace_onboarding_state_transition_delegates_to_service(self) -> None:
+    def test_workspace_onboarding_state_route_is_retired(self) -> None:
         service = Mock()
         service.transition_workspace_onboarding_state = AsyncMock(return_value=sample_submitted_workspace_payload())
         current_user = {
@@ -567,16 +539,10 @@ class TestWorkspaceRoutes:
         finally:
             app.dependency_overrides.clear()
 
-        assert response.status_code == 200
-        assert response.json()["onboardingState"] == "submitted"
-        assert response.json()["submittedAt"] == "2026-08-11T12:00:00+00:00"
-        transition_kwargs = service.transition_workspace_onboarding_state.await_args.kwargs
-        assert transition_kwargs["db"] is db
-        assert transition_kwargs["workspace_uuid"] == uuid_pkg.UUID("018f6f83-0000-0000-0000-000000000201")
-        assert transition_kwargs["current_user"] == current_user
-        assert transition_kwargs["payload"].target_state == "submitted"
+        assert response.status_code == 404
+        service.transition_workspace_onboarding_state.assert_not_awaited()
 
-    def test_workspace_onboarding_state_transition_surfaces_forbidden(self) -> None:
+    def test_workspace_onboarding_state_route_does_not_expose_authorization_behavior(self) -> None:
         service = Mock()
         service.transition_workspace_onboarding_state = AsyncMock(side_effect=ForbiddenException("You do not have enough privileges."))
 
@@ -597,8 +563,8 @@ class TestWorkspaceRoutes:
         finally:
             app.dependency_overrides.clear()
 
-        assert response.status_code == 403
-        assert response.json()["error"]["code"] == "forbidden"
+        assert response.status_code == 404
+        service.transition_workspace_onboarding_state.assert_not_awaited()
 
     def test_workspace_crud_mutations_delegate_to_service_for_admin(self) -> None:
         service = Mock()
@@ -762,7 +728,7 @@ class TestWorkspaceRoutes:
         assert contact_delete_response.status_code == 200
         assert contact_delete_response.json() == {"message": "Application information contact deleted"}
 
-    def test_workspace_application_information_onboarding_state_transition_delegates_to_service(self) -> None:
+    def test_workspace_application_information_onboarding_state_route_is_retired(self) -> None:
         service = Mock()
         service.transition_workspace_application_information_onboarding_state = AsyncMock(
             return_value=sample_submitted_application_information_payload()
@@ -787,15 +753,8 @@ class TestWorkspaceRoutes:
         finally:
             app.dependency_overrides.clear()
 
-        assert response.status_code == 200
-        assert response.json()["onboardingState"] == "submitted"
-        assert response.json()["submittedAt"] == "2026-08-11T12:00:00+00:00"
-        transition_kwargs = service.transition_workspace_application_information_onboarding_state.await_args.kwargs
-        assert transition_kwargs["db"] is db
-        assert transition_kwargs["workspace_uuid"] == uuid_pkg.UUID("018f6f83-0000-0000-0000-000000000201")
-        assert transition_kwargs["application_information_uuid"] == uuid_pkg.UUID("018f6f83-0000-0000-0000-000000000501")
-        assert transition_kwargs["current_user"] == current_user
-        assert transition_kwargs["payload"].target_state == "submitted"
+        assert response.status_code == 404
+        service.transition_workspace_application_information_onboarding_state.assert_not_awaited()
 
     def test_workspace_application_information_denied_for_non_admin_actor(self) -> None:
         service = Mock()
@@ -847,112 +806,6 @@ class TestWorkspaceRoutes:
         assert response.json()["error"]["code"] == "conflict"
         assert response.json()["error"]["message"] == ("Linked RP applications must be unlinked or removed before deleting application information")
 
-    def test_workspace_application_information_review_routes_delegate_for_superuser(self) -> None:
-        service = Mock()
-        service.get_workspace_application_information_review_context = AsyncMock(
-            return_value={
-                "notes": [sample_application_information_review_note_payload()],
-                "checklist_summary": sample_application_information_review_checklist_payload(),
-            }
-        )
-        service.add_workspace_application_information_review_note = AsyncMock(
-            return_value=sample_application_information_review_note_payload(body="Ready for external review once evidence is linked")
-        )
-        service.upsert_workspace_application_information_review_checklist = AsyncMock(
-            return_value={
-                **sample_application_information_review_checklist_payload(),
-                "review_disposition": "ready_for_next_step",
-            }
-        )
-        current_user = cl_admin_user()
-        db = Mock()
-
-        app.dependency_overrides[get_current_user] = lambda: current_user
-        app.dependency_overrides[get_workspace_service] = lambda: service
-        app.dependency_overrides[async_get_db] = lambda: db
-
-        try:
-            with TestClient(app) as client:
-                read_response = client.get(
-                    "/api/v1/workspaces/018f6f83-0000-0000-0000-000000000201/application-information/018f6f83-0000-0000-0000-000000000501/review"
-                )
-                note_response = client.post(
-                    "/api/v1/workspaces/018f6f83-0000-0000-0000-000000000201/application-information/018f6f83-0000-0000-0000-000000000501/review/notes",
-                    json={"body": "Ready for external review once evidence is linked"},
-                )
-                checklist_response = client.put(
-                    "/api/v1/workspaces/018f6f83-0000-0000-0000-000000000201/application-information/018f6f83-0000-0000-0000-000000000501/review/checklist",
-                    json={
-                        "reviewDisposition": "ready_for_next_step",
-                        "applicationInformationStatus": "complete",
-                        "contactsStatus": "complete",
-                        "environmentRegistrationStatus": "complete",
-                        "promotionMetadataStatus": "incomplete",
-                        "evidenceReferenceStatus": "incomplete",
-                        "processLinksStatus": "complete",
-                        "rationale": "Ready for external review once evidence is linked",
-                    },
-                )
-        finally:
-            app.dependency_overrides.clear()
-
-        assert read_response.status_code == 200
-        assert read_response.json()["notes"][0]["authorName"] == "CL Admin"
-        assert read_response.json()["checklistSummary"]["reviewDisposition"] == "changes_requested"
-        assert note_response.status_code == 201
-        assert note_response.json()["body"] == "Ready for external review once evidence is linked"
-        assert checklist_response.status_code == 200
-        assert checklist_response.json()["reviewDisposition"] == "ready_for_next_step"
-        read_kwargs = service.get_workspace_application_information_review_context.await_args.kwargs
-        assert read_kwargs["db"] is db
-        assert read_kwargs["workspace_uuid"] == uuid_pkg.UUID("018f6f83-0000-0000-0000-000000000201")
-        assert read_kwargs["application_information_uuid"] == uuid_pkg.UUID("018f6f83-0000-0000-0000-000000000501")
-
-    def test_workspace_application_information_review_routes_deny_non_superuser(self) -> None:
-        service = Mock()
-        service.get_workspace_application_information_review_context = AsyncMock()
-        service.add_workspace_application_information_review_note = AsyncMock()
-        service.upsert_workspace_application_information_review_checklist = AsyncMock()
-
-        app.dependency_overrides[get_current_user] = lambda: {
-            "id": 42,
-            "username": "workspace-admin@example.gc.ca",
-            "is_superuser": False,
-        }
-        app.dependency_overrides[get_workspace_service] = lambda: service
-        app.dependency_overrides[async_get_db] = lambda: Mock()
-
-        try:
-            with TestClient(app) as client:
-                read_response = client.get(
-                    "/api/v1/workspaces/018f6f83-0000-0000-0000-000000000201/application-information/018f6f83-0000-0000-0000-000000000501/review"
-                )
-                note_response = client.post(
-                    "/api/v1/workspaces/018f6f83-0000-0000-0000-000000000201/application-information/018f6f83-0000-0000-0000-000000000501/review/notes",
-                    json={"body": "Need more review"},
-                )
-                checklist_response = client.put(
-                    "/api/v1/workspaces/018f6f83-0000-0000-0000-000000000201/application-information/018f6f83-0000-0000-0000-000000000501/review/checklist",
-                    json={
-                        "reviewDisposition": "pending",
-                        "applicationInformationStatus": "complete",
-                        "contactsStatus": "complete",
-                        "environmentRegistrationStatus": "complete",
-                        "promotionMetadataStatus": "complete",
-                        "evidenceReferenceStatus": "incomplete",
-                        "processLinksStatus": "complete",
-                    },
-                )
-        finally:
-            app.dependency_overrides.clear()
-
-        assert read_response.status_code == 403
-        assert note_response.status_code == 403
-        assert checklist_response.status_code == 403
-        service.get_workspace_application_information_review_context.assert_not_called()
-        service.add_workspace_application_information_review_note.assert_not_called()
-        service.upsert_workspace_application_information_review_checklist.assert_not_called()
-
     def test_workspace_rp_application_crud_delegates_to_service_for_workspace_admin(self) -> None:
         service = Mock()
         service.list_workspace_rp_applications = AsyncMock(
@@ -964,8 +817,8 @@ class TestWorkspaceRoutes:
                     "serviceNameEn": "Benefits Portal",
                     "serviceNameFr": "Portail des prestations",
                     "canadaLoginEnvironment": "staging",
-                    "onboardingState": "draft",
-                    "promotionStatus": None,
+                    "registrationCompletedAt": None,
+                    "productionReviewStatus": None,
                     "registrationLastCompletedStep": "basics",
                     "resumeTaskPath": (
                         "/workspaces/018f6f83-0000-0000-0000-000000000201/applications/018f6f83-0000-0000-0000-000000000701/registration/endpoints"
@@ -975,8 +828,6 @@ class TestWorkspaceRoutes:
             ]
         )
         service.create_workspace_rp_application_registration_draft = AsyncMock(return_value=sample_rp_application_registration_draft_payload())
-        service.get_workspace_rp_application = AsyncMock(return_value=sample_rp_application_payload())
-        service.update_workspace_rp_application = AsyncMock(return_value=sample_rp_application_payload(dnr_app_name="Benefits Portal Updated"))
         service.delete_workspace_rp_application = AsyncMock(return_value={"message": "RP application deleted"})
         current_user = {
             "id": 42,
@@ -1004,16 +855,6 @@ class TestWorkspaceRoutes:
                         "serviceNameFr": "Portail des prestations",
                     },
                 )
-                detail_response = client.get(
-                    "/api/v1/workspaces/018f6f83-0000-0000-0000-000000000201/applications/018f6f83-0000-0000-0000-000000000701"
-                )
-                update_response = client.patch(
-                    "/api/v1/workspaces/018f6f83-0000-0000-0000-000000000201/applications/018f6f83-0000-0000-0000-000000000701",
-                    json={
-                        "serviceNameEn": "Benefits Portal Updated",
-                        "requestedScopes": ["openid", "profile", "email"],
-                    },
-                )
                 delete_response = client.delete(
                     "/api/v1/workspaces/018f6f83-0000-0000-0000-000000000201/applications/018f6f83-0000-0000-0000-000000000701"
                 )
@@ -1033,20 +874,12 @@ class TestWorkspaceRoutes:
         create_kwargs = service.create_workspace_rp_application_registration_draft.await_args.kwargs
         assert create_kwargs["registration_creation_key"] == uuid_pkg.UUID("018f6f83-0000-0000-0000-000000000801")
         assert create_kwargs["payload"].service_name_en == "Benefits Portal"
-        assert detail_response.status_code == 200
-        assert detail_response.json()["applicationInformationId"] == 17
-        assert_default_onboarding_fields(detail_response.json())
-        assert_default_promotion_fields(detail_response.json())
-        assert update_response.status_code == 200
-        assert update_response.json()["dnrAppName"] == "Benefits Portal Updated"
-        assert_default_onboarding_fields(update_response.json())
-        assert_default_promotion_fields(update_response.json())
         assert delete_response.status_code == 200
         assert delete_response.json() == {"message": "RP application deleted"}
 
-    def test_workspace_rp_application_onboarding_state_transition_delegates_to_service(self) -> None:
+    def test_workspace_rp_application_registration_completion_delegates_to_service(self) -> None:
         service = Mock()
-        service.transition_workspace_rp_application_onboarding_state = AsyncMock(return_value=sample_rp_application_registration_submission_payload())
+        service.complete_workspace_rp_application_registration = AsyncMock(return_value=sample_rp_application_registration_submission_payload())
         current_user = {
             "id": 42,
             "username": "workspace-admin@example.gc.ca",
@@ -1061,24 +894,23 @@ class TestWorkspaceRoutes:
         try:
             with TestClient(app) as client:
                 response = client.post(
-                    "/api/v1/workspaces/018f6f83-0000-0000-0000-000000000201/applications/018f6f83-0000-0000-0000-000000000701/onboarding-state",
-                    json={"targetState": "submitted", "expectedDraftVersion": 4},
+                    "/api/v1/workspaces/018f6f83-0000-0000-0000-000000000201/applications/018f6f83-0000-0000-0000-000000000701/registration/complete",
+                    json={"expectedDraftVersion": 4},
                 )
         finally:
             app.dependency_overrides.clear()
 
         assert response.status_code == 200
-        assert response.json()["onboardingState"] == "submitted"
+        assert response.json()["registrationCompletedAt"] == "2026-08-11T12:00:00Z"
         assert response.json()["registrationDraftVersion"] == 5
         assert response.json()["rpApplicationUuid"] == ("018f6f83-0000-0000-0000-000000000701")
         assert "id" not in response.json()
         assert "oidcRegistrationPayload" not in response.json()
-        transition_kwargs = service.transition_workspace_rp_application_onboarding_state.await_args.kwargs
+        transition_kwargs = service.complete_workspace_rp_application_registration.await_args.kwargs
         assert transition_kwargs["db"] is db
         assert transition_kwargs["workspace_uuid"] == uuid_pkg.UUID("018f6f83-0000-0000-0000-000000000201")
         assert transition_kwargs["rp_application_uuid"] == uuid_pkg.UUID("018f6f83-0000-0000-0000-000000000701")
         assert transition_kwargs["current_user"] == current_user
-        assert transition_kwargs["payload"].target_state == "submitted"
         assert transition_kwargs["payload"].expected_draft_version == 4
 
     def test_application_rp_configuration_list_delegates_with_complete_ancestry(self) -> None:
@@ -1094,8 +926,8 @@ class TestWorkspaceRoutes:
                     "serviceNameFr": "Portail des prestations",
                     "configurationName": "Partner staging A",
                     "canadaLoginEnvironment": "staging",
-                    "onboardingState": "draft",
-                    "promotionStatus": None,
+                    "registrationCompletedAt": None,
+                    "productionReviewStatus": None,
                     "registrationLastCompletedStep": "basics",
                     "resumeTaskPath": (
                         "/workspaces/018f6f83-0000-0000-0000-000000000201/applications/018f6f83-0000-0000-0000-000000000701/registration/endpoints"
@@ -1148,8 +980,8 @@ class TestWorkspaceRoutes:
                 "serviceNameFr": "Portail des prestations",
                 "configurationName": "Partner staging A",
                 "canadaLoginEnvironment": "staging",
-                "onboardingState": "draft",
-                "promotionStatus": None,
+                "registrationCompletedAt": None,
+                "productionReviewStatus": None,
                 "registrationLastCompletedStep": "basics",
                 "resumeTaskPath": None,
                 "role": "rp_admin",
@@ -1164,8 +996,8 @@ class TestWorkspaceRoutes:
                 "serviceNameFr": "Portail des prestations",
                 "configurationName": "Partner staging A",
                 "canadaLoginEnvironment": "staging",
-                "onboardingState": "draft",
-                "promotionStatus": None,
+                "registrationCompletedAt": None,
+                "productionReviewStatus": None,
                 "registrationDraftVersion": 2,
                 "registrationLastCompletedStep": "basics",
                 "registrationAnswers": {},
@@ -1325,7 +1157,8 @@ class TestWorkspaceRoutes:
         assert response.json()["targetRpConfigurationUuid"] == "018f6f83-0000-0000-0000-000000000702"
         assert response.json()["targetConfigurationName"] == "Partner production A"
         assert response.json()["targetPartnerEnvironment"] is None
-        assert response.json()["promotionStatus"] == "review_tracked"
+        assert "promotionStatus" not in response.json()
+        assert response.json()["selfServe"] is True
         arguments = service.create_application_rp_configuration_progression.await_args.kwargs
         assert arguments["source_rp_configuration_uuid"] == uuid_pkg.UUID("018f6f83-0000-0000-0000-000000000701")
         assert arguments["payload"].target_configuration_name == "Partner production A"
@@ -1333,13 +1166,51 @@ class TestWorkspaceRoutes:
         assert arguments["payload"].target_environment == "production"
         assert arguments["progression_creation_key"] == uuid_pkg.UUID("018f6f83-0000-0000-0000-000000000902")
 
+    def test_application_rp_configuration_copy_accepts_explicit_any_environment_target(self) -> None:
+        service = Mock()
+        service.create_application_rp_configuration_copy = AsyncMock(return_value=sample_rp_configuration_copy_payload())
+        current_user = {
+            "id": 42,
+            "username": "workspace-admin@example.gc.ca",
+            "is_superuser": False,
+        }
+        db = Mock()
+        app.dependency_overrides[get_current_user] = lambda: current_user
+        app.dependency_overrides[get_workspace_service] = lambda: service
+        app.dependency_overrides[async_get_db] = lambda: db
+
+        try:
+            with TestClient(app) as client:
+                response = client.post(
+                    "/api/v1/workspaces/018f6f83-0000-0000-0000-000000000201/"
+                    "application-information/018f6f83-0000-0000-0000-000000000501/"
+                    "rp-configurations/018f6f83-0000-0000-0000-000000000701/copy",
+                    headers={"Idempotency-Key": "018f6f83-0000-0000-0000-000000000902"},
+                    json={
+                        "targetConfigurationName": " Partner test B ",
+                        "targetPartnerEnvironment": " Partner QA 2 ",
+                        "targetEnvironment": "test",
+                    },
+                )
+        finally:
+            app.dependency_overrides.clear()
+
+        assert response.status_code == 201
+        assert response.json()["copyPolicyVersion"] == 1
+        assert response.json()["sourcePartnerEnvironment"] is None
+        assert response.json()["targetEnvironment"] == "test"
+        arguments = service.create_application_rp_configuration_copy.await_args.kwargs
+        assert arguments["source_rp_configuration_uuid"] == uuid_pkg.UUID("018f6f83-0000-0000-0000-000000000701")
+        assert arguments["payload"].target_configuration_name == "Partner test B"
+        assert arguments["payload"].target_partner_environment == "Partner QA 2"
+        assert arguments["payload"].target_environment == "test"
+        assert arguments["copy_creation_key"] == uuid_pkg.UUID("018f6f83-0000-0000-0000-000000000902")
+
     def test_application_rp_configuration_registration_and_delete_routes_preserve_ancestry(self) -> None:
         service = Mock()
         service.get_application_rp_configuration_registration_draft = AsyncMock(return_value=sample_rp_application_registration_draft_payload())
         service.update_application_rp_configuration_registration_draft = AsyncMock(return_value=sample_rp_application_registration_draft_payload())
-        service.transition_application_rp_configuration_onboarding_state = AsyncMock(
-            return_value=sample_rp_application_registration_submission_payload()
-        )
+        service.complete_application_rp_configuration_registration = AsyncMock(return_value=sample_rp_application_registration_submission_payload())
         service.delete_application_rp_configuration = AsyncMock(return_value={"message": "RP configuration deleted"})
         current_user = {
             "id": 42,
@@ -1371,9 +1242,9 @@ class TestWorkspaceRoutes:
                         },
                     },
                 )
-                submit_response = client.post(
-                    f"{base_path}/onboarding-state",
-                    json={"targetState": "submitted", "expectedDraftVersion": 4},
+                complete_response = client.post(
+                    f"{base_path}/registration/complete",
+                    json={"expectedDraftVersion": 4},
                 )
                 delete_response = client.delete(base_path)
         finally:
@@ -1381,7 +1252,7 @@ class TestWorkspaceRoutes:
 
         assert read_response.status_code == 200
         assert patch_response.status_code == 200
-        assert submit_response.status_code == 200
+        assert complete_response.status_code == 200
         assert delete_response.json() == {"message": "RP configuration deleted"}
         common_arguments = {
             "db": db,
@@ -1395,12 +1266,12 @@ class TestWorkspaceRoutes:
         assert patch_arguments["application_information_uuid"] == common_arguments["application_information_uuid"]
         assert patch_arguments["payload"].expected_draft_version == 1
         assert patch_arguments["payload"].configuration_name == "Partner staging B"
-        submit_arguments = service.transition_application_rp_configuration_onboarding_state.await_args.kwargs
-        assert submit_arguments["application_information_uuid"] == common_arguments["application_information_uuid"]
-        assert submit_arguments["payload"].target_state == "submitted"
+        completion_arguments = service.complete_application_rp_configuration_registration.await_args.kwargs
+        assert completion_arguments["application_information_uuid"] == common_arguments["application_information_uuid"]
+        assert completion_arguments["payload"].expected_draft_version == 4
         service.delete_application_rp_configuration.assert_awaited_once_with(**common_arguments)
 
-    def test_workspace_rp_application_onboarding_state_transition_surfaces_bad_request(self) -> None:
+    def test_workspace_rp_application_onboarding_state_route_is_retired(self) -> None:
         service = Mock()
         service.transition_workspace_rp_application_onboarding_state = AsyncMock(
             side_effect=BadRequestException("Production RP applications cannot move to 'approved' or 'launched' without a recorded promotion request")
@@ -1423,10 +1294,8 @@ class TestWorkspaceRoutes:
         finally:
             app.dependency_overrides.clear()
 
-        assert response.status_code == 400
-        assert response.json()["error"]["message"] == (
-            "Production RP applications cannot move to 'approved' or 'launched' without a recorded promotion request"
-        )
+        assert response.status_code == 404
+        service.transition_workspace_rp_application_onboarding_state.assert_not_awaited()
 
     def test_read_workspace_rp_application_promotion_request_delegates_to_service(self) -> None:
         service = Mock()
@@ -1445,7 +1314,7 @@ class TestWorkspaceRoutes:
         try:
             with TestClient(app) as client:
                 response = client.get(
-                    "/api/v1/workspaces/018f6f83-0000-0000-0000-000000000201/applications/018f6f83-0000-0000-0000-000000000701/promotion-request"
+                    "/api/v1/workspaces/018f6f83-0000-0000-0000-000000000201/applications/018f6f83-0000-0000-0000-000000000701/production-review"
                 )
         finally:
             app.dependency_overrides.clear()
@@ -1462,7 +1331,7 @@ class TestWorkspaceRoutes:
 
     def test_workspace_rp_application_promotion_request_post_delegates_to_service(self) -> None:
         service = Mock()
-        service.upsert_workspace_rp_application_promotion_request = AsyncMock(return_value=sample_review_tracked_production_rp_application_payload())
+        service.upsert_workspace_rp_application_promotion_request = AsyncMock(return_value=sample_pending_production_review_payload())
         current_user = {
             "id": 42,
             "username": "workspace-admin@example.gc.ca",
@@ -1477,16 +1346,16 @@ class TestWorkspaceRoutes:
         try:
             with TestClient(app) as client:
                 response = client.post(
-                    "/api/v1/workspaces/018f6f83-0000-0000-0000-000000000201/applications/018f6f83-0000-0000-0000-000000000701/promotion-request",
+                    "/api/v1/workspaces/018f6f83-0000-0000-0000-000000000201/applications/018f6f83-0000-0000-0000-000000000701/production-review",
                     json={"externalReference": "CAB-123"},
                 )
         finally:
             app.dependency_overrides.clear()
 
         assert response.status_code == 200
-        assert response.json()["promotionTargetEnvironment"] == "production"
-        assert response.json()["promotionStatus"] == "review_tracked"
-        assert response.json()["promotionExternalReference"] == "CAB-123"
+        assert response.json()["targetEnvironment"] == "production"
+        assert response.json()["status"] == "pending"
+        assert response.json()["externalReference"] == "CAB-123"
         write_kwargs = service.upsert_workspace_rp_application_promotion_request.await_args.kwargs
         assert write_kwargs["db"] is db
         assert write_kwargs["workspace_uuid"] == uuid_pkg.UUID("018f6f83-0000-0000-0000-000000000201")
@@ -1494,9 +1363,81 @@ class TestWorkspaceRoutes:
         assert write_kwargs["current_user"] == current_user
         assert write_kwargs["payload"].external_reference == "CAB-123"
 
+    def test_workspace_rp_application_production_review_requires_external_reference(self) -> None:
+        service = Mock()
+        service.upsert_workspace_rp_application_promotion_request = AsyncMock()
+        app.dependency_overrides[get_current_user] = lambda: {
+            "id": 42,
+            "username": "workspace-admin@example.gc.ca",
+            "is_superuser": False,
+        }
+        app.dependency_overrides[get_workspace_service] = lambda: service
+        app.dependency_overrides[async_get_db] = lambda: Mock()
+
+        try:
+            with TestClient(app) as client:
+                response = client.post(
+                    "/api/v1/workspaces/018f6f83-0000-0000-0000-000000000201/applications/018f6f83-0000-0000-0000-000000000701/production-review",
+                    json={},
+                )
+        finally:
+            app.dependency_overrides.clear()
+
+        assert response.status_code == 422
+        service.upsert_workspace_rp_application_promotion_request.assert_not_awaited()
+
+    def test_workspace_rp_application_production_review_rejects_blank_external_reference(self) -> None:
+        service = Mock()
+        service.upsert_workspace_rp_application_promotion_request = AsyncMock()
+        app.dependency_overrides[get_current_user] = lambda: {
+            "id": 42,
+            "username": "workspace-admin@example.gc.ca",
+            "is_superuser": False,
+        }
+        app.dependency_overrides[get_workspace_service] = lambda: service
+        app.dependency_overrides[async_get_db] = lambda: Mock()
+
+        try:
+            with TestClient(app) as client:
+                response = client.post(
+                    "/api/v1/workspaces/018f6f83-0000-0000-0000-000000000201/applications/018f6f83-0000-0000-0000-000000000701/production-review",
+                    json={"externalReference": "   "},
+                )
+        finally:
+            app.dependency_overrides.clear()
+
+        assert response.status_code == 422
+        service.upsert_workspace_rp_application_promotion_request.assert_not_awaited()
+
+    def test_workspace_rp_application_production_review_trims_external_reference(self) -> None:
+        service = Mock()
+        service.upsert_workspace_rp_application_promotion_request = AsyncMock(
+            return_value=sample_promotion_request_payload(),
+        )
+        app.dependency_overrides[get_current_user] = lambda: {
+            "id": 42,
+            "username": "workspace-admin@example.gc.ca",
+            "is_superuser": False,
+        }
+        app.dependency_overrides[get_workspace_service] = lambda: service
+        app.dependency_overrides[async_get_db] = lambda: Mock()
+
+        try:
+            with TestClient(app) as client:
+                response = client.post(
+                    "/api/v1/workspaces/018f6f83-0000-0000-0000-000000000201/applications/018f6f83-0000-0000-0000-000000000701/production-review",
+                    json={"externalReference": "  CAB-123  "},
+                )
+        finally:
+            app.dependency_overrides.clear()
+
+        assert response.status_code == 200
+        write_kwargs = service.upsert_workspace_rp_application_promotion_request.await_args.kwargs
+        assert write_kwargs["payload"].external_reference == "CAB-123"
+
     def test_workspace_rp_application_promotion_request_patch_delegates_to_service(self) -> None:
         service = Mock()
-        service.review_workspace_rp_application_promotion_request = AsyncMock(return_value=sample_approved_production_rp_application_payload())
+        service.review_workspace_rp_application_promotion_request = AsyncMock(return_value=sample_promotion_request_payload())
 
         app.dependency_overrides[get_current_user] = lambda: {
             "id": 1,
@@ -1509,7 +1450,7 @@ class TestWorkspaceRoutes:
         try:
             with TestClient(app) as client:
                 response = client.patch(
-                    "/api/v1/workspaces/018f6f83-0000-0000-0000-000000000201/applications/018f6f83-0000-0000-0000-000000000701/promotion-request",
+                    "/api/v1/workspaces/018f6f83-0000-0000-0000-000000000201/applications/018f6f83-0000-0000-0000-000000000701/production-review",
                     json={
                         "status": "approved",
                         "externalReference": "CAB-123",
@@ -1520,9 +1461,9 @@ class TestWorkspaceRoutes:
             app.dependency_overrides.clear()
 
         assert response.status_code == 200
-        assert response.json()["promotionStatus"] == "approved"
-        assert response.json()["promotionReviewedByTeam"] == "CanadaLogin"
-        assert response.json()["promotionReviewedAt"] == "2026-08-11T12:15:00Z"
+        assert response.json()["status"] == "approved"
+        assert response.json()["reviewedByTeam"] == "CanadaLogin"
+        assert response.json()["reviewedAt"] == "2026-08-11T12:15:00Z"
         patch_kwargs = service.review_workspace_rp_application_promotion_request.await_args.kwargs
         assert patch_kwargs["workspace_uuid"] == uuid_pkg.UUID("018f6f83-0000-0000-0000-000000000201")
         assert patch_kwargs["rp_application_uuid"] == uuid_pkg.UUID("018f6f83-0000-0000-0000-000000000701")
@@ -1546,7 +1487,7 @@ class TestWorkspaceRoutes:
                 response = client.patch(
                     "/api/v1/workspaces/018f6f83-0000-0000-0000-000000000201/"
                     "application-information/018f6f83-0000-0000-0000-000000000501/"
-                    "rp-configurations/018f6f83-0000-0000-0000-000000000702/promotion-request",
+                    "rp-configurations/018f6f83-0000-0000-0000-000000000702/production-review",
                     json={
                         "status": "approved",
                         "externalReference": "CAB-123",
@@ -1636,11 +1577,11 @@ class TestWorkspaceRoutes:
         assert "workspaceId" not in list_response.json()[0]
         assert "rpApplicationId" not in list_response.json()[0]
         assert create_response.status_code == 201
-        assert create_response.json()["acceptanceUrl"].endswith("/raw-token")
+        assert create_response.json()["acceptanceUrl"].endswith("/prepare#token=raw-token")
         assert revoke_response.status_code == 200
         assert revoke_response.json()["status"] == "revoked"
         assert reissue_response.status_code == 200
-        assert reissue_response.json()["acceptanceUrl"].endswith("/raw-token")
+        assert reissue_response.json()["acceptanceUrl"].endswith("/prepare#token=raw-token")
 
         invitation_service.list_developer_invitations.assert_awaited_once_with(
             db=db,
@@ -1656,6 +1597,7 @@ class TestWorkspaceRoutes:
         assert create_kwargs["invited_email"] == "invitee@example.gc.ca"
         assert create_kwargs["role"] == "read_only"
         assert create_kwargs["invite_expires_at"] == datetime(2026, 8, 20, 12, 0, tzinfo=UTC)
+        assert create_kwargs["correlation_id"]
         assert "gc_notify_notification_id" not in create_kwargs
         invitation_service.revoke_developer_invitation.assert_awaited_once_with(
             db=db,
@@ -1663,6 +1605,7 @@ class TestWorkspaceRoutes:
             rp_application_uuid=uuid_pkg.UUID("018f6f83-0000-0000-0000-000000000701"),
             invitation_uuid=uuid_pkg.UUID("018f6f83-0000-0000-0000-000000000801"),
             current_user=current_user,
+            correlation_id=ANY,
         )
         reissue_kwargs = invitation_service.reissue_developer_invitation.await_args.kwargs
         assert reissue_kwargs["db"] is db
@@ -1671,6 +1614,7 @@ class TestWorkspaceRoutes:
         assert reissue_kwargs["invitation_uuid"] == uuid_pkg.UUID("018f6f83-0000-0000-0000-000000000801")
         assert reissue_kwargs["current_user"] == current_user
         assert reissue_kwargs["invite_expires_at"] == datetime(2026, 8, 27, 12, 0, tzinfo=UTC)
+        assert reissue_kwargs["correlation_id"]
         assert "gc_notify_notification_id" not in reissue_kwargs
 
     def test_invitation_write_routes_reject_caller_controlled_delivery_metadata(
@@ -1738,11 +1682,9 @@ class TestWorkspaceRoutes:
         assert response.status_code == 403
         assert response.json()["error"]["code"] == "forbidden"
 
-    def test_workspace_rp_application_telemetry_routes_delegate_to_service_for_workspace_admin(self) -> None:
+    def test_workspace_rp_application_usage_route_delegates_to_service_for_workspace_admin(self) -> None:
         service = Mock()
         service.get_workspace_rp_application_usage_summary = AsyncMock(return_value={"total": 11, "succeeded": 9, "failed": 2})
-        service.get_workspace_rp_application_audit_events = AsyncMock(return_value={"events": [], "next": '"1775692800000", "event-2"', "total": 20})
-        service.get_workspace_rp_application_audit_events_search_after = AsyncMock(return_value={"events": [], "next": None, "total": 20})
         current_user = {
             "id": 42,
             "username": "workspace-admin@example.gc.ca",
@@ -1762,27 +1704,11 @@ class TestWorkspaceRoutes:
                     "/api/v1/workspaces/018f6f83-0000-0000-0000-000000000201/applications/018f6f83-0000-0000-0000-000000000701/usage/summary",
                     params={"selected_date": "1775692800000"},
                 )
-                audit_response = client.get(
-                    "/api/v1/workspaces/018f6f83-0000-0000-0000-000000000201/applications/018f6f83-0000-0000-0000-000000000701/audit-events",
-                    params={"selected_date": "1775692800000", "size": 25},
-                )
-                search_after_response = client.get(
-                    "/api/v1/workspaces/018f6f83-0000-0000-0000-000000000201/applications/018f6f83-0000-0000-0000-000000000701/audit-events/search-after",
-                    params={
-                        "selected_date": "1775692800000",
-                        "size": 25,
-                        "search_after": '"1775692800000", "event-2"',
-                    },
-                )
         finally:
             app.dependency_overrides.clear()
 
         assert usage_response.status_code == 200
         assert usage_response.json() == {"total": 11, "succeeded": 9, "failed": 2}
-        assert audit_response.status_code == 200
-        assert audit_response.json()["total"] == 20
-        assert search_after_response.status_code == 200
-        assert search_after_response.json()["next"] is None
         service.get_workspace_rp_application_usage_summary.assert_awaited_once_with(
             db=db,
             workspace_uuid=uuid_pkg.UUID("018f6f83-0000-0000-0000-000000000201"),
@@ -1790,23 +1716,4 @@ class TestWorkspaceRoutes:
             current_user=current_user,
             ibm_sv_admin_service=ibm_sv_admin_service,
             selected_date="1775692800000",
-        )
-        service.get_workspace_rp_application_audit_events.assert_awaited_once_with(
-            db=db,
-            workspace_uuid=uuid_pkg.UUID("018f6f83-0000-0000-0000-000000000201"),
-            rp_application_uuid=uuid_pkg.UUID("018f6f83-0000-0000-0000-000000000701"),
-            current_user=current_user,
-            ibm_sv_admin_service=ibm_sv_admin_service,
-            selected_date="1775692800000",
-            size=25,
-        )
-        service.get_workspace_rp_application_audit_events_search_after.assert_awaited_once_with(
-            db=db,
-            workspace_uuid=uuid_pkg.UUID("018f6f83-0000-0000-0000-000000000201"),
-            rp_application_uuid=uuid_pkg.UUID("018f6f83-0000-0000-0000-000000000701"),
-            current_user=current_user,
-            ibm_sv_admin_service=ibm_sv_admin_service,
-            selected_date="1775692800000",
-            size=25,
-            search_after='"1775692800000", "event-2"',
         )

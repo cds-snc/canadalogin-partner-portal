@@ -167,7 +167,7 @@ class UserRead(BaseModel):
     username: str
     email: str
     profile_image_url: str
-    tier_id: int | None
+    enabled: bool
 
 class UserCreate(BaseModel):
     name: str
@@ -187,7 +187,7 @@ class UserReadV2(BaseModel):
     username: str
     email: str
     avatar_url: str          # Changed from profile_image_url
-    subscription_tier: str   # Changed from tier_id to string
+    account_status: str      # Changed from enabled boolean
     created_at: datetime     # New field
     is_verified: bool        # New field
 
@@ -384,7 +384,7 @@ API v2 Changes:
 - GET /users/ now returns paginated response instead of array
 - POST /users/ now requires authentication
 - UserRead.profile_image_url renamed to avatar_url
-- UserRead.tier_id changed to subscription_tier (string)
+- UserRead.enabled changed to account_status (string)
 - Added UserRead.created_at and is_verified fields
 - UserCreate now requires accept_terms field
 """

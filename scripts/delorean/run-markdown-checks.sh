@@ -27,6 +27,15 @@ if [ "$#" -gt 0 ]; then
       continue
     fi
 
+    case "${normalized_path}" in
+      "${repo_root}"/*)
+        ;;
+      *)
+        echo "Markdown file is outside the repository: ${input_path}" >&2
+        exit 1
+        ;;
+    esac
+
     target_files+=("${normalized_path}")
     has_target_files=1
   done
@@ -42,7 +51,7 @@ markdownlint_targets=()
 if [ "${has_target_files}" -eq 1 ]; then
   for file in "${target_files[@]}"; do
     if [[ "${file}" == "${repo_root}/"* ]]; then
-      markdownlint_targets+=("${file#${repo_root}/}")
+      markdownlint_targets+=("${file#"${repo_root}"/}")
     else
       markdownlint_targets+=("${file}")
     fi
@@ -84,6 +93,11 @@ else
     -path "*/storybook-static" -prune -o \
     -path "*/.venv" -prune -o \
     -path "*/venv" -prune -o \
+    -path "*/.uv-cache" -prune -o \
+    -path "*/.mypy_cache" -prune -o \
+    -path "*/.ruff_cache" -prune -o \
+    -path "*/test-results" -prune -o \
+    -path "*/playwright-report" -prune -o \
     -path "*/__MACOSX" -prune -o \
     -path "*/__pycache__" -prune -o \
     -path "*/.pytest_cache" -prune -o \
@@ -93,7 +107,7 @@ fi
 status=0
 
 while IFS= read -r -d '' file; do
-  rel_path="${file#${repo_root}/}"
+  rel_path="${file#"${repo_root}"/}"
   first_line="$(sed -n '/[^[:space:]]/{p;q;}' "${file}")"
 
   if [ -z "${first_line}" ]; then

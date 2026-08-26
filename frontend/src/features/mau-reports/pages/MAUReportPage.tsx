@@ -189,24 +189,64 @@ export const MAUReportPage = (): FunctionComponent => {
 		setActiveEndDate(draftEndDate);
 	};
 
-	const departmentName = responseData?.department_name ?? null;
+	const isFrench = lang.toLowerCase().startsWith("fr");
+	const localizedApplicationName = responseData
+		? (isFrench
+				? responseData.application_name_fr
+				: responseData.application_name_en
+			)?.trim() || t("common.notProvided")
+		: null;
+	const departmentName = responseData
+		? (isFrench
+				? responseData.department_name_fr
+				: responseData.department_name
+			)?.trim() || null
+		: null;
 
 	return (
 		<Grid columns="1fr" tag="div">
 			<Heading tag="h1">{t("mauReport.pageTitle")}</Heading>
+			{responseData ? (
+				<>
+					<Text>
+						{t("mauReport.workspaceLabel", {
+							workspace: responseData.workspace_name,
+						})}
+					</Text>
+					<Text>
+						{t("mauReport.applicationLabel", {
+							application: localizedApplicationName,
+						})}
+					</Text>
+					<Text>
+						{t("mauReport.configurationLabel", {
+							configuration: responseData.configuration_name,
+						})}
+					</Text>
+				</>
+			) : null}
 			{departmentName ? (
 				<Text>
 					{t("mauReport.departmentLabel", { department: departmentName })}
 				</Text>
 			) : null}
 			{responseData ? (
-				<Text>
-					{t("mauReport.partnerEnvironmentLabel", {
-						environment:
-							responseData.partner_environment?.trim() ||
-							t("common.notProvided"),
-					})}
-				</Text>
+				<>
+					<Text>
+						{t("mauReport.partnerEnvironmentLabel", {
+							environment:
+								responseData.partner_environment?.trim() ||
+								t("common.notProvided"),
+						})}
+					</Text>
+					<Text>
+						{t("mauReport.canadaLoginEnvironmentLabel", {
+							environment:
+								responseData.canada_login_environment?.trim() ||
+								t("common.notProvided"),
+						})}
+					</Text>
+				</>
 			) : null}
 
 			<form

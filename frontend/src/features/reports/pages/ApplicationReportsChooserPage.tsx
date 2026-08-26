@@ -3,56 +3,45 @@ import { useTranslation } from "react-i18next";
 import type { FunctionComponent } from "@/common/types";
 import { useDocumentTitle } from "@/common/use-document-title";
 import { Button, Heading, Link, Notice, Text } from "@/components/ui";
-import {
-	getPartnerAccessForWorkspace,
-	roleAllows,
-} from "@/features/auth/authorization";
-import { accessibleRPApplicationsQueryKey } from "@/features/your-applications/query-keys";
 import { getRequestErrorNotice } from "@/fetch";
 import {
-	getAccessibleRPApplications,
-	type RPApplicationSummaryRead,
-} from "@/fetch/rp-applications";
-import { useSession } from "@/hooks";
+	getAccessibleMauReportDestinations,
+	type MAUReportDestinationRead,
+} from "@/fetch/mau-report";
 import {
 	buildRPConfigurationPublicReferences,
 	getLocalizedRPApplicationName,
-	getRPConfigurationDisplayName,
 } from "@/features/rp-applications/rp-application-summary";
 import { getCanadaLoginEnvironmentLabel } from "@/features/workspaces/onboarding-display";
 
 const getApplicationLabel = (
-	application: RPApplicationSummaryRead,
+	application: MAUReportDestinationRead,
 	language: string,
 	fallback: string
-): string => getLocalizedRPApplicationName(application, language) || fallback;
+): string =>
+	getLocalizedRPApplicationName(
+		{
+			serviceNameEn: application.applicationNameEn,
+			serviceNameFr: application.applicationNameFr,
+		},
+		language
+	) || fallback;
 
 export const ApplicationReportsChooserPage = (): FunctionComponent => {
 	const { i18n, t } = useTranslation();
-	const { currentUser } = useSession();
 	useDocumentTitle(t("reports.applicationsChooser.title"), t("home.title"));
 	const { data, error, isLoading, refetch } = useQuery({
-		enabled: Boolean(currentUser?.uuid),
-		queryFn: getAccessibleRPApplications,
-		queryKey: accessibleRPApplicationsQueryKey,
+		queryFn: getAccessibleMauReportDestinations,
+		queryKey: ["reports", "mau-report-destinations"],
 	});
-	const authorizationContext = currentUser?.authorizationContext;
-	const reportApplications = (data ?? []).filter((application) => {
-		const sessionAccess = getPartnerAccessForWorkspace(
-			authorizationContext,
-			application.workspaceUuid
-		);
-		return (
-			application.role !== null &&
-			application.role !== undefined &&
-			sessionAccess?.role === application.role &&
-			roleAllows(application.role, "mau_report_read") &&
-			Boolean(application.applicationInformationUuid)
-		);
-	});
+	const reportApplications = data ?? [];
 	const language = i18n?.resolvedLanguage ?? i18n?.language ?? "en";
 	const publicReferences = buildRPConfigurationPublicReferences(
-		reportApplications,
+		reportApplications.map((application) => ({
+			...application,
+			serviceNameEn: application.applicationNameEn,
+			serviceNameFr: application.applicationNameFr,
+		})),
 		language,
 		t("reports.applicationsChooser.unknownConfiguration")
 	);
@@ -68,7 +57,7 @@ export const ApplicationReportsChooserPage = (): FunctionComponent => {
 				<Text>{t("reports.applicationsChooser.summary")}</Text>
 			</div>
 
-			{!currentUser || isLoading ? (
+			{isLoading ? (
 				<Notice
 					noticeRole="info"
 					noticeTitle={t("reports.applicationsChooser.loadingTitle")}
@@ -110,11 +99,12 @@ export const ApplicationReportsChooserPage = (): FunctionComponent => {
 								<Link
 									href={`/workspaces/${encodeURIComponent(application.workspaceUuid)}/applications/${encodeURIComponent(application.applicationInformationUuid ?? "")}/rp-configurations/${encodeURIComponent(application.uuid)}/usage`}
 								>
-									{getRPConfigurationDisplayName(
-										application,
-										language,
-										t("reports.applicationsChooser.unknownConfiguration")
-									)}
+									{application.configurationName.trim() ||
+										getApplicationLabel(
+											application,
+											language,
+											t("reports.applicationsChooser.unknownConfiguration")
+										)}
 								</Link>
 							</Heading>
 							<Text>

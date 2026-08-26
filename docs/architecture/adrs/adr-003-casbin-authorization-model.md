@@ -24,7 +24,7 @@ The authenticated session and current-user responses also do not expose one
 safe, scope-aware authorization context.
 
 The active
-[define-four-role-authorization-model OpenSpec change](../../../openspec/changes/define-four-role-authorization-model/)
+[define-four-role-authorization-model OpenSpec change](../../../openspec/changes/archive/2026-08-12-define-four-role-authorization-model/)
 implements the selected model. OIDC remains the authentication boundary: it
 establishes a trusted local user identity and backend session, while
 server-owned, normalized assignments establish authorization. Casbin remains
@@ -90,10 +90,10 @@ The product supports exactly four authorization roles in this phase:
 
 | Stable machine key | Display label | Scope | Capability summary | Explicit denials |
 |---|---|---|---|---|
-| cl_admin | CL Admin | Global platform | Platform governance, partner bootstrap, initial RP Admin assignment, cross-workspace metadata and oversight, internal review, and aggregate reporting | RP secret values, client credentials, secret lifecycle, and partner configuration editing |
-| rp_admin | RP Admin | One partner workspace | Workspace metadata, partner configuration and secrets, workspace reporting and audit views, and invitation of RP User (Edit) or Read Only | RP Admin assignment, platform governance, cross-workspace oversight, and production approval |
-| rp_user_edit | RP User (Edit) | One partner workspace | Partner configuration and secret workflows, CATS and promotion-request metadata, workspace reporting, and bounded audit views | Invitations, role assignment, platform governance, cross-workspace oversight, and production approval |
-| read_only | Read Only | One partner workspace | Partner metadata, OAuth configuration, MAU and aggregate reports, and redacted bounded audit views | Mutations, invitations, role assignment, secret values or lifecycle, platform governance, and internal audit events |
+| cl_admin | CL Admin | Global platform | Users and access, invitations, immutable role reference, partner bootstrap, initial RP Admin assignment, cross-workspace metadata, and explicit Production-review outcomes | RP secret values and lifecycle, partner configuration editing, partner MAU, aggregate reporting, generic audit browsing, catalog/policy CRUD, and broad Verify administration |
+| rp_admin | RP Admin | One partner workspace | Workspace, Application, contacts, RP configuration, checklist/CATS, Production-review request, secrets and secret-change log, scoped MAU, and invitations/assignments for RP User (Edit) or Read Only | RP Admin assignment, CL/global administration, cross-workspace oversight, aggregate reporting, generic audit browsing, and Production-review outcomes |
+| rp_user_edit | RP User (Edit) | One partner workspace | Application/contact editing, RP configuration, checklist/CATS, Production-review request, secret workflows/change log, and scoped MAU | Invitations, role assignment, CL/global administration, cross-workspace oversight, aggregate reporting, generic audit browsing, and Production-review outcomes |
+| read_only | Read Only | One partner workspace | Workspace/Application/RP-configuration metadata, checklist/CATS visibility, Production-review status, and scoped MAU | Mutations, copy, review requests, invitations, role assignment, secrets/change log, CL/global administration, aggregate reporting, generic audit browsing, and Production-review outcomes |
 
 Machine keys are immutable policy and persistence identities. Display labels are
 bilingual presentation content and never become policy subjects. Role
@@ -161,8 +161,9 @@ product authorization.
 
 Canonical role-to-capability policy is system-owned and immutable at runtime.
 No role, policy, or access-policy CRUD API or UI may create direct-user
-subjects, change canonical capabilities, or change scope semantics. Policy
-initialization is idempotent and is delivered through reviewed code,
+subjects, change canonical capabilities, or change scope semantics. The
+Administration role surface is an immutable reference, not a role editor.
+Policy initialization is idempotent and is delivered through reviewed code,
 configuration, or migration data appropriate to the selected policy store.
 Deprecated admin and application-owner subjects are removed only after the
 canonical resolver, policy initialization, and migration checks pass.
@@ -202,17 +203,18 @@ enforces authority.
 
 ### CL Admin Secret Boundary
 
-CL Admin is a platform-governance role, not a partner superuser. It cannot read
-RP client secret values, retrieve client credentials, invoke partner secret
-lifecycle operations, or edit partner configuration.
+CL Admin is an access-administration and Production-review role, not a partner
+superuser. It cannot read RP client secret values, retrieve client credentials,
+invoke partner secret lifecycle operations, edit partner configuration, or use
+partner-scoped MAU as an implicit global report.
 
-The Verify administration adapter uses an explicit CL Admin operation allowlist
-for required user, application, group, entitlement, login, and audit-query
-administration. Secret reads, client credentials, and secret lifecycle calls
-are denied by the backend before any external request, and secret-bearing
-fields are redacted from permitted responses. A new external operation needs an
-explicit permission-matrix and contract update; it does not inherit a wildcard
-administrator grant.
+The portal does not expose a generic IBM Security Verify administration
+surface. Provider adapters are bounded to authentication and safe identity
+binding, retained-RP adoption, and an authorized RP-configuration service
+operation. Secret reads, client credentials, and secret lifecycle calls are
+denied for CL Admin before any external request. A new provider operation needs
+an explicit permission-matrix and contract update; it does not inherit a
+wildcard administrator grant.
 
 ### Bootstrap And Last-Administrator Invariant
 
@@ -287,8 +289,8 @@ Option 2 is selected.
 - The backend must load current assignment state, enforce both capability and
   object scope, and fail closed when assignment state is ambiguous.
 - is_superuser, user.role_ids, workspace role authority, direct Casbin
-  subjects, legacy application-owner policy, and role/policy CRUD require a
-  staged retirement after runtime parity is verified.
+  subjects, legacy application-owner policy, and role/policy/catalog CRUD
+  require a staged retirement after runtime parity is verified.
 - Authenticated-user and grant-accessible RP application contracts must carry safe
   role and workspace context without exposing policy internals.
 - Tests must cover every role/capability pair, no-role access, cross-workspace
@@ -303,7 +305,7 @@ Option 2 is selected.
 
 ADR-003 was accepted on 2026-08-11 after the local implementation and
 verification recorded by the
-[define-four-role-authorization-model OpenSpec change](../../../openspec/changes/define-four-role-authorization-model/).
+[define-four-role-authorization-model OpenSpec change](../../../openspec/changes/archive/2026-08-12-define-four-role-authorization-model/).
 The acceptance review confirmed:
 
 - strict OpenSpec validation and scenario preservation;
@@ -348,8 +350,11 @@ verification, and residual-risk acceptance require separate human decisions.
 
 ## Links
 
-- [OpenSpec proposal](../../../openspec/changes/define-four-role-authorization-model/proposal.md)
-- [OpenSpec design](../../../openspec/changes/define-four-role-authorization-model/design.md)
+- [OpenSpec proposal](../../../openspec/changes/archive/2026-08-12-define-four-role-authorization-model/proposal.md)
+- [OpenSpec design](../../../openspec/changes/archive/2026-08-12-define-four-role-authorization-model/design.md)
+- [Approved-scope alignment change](../../../openspec/changes/align-partner-portal-to-approved-product-scope/)
+- [Partner Portal Onboarding PRD](../../plans/partner-portal-onboarding-prd.md)
+- [Partner Portal MVP PRD](../../plans/partner-portal-mvp.md)
 - [Codebase architecture](../codebase.md)
 - [Development conventions](../../repo-guidance/development-conventions.md)
 - [Casbin subject resolution and code-owned policy](../../../backend/src/app/core/access_control.py)

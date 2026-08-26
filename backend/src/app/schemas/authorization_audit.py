@@ -14,7 +14,6 @@ from ..core.authorization import (
     LifecycleStatus,
     PartnerRoleCode,
     ResourceScopeDecisionReason,
-    VerifyAdminOperation,
 )
 from .authorization import AuthorizationContractModel
 
@@ -172,6 +171,22 @@ class InvitationTransitionAuditEvent(AuthorizationAuditEventBase):
         return self
 
 
+class InvitationTransitionAttemptAuditEvent(AuthorizationAuditEventBase):
+    """A minimized denied or failed invitation lifecycle attempt."""
+
+    event_name: Literal["authorization.invitation_transition_attempted"] = "authorization.invitation_transition_attempted"
+    action: Literal[InvitationTransitionAction.ACCEPT] = InvitationTransitionAction.ACCEPT
+    result: Literal[
+        AuthorizationAuditResult.DENIED,
+        AuthorizationAuditResult.FAILED,
+    ]
+    invitation_uuid: UUID
+    workspace_uuid: UUID
+    target_user_uuid: UUID | None = None
+    role: PartnerRoleCode
+    current_status: InvitationStatus
+
+
 class PrivilegedResourceType(StrEnum):
     PLATFORM = "platform"
     WORKSPACE = "workspace"
@@ -189,20 +204,21 @@ class PrivilegedAccessAuditEvent(AuthorizationAuditEventBase):
     resource_uuid: UUID | None = None
     workspace_uuid: UUID | None = None
     decision_reason: ResourceScopeDecisionReason
-    verify_operation: VerifyAdminOperation | None = None
 
     @model_validator(mode="after")
     def validate_decision_context(self) -> "PrivilegedAccessAuditEvent":
         if self.result is AuthorizationAuditResult.ALLOWED and self.role is None:
             raise ValueError("allowed privileged access requires a canonical role")
-        if self.resource_type is PrivilegedResourceType.VERIFY and self.verify_operation is None:
-            raise ValueError("Verify access decisions require an operation")
-        if self.resource_type is not PrivilegedResourceType.VERIFY and self.verify_operation is not None:
-            raise ValueError("Verify operations belong only to Verify access decisions")
         return self
 
 
-AuthorizationAuditEvent: TypeAlias = RoleAssignmentAuditEvent | RoleRevocationAuditEvent | InvitationTransitionAuditEvent | PrivilegedAccessAuditEvent
+AuthorizationAuditEvent: TypeAlias = (
+    RoleAssignmentAuditEvent
+    | RoleRevocationAuditEvent
+    | InvitationTransitionAuditEvent
+    | InvitationTransitionAttemptAuditEvent
+    | PrivilegedAccessAuditEvent
+)
 
 
 def _validate_role_workspace(role: CanonicalRoleCode, workspace_uuid: UUID | None) -> None:

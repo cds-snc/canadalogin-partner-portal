@@ -5,7 +5,8 @@ import { useParams } from "@tanstack/react-router";
 import { MAUReportPage } from "@/features/mau-reports/pages/MAUReportPage";
 import { HttpRequestError } from "@/fetch/errors";
 
-const { mockUseQuery } = vi.hoisted(() => ({
+const { mockLanguage, mockUseQuery } = vi.hoisted(() => ({
+	mockLanguage: { current: "en" },
 	mockUseQuery: vi.fn(),
 }));
 
@@ -20,13 +21,17 @@ vi.mock("react-i18next", () => ({
 		i18n: { resolvedLanguage: string };
 		t: (key: string, options?: Record<string, unknown>) => string;
 	} => ({
-		i18n: { resolvedLanguage: "en" },
+		i18n: { resolvedLanguage: mockLanguage.current },
 		t: (key: string, options?: Record<string, unknown>): string => {
 			const translations: Record<string, string> = {
 				"mauReport.pageTitle": "Usage Report",
 				"mauReport.title": "MAU report",
 				"mauReport.departmentLabel": `Department: ${options?.["department"] ?? ""}`,
+				"mauReport.workspaceLabel": `Workspace: ${options?.["workspace"] ?? ""}`,
+				"mauReport.applicationLabel": `Application: ${options?.["application"] ?? ""}`,
+				"mauReport.configurationLabel": `RP configuration: ${options?.["configuration"] ?? ""}`,
 				"mauReport.partnerEnvironmentLabel": `Partner environment: ${options?.["environment"] ?? ""}`,
+				"mauReport.canadaLoginEnvironmentLabel": `CanadaLogin environment: ${options?.["environment"] ?? ""}`,
 				"common.notProvided": "Not provided",
 				"mauReport.loadingTitle": "Loading MAU report",
 				"mauReport.loadingBody": "Loading MAU data for this RP application.",
@@ -194,6 +199,7 @@ describe("MAUReportPage", () => {
 		});
 		mockUseQuery.mockReset();
 		mockMAUDailyTrendLineChart.mockReset();
+		mockLanguage.current = "en";
 	});
 
 	it("shows loading state", () => {
@@ -301,6 +307,43 @@ describe("MAUReportPage", () => {
 		expect(screen.getByText("Department: Health Canada")).toBeTruthy();
 		expect(
 			screen.getByText("Partner environment: Partner production")
+		).toBeTruthy();
+	});
+
+	it("identifies the scoped workspace, localized Application, configuration, and both environments", () => {
+		mockUseQuery.mockReturnValue({
+			data: {
+				application_information_uuid: "application-information-uuid-1",
+				application_name: "Provider application",
+				application_name_en: "Benefits service",
+				application_name_fr: "Service de prestations",
+				canada_login_environment: "production",
+				configuration_name: "Benefits production",
+				end_date: "2026-01-31",
+				partner_environment: "Partner production",
+				records: [],
+				rp_configuration_uuid: "application-uuid-1",
+				start_date: "2026-01-01",
+				workspace_name: "Benefits workspace",
+				workspace_uuid: "workspace-uuid-1",
+			},
+			error: null,
+			isLoading: false,
+			isRefetching: false,
+		});
+
+		render(<MAUReportPage />);
+
+		expect(screen.getByText("Workspace: Benefits workspace")).toBeTruthy();
+		expect(screen.getByText("Application: Benefits service")).toBeTruthy();
+		expect(
+			screen.getByText("RP configuration: Benefits production")
+		).toBeTruthy();
+		expect(
+			screen.getByText("Partner environment: Partner production")
+		).toBeTruthy();
+		expect(
+			screen.getByText("CanadaLogin environment: production")
 		).toBeTruthy();
 	});
 

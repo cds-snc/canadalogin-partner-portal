@@ -8,8 +8,6 @@ import { useSession } from "@/hooks";
 import { useApplicationInformationContacts } from "../hooks/use-application-information-contacts";
 import { useApplicationRPConfigurations } from "../hooks/use-application-rp-configurations";
 import { useWorkspaceApplicationInformation } from "../hooks/use-workspace-application-information";
-import { getWorkspaceOnboardingStateLabel } from "../onboarding-display";
-import { getApplicationInformationReadinessSummary } from "../onboarding-readiness";
 
 export const ApplicationInformationDetailPage = (): FunctionComponent => {
 	const { i18n, t } = useTranslation() as unknown as {
@@ -26,6 +24,17 @@ export const ApplicationInformationDetailPage = (): FunctionComponent => {
 	const search = useSearch({
 		from: "/workspaces/$workspaceUuid/applications/$applicationInformationUuid",
 	});
+	const authorizationContext = currentUser?.authorizationContext;
+	const canReadContacts = hasCapability(
+		authorizationContext,
+		"application_information_read",
+		workspaceUuid
+	);
+	const canReadConfigurations = hasCapability(
+		authorizationContext,
+		"rp_configuration_read",
+		workspaceUuid
+	);
 	const { applicationInformation, error, isLoading } =
 		useWorkspaceApplicationInformation(
 			workspaceUuid,
@@ -37,14 +46,18 @@ export const ApplicationInformationDetailPage = (): FunctionComponent => {
 		isLoading: isLoadingContacts,
 	} = useApplicationInformationContacts(
 		workspaceUuid,
-		applicationInformationUuid
+		applicationInformationUuid,
+		canReadContacts
 	);
 	const {
 		configurations,
 		error: configurationsError,
 		isLoading: isLoadingConfigurations,
-	} = useApplicationRPConfigurations(workspaceUuid, applicationInformationUuid);
-	const authorizationContext = currentUser?.authorizationContext;
+	} = useApplicationRPConfigurations(
+		workspaceUuid,
+		applicationInformationUuid,
+		canReadConfigurations
+	);
 	const canEdit = hasCapability(
 		authorizationContext,
 		"application_information_write",
@@ -55,26 +68,18 @@ export const ApplicationInformationDetailPage = (): FunctionComponent => {
 		"rp_configuration_write",
 		workspaceUuid
 	);
-	const canReviewInternally = hasCapability(
-		authorizationContext,
-		"production_review"
-	);
 	const localizedName = applicationInformation
 		? i18n.resolvedLanguage?.startsWith("fr")
 			? applicationInformation.serviceNameFr
 			: applicationInformation.serviceNameEn
 		: null;
-	const readiness = applicationInformation
-		? getApplicationInformationReadinessSummary(
-				applicationInformation,
-				contacts
-			)
-		: null;
 	const contactsRequiringConfirmation = contacts.filter(
 		(contact) => contact.identityConfirmationRequired
 	).length;
 	const errorNotice = getRequestErrorNotice(
-		error ?? contactsError ?? configurationsError,
+		error ??
+			(canReadContacts ? contactsError : null) ??
+			(canReadConfigurations ? configurationsError : null),
 		{
 			bodyKey: "workspaces.appInfoErrorBody",
 			titleKey: "workspaces.appInfoErrorTitle",
@@ -104,7 +109,9 @@ export const ApplicationInformationDetailPage = (): FunctionComponent => {
 				</Notice>
 			) : null}
 
-			{isLoading || isLoadingContacts || isLoadingConfigurations ? (
+			{isLoading ||
+			(canReadContacts && isLoadingContacts) ||
+			(canReadConfigurations && isLoadingConfigurations) ? (
 				<Notice
 					noticeRole="info"
 					noticeTitle={t("workspaces.appInfoLoadingTitle")}
@@ -132,41 +139,34 @@ export const ApplicationInformationDetailPage = (): FunctionComponent => {
 						</Heading>
 						<Text>{applicationInformation.overview}</Text>
 						<Grid columns="1fr" columnsDesktop="16rem 1fr" tag="dl">
-							<dt>
-								<strong>{t("workspaces.onboardingStateLabel")}</strong>
-							</dt>
-							<dd>
-								{applicationInformation.onboardingState?.trim()
-									? getWorkspaceOnboardingStateLabel(
-											t,
-											applicationInformation.onboardingState
-										)
-									: t("common.notAvailable")}
-							</dd>
-							<dt>
-								<strong>{t("workspaces.appInfoReadinessSummaryLabel")}</strong>
-							</dt>
-							<dd>
-								{readiness?.submitReady
-									? t("workspaces.appInfoReadinessReady")
-									: t("workspaces.appInfoReadinessAttentionRequired")}
-							</dd>
-							<dt>
-								<strong>{t("workspaces.appInfoContactsCountLabel")}</strong>
-							</dt>
-							<dd>{contacts.length}</dd>
-							<dt>
-								<strong>
-									{t("workspaces.appInfoRpConfigurationCountLabel")}
-								</strong>
-							</dt>
-							<dd>{configurations.length}</dd>
-							<dt>
-								<strong>
-									{t("workspaces.appInfoContactsConfirmationCountLabel")}
-								</strong>
-							</dt>
-							<dd>{contactsRequiringConfirmation}</dd>
+							{canReadContacts ? (
+								<>
+									<dt>
+										<strong>{t("workspaces.appInfoContactsCountLabel")}</strong>
+									</dt>
+									<dd>{contacts.length}</dd>
+								</>
+							) : null}
+							{canReadConfigurations ? (
+								<>
+									<dt>
+										<strong>
+											{t("workspaces.appInfoRpConfigurationCountLabel")}
+										</strong>
+									</dt>
+									<dd>{configurations.length}</dd>
+								</>
+							) : null}
+							{canReadContacts ? (
+								<>
+									<dt>
+										<strong>
+											{t("workspaces.appInfoContactsConfirmationCountLabel")}
+										</strong>
+									</dt>
+									<dd>{contactsRequiringConfirmation}</dd>
+								</>
+							) : null}
 						</Grid>
 					</section>
 
@@ -180,46 +180,41 @@ export const ApplicationInformationDetailPage = (): FunctionComponent => {
 								href={`/workspaces/${workspaceUuid}/applications/${applicationInformationUuid}/details`}
 							/>
 							<Card
-								cardTitle={t("workspaces.appInfoReadinessTitle")}
+								cardTitle={t("workspaces.appInfoChecklistTitle")}
 								cardTitleTag="h3"
-								description={t("workspaces.appInfoHubReadinessDescription")}
-								href={`/workspaces/${workspaceUuid}/applications/${applicationInformationUuid}/readiness`}
+								description={t("workspaces.appInfoHubChecklistDescription")}
+								href={`/workspaces/${workspaceUuid}/applications/${applicationInformationUuid}/checklist-and-evidence`}
 							/>
-							<Card
-								cardTitle={t("workspaces.appInfoContacts")}
-								cardTitleTag="h3"
-								description={t("workspaces.appInfoContactsManagementHint")}
-								href={`/workspaces/${workspaceUuid}/applications/${applicationInformationUuid}/contacts`}
-							/>
-							{canCreateConfiguration &&
-							!isLoadingConfigurations &&
-							configurations.length === 0 ? (
+							{canReadContacts ? (
 								<Card
-									cardTitle={t("workspaces.rpConfigurationCreateFirstAction")}
+									cardTitle={t("workspaces.appInfoContacts")}
 									cardTitleTag="h3"
-									href={`/workspaces/${workspaceUuid}/applications/${applicationInformationUuid}/rp-configurations/new`}
-									description={t(
-										"workspaces.rpConfigurationCreateFirstDescription"
-									)}
-								/>
-							) : (
-								<Card
-									cardTitle={t("workspaces.rpConfigurationsTitle")}
-									cardTitleTag="h3"
-									href={`/workspaces/${workspaceUuid}/applications/${applicationInformationUuid}/rp-configurations`}
-									description={t(
-										"workspaces.appInfoHubRpConfigurationsDescription"
-									)}
-								/>
-							)}
-							{canReviewInternally ? (
-								<Card
-									cardTitle={t("workspaces.appInfoInternalReviewTitle")}
-									cardTitleTag="h3"
-									description={t("workspaces.appInfoInternalReviewSummary")}
-									href={`/workspaces/${workspaceUuid}/applications/${applicationInformationUuid}/internal-review`}
+									description={t("workspaces.appInfoContactsManagementHint")}
+									href={`/workspaces/${workspaceUuid}/applications/${applicationInformationUuid}/contacts`}
 								/>
 							) : null}
+							{canReadConfigurations &&
+								(canCreateConfiguration &&
+								!isLoadingConfigurations &&
+								configurations.length === 0 ? (
+									<Card
+										cardTitle={t("workspaces.rpConfigurationCreateFirstAction")}
+										cardTitleTag="h3"
+										href={`/workspaces/${workspaceUuid}/applications/${applicationInformationUuid}/rp-configurations/new`}
+										description={t(
+											"workspaces.rpConfigurationCreateFirstDescription"
+										)}
+									/>
+								) : (
+									<Card
+										cardTitle={t("workspaces.rpConfigurationsTitle")}
+										cardTitleTag="h3"
+										href={`/workspaces/${workspaceUuid}/applications/${applicationInformationUuid}/rp-configurations`}
+										description={t(
+											"workspaces.appInfoHubRpConfigurationsDescription"
+										)}
+									/>
+								))}
 						</Grid>
 					</section>
 

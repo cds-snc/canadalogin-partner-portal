@@ -1,59 +1,19 @@
-export const onboardingOversightQueueRecordTypes = [
-	"workspace",
-	"application_information",
-	"rp_application",
-	"production_progression",
-] as const;
-
-export const onboardingOversightQueueLifecycleStates = [
-	"submitted",
-	"under_review",
+export const onboardingOversightQueueReviewStatuses = [
+	"pending",
 	"approved",
-	"launched",
+	"rejected",
 ] as const;
 
-export const onboardingOversightQueueEnvironments = [
-	"test",
-	"staging",
-	"production",
-] as const;
-
-export const onboardingOversightQueuePromotionStatuses = [
-	"review_tracked",
-	"changes_requested",
-	"approved",
-	"launched",
-] as const;
-
-export type OnboardingOversightQueueRecordType =
-	(typeof onboardingOversightQueueRecordTypes)[number];
-
-export type OnboardingOversightQueueLifecycleState =
-	(typeof onboardingOversightQueueLifecycleStates)[number];
-
-export type OnboardingOversightQueueEnvironment =
-	(typeof onboardingOversightQueueEnvironments)[number];
-
-export type OnboardingOversightQueuePromotionStatus =
-	(typeof onboardingOversightQueuePromotionStatuses)[number];
+export type OnboardingOversightQueueReviewStatus =
+	(typeof onboardingOversightQueueReviewStatuses)[number];
 
 export type OnboardingOversightQueueFilters = {
 	department?: string;
-	environment?: OnboardingOversightQueueEnvironment;
-	onboardingState?: OnboardingOversightQueueLifecycleState;
-	promotionStatus?: OnboardingOversightQueuePromotionStatus;
-	recordType?: OnboardingOversightQueueRecordType;
+	reviewStatus?: OnboardingOversightQueueReviewStatus;
 	workspace?: string;
 };
 
-const recordTypeSet = new Set<string>(onboardingOversightQueueRecordTypes);
-const onboardingStateSet = new Set<string>(
-	onboardingOversightQueueLifecycleStates
-);
-const environmentSet = new Set<string>(onboardingOversightQueueEnvironments);
-const promotionStatusSet = new Set<string>(
-	onboardingOversightQueuePromotionStatuses
-);
+const reviewStatusSet = new Set<string>(onboardingOversightQueueReviewStatuses);
 
 const normalizeText = (value: unknown): string | undefined => {
 	if (typeof value !== "string") {
@@ -64,16 +24,15 @@ const normalizeText = (value: unknown): string | undefined => {
 	return trimmedValue === "" ? undefined : trimmedValue;
 };
 
-const normalizeEnum = <T extends string>(
-	value: unknown,
-	allowedValues: ReadonlySet<string>
-): T | undefined => {
+const normalizeReviewStatus = (
+	value: unknown
+): OnboardingOversightQueueReviewStatus | undefined => {
 	const normalizedValue = normalizeText(value);
-	if (!normalizedValue || !allowedValues.has(normalizedValue)) {
+	if (!normalizedValue || !reviewStatusSet.has(normalizedValue)) {
 		return undefined;
 	}
 
-	return normalizedValue as T;
+	return normalizedValue as OnboardingOversightQueueReviewStatus;
 };
 
 export const normalizeOnboardingOversightQueueFilters = (
@@ -83,21 +42,8 @@ export const normalizeOnboardingOversightQueueFilters = (
 
 	return {
 		department: normalizeText(values["department"]),
-		environment: normalizeEnum<OnboardingOversightQueueEnvironment>(
-			values["environment"],
-			environmentSet
-		),
-		onboardingState: normalizeEnum<OnboardingOversightQueueLifecycleState>(
-			values["onboardingState"] ?? values["onboarding_state"],
-			onboardingStateSet
-		),
-		promotionStatus: normalizeEnum<OnboardingOversightQueuePromotionStatus>(
-			values["promotionStatus"] ?? values["promotion_status"],
-			promotionStatusSet
-		),
-		recordType: normalizeEnum<OnboardingOversightQueueRecordType>(
-			values["recordType"] ?? values["record_type"],
-			recordTypeSet
+		reviewStatus: normalizeReviewStatus(
+			values["reviewStatus"] ?? values["review_status"]
 		),
 		workspace: normalizeText(values["workspace"]),
 	};

@@ -1,6 +1,5 @@
 import { requestJson } from "@/fetch";
 import type { PartnerRole } from "@/features/auth/authorization";
-import type { ApiMessageResponse } from "./api-types";
 
 export type AdminUserRead = {
 	email: string;
@@ -13,21 +12,6 @@ export type AdminUserRead = {
 		workspaceName: string;
 		workspaceUuid: string;
 	}>;
-};
-
-export type AdminUserProfileRead = {
-	acceptedTermsAt: string | null;
-	authProvider: string | null;
-	departmentAbbreviation: string | null;
-	departmentUuid: string | null;
-	email: string;
-	enabled: boolean;
-	name: string;
-	profileImageUrl: string;
-	termsVersion: string | null;
-	tierUuid: string | null;
-	uuid: string;
-	username: string;
 };
 
 export type UserAccessAdministrationRead = {
@@ -64,17 +48,6 @@ export type UserAccessAdministrationRead = {
 export type UserInvitationTargetResolutionRead = {
 	outcome: "existing_identity" | "ineligible_identity" | "new_identity";
 	userUuid: string | null;
-};
-
-export type UserCreate = {
-	email: string;
-	name: string;
-};
-
-export type UserUpdate = {
-	email?: string | null;
-	name?: string | null;
-	profileImageUrl?: string | null;
 };
 
 export type UsersListResponse = {
@@ -152,29 +125,6 @@ export const searchUsers = async (
 		)) ?? []
 	);
 };
-export const createUser = async (
-	payload: UserCreate
-): Promise<AdminUserProfileRead | null> =>
-	requestJson<AdminUserProfileRead>("/api/v1/user", {
-		body: JSON.stringify(payload),
-		method: "POST",
-	});
-
-export const updateUser = async (
-	userUuid: string,
-	payload: UserUpdate
-): Promise<ApiMessageResponse | null> =>
-	requestJson<ApiMessageResponse>(`/api/v1/user/${userUuid}`, {
-		body: JSON.stringify(payload),
-		method: "PATCH",
-	});
-
-export const deleteUser = async (
-	userUuid: string
-): Promise<ApiMessageResponse | null> =>
-	requestJson<ApiMessageResponse>(`/api/v1/user/${userUuid}`, {
-		method: "DELETE",
-	});
 
 export const getUserAccessAdministration = async (
 	userUuid: string

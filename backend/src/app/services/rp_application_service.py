@@ -1,3 +1,5 @@
+import csv
+import io
 import json
 import logging
 import re
@@ -19,6 +21,7 @@ from ..core.authorization import (
     Capability,
     ResourceScopeDecision,
     ResourceScopeRequest,
+    role_allows,
 )
 from ..core.config import settings
 from ..core.exceptions.cache_exceptions import MissingClientError
@@ -37,11 +40,17 @@ from ..models.audit_log import AuditLog
 from ..models.department import Department
 from ..models.rp_application import RPApplication
 from ..models.workspace import Workspace
+from ..repositories.crud_application_information import crud_application_information
+from ..repositories.crud_audit_log import crud_audit_log
 from ..repositories.crud_departments import crud_departments
+from ..repositories.crud_rp_application_promotion_requests import (
+    crud_rp_application_promotion_requests,
+)
 from ..repositories.crud_rp_applications import crud_rp_applications
 from ..repositories.crud_workspaces import crud_workspaces
 from ..repositories.dependencies import IBMVerifyAdminClientFactory
 from ..repositories.ibm_sv_admin import IBMVerifyAdminClient
+from ..schemas.application_information import ApplicationInformationRead
 from ..schemas.authorization_audit import (
     AuthorizationActorType,
     AuthorizationAuditActor,
@@ -49,11 +58,10 @@ from ..schemas.authorization_audit import (
     PrivilegedAccessAuditEvent,
     PrivilegedResourceType,
 )
+from ..schemas.mau import MAUReportDestinationRead
 from ..schemas.rp_application import (
-    AccessibleRPApplicationDepartmentAssignRequest,
     AccessibleRPApplicationOAuthSetupRead,
     AccessibleRPApplicationRead,
-    AccessibleRPApplicationSummaryRead,
     CanadaLoginEnvironment,
     RPApplicationClientCredentialsRead,
     RPApplicationClientRotatedSecretCreateRequest,
@@ -94,6 +102,18 @@ APPLICATION_ID_PATTERN = re.compile(r"/applications/([^/?#]+)")
 SUMMARY_ACCESS_GRANT_ROLES = PARTNER_ROLE_CODES
 CONFIGURATION_EDIT_GRANT_ROLES = frozenset({CanonicalRoleCode.RP_ADMIN, CanonicalRoleCode.RP_USER_EDIT})
 SECRET_ACCESS_GRANT_ROLES = CONFIGURATION_EDIT_GRANT_ROLES
+SECRET_CHANGE_AUDIT_OPERATIONS = (
+    "ROTATE_SECRET",
+    "REGENERATE",
+    "DELETE_ROTATED",
+)
+SECRET_CHANGE_LOG_HEADERS = (
+    "TimeGenerated",
+    "Actor",
+    "Action",
+    "RPConfigurationId",
+)
+SECRET_AUDIT_EVENT_NAME = "rp_application.secret_operation"
 ADOPTION_FIELD_NAMES: tuple[RPApplicationAdoptionFieldName, ...] = (
     "displayName",
     "providerApplicationState",
@@ -108,6 +128,13 @@ ADOPTION_FIELD_NAMES: tuple[RPApplicationAdoptionFieldName, ...] = (
 
 
 class RPApplicationService:
+    @staticmethod
+    def _sentinel_csv_cell(value: object) -> str:
+        normalized = str(value or "")
+        if normalized.startswith(("=", "+", "-", "@", "\t", "\r")):
+            return f"'{normalized}"
+        return normalized
+
     def __init__(self) -> None:
         self._decision_point = CanonicalResourceScopeDecisionPoint()
 
@@ -121,6 +148,42 @@ class RPApplicationService:
         if isinstance(value, Mapping):
             return dict(value)
         return {}
+
+    async def _attach_production_review_statuses(
+        self,
+        *,
+        db: AsyncSession,
+        applications: list[dict[str, Any]],
+    ) -> None:
+        """Attach only explicit canonical Production-review states in place."""
+
+        application_ids = tuple(sorted(application_id for application in applications if isinstance((application_id := application.get("id")), int)))
+        if not application_ids:
+            return
+
+        review_records = await crud_rp_application_promotion_requests.get_multi(
+            db=db,
+            limit=None,
+            return_total_count=False,
+            rp_application_id__in=application_ids,
+            target_environment="production",
+            is_deleted=False,
+            return_as_model=False,
+        )
+        canonical_by_application_id = {
+            int(record["rp_application_id"]): status
+            for record in review_records.get("data", [])
+            if isinstance(record.get("rp_application_id"), int) and (status := record.get("review_status")) in {"pending", "approved", "rejected"}
+        }
+        reconciliation_required_ids = {
+            int(record["rp_application_id"])
+            for record in review_records.get("data", [])
+            if isinstance(record.get("rp_application_id"), int) and record.get("review_status") not in {"pending", "approved", "rejected"}
+        }
+        for application in applications:
+            application_id = cast(int, application.get("id"))
+            application["production_review_status"] = canonical_by_application_id.get(application_id)
+            application["production_review_reconciliation_required"] = application_id in reconciliation_required_ids
 
     def _first_string_value(self, value: Any, keys: tuple[str, ...]) -> str | None:
         value_dict = self._as_dict(value)
@@ -211,6 +274,110 @@ class RPApplicationService:
         if len(normalized) <= 128 and re.fullmatch(r"[A-Za-z0-9][A-Za-z0-9_.:-]*", normalized) is not None:
             return normalized
         return hash_log_value(correlation_id)
+
+    def _safe_secret_correlation_id(self, correlation_id: str | None) -> str:
+        return self._safe_adoption_correlation_id(correlation_id or "unavailable")
+
+    def _public_rp_configuration_uuid(
+        self,
+        rp_application_uuid: uuid_pkg.UUID | str,
+    ) -> uuid_pkg.UUID | None:
+        try:
+            return uuid_pkg.UUID(str(rp_application_uuid))
+        except (TypeError, ValueError, AttributeError):
+            return None
+
+    async def _record_secret_operation_audit(
+        self,
+        *,
+        db: AsyncSession,
+        current_user: dict[str, Any],
+        rp_application_uuid: uuid_pkg.UUID | str,
+        operation: str,
+        action: str,
+        outcome: Literal["succeeded", "failed"],
+        correlation_id: str | None,
+    ) -> None:
+        """Persist a minimized secret event without provider or secret data."""
+
+        event_timestamp = datetime.now(UTC)
+        public_rp_uuid = self._public_rp_configuration_uuid(rp_application_uuid)
+        actor_uuid = current_user.get("uuid")
+        actor: dict[str, str] = {"type": "user"}
+        if actor_uuid is not None:
+            actor["userUuid"] = str(actor_uuid)
+        safe_correlation_id = self._safe_secret_correlation_id(correlation_id)
+        event = {
+            "eventVersion": 1,
+            "eventName": SECRET_AUDIT_EVENT_NAME,
+            "timestamp": event_timestamp.isoformat().replace("+00:00", "Z"),
+            "actor": actor,
+            "correlationId": safe_correlation_id,
+            "rpConfigurationUuid": (str(public_rp_uuid) if public_rp_uuid is not None else None),
+            "action": action,
+            "outcome": outcome,
+        }
+        await AuditService().log_action(
+            db=db,
+            user="authorization_actor",
+            user_uuid=actor_uuid,
+            target="rp_application",
+            target_uuid=public_rp_uuid,
+            operation=operation,
+            description=json.dumps(event, separators=(",", ":")),
+        )
+        logger.warning(
+            "Sensitive credential action=%s outcome=%s actor_id=%s rp_configuration_id=%s correlation_id=%s",
+            action,
+            outcome,
+            hash_log_value(actor_uuid or "unavailable"),
+            hash_log_value(public_rp_uuid or "unavailable"),
+            safe_correlation_id,
+        )
+
+    async def _record_secret_operation_failure(
+        self,
+        *,
+        db: AsyncSession,
+        current_user: dict[str, Any],
+        rp_application_uuid: uuid_pkg.UUID | str,
+        operation: str,
+        action: str,
+        correlation_id: str | None,
+    ) -> None:
+        """Best-effort failure audit that never replaces the original error."""
+
+        safe_correlation_id = self._safe_secret_correlation_id(correlation_id)
+        try:
+            await db.rollback()
+        except Exception:
+            logger.critical(
+                "Secret operation audit rollback unavailable action=%s rp_configuration_id=%s correlation_id=%s",
+                action,
+                hash_log_value(rp_application_uuid),
+                safe_correlation_id,
+            )
+        try:
+            await self._record_secret_operation_audit(
+                db=db,
+                current_user=current_user,
+                rp_application_uuid=rp_application_uuid,
+                operation=operation,
+                action=action,
+                outcome="failed",
+                correlation_id=safe_correlation_id,
+            )
+        except Exception:
+            try:
+                await db.rollback()
+            except Exception:
+                pass
+            logger.critical(
+                "Secret operation failure audit unavailable action=%s rp_configuration_id=%s correlation_id=%s",
+                action,
+                hash_log_value(rp_application_uuid),
+                safe_correlation_id,
+            )
 
     async def _persist_adoption_authorization_decision(
         self,
@@ -989,7 +1156,7 @@ class RPApplicationService:
                         ("secretId", "secret_id", "id"),
                     )
                     or delete_path,
-                ).model_dump(by_alias=True)
+                ).model_dump(mode="json", by_alias=True)
             )
 
         return normalized_entries
@@ -1193,10 +1360,10 @@ class RPApplicationService:
             partner_environment=application_data.get("partner_environment"),
             workspace_uuid=workspace_access.workspace_uuid,
             role=workspace_access.role,
-            ibm_sv_application_id=application_data.get("ibm_sv_application_id"),
             canada_login_environment=application_data.get("canada_login_environment"),
-            onboarding_state=application_data.get("onboarding_state"),
-            promotion_status=application_data.get("promotion_status"),
+            registration_completed_at=application_data.get("registration_completed_at"),
+            production_review_status=application_data.get("production_review_status"),
+            production_review_reconciliation_required=bool(application_data.get("production_review_reconciliation_required")),
         ).model_dump()
 
     @staticmethod
@@ -1369,6 +1536,10 @@ class RPApplicationService:
         }
 
         applications = [self._as_dict(item) for item in applications_result.get("data", [])]
+        await self._attach_production_review_statuses(
+            db=db,
+            applications=applications,
+        )
         application_information_by_id = await self._load_application_information_parents(
             db,
             applications,
@@ -1407,6 +1578,42 @@ class RPApplicationService:
             )
         return summaries
 
+    async def list_accessible_mau_report_destinations(
+        self,
+        db: AsyncSession,
+        current_user: dict[str, Any],
+    ) -> list[dict[str, Any]]:
+        """Return only server-authorized hierarchy fields needed by Reports."""
+
+        summaries = await self.list_accessible_rp_applications(
+            db=db,
+            current_user=current_user,
+        )
+        destinations: list[dict[str, Any]] = []
+        for summary in summaries:
+            role_value = summary.get("role")
+            try:
+                role = CanonicalRoleCode(str(role_value))
+            except ValueError:
+                continue
+            application_information_uuid = summary.get("applicationInformationUuid")
+            if role not in PARTNER_ROLE_CODES or not role_allows(role, Capability.MAU_REPORT_READ) or application_information_uuid is None:
+                continue
+            destinations.append(
+                MAUReportDestinationRead(
+                    uuid=summary["uuid"],
+                    workspace_uuid=summary["workspaceUuid"],
+                    workspace_name=summary["workspaceName"],
+                    application_information_uuid=application_information_uuid,
+                    application_name_en=summary["serviceNameEn"],
+                    application_name_fr=summary["serviceNameFr"],
+                    configuration_name=summary["configurationName"],
+                    partner_environment=summary.get("partnerEnvironment"),
+                    canada_login_environment=summary.get("canadaLoginEnvironment"),
+                ).model_dump(mode="json", by_alias=True)
+            )
+        return destinations
+
     async def get_accessible_rp_application_by_uuid(
         self,
         db: AsyncSession,
@@ -1428,13 +1635,17 @@ class RPApplicationService:
         parent_application = application_information_by_id.get(parent_id) if isinstance(parent_id, int) else None
         if isinstance(parent_id, int) and parent_application is None:
             raise NotFoundException("RP application not found")
+        await self._attach_production_review_statuses(
+            db=db,
+            applications=[application_data],
+        )
         return self._accessible_rp_application_read(
             application_data,
             workspace_access,
             (uuid_pkg.UUID(str(parent_application["uuid"])) if parent_application is not None else None),
         )
 
-    async def get_accessible_rp_application_department_preflight(
+    async def get_accessible_rp_application_mau_context(
         self,
         db: AsyncSession,
         rp_application_uuid: uuid_pkg.UUID | str,
@@ -1442,8 +1653,9 @@ class RPApplicationService:
         expected_workspace_uuid: uuid_pkg.UUID | str | None = None,
         expected_application_information_uuid: uuid_pkg.UUID | str | None = None,
     ) -> dict[str, Any]:
-        """Project the effective Department inherited from the parent workspace."""
-        rp_application_data, _ = await self._resolve_accessible_rp_application_access(
+        """Resolve the secret-free hierarchy labels for one scoped MAU report."""
+
+        rp_application_data, workspace_access = await self._resolve_accessible_rp_application_access(
             db=db,
             rp_application_uuid=rp_application_uuid,
             current_user=current_user,
@@ -1456,14 +1668,42 @@ class RPApplicationService:
             rp_application_data=rp_application_data,
         )
 
-        response = AccessibleRPApplicationSummaryRead(
-            id=rp_application_data["id"],
-            uuid=rp_application_data["uuid"],
-            dnr_app_name=rp_application_data["dnr_app_name"],
-            department_id=department_id,
-            partner_environment=rp_application_data.get("partner_environment"),
+        workspace = await crud_workspaces.get(
+            db=db,
+            id=workspace_access.workspace_id,
+            uuid=workspace_access.workspace_uuid,
+            is_deleted=False,
+            schema_to_select=WorkspaceRead,
         )
-        return response.model_dump(by_alias=True)
+        application_information_id = rp_application_data.get("application_information_id")
+        application_information = (
+            await crud_application_information.get(
+                db=db,
+                id=application_information_id,
+                workspace_id=workspace_access.workspace_id,
+                is_deleted=False,
+                schema_to_select=ApplicationInformationRead,
+            )
+            if isinstance(application_information_id, int)
+            else None
+        )
+        if workspace is None or application_information is None:
+            raise NotFoundException("RP configuration report context is unavailable")
+
+        return {
+            "id": rp_application_data["id"],
+            "uuid": rp_application_data["uuid"],
+            "dnr_app_name": rp_application_data["dnr_app_name"],
+            "configuration_name": (rp_application_data.get("configuration_name") or rp_application_data["dnr_app_name"]),
+            "canada_login_environment": rp_application_data.get("canada_login_environment"),
+            "partner_environment": rp_application_data.get("partner_environment"),
+            "department_id": department_id,
+            "workspace_uuid": workspace["uuid"],
+            "workspace_name": workspace["name"],
+            "application_information_uuid": application_information["uuid"],
+            "application_name_en": application_information["service_name_en"],
+            "application_name_fr": application_information["service_name_fr"],
+        }
 
     async def _get_effective_workspace_department(
         self,
@@ -1491,39 +1731,6 @@ class RPApplicationService:
         if department is None:
             raise NotFoundException("Workspace department is unavailable")
         return int(department.department_id), department.uuid
-
-    async def assign_accessible_rp_application_department(
-        self,
-        db: AsyncSession,
-        rp_application_uuid: uuid_pkg.UUID | str,
-        current_user: dict[str, Any],
-        payload: AccessibleRPApplicationDepartmentAssignRequest,
-    ) -> dict[str, Any]:
-        """Deprecated idempotent adapter for workspace-derived Department context."""
-        rp_application_data, _ = await self._resolve_accessible_rp_application_access(
-            db=db,
-            rp_application_uuid=rp_application_uuid,
-            current_user=current_user,
-            allowed_grant_roles=CONFIGURATION_EDIT_GRANT_ROLES,
-        )
-
-        department_id, department_uuid = await self._get_effective_workspace_department(
-            db=db,
-            rp_application_data=rp_application_data,
-        )
-        if str(payload.department_uuid) != str(department_uuid):
-            raise CustomException(
-                status_code=409,
-                detail="RP configuration Department is inherited from its workspace",
-            )
-
-        response = AccessibleRPApplicationSummaryRead(
-            id=rp_application_data["id"],
-            uuid=rp_application_data["uuid"],
-            dnr_app_name=rp_application_data["dnr_app_name"],
-            department_id=department_id,
-        )
-        return response.model_dump(by_alias=True)
 
     async def _require_rp_application_department(
         self,
@@ -1553,6 +1760,10 @@ class RPApplicationService:
         )
         rp_application_data["department_id"] = department_id
         await self._require_rp_application_department(rp_application_data)
+        await self._attach_production_review_statuses(
+            db=db,
+            applications=[rp_application_data],
+        )
 
         resolved_ibm_admin_client = await self._resolve_ibm_admin_client(
             ibm_admin_client=ibm_admin_client,
@@ -1613,8 +1824,9 @@ class RPApplicationService:
             rp_application_name=rp_application_data["dnr_app_name"],
             status=status,
             canada_login_environment=rp_application_data.get("canada_login_environment"),
-            onboarding_state=rp_application_data.get("onboarding_state"),
-            promotion_status=rp_application_data.get("promotion_status"),
+            registration_completed_at=rp_application_data.get("registration_completed_at"),
+            production_review_status=rp_application_data.get("production_review_status"),
+            production_review_reconciliation_required=bool(rp_application_data.get("production_review_reconciliation_required")),
             application_url=application_url,
             discovery_endpoint=settings.OIDC_SERVER_METADATA_URL,
             department_name=department_name,
@@ -1668,35 +1880,100 @@ class RPApplicationService:
         ibm_admin_client_factory: IBMVerifyAdminClientFactory | None = None,
         expected_workspace_uuid: uuid_pkg.UUID | str | None = None,
         expected_application_information_uuid: uuid_pkg.UUID | str | None = None,
+        correlation_id: str | None = None,
     ) -> dict[str, Any]:
-        rp_application_data, _, client_id, resolved_ibm_admin_client = await self._get_accessible_secret_context(
+        try:
+            _, _, client_id, resolved_ibm_admin_client = await self._get_accessible_secret_context(
+                db=db,
+                rp_application_uuid=rp_application_uuid,
+                current_user=current_user,
+                ibm_admin_client=ibm_admin_client,
+                ibm_admin_client_factory=ibm_admin_client_factory,
+                expected_workspace_uuid=expected_workspace_uuid,
+                expected_application_information_uuid=expected_application_information_uuid,
+            )
+            credentials = await self._read_client_credentials(
+                ibm_admin_client=resolved_ibm_admin_client,
+                client_id=client_id,
+            )
+        except Exception:
+            await self._record_secret_operation_failure(
+                db=db,
+                current_user=current_user,
+                rp_application_uuid=rp_application_uuid,
+                operation="REVEAL_SECRET",
+                action="reveal",
+                correlation_id=correlation_id,
+            )
+            raise
+
+        await self._record_secret_operation_audit(
+            db=db,
+            current_user=current_user,
+            rp_application_uuid=rp_application_uuid,
+            operation="REVEAL_SECRET",
+            action="reveal",
+            outcome="succeeded",
+            correlation_id=correlation_id,
+        )
+        return credentials
+
+    async def export_accessible_rp_application_secret_change_log(
+        self,
+        db: AsyncSession,
+        rp_application_uuid: uuid_pkg.UUID | str,
+        current_user: dict[str, Any],
+        expected_workspace_uuid: uuid_pkg.UUID | str | None = None,
+        expected_application_information_uuid: uuid_pkg.UUID | str | None = None,
+    ) -> str:
+        """Export the bounded actor/time secret-change record for one config."""
+
+        rp_application_data, _ = await self._resolve_accessible_rp_application_access(
             db=db,
             rp_application_uuid=rp_application_uuid,
             current_user=current_user,
-            ibm_admin_client=ibm_admin_client,
-            ibm_admin_client_factory=ibm_admin_client_factory,
+            allowed_grant_roles=SECRET_ACCESS_GRANT_ROLES,
             expected_workspace_uuid=expected_workspace_uuid,
             expected_application_information_uuid=expected_application_information_uuid,
         )
-
-        await self._create_audit_log_entry(
+        target_uuid = rp_application_data.get("uuid")
+        audit_data = await crud_audit_log.get_multi(
             db=db,
-            current_user=current_user,
-            rp_application_data=rp_application_data,
-            operation="REVEAL_SECRET",
-            description=(f"Revealed client credentials for RP configuration '{self._configuration_name(rp_application_data)}'"),
+            target="rp_application",
+            target_uuid=target_uuid,
+            operation__in=SECRET_CHANGE_AUDIT_OPERATIONS,
+            offset=0,
+            limit=10_000,
+            sort_columns="created_at",
+            sort_orders="ASC",
         )
+        raw_records = audit_data.get("data", []) if isinstance(audit_data, dict) else audit_data
 
-        logger.warning(
-            "Sensitive credential action=reveal actor_id=%s application_id=%s",
-            hash_log_value(current_user.get("uuid", "")),
-            hash_log_value(rp_application_data.get("uuid", rp_application_uuid)),
-        )
+        output = io.StringIO(newline="")
+        writer = csv.DictWriter(output, fieldnames=list(SECRET_CHANGE_LOG_HEADERS), lineterminator="\n")
+        writer.writeheader()
+        for raw_record in raw_records:
+            record = self._as_dict(raw_record)
+            created_at = record.get("created_at")
+            if isinstance(created_at, datetime):
+                normalized_created_at = created_at.replace(tzinfo=UTC) if created_at.tzinfo is None else created_at.astimezone(UTC)
+                time_generated = normalized_created_at.isoformat().replace("+00:00", "Z")
+            else:
+                time_generated = str(created_at or "")
+            actor = record.get("user_uuid")
+            if actor is None:
+                legacy_actor = record.get("user")
+                actor = f"legacy:{hash_log_value(legacy_actor)}" if legacy_actor else "unknown"
+            writer.writerow(
+                {
+                    "TimeGenerated": self._sentinel_csv_cell(time_generated),
+                    "Actor": self._sentinel_csv_cell(actor),
+                    "Action": self._sentinel_csv_cell(record.get("operation")),
+                    "RPConfigurationId": self._sentinel_csv_cell(target_uuid),
+                }
+            )
 
-        return await self._read_client_credentials(
-            ibm_admin_client=resolved_ibm_admin_client,
-            client_id=client_id,
-        )
+        return output.getvalue()
 
     async def list_accessible_rp_application_rotated_secrets(
         self,
@@ -1707,33 +1984,41 @@ class RPApplicationService:
         ibm_admin_client_factory: IBMVerifyAdminClientFactory | None = None,
         expected_workspace_uuid: uuid_pkg.UUID | str | None = None,
         expected_application_information_uuid: uuid_pkg.UUID | str | None = None,
+        correlation_id: str | None = None,
     ) -> list[dict[str, Any]]:
-        rp_application_data, _, client_id, resolved_ibm_admin_client = await self._get_accessible_secret_context(
+        try:
+            _, _, client_id, resolved_ibm_admin_client = await self._get_accessible_secret_context(
+                db=db,
+                rp_application_uuid=rp_application_uuid,
+                current_user=current_user,
+                ibm_admin_client=ibm_admin_client,
+                ibm_admin_client_factory=ibm_admin_client_factory,
+                expected_workspace_uuid=expected_workspace_uuid,
+                expected_application_information_uuid=expected_application_information_uuid,
+            )
+            client_secret_response = await resolved_ibm_admin_client.get_client_secret(client_id)
+            rotated_secrets = self._extract_rotated_secret_entries(client_secret_response)
+        except Exception:
+            await self._record_secret_operation_failure(
+                db=db,
+                current_user=current_user,
+                rp_application_uuid=rp_application_uuid,
+                operation="VIEW_ROTATED",
+                action="view_rotated",
+                correlation_id=correlation_id,
+            )
+            raise
+
+        await self._record_secret_operation_audit(
             db=db,
+            current_user=current_user,
             rp_application_uuid=rp_application_uuid,
-            current_user=current_user,
-            ibm_admin_client=ibm_admin_client,
-            ibm_admin_client_factory=ibm_admin_client_factory,
-            expected_workspace_uuid=expected_workspace_uuid,
-            expected_application_information_uuid=expected_application_information_uuid,
-        )
-
-        client_secret_response = await resolved_ibm_admin_client.get_client_secret(client_id)
-        await self._create_audit_log_entry(
-            db=db,
-            current_user=current_user,
-            rp_application_data=rp_application_data,
             operation="VIEW_ROTATED",
-            description=(f"Viewed rotated client secrets for RP configuration '{self._configuration_name(rp_application_data)}'"),
+            action="view_rotated",
+            outcome="succeeded",
+            correlation_id=correlation_id,
         )
-
-        logger.warning(
-            "Sensitive credential action=view_rotated actor_id=%s application_id=%s",
-            hash_log_value(current_user.get("uuid", "")),
-            hash_log_value(rp_application_data.get("uuid", rp_application_uuid)),
-        )
-
-        return self._extract_rotated_secret_entries(client_secret_response)
+        return rotated_secrets
 
     async def rotate_accessible_rp_application_client_secret(
         self,
@@ -1745,39 +2030,47 @@ class RPApplicationService:
         ibm_admin_client_factory: IBMVerifyAdminClientFactory | None = None,
         expected_workspace_uuid: uuid_pkg.UUID | str | None = None,
         expected_application_information_uuid: uuid_pkg.UUID | str | None = None,
+        correlation_id: str | None = None,
     ) -> dict[str, Any]:
-        rp_application_data, _, client_id, resolved_ibm_admin_client = await self._get_accessible_secret_context(
-            db=db,
-            rp_application_uuid=rp_application_uuid,
-            current_user=current_user,
-            ibm_admin_client=ibm_admin_client,
-            ibm_admin_client_factory=ibm_admin_client_factory,
-            expected_workspace_uuid=expected_workspace_uuid,
-            expected_application_information_uuid=expected_application_information_uuid,
-        )
-
-        await resolved_ibm_admin_client.update_client_secret(
-            client_id,
-            payload.model_dump(by_alias=True),
-        )
         operation = "ROTATE_SECRET"
-        description = f"Rotated client secret for RP configuration '{self._configuration_name(rp_application_data)}'"
+        action = "rotate"
         if payload.description.strip() == "" and payload.rotated_secret_expired_at == 0:
             operation = "REGENERATE"
-            description = f"Regenerated client secret for RP configuration '{self._configuration_name(rp_application_data)}'"
+            action = "regenerate"
 
-        await self._create_audit_log_entry(
+        try:
+            _, _, client_id, resolved_ibm_admin_client = await self._get_accessible_secret_context(
+                db=db,
+                rp_application_uuid=rp_application_uuid,
+                current_user=current_user,
+                ibm_admin_client=ibm_admin_client,
+                ibm_admin_client_factory=ibm_admin_client_factory,
+                expected_workspace_uuid=expected_workspace_uuid,
+                expected_application_information_uuid=expected_application_information_uuid,
+            )
+            await resolved_ibm_admin_client.update_client_secret(
+                client_id,
+                payload.model_dump(by_alias=True),
+            )
+        except Exception:
+            await self._record_secret_operation_failure(
+                db=db,
+                current_user=current_user,
+                rp_application_uuid=rp_application_uuid,
+                operation=operation,
+                action=action,
+                correlation_id=correlation_id,
+            )
+            raise
+
+        await self._record_secret_operation_audit(
             db=db,
             current_user=current_user,
-            rp_application_data=rp_application_data,
+            rp_application_uuid=rp_application_uuid,
             operation=operation,
-            description=description,
-        )
-
-        logger.warning(
-            "Sensitive credential action=rotate actor_id=%s application_id=%s",
-            hash_log_value(current_user.get("uuid", "")),
-            hash_log_value(rp_application_data.get("uuid", rp_application_uuid)),
+            action=action,
+            outcome="succeeded",
+            correlation_id=correlation_id,
         )
 
         return await self._read_client_credentials(
@@ -1795,37 +2088,45 @@ class RPApplicationService:
         ibm_admin_client_factory: IBMVerifyAdminClientFactory | None = None,
         expected_workspace_uuid: uuid_pkg.UUID | str | None = None,
         expected_application_information_uuid: uuid_pkg.UUID | str | None = None,
+        correlation_id: str | None = None,
     ) -> list[dict[str, Any]]:
-        rp_application_data, _, client_id, resolved_ibm_admin_client = await self._get_accessible_secret_context(
+        try:
+            _, _, client_id, resolved_ibm_admin_client = await self._get_accessible_secret_context(
+                db=db,
+                rp_application_uuid=rp_application_uuid,
+                current_user=current_user,
+                ibm_admin_client=ibm_admin_client,
+                ibm_admin_client_factory=ibm_admin_client_factory,
+                expected_workspace_uuid=expected_workspace_uuid,
+                expected_application_information_uuid=expected_application_information_uuid,
+            )
+            await resolved_ibm_admin_client.update_client_secret(
+                client_id,
+                {
+                    "deleteRotatedSecrets": False,
+                    "description": payload.description,
+                    "rotatedSecretExpiredAt": payload.rotated_secret_expired_at,
+                },
+            )
+        except Exception:
+            await self._record_secret_operation_failure(
+                db=db,
+                current_user=current_user,
+                rp_application_uuid=rp_application_uuid,
+                operation="ROTATE_SECRET",
+                action="create_rotated",
+                correlation_id=correlation_id,
+            )
+            raise
+
+        await self._record_secret_operation_audit(
             db=db,
+            current_user=current_user,
             rp_application_uuid=rp_application_uuid,
-            current_user=current_user,
-            ibm_admin_client=ibm_admin_client,
-            ibm_admin_client_factory=ibm_admin_client_factory,
-            expected_workspace_uuid=expected_workspace_uuid,
-            expected_application_information_uuid=expected_application_information_uuid,
-        )
-
-        await resolved_ibm_admin_client.update_client_secret(
-            client_id,
-            {
-                "deleteRotatedSecrets": False,
-                "description": payload.description,
-                "rotatedSecretExpiredAt": payload.rotated_secret_expired_at,
-            },
-        )
-        await self._create_audit_log_entry(
-            db=db,
-            current_user=current_user,
-            rp_application_data=rp_application_data,
             operation="ROTATE_SECRET",
-            description=(f"Created rotated client secret for RP configuration '{self._configuration_name(rp_application_data)}'"),
-        )
-
-        logger.warning(
-            "Sensitive credential action=create_rotated actor_id=%s application_id=%s",
-            hash_log_value(current_user.get("uuid", "")),
-            hash_log_value(rp_application_data.get("uuid", rp_application_uuid)),
+            action="create_rotated",
+            outcome="succeeded",
+            correlation_id=correlation_id,
         )
 
         client_secret_response = await resolved_ibm_admin_client.get_client_secret(client_id)
@@ -1841,41 +2142,50 @@ class RPApplicationService:
         ibm_admin_client_factory: IBMVerifyAdminClientFactory | None = None,
         expected_workspace_uuid: uuid_pkg.UUID | str | None = None,
         expected_application_information_uuid: uuid_pkg.UUID | str | None = None,
+        correlation_id: str | None = None,
     ) -> bool:
-        rp_application_data, _, client_id, resolved_ibm_admin_client = await self._get_accessible_secret_context(
+        try:
+            _, _, client_id, resolved_ibm_admin_client = await self._get_accessible_secret_context(
+                db=db,
+                rp_application_uuid=rp_application_uuid,
+                current_user=current_user,
+                ibm_admin_client=ibm_admin_client,
+                ibm_admin_client_factory=ibm_admin_client_factory,
+                expected_workspace_uuid=expected_workspace_uuid,
+                expected_application_information_uuid=expected_application_information_uuid,
+            )
+            client_secret_response = await resolved_ibm_admin_client.get_client_secret(client_id)
+            rotated_secrets = self._extract_rotated_secret_entries(client_secret_response)
+            selected_secret = next(
+                (secret for secret in rotated_secrets if secret.get("secretId") == secret_id),
+                None,
+            )
+            if selected_secret is None:
+                raise NotFoundException("Rotated client secret not found")
+
+            deleted = await resolved_ibm_admin_client.delete_rotated_client_secrets(
+                client_id,
+                [secret_id],
+            )
+        except Exception:
+            await self._record_secret_operation_failure(
+                db=db,
+                current_user=current_user,
+                rp_application_uuid=rp_application_uuid,
+                operation="DELETE_ROTATED",
+                action="delete_rotated",
+                correlation_id=correlation_id,
+            )
+            raise
+
+        await self._record_secret_operation_audit(
             db=db,
+            current_user=current_user,
             rp_application_uuid=rp_application_uuid,
-            current_user=current_user,
-            ibm_admin_client=ibm_admin_client,
-            ibm_admin_client_factory=ibm_admin_client_factory,
-            expected_workspace_uuid=expected_workspace_uuid,
-            expected_application_information_uuid=expected_application_information_uuid,
-        )
-
-        client_secret_response = await resolved_ibm_admin_client.get_client_secret(client_id)
-        rotated_secrets = self._extract_rotated_secret_entries(client_secret_response)
-        selected_secret = next(
-            (secret for secret in rotated_secrets if secret.get("secretId") == secret_id),
-            None,
-        )
-        if selected_secret is None:
-            raise NotFoundException("Rotated client secret not found")
-
-        deleted = await resolved_ibm_admin_client.delete_rotated_client_secrets(
-            client_id,
-            [secret_id],
-        )
-        await self._create_audit_log_entry(
-            db=db,
-            current_user=current_user,
-            rp_application_data=rp_application_data,
             operation="DELETE_ROTATED",
-            description=(f"Deleted rotated client secret for RP configuration '{self._configuration_name(rp_application_data)}'"),
-        )
-        logger.warning(
-            "Sensitive credential action=delete_rotated actor_id=%s application_id=%s",
-            hash_log_value(current_user.get("uuid", "")),
-            hash_log_value(rp_application_data.get("uuid", rp_application_uuid)),
+            action="delete_rotated",
+            outcome=("succeeded" if deleted else "failed"),
+            correlation_id=correlation_id,
         )
 
         return deleted

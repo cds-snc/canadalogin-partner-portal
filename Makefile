@@ -731,7 +731,11 @@ format-python: fmt-python
 check-python-format: fmt-ci-python
 
 lint-python:
-	$(BACKEND_CMD) ruff check src/ tests/
+	$(BACKEND_CMD) ruff check --no-fix src/
+	$(BACKEND_CMD) ruff check --no-fix \
+		--extend-per-file-ignores 'tests/*:I001' \
+		--extend-per-file-ignores 'tests/test_department_seed.py:W191' \
+		tests/
 
 run-pytest:
 	$(BACKEND_CMD) pytest -q

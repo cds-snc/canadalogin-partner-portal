@@ -174,13 +174,6 @@ session cookie. Shared environments must also replace the loopback origins
 with their exact frontend origins. Cookie-authenticated state-changing API
 requests are checked against the same origin allowlist.
 
-### First Tier
-
-```env
-# Default Tier
-TIER_NAME="free"
-```
-
 ## Environment Types
 
 Set your environment type:

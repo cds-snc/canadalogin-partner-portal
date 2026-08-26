@@ -13,8 +13,9 @@ export type WorkspacesState = {
 	workspaces: Array<WorkspaceRead>;
 };
 
-export const useWorkspaces = (): WorkspacesState => {
+export const useWorkspaces = (enabled = true): WorkspacesState => {
 	const query = useQuery<Array<WorkspaceRead>, Error>({
+		enabled,
 		queryFn: getCurrentUserWorkspaces,
 		queryKey: workspacesQueryKey,
 	});

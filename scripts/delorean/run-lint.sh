@@ -8,6 +8,17 @@ status=0
 ran_any=0
 lint_scope="${DELOREAN_LINT_SCOPE:-all}"
 lint_mode="${DELOREAN_LINT_MODE:-full}"
+file_scope="${DELOREAN_FILE_SCOPE:-}"
+backend_python_files=()
+frontend_format_files=()
+
+if [ -z "${file_scope}" ]; then
+  if [ "$#" -gt 0 ]; then
+    file_scope="changed"
+  else
+    file_scope="all"
+  fi
+fi
 
 case "${lint_scope}" in
   all | frontend | backend | ruff)
@@ -26,6 +37,46 @@ case "${lint_mode}" in
     exit 1
     ;;
 esac
+
+case "${file_scope}" in
+  all | changed)
+    ;;
+  *)
+    echo "Unknown DELOREAN_FILE_SCOPE='${file_scope}'. Use all or changed." >&2
+    exit 1
+    ;;
+esac
+
+if [ "${file_scope}" = "changed" ]; then
+  for input_path in "$@"; do
+    if [ -f "${input_path}" ]; then
+      normalized_path="$(cd -- "$(dirname -- "${input_path}")" && pwd)/$(basename -- "${input_path}")"
+    elif [ -f "${repo_root}/${input_path}" ]; then
+      normalized_path="${repo_root}/${input_path}"
+    else
+      continue
+    fi
+
+    case "${normalized_path}" in
+      "${repo_root}"/*)
+        ;;
+      *)
+        echo "Lint-check file is outside the repository: ${input_path}" >&2
+        exit 1
+        ;;
+    esac
+
+    rel_path="${normalized_path#"${repo_root}"/}"
+    case "${rel_path}" in
+      backend/*.py | backend/*.pyi)
+        backend_python_files+=("${normalized_path}")
+        ;;
+      frontend/src/*.ts | frontend/src/*.tsx)
+        frontend_format_files+=("${normalized_path}")
+        ;;
+    esac
+  done
+fi
 
 is_ci() {
   [ "${CI:-}" = "true" ]
@@ -77,8 +128,7 @@ make_has_target() {
   [ -f "${repo_root}/Makefile" ] && grep -Eq "^${target}([[:space:]]*:|:)" "${repo_root}/Makefile"
 }
 
-python_module_available() {
-  local module="$1"
+resolve_python_command() {
   local python_command="${PYTHON:-}"
 
   if [ -z "${python_command}" ]; then
@@ -89,6 +139,14 @@ python_module_available() {
     fi
   fi
 
+  printf '%s\n' "${python_command}"
+}
+
+python_module_available() {
+  local module="$1"
+  local python_command=""
+
+  python_command="$(resolve_python_command)"
   command -v "${python_command}" >/dev/null 2>&1 && "${python_command}" -c "import ${module}" >/dev/null 2>&1
 }
 
@@ -132,25 +190,65 @@ if scope_includes "frontend" && [ -f "${repo_root}/frontend/package.json" ]; the
   if [ "${lint_mode}" = "full" ]; then
     run_frontend_script "typecheck"
   fi
-  run_frontend_script "format:check"
+  if package_has_script "${repo_root}/frontend/package.json" "format:check"; then
+    if [ "${file_scope}" = "changed" ]; then
+      if [ "${#frontend_format_files[@]}" -gt 0 ]; then
+        run_command \
+          "Prettier check for changed frontend source files" \
+          "${repo_root}/frontend/node_modules/.bin/prettier" \
+          --ignore-path "${repo_root}/frontend/.prettierignore" \
+          --check \
+          "${frontend_format_files[@]}"
+      else
+        echo "No changed frontend source files matched Prettier checks. Skipping."
+      fi
+    else
+      run_frontend_script "format:check"
+    fi
+  fi
 fi
 
-if scope_includes "backend" && { [ -f "${repo_root}/backend/requirements-dev.txt" ] || [ -f "${repo_root}/.flake8" ]; }; then
+if scope_includes "backend" && {
+  [ -f "${repo_root}/backend/pyproject.toml" ] ||
+    [ -f "${repo_root}/backend/uv.lock" ] ||
+    [ -f "${repo_root}/backend/requirements-dev.txt" ] ||
+    [ -f "${repo_root}/.flake8" ]
+}; then
   if make_has_target "lint-python"; then
     ran_any=1
-    if python_module_available "flake8"; then
+    if python_module_available "ruff"; then
       run_command "make lint-python" make -C "${repo_root}" lint-python
     else
-      handle_missing_tool "Backend linting is configured, but flake8 is not installed."
+      handle_missing_tool "Backend linting is configured, but Ruff is not installed."
     fi
   fi
 
   if make_has_target "fmt-ci-python"; then
     ran_any=1
-    if python_module_available "black"; then
-      run_command "make fmt-ci-python" make -C "${repo_root}" fmt-ci-python
+    if python_module_available "ruff"; then
+      if [ "${file_scope}" = "changed" ]; then
+        if [ "${#backend_python_files[@]}" -gt 0 ]; then
+          python_command="$(resolve_python_command)"
+          run_command \
+            "Ruff format check for changed backend Python files" \
+            "${python_command}" -m ruff format --check "${backend_python_files[@]}"
+        else
+          echo "No changed backend Python files matched Ruff format checks. Skipping."
+        fi
+      else
+        run_command "make fmt-ci-python" make -C "${repo_root}" fmt-ci-python
+      fi
     else
-      handle_missing_tool "Backend format checking is configured, but black is not installed."
+      handle_missing_tool "Backend format checking is configured, but Ruff is not installed."
+    fi
+  fi
+
+  if [ "${lint_mode}" = "full" ] && make_has_target "typecheck"; then
+    ran_any=1
+    if python_module_available "mypy"; then
+      run_command "make typecheck" make -C "${repo_root}" typecheck
+    else
+      handle_missing_tool "Backend type checking is configured, but mypy is not installed."
     fi
   fi
 fi

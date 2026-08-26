@@ -53,7 +53,7 @@ describe("route catalog", () => {
 		expect(
 			isRouteVisible(ROUTE_CATALOG.onboardingOversight, clAdminContext)
 		).toBe(true);
-		expect(isRouteVisible(ROUTE_CATALOG.reports, clAdminContext)).toBe(true);
+		expect(isRouteVisible(ROUTE_CATALOG.reports, clAdminContext)).toBe(false);
 
 		expect(isRouteVisible(ROUTE_CATALOG.workspaces, partnerContext)).toBe(true);
 		expect(isRouteVisible(ROUTE_CATALOG.reports, partnerContext)).toBe(true);
@@ -68,6 +68,7 @@ describe("route catalog", () => {
 		);
 
 		expect(isRouteVisible(ROUTE_CATALOG.home, noAccessContext)).toBe(true);
+		expect(isRouteVisible(ROUTE_CATALOG.account, noAccessContext)).toBe(true);
 		expect(isRouteVisible(ROUTE_CATALOG.workspaces, noAccessContext)).toBe(
 			false
 		);
@@ -88,9 +89,13 @@ describe("route catalog", () => {
 		expect(getActiveTaskArea("/support")).toBeNull();
 		expect(isRouteActive(ROUTE_CATALOG.home, "/support")).toBe(false);
 		expect(findRouteByPath("/users")?.id).toBe("usersAndAccess");
-		expect(findRouteByPath("/users/invite")?.id).toBe("usersAndAccess");
-		expect(findRouteByPath("/reports/workspaces")?.id).toBe("reports");
+		expect(findRouteByPath("/account")?.id).toBe("account");
+		expect(findRouteByPath("/users/invite")?.id).toBe("invitations");
+		expect(findRouteByPath("/reports/applications")?.id).toBe("reports");
 		expect(findRouteByPath("/users/user-uuid")?.id).toBe("usersAndAccess");
+		expect(findRouteByPath("/departments")).toBeNull();
+		expect(findRouteByPath("/tiers")).toBeNull();
+		expect(findRouteByPath("/policies")).toBeNull();
 		expect(findRouteByPath("/workspaces/workspace-uuid/settings")?.id).toBe(
 			"workspaces"
 		);
@@ -128,6 +133,15 @@ describe("route catalog", () => {
 			"administration",
 		]);
 		expect(getReturnRoute("usersAndAccess")?.id).toBe("administration");
+		expect(getBreadcrumbRoutes("invitations").map(({ id }) => id)).toEqual([
+			"home",
+			"administration",
+		]);
+		expect(getReturnRoute("invitations")?.id).toBe("administration");
+		expect(getBreadcrumbRoutes("account").map(({ id }) => id)).toEqual([
+			"home",
+		]);
+		expect(getReturnRoute("account")?.id).toBe("home");
 		expect(
 			getBreadcrumbRoutes("rpRegistrationAdoption").map(({ id }) => id)
 		).toEqual(["home", "workspaces"]);

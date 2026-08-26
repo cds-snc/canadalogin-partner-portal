@@ -125,6 +125,55 @@ export const assignWorkspaceRole = async (
 	return result;
 };
 
+export const getWorkspaceRoleAssignment = async (
+	workspaceUuid: string,
+	assignmentUuid: string
+): Promise<RoleAssignmentRead> => {
+	const result = await requestJson<RoleAssignmentRead | null>(
+		`/api/v1/workspaces/${encodeURIComponent(workspaceUuid)}/access/assignments/${encodeURIComponent(assignmentUuid)}`,
+		{ cache: "no-store", method: "GET" },
+		{ redirectOnForbidden: false }
+	);
+	if (!result) {
+		throw new Error("Failed to load workspace role assignment");
+	}
+	return result;
+};
+
+export const replaceWorkspaceRoleAssignment = async (
+	workspaceUuid: string,
+	assignmentUuid: string,
+	role: PartnerRole
+): Promise<RoleAssignmentRead> => {
+	const result = await requestJson<RoleAssignmentRead | null>(
+		`/api/v1/workspaces/${encodeURIComponent(workspaceUuid)}/access/assignments/${encodeURIComponent(assignmentUuid)}`,
+		{
+			body: JSON.stringify({ role }),
+			method: "PATCH",
+		},
+		{ redirectOnForbidden: false }
+	);
+	if (!result) {
+		throw new Error("Failed to replace workspace role assignment");
+	}
+	return result;
+};
+
+export const revokeWorkspaceRoleAssignment = async (
+	workspaceUuid: string,
+	assignmentUuid: string
+): Promise<ApiMessageResponse> => {
+	const result = await requestJson<ApiMessageResponse | null>(
+		`/api/v1/workspaces/${encodeURIComponent(workspaceUuid)}/access/assignments/${encodeURIComponent(assignmentUuid)}`,
+		{ method: "DELETE" },
+		{ redirectOnForbidden: false }
+	);
+	if (!result) {
+		throw new Error("Failed to revoke workspace role assignment");
+	}
+	return result;
+};
+
 export const replaceWorkspaceRole = async (
 	workspaceUuid: string,
 	userUuid: string,

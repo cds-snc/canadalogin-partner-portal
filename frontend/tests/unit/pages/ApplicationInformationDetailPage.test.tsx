@@ -21,18 +21,14 @@ vi.mock("react-i18next", () => ({
 				"workspaces.appInfoHubDetailsDescription": "Review full details.",
 				"workspaces.appInfoHubDetailsTitle": "Application details",
 				"workspaces.appInfoHubOverviewTitle": "Application summary",
-				"workspaces.appInfoHubReadinessDescription": "Review readiness.",
+				"workspaces.appInfoHubChecklistDescription":
+					"Review checklist and evidence.",
 				"workspaces.appInfoHubRpConfigurationsDescription":
 					"Review named RP configurations.",
 				"workspaces.appInfoHubSummary":
 					"Review important status and choose a focused area.",
 				"workspaces.appInfoHubTasksTitle": "Application tasks",
-				"workspaces.appInfoInternalReviewSummary": "Review internal evidence.",
-				"workspaces.appInfoInternalReviewTitle": "Internal review",
-				"workspaces.appInfoReadinessAttentionRequired": "Attention required",
-				"workspaces.appInfoReadinessReady": "Ready",
-				"workspaces.appInfoReadinessSummaryLabel": "Submission readiness",
-				"workspaces.appInfoReadinessTitle": "Readiness summary",
+				"workspaces.appInfoChecklistTitle": "Checklist and evidence",
 				"workspaces.appInfoRpConfigurationCountLabel": "RP configurations",
 				"workspaces.appInfoDelete": "Delete application",
 				"workspaces.appInfoManagementTitle": "Application management",
@@ -41,8 +37,6 @@ vi.mock("react-i18next", () => ({
 					"Create first RP configuration",
 				"workspaces.rpConfigurationCreateFirstDescription":
 					"Start the first configuration.",
-				"workspaces.onboardingStateLabel": "Onboarding status",
-				"workspaces.onboardingStateUnderReview": "Under review",
 			};
 
 			return translations[key] ?? key;
@@ -120,22 +114,17 @@ vi.mock(
 vi.mock("@/hooks", () => ({ useSession: vi.fn() }));
 
 const applicationInformation = {
-	approvedAt: null,
 	createdAt: "2026-08-13T00:00:00Z",
 	createdBy: 42,
 	deletedAt: null,
 	id: 17,
 	isDeleted: false,
-	launchedAt: null,
 	migrationOrTransitionPlan: "Plan",
-	onboardingState: "under_review",
 	overview: "A concise service overview.",
 	securityAndPrivacy: "Protected B",
 	serviceNameEn: "Example service",
 	serviceNameFr: "Service exemple",
-	submittedAt: "2026-08-12T00:00:00Z",
 	technologyAndProtocol: "OIDC",
-	underReviewAt: "2026-08-13T00:00:00Z",
 	updatedAt: null,
 	usage: "Usage",
 	uuid: "application-information-uuid-1",
@@ -216,7 +205,6 @@ describe("ApplicationInformationDetailPage", () => {
 			screen.getByRole("heading", { level: 1, name: "Example service" })
 		).toBeTruthy();
 		expect(screen.getByText("A concise service overview.")).toBeTruthy();
-		expect(screen.getByText("Ready")).toBeTruthy();
 		expect(screen.getByText("Contact records")).toBeTruthy();
 		expect(
 			screen.getByText("Contacts requiring identity confirmation")
@@ -228,9 +216,9 @@ describe("ApplicationInformationDetailPage", () => {
 		).toContain("/details");
 		expect(
 			screen
-				.getByRole("link", { name: "Readiness summary" })
+				.getByRole("link", { name: "Checklist and evidence" })
 				.getAttribute("href")
-		).toContain("/readiness");
+		).toContain("/checklist-and-evidence");
 		expect(
 			screen
 				.getByRole("link", { name: "Application contacts" })
@@ -255,10 +243,10 @@ describe("ApplicationInformationDetailPage", () => {
 		expect(
 			screen.getByRole("heading", { level: 2, name: "Application management" })
 		).toBeTruthy();
-		expect(screen.queryByRole("link", { name: "Internal review" })).toBeNull();
+		expect(screen.queryByText("Submission readiness")).toBeNull();
 	});
 
-	it("shows Internal review only to a platform reviewer", () => {
+	it("does not expose Internal review to a platform reviewer", () => {
 		vi.mocked(useSession).mockReturnValue({
 			currentUser: {
 				authorizationContext: {
@@ -275,9 +263,16 @@ describe("ApplicationInformationDetailPage", () => {
 
 		render(<ApplicationInformationDetailPage />);
 
+		expect(screen.queryByRole("link", { name: "Internal review" })).toBeNull();
 		expect(
-			screen.getByRole("link", { name: "Internal review" }).getAttribute("href")
-		).toContain("/internal-review");
+			screen.queryByRole("link", { name: "Application contacts" })
+		).toBeNull();
+		expect(screen.queryByText("Contact records")).toBeNull();
+		expect(useApplicationInformationContacts).toHaveBeenLastCalledWith(
+			"workspace-uuid-1",
+			"application-information-uuid-1",
+			false
+		);
 		expect(
 			screen.queryByRole("link", { name: "Delete application" })
 		).toBeNull();

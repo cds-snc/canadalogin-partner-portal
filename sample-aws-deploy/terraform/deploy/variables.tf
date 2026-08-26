@@ -203,6 +203,15 @@ variable "oidc_scopes" {
   default     = "openid profile email"
 }
 
+variable "partner_access_allowed_email_domains" {
+  description = "Exact email domains allowed to receive partner workspace access"
+  type        = list(string)
+  validation {
+    condition     = length(var.partner_access_allowed_email_domains) > 0
+    error_message = "At least one partner-access email domain must be configured."
+  }
+}
+
 variable "oidc_post_login_redirect" {
   description = "Frontend path to redirect after login"
   type        = string

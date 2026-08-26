@@ -65,13 +65,10 @@ api/
     ├── login.py            # Authentication endpoints
     ├── logout.py           # Logout functionality
     ├── oidc.py             # OIDC login and callback endpoints
-    ├── policies.py         # Access policy endpoints
     ├── users.py            # User management
     ├── posts.py            # Post operations
     ├── tasks.py            # Background task endpoints
-    ├── roles.py            # Role management
-    ├── tiers.py            # User tier management
-    └── rate_limits.py      # Rate limiting endpoints
+    └── roles.py            # Fixed role reference and assignment support
 ```
 
 **Purpose**: Contains HTTP-facing route handlers, dependency wiring, authentication context injection, request validation, response models, and route-level decorators. Business logic is delegated to the service layer.
@@ -82,12 +79,8 @@ services/
 ├── auth_service.py         # Login, refresh, and logout orchestration
 ├── health_service.py       # Health and readiness checks
 ├── oidc_service.py         # OIDC redirect and callback flow
-├── policy_service.py       # Access policy business logic
 ├── post_service.py         # Post ownership, workflow, and review logic
-├── rate_limit_service.py   # Tier-scoped rate limit orchestration
-├── role_service.py         # Role business logic
 ├── task_service.py         # Background task orchestration
-├── tier_service.py         # Tier business logic
 └── user_service.py         # User lifecycle and aggregate reads
 ```
 
@@ -155,19 +148,19 @@ worker/
 models/
 ├── user.py                 # User model
 ├── post.py                 # Post model
-├── tier.py                 # User tier model
-└── rate_limit.py           # Rate limit model
+├── tier.py                 # Legacy migration-compatible table model
+└── rate_limit.py           # Legacy migration-compatible table model
 ```
 
-**Purpose**: SQLAlchemy ORM models defining database schema.
+**Purpose**: SQLAlchemy ORM models defining database schema. The retained
+`tier` and `rate_limit` table models preserve existing database history; they
+do not back product catalog or administration APIs.
 
 #### Schemas (`schemas/`)
 ```text
 schemas/
 ├── user.py                 # User validation schemas
 ├── post.py                 # Post validation schemas
-├── tier.py                 # Tier validation schemas
-├── rate_limit.py           # Rate limit schemas
 └── job.py                  # Background job schemas
 ```
 
@@ -176,12 +169,10 @@ schemas/
 #### Repository Adapters (`repositories/`)
 ```text
 repositories/
-├── crud_access_policies.py   # Access policy database access
+├── crud_access_policies.py   # Legacy policy persistence compatibility
 ├── crud_departments.py       # Department database access
-├── crud_rate_limit.py        # Rate limit database access
 ├── crud_roles.py             # Role database access
 ├── crud_rp_applications.py   # RP application database access
-├── crud_tier.py              # Tier database access
 ├── crud_users.py             # User database access
 ├── crud_workspace_members.py # Workspace member database access
 ├── crud_workspaces.py        # Workspace database access
@@ -222,8 +213,7 @@ migrations/
 
 ```text
 scripts/
-├── create_initial_cl_admin.py # Create the initial canonical CL Admin assignment
-└── create_first_tier.py       # Create initial user tier
+└── create_initial_cl_admin.py # Create the initial canonical CL Admin assignment
 ```
 
 **Purpose**: Initialization and maintenance scripts.

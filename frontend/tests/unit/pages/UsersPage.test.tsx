@@ -71,7 +71,8 @@ vi.mock("@/components/ui", () => ({
 	}: {
 		action?: Array<{
 			buttonLabel: string;
-			onAction: (row: Record<string, string>) => void;
+			href?: (row: Record<string, string>) => string;
+			onAction?: (row: Record<string, string>) => void;
 			screenReaderLabel?: (row: Record<string, string>) => string;
 		}>;
 		columns: Array<{ field: string; headerName: string }>;
@@ -111,16 +112,23 @@ vi.mock("@/components/ui", () => ({
 					{columns.map((column) => (
 						<span key={column.field}>{row[column.field]}</span>
 					))}
-					{action?.map((item) => (
-						<button
-							key={item.buttonLabel}
-							type="button"
-							onClick={() => item.onAction(row)}
-						>
-							{item.buttonLabel}{" "}
-							<span className="sr-only">{item.screenReaderLabel?.(row)}</span>
-						</button>
-					))}
+					{action?.map((item) =>
+						item.href ? (
+							<a key={item.buttonLabel} href={item.href(row)}>
+								{item.buttonLabel}{" "}
+								<span className="sr-only">{item.screenReaderLabel?.(row)}</span>
+							</a>
+						) : (
+							<button
+								key={item.buttonLabel}
+								type="button"
+								onClick={() => item.onAction?.(row)}
+							>
+								{item.buttonLabel}{" "}
+								<span className="sr-only">{item.screenReaderLabel?.(row)}</span>
+							</button>
+						)
+					)}
 				</div>
 			))}
 		</section>
@@ -270,13 +278,45 @@ describe("UsersPage", () => {
 		).toHaveLength(2);
 		expect(screen.getAllByText("invited@example.com")).toHaveLength(2);
 		expect(screen.getByText("Pending")).toBeTruthy();
-		fireEvent.click(
-			screen.getByRole("button", { name: "Manage invited@example.com" })
-		);
-		expect(navigate).toHaveBeenLastCalledWith({
-			params: { workspaceUuid: "workspace-uuid-1" },
-			to: "/workspaces/$workspaceUuid/access",
-		});
+		expect(
+			screen
+				.getByRole("link", { name: "Manage invited@example.com" })
+				.getAttribute("href")
+		).toBe("/workspaces/workspace-uuid-1/access/invitations/invitation-uuid-1");
+	});
+
+	it("keeps invitations in one workspace on distinct record destinations", () => {
+		setUsers([sampleUser]);
+		const secondInvitation = {
+			...sampleInvitation,
+			invitationUuid: "invitation-uuid-2",
+			invitedEmail: "other@example.com",
+		};
+		vi.mocked(usePendingUserInvitations).mockReturnValue({
+			error: null,
+			invitations: [sampleInvitation, secondInvitation],
+			isLoading: false,
+			response: {
+				data: [sampleInvitation, secondInvitation],
+				has_more: false,
+				items_per_page: 10,
+				page: 1,
+				total_count: 2,
+			},
+		} as never);
+
+		render(<UsersPage />);
+
+		expect(
+			screen
+				.getByRole("link", { name: "Manage invited@example.com" })
+				.getAttribute("href")
+		).toContain("invitation-uuid-1");
+		expect(
+			screen
+				.getByRole("link", { name: "Manage other@example.com" })
+				.getAttribute("href")
+		).toContain("invitation-uuid-2");
 	});
 
 	it("states when there are no pending invitations", () => {

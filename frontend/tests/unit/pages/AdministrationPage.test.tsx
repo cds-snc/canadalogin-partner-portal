@@ -9,20 +9,14 @@ vi.mock("react-i18next", () => ({
 		t: (key: string): string =>
 			({
 				"administration.groups.accessManagement": "Access management",
-				"administration.groups.monitoringAndReference":
-					"Monitoring and reference",
-				"administration.groups.partnerConfiguration": "Partner configuration",
-				"administration.summary": "Choose a platform governance task.",
-				"administration.tasks.auditLogs": "Review audit records.",
-				"administration.tasks.departments": "Manage departments.",
+				"administration.groups.monitoringAndReference": "Role reference",
+				"administration.summary": "Choose an identity and access task.",
+				"administration.tasks.invitations": "Invite a partner user.",
 				"administration.tasks.roleReference": "Review fixed roles.",
-				"administration.tasks.tiers": "Manage tiers.",
 				"administration.tasks.usersAndAccess": "Manage users and access.",
 				"administration.title": "Administration",
-				"nav.auditLogs": "Audit logs",
-				"nav.departments": "Departments",
+				"nav.invitations": "Invitations",
 				"nav.roles": "Roles",
-				"nav.tiers": "Tiers",
 				"nav.usersAndAccess": "Users and access",
 			})[key] ?? key,
 	}),
@@ -73,7 +67,6 @@ describe("AdministrationPage", () => {
 				name: "CL Admin",
 				profileImageUrl: "",
 				termsVersion: "2026-01",
-				tierUuid: null,
 				uuid: "user-uuid-1",
 				username: "admin@local.example",
 			},
@@ -90,24 +83,20 @@ describe("AdministrationPage", () => {
 		expect(
 			screen.getByRole("heading", { name: "Administration" })
 		).toBeTruthy();
-		for (const groupName of [
-			"Access management",
-			"Partner configuration",
-			"Monitoring and reference",
-		]) {
+		for (const groupName of ["Access management", "Role reference"]) {
 			expect(screen.getByRole("heading", { name: groupName })).toBeTruthy();
 		}
 		for (const [name, href] of [
 			["Users and access", "/users"],
-			["Departments", "/departments"],
-			["Tiers", "/tiers"],
-			["Audit logs", "/audit-logs"],
+			["Invitations", "/users/invite"],
 			["Roles", "/roles"],
 		] as const) {
 			expect(screen.getByRole("link", { name }).getAttribute("href")).toBe(
 				href
 			);
 		}
-		expect(screen.queryByRole("link", { name: /polic/i })).toBeNull();
+		for (const retired of [/department/i, /tier/i, /polic/i, /audit/i]) {
+			expect(screen.queryByRole("link", { name: retired })).toBeNull();
+		}
 	});
 });

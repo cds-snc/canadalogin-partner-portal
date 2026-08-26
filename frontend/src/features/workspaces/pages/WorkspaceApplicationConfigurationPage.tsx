@@ -11,8 +11,8 @@ import { useSession } from "@/hooks";
 import { useApplicationRPConfigurationConfiguration } from "../hooks/use-application-rp-configurations";
 import {
 	getCanadaLoginEnvironmentLabel,
-	getWorkspaceOnboardingStateLabel,
-	getWorkspacePromotionStatusLabel,
+	getProductionReviewSummaryLabel,
+	getRegistrationStatusLabel,
 } from "../onboarding-display";
 import { getEarliestIncompleteRegistrationStep } from "../workspace-rp-registration-flow";
 
@@ -292,27 +292,28 @@ export const WorkspaceApplicationConfigurationPage = (): FunctionComponent => {
 								: t("common.notAvailable")}
 						</dd>
 						<dt>
-							<strong>{t("workspaces.onboardingStateLabel")}</strong>
+							<strong>{t("workspaces.registrationStatusLabel")}</strong>
 						</dt>
 						<dd>
-							{configuration.onboardingState?.trim()
-								? getWorkspaceOnboardingStateLabel(
-										t as never,
-										configuration.onboardingState
-									)
-								: t("common.notAvailable")}
+							{getRegistrationStatusLabel(
+								t as never,
+								configuration.registrationCompletedAt
+							)}
 						</dd>
-						<dt>
-							<strong>{t("workspaces.productionReviewLabel")}</strong>
-						</dt>
-						<dd>
-							{configuration.promotionStatus?.trim()
-								? getWorkspacePromotionStatusLabel(
+						{configuration.canadaLoginEnvironment === "production" ? (
+							<>
+								<dt>
+									<strong>{t("workspaces.productionReviewLabel")}</strong>
+								</dt>
+								<dd>
+									{getProductionReviewSummaryLabel(
 										t as never,
-										configuration.promotionStatus
-									)
-								: t("common.notAvailable")}
-						</dd>
+										configuration.productionReviewStatus,
+										configuration.productionReviewReconciliationRequired
+									)}
+								</dd>
+							</>
+						) : null}
 					</Grid>
 
 					{configurationGroups.map((group) => {
@@ -358,9 +359,7 @@ export const WorkspaceApplicationConfigurationPage = (): FunctionComponent => {
 					) : null}
 
 					<div className="flex flex-wrap gap-200">
-						{canEdit &&
-						configuration.onboardingState === "draft" &&
-						resumePath ? (
+						{canEdit && !configuration.registrationCompletedAt && resumePath ? (
 							<Button href={resumePath} type="link">
 								{t("workspaces.rpConfigurationResumeAction")}
 							</Button>

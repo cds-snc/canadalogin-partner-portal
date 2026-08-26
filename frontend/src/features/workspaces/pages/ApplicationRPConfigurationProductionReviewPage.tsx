@@ -14,20 +14,22 @@ import {
 	Text,
 } from "@/components/ui";
 import { hasCapability } from "@/features/auth/authorization";
+import { getLocalizedRPApplicationName } from "@/features/rp-applications/rp-application-summary";
 import { getRequestErrorNotice, HttpRequestError } from "@/fetch";
 import { useSession } from "@/hooks";
 import { useApplicationRPConfiguration } from "../hooks/use-application-rp-configurations";
 import {
-	useApplicationRPConfigurationPromotion,
-	useApplicationRPConfigurationPromotionActions,
-} from "../hooks/use-application-rp-configuration-promotion";
-import { getWorkspacePromotionStatusLabel } from "../onboarding-display";
+	useApplicationRPConfigurationProductionReview,
+	useApplicationRPConfigurationProductionReviewActions,
+} from "../hooks/use-application-rp-configuration-production-review";
+import { getProductionReviewSummaryLabel } from "../onboarding-display";
 
-type ReviewStatus = "changes_requested" | "approved" | "launched";
+type ReviewDecision = "approved" | "rejected";
 
 export const ApplicationRPConfigurationProductionReviewPage =
 	(): FunctionComponent => {
-		const { t } = useTranslation() as unknown as {
+		const { i18n, t } = useTranslation() as unknown as {
+			i18n: { resolvedLanguage?: string };
 			t: (key: string, options?: Record<string, unknown>) => string;
 		};
 		const { currentUser } = useSession();
@@ -35,35 +37,44 @@ export const ApplicationRPConfigurationProductionReviewPage =
 			useParams({
 				from: "/workspaces/$workspaceUuid/applications/$applicationInformationUuid/rp-configurations/$rpConfigurationUuid/production-review",
 			});
-		const { configuration, error: configurationError } =
-			useApplicationRPConfiguration(
-				workspaceUuid,
-				applicationInformationUuid,
-				rpConfigurationUuid
-			);
 		const {
-			error: promotionError,
+			configuration,
+			error: configurationError,
+			isLoading: isConfigurationLoading,
+		} = useApplicationRPConfiguration(
+			workspaceUuid,
+			applicationInformationUuid,
+			rpConfigurationUuid
+		);
+		const {
+			error: productionReviewError,
 			isLoading,
-			promotion,
+			productionReview,
 			refetch,
-		} = useApplicationRPConfigurationPromotion(
+		} = useApplicationRPConfigurationProductionReview(
 			workspaceUuid,
 			applicationInformationUuid,
 			rpConfigurationUuid
 		);
 		const { isRequesting, isReviewing, requestReview, review } =
-			useApplicationRPConfigurationPromotionActions();
-		const [externalReference, setExternalReference] = useState("");
+			useApplicationRPConfigurationProductionReviewActions();
+		const [requestReference, setRequestReference] = useState<string | null>(
+			null
+		);
+		const [decisionReference, setDecisionReference] = useState<string | null>(
+			null
+		);
 		const [reviewedByTeam, setReviewedByTeam] = useState("");
-		const [reviewStatus, setReviewStatus] =
-			useState<ReviewStatus>("changes_requested");
-		const [submitted, setSubmitted] = useState(false);
+		const [reviewDecision, setReviewDecision] =
+			useState<ReviewDecision>("rejected");
+		const [requestSubmitted, setRequestSubmitted] = useState(false);
+		const [decisionSubmitted, setDecisionSubmitted] = useState(false);
 		const [requestError, setRequestError] = useState<Error | null>(null);
 		const [successKey, setSuccessKey] = useState<string | null>(null);
 		const authorizationContext = currentUser?.authorizationContext;
 		const canRequest = hasCapability(
 			authorizationContext,
-			"promotion_request_write",
+			"production_review_request_write",
 			workspaceUuid
 		);
 		const canReview = hasCapability(
@@ -71,35 +82,58 @@ export const ApplicationRPConfigurationProductionReviewPage =
 			"production_review",
 			workspaceUuid
 		);
-		const promotionNotFound =
-			promotionError instanceof HttpRequestError &&
-			promotionError.status === 404;
+		const productionReviewNotFound =
+			productionReviewError instanceof HttpRequestError &&
+			productionReviewError.status === 404;
+		const productionReviewReconciliationRequired = Boolean(
+			configuration?.productionReviewReconciliationRequired
+		);
 		const effectiveError =
 			requestError ??
 			configurationError ??
-			(promotionNotFound ? null : promotionError);
+			(productionReviewNotFound || productionReviewReconciliationRequired
+				? null
+				: productionReviewError);
 		const errorNotice = getRequestErrorNotice(effectiveError, {
 			bodyKey: "workspaces.rpProductionReviewErrorBody",
 			titleKey: "workspaces.rpProductionReviewErrorTitle",
 		});
-		const externalReferenceRequired =
-			submitted &&
-			canReview &&
-			(reviewStatus === "approved" || reviewStatus === "launched") &&
-			!externalReference.trim();
+		const requestReferenceValue =
+			requestReference ?? productionReview?.externalReference ?? "";
+		const decisionReferenceValue =
+			decisionReference ?? productionReview?.externalReference ?? "";
+		const requestReferenceRequired =
+			requestSubmitted && !requestReferenceValue.trim();
+		const decisionReferenceRequired =
+			decisionSubmitted && !decisionReferenceValue.trim();
+		const isPending = productionReview?.status === "pending";
+		const productionReviewResolved =
+			!isLoading && (!productionReviewError || productionReviewNotFound);
+		const canEditRequest =
+			canRequest &&
+			productionReviewResolved &&
+			(!productionReview || isPending);
+		const canRecordDecision = canReview && isPending;
 		const basePath = `/workspaces/${encodeURIComponent(workspaceUuid)}/applications/${encodeURIComponent(applicationInformationUuid)}/rp-configurations/${encodeURIComponent(rpConfigurationUuid)}`;
+		const checklistPath = `/workspaces/${encodeURIComponent(workspaceUuid)}/applications/${encodeURIComponent(applicationInformationUuid)}/checklist-and-evidence`;
+		const applicationName = configuration
+			? getLocalizedRPApplicationName(
+					configuration,
+					i18n.resolvedLanguage ?? "en"
+				)
+			: null;
 
 		const handleRequest = async (): Promise<void> => {
+			setRequestSubmitted(true);
 			setRequestError(null);
 			setSuccessKey(null);
+			if (!requestReferenceValue.trim()) return;
 			try {
 				await requestReview(
 					workspaceUuid,
 					applicationInformationUuid,
 					rpConfigurationUuid,
-					externalReference.trim()
-						? { externalReference: externalReference.trim() }
-						: {}
+					{ externalReference: requestReferenceValue.trim() }
 				);
 				setSuccessKey("workspaces.rpProductionReviewRequestedSuccess");
 				await refetch();
@@ -109,28 +143,21 @@ export const ApplicationRPConfigurationProductionReviewPage =
 		};
 
 		const handleReview = async (): Promise<void> => {
-			setSubmitted(true);
+			setDecisionSubmitted(true);
 			setRequestError(null);
 			setSuccessKey(null);
-			if (
-				(reviewStatus === "approved" || reviewStatus === "launched") &&
-				!externalReference.trim()
-			) {
-				return;
-			}
+			if (!decisionReferenceValue.trim()) return;
 			try {
 				await review(
 					workspaceUuid,
 					applicationInformationUuid,
 					rpConfigurationUuid,
 					{
-						...(externalReference.trim()
-							? { externalReference: externalReference.trim() }
-							: {}),
+						externalReference: decisionReferenceValue.trim(),
 						...(reviewedByTeam.trim()
 							? { reviewedByTeam: reviewedByTeam.trim() }
 							: {}),
-						status: reviewStatus,
+						status: reviewDecision,
 					}
 				);
 				setSuccessKey("workspaces.rpProductionReviewRecordedSuccess");
@@ -147,7 +174,9 @@ export const ApplicationRPConfigurationProductionReviewPage =
 					<Text>{t("workspaces.rpProductionReviewSummary")}</Text>
 				</div>
 
-				{externalReferenceRequired ? <ErrorSummary listen /> : null}
+				{requestReferenceRequired || decisionReferenceRequired ? (
+					<ErrorSummary listen />
+				) : null}
 				{successKey ? (
 					<Notice
 						noticeRole="success"
@@ -157,7 +186,7 @@ export const ApplicationRPConfigurationProductionReviewPage =
 						<Text>{t(successKey)}</Text>
 					</Notice>
 				) : null}
-				{isLoading ? (
+				{isLoading || isConfigurationLoading ? (
 					<Notice
 						noticeRole="info"
 						noticeTitle={t("workspaces.rpProductionReviewLoadingTitle")}
@@ -175,8 +204,18 @@ export const ApplicationRPConfigurationProductionReviewPage =
 						<Text>{errorNotice.bodyText ?? t(errorNotice.bodyKey)}</Text>
 					</Notice>
 				) : null}
+				{productionReviewReconciliationRequired ? (
+					<Notice
+						noticeRole="warning"
+						noticeTitle={t("workspaces.productionReviewReconciliationRequired")}
+						noticeTitleTag="h2"
+					>
+						<Text>{t("workspaces.productionReviewReconciliationBody")}</Text>
+					</Notice>
+				) : null}
 
-				{configuration?.canadaLoginEnvironment !== "production" ? (
+				{configuration &&
+				configuration.canadaLoginEnvironment !== "production" ? (
 					<Notice
 						noticeRole="warning"
 						noticeTitle={t("workspaces.rpProductionReviewUnavailableTitle")}
@@ -193,6 +232,12 @@ export const ApplicationRPConfigurationProductionReviewPage =
 						</Heading>
 						<Grid columns="1fr" columnsDesktop="16rem 1fr" tag="dl">
 							<dt>
+								<strong>
+									{t("workspaces.rpConfigurationsApplicationLabel")}
+								</strong>
+							</dt>
+							<dd>{applicationName}</dd>
+							<dt>
 								<strong>{t("workspaces.rpConfigurationNameLabel")}</strong>
 							</dt>
 							<dd>{configuration.configurationName}</dd>
@@ -200,21 +245,20 @@ export const ApplicationRPConfigurationProductionReviewPage =
 								<strong>{t("workspaces.rpProductionReviewStatusLabel")}</strong>
 							</dt>
 							<dd>
-								{promotion
-									? getWorkspacePromotionStatusLabel(
-											t as never,
-											promotion.status
-										)
-									: t("workspaces.rpProductionReviewNotRequested")}
+								{getProductionReviewSummaryLabel(
+									t as never,
+									productionReview?.status,
+									productionReviewReconciliationRequired
+								)}
 							</dd>
-							{promotion?.sourceRpConfigurationUuid ? (
+							{productionReview?.sourceRpConfigurationUuid ? (
 								<>
 									<dt>
-										<strong>{t("workspaces.rpProgressionSourceLabel")}</strong>
+										<strong>{t("workspaces.rpCopySourceLabel")}</strong>
 									</dt>
 									<dd>
 										<Link
-											href={`/workspaces/${encodeURIComponent(workspaceUuid)}/applications/${encodeURIComponent(applicationInformationUuid)}/rp-configurations/${encodeURIComponent(promotion.sourceRpConfigurationUuid)}`}
+											href={`/workspaces/${encodeURIComponent(workspaceUuid)}/applications/${encodeURIComponent(applicationInformationUuid)}/rp-configurations/${encodeURIComponent(productionReview.sourceRpConfigurationUuid)}`}
 										>
 											{t("workspaces.rpProductionReviewViewSource")}
 										</Link>
@@ -223,7 +267,18 @@ export const ApplicationRPConfigurationProductionReviewPage =
 							) : null}
 						</Grid>
 
-						{canRequest ? (
+						<Notice
+							noticeRole="info"
+							noticeTitle={t("workspaces.rpProductionReviewChecklistTitle")}
+							noticeTitleTag="h2"
+						>
+							<Text>{t("workspaces.rpProductionReviewChecklistBody")}</Text>
+							<Link href={checklistPath}>
+								{t("workspaces.rpProductionReviewChecklistAction")}
+							</Link>
+						</Notice>
+
+						{canEditRequest ? (
 							<form
 								className="grid gap-300"
 								onSubmit={(event) => {
@@ -235,24 +290,34 @@ export const ApplicationRPConfigurationProductionReviewPage =
 									{t("workspaces.rpProductionReviewRequestTitle")}
 								</Heading>
 								<Input
+									required
 									inputId="production-request-reference"
 									label={t("workspaces.rpProductionReviewReferenceLabel")}
 									maxLength={255}
 									name="externalReference"
-									value={externalReference}
+									value={requestReferenceValue}
+									errorMessage={
+										requestReferenceRequired
+											? t("workspaces.rpProductionReviewReferenceRequired")
+											: undefined
+									}
 									onInput={(event): void => {
-										setExternalReference(
+										setRequestReference(
 											(event.target as HTMLInputElement).value
 										);
 									}}
 								/>
 								<Button disabled={isRequesting} type="submit">
-									{t("workspaces.rpProductionReviewRequestAction")}
+									{t(
+										productionReview
+											? "workspaces.rpProductionReviewUpdateAction"
+											: "workspaces.rpProductionReviewRequestAction"
+									)}
 								</Button>
 							</form>
 						) : null}
 
-						{canReview && promotion ? (
+						{canRecordDecision ? (
 							<form
 								className="grid gap-300"
 								onSubmit={(event) => {
@@ -268,39 +333,35 @@ export const ApplicationRPConfigurationProductionReviewPage =
 									label={t("workspaces.rpProductionReviewDecisionLabel")}
 									name="reviewStatus"
 									selectId="production-review-status"
-									value={reviewStatus}
+									value={reviewDecision}
 									onInput={(event): void => {
-										setReviewStatus(
-											(event.target as HTMLSelectElement).value as ReviewStatus
+										setReviewDecision(
+											(event.target as HTMLSelectElement)
+												.value as ReviewDecision
 										);
 									}}
 								>
-									<option value="changes_requested">
-										{t("workspaces.promotionStatusChangesRequested")}
-									</option>
 									<option value="approved">
-										{t("workspaces.promotionStatusApproved")}
+										{t("workspaces.productionReviewStatusApproved")}
 									</option>
-									<option value="launched">
-										{t("workspaces.promotionStatusLaunched")}
+									<option value="rejected">
+										{t("workspaces.productionReviewStatusRejected")}
 									</option>
 								</Select>
 								<Input
+									required
 									inputId="production-review-reference"
 									label={t("workspaces.rpProductionReviewReferenceLabel")}
 									maxLength={255}
 									name="externalReference"
-									value={externalReference}
+									value={decisionReferenceValue}
 									errorMessage={
-										externalReferenceRequired
+										decisionReferenceRequired
 											? t("workspaces.rpProductionReviewReferenceRequired")
 											: undefined
 									}
-									required={
-										reviewStatus === "approved" || reviewStatus === "launched"
-									}
 									onInput={(event): void => {
-										setExternalReference(
+										setDecisionReference(
 											(event.target as HTMLInputElement).value
 										);
 									}}
@@ -319,6 +380,16 @@ export const ApplicationRPConfigurationProductionReviewPage =
 									{t("workspaces.rpProductionReviewRecordAction")}
 								</Button>
 							</form>
+						) : null}
+
+						{productionReview && !isPending ? (
+							<Notice
+								noticeRole="info"
+								noticeTitle={t("workspaces.rpProductionReviewTerminalTitle")}
+								noticeTitleTag="h2"
+							>
+								<Text>{t("workspaces.rpProductionReviewTerminalBody")}</Text>
+							</Notice>
 						) : null}
 					</>
 				) : null}

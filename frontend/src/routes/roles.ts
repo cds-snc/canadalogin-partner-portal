@@ -10,10 +10,13 @@ const RolesPage = lazy(async () => ({
 
 export const Route = createFileRoute("/roles")({
 	beforeLoad: async () => {
-		await requireCapability("/roles", "platform_governance");
+		await requireCapability("/roles", "access_administration");
 
 		return {
-			backLink: { href: "/", label: i18n.t("nav.home") },
+			backLink: {
+				href: "/administration",
+				label: i18n.t("nav.administration"),
+			},
 		} satisfies RouteBackLinkContext;
 	},
 	component: RolesPage,

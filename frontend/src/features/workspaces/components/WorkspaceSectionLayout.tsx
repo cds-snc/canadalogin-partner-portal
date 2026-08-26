@@ -26,7 +26,6 @@ export const WorkspaceSectionLayout = ({
 	const isFirstLevelChild =
 		currentRoute !== null &&
 		currentRoute.id !== "overview" &&
-		currentRoute.id !== "reports" &&
 		(pathname === getWorkspaceRoutePath(currentRoute.id, workspaceUuid) ||
 			pathname === `${getWorkspaceRoutePath(currentRoute.id, workspaceUuid)}/`);
 

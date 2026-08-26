@@ -8,9 +8,8 @@ FastAPI backend for the CanadaLogin Partner Portal.
 - PostgreSQL database with Alembic migrations
 - Unified `repositories/` data-access layer for database `FastCRUD` adapters and IBM Security Verify clients
 - OIDC authentication with Authlib
-- GC Notify integration
-- AWS S3 file service
-- IBM Security Verify integration (ADMIN APIs)
+- S3-backed aggregate MAU ingestion
+- Bounded IBM Security Verify integration for RP setup, credentials, and scoped usage
 - Redis-backed server-side sessions
 - Casbin authorization
 - Rate limiting
@@ -19,7 +18,12 @@ FastAPI backend for the CanadaLogin Partner Portal.
 
 ## IBM Security Verify Configuration
 
-The backend integrates with IBM Security Verify for **admin API operations** (server-to-server, client credentials flow). This is used for managing applications, users, and groups programmatically.
+The backend uses a server-to-server, client-credentials adapter for the
+specific IBM Security Verify operations required by Partner Portal workflows:
+discovering or adopting RP applications, applying supported RP configuration,
+managing RP client secrets, and reading application-scoped login counts. It is
+not a generic Verify administration surface and does not expose broad user,
+group, application-catalog, tier, or policy administration.
 
 **This is NOT for end-user login** - user authentication uses the OIDC config above.
 
@@ -28,10 +32,20 @@ The backend integrates with IBM Security Verify for **admin API operations** (se
 IBM_SV_ADMIN_BASE_URL="https://your-tenant.verify.ibm.com"
 IBM_SV_ADMIN_CLIENT_ID="your-api-client-id"
 IBM_SV_ADMIN_CLIENT_SECRET="your-api-client-secret"
-IBM_SV_ADMIN_SCOPES="openid profile email readUsers manageUsers"
 ```
 
-The admin client uses client credentials flow for managing applications, users, and groups. The user client uses access tokens from user sessions for self-service operations (profile, MFA authenticators).
+Provision the client with only the provider permissions required by these
+bounded operations. OIDC establishes the signed-in identity; portal roles and
+workspace access are resolved from the portal database on every protected
+request.
+
+## Invitation delivery
+
+The portal does not send invitation email and has no GC Notify or other mail
+transport dependency. An authorized administrator creates or reissues an
+invitation, copies the generated link, and shares it through an approved
+channel. `RP_APPLICATION_INVITE_URL_BASE` configures the frontend base used for
+that link.
 
 ## Setup
 

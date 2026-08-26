@@ -22,7 +22,7 @@ class TestExternalIdentitySchemas:
         assert AccessPolicyOut.model_config.get("from_attributes") is True
 
     def test_user_read_exposes_no_legacy_or_oidc_authorization_fields(self):
-        assert "tier_uuid" in UserRead.model_fields
+        assert "tier_uuid" not in UserRead.model_fields
         assert "role_uuids" not in UserRead.model_fields
         assert "role_ids" not in UserRead.model_fields
         assert "tier_id" not in UserRead.model_fields

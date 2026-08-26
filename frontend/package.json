@@ -20,8 +20,10 @@
 	"scripts": {
 		"setup": "git init && npx husky init && npx playwright install && shx rm .husky/pre-commit",
 		"format": "prettier \"src/**/*.{ts,tsx}\" --write",
+		"format:check": "prettier \"src/**/*.{ts,tsx}\" --check",
 		"lint": "eslint --max-warnings 0",
 		"lint:fix": "eslint --max-warnings 0 --fix",
+		"typecheck": "tsc --noEmit",
 		"dev": "vite",
 		"storybook": "storybook dev -p 6006",
 		"storybook:setup": "node node_modules/@storybook/addon-styling/bin/postinstall.js",

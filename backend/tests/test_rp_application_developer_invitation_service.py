@@ -1,3 +1,4 @@
+import json
 from contextlib import ExitStack, contextmanager
 from datetime import UTC, datetime, timedelta
 from types import SimpleNamespace
@@ -6,7 +7,6 @@ from uuid import uuid4
 
 import pytest
 from sqlalchemy.exc import IntegrityError
-
 from src.app.core.authorization import CanonicalRoleCode
 from src.app.core.config import settings
 from src.app.core.exceptions.http_exceptions import (
@@ -14,6 +14,11 @@ from src.app.core.exceptions.http_exceptions import (
     DuplicateValueException,
     ForbiddenException,
     NotFoundException,
+)
+from src.app.core.identity import (
+    AUTHENTICATED_EMAIL_KEY,
+    AUTHENTICATED_EMAIL_VERIFIED_KEY,
+    AUTHENTICATION_PROVIDER_KEY,
 )
 from src.app.models.audit_log import AuditLog
 from src.app.services.authorization_service import (
@@ -120,6 +125,9 @@ def _cl_admin_user(*, user_id: int = 1, email: str | None = None) -> dict[str, o
     }
     if email is not None:
         current_user["email"] = email
+        current_user[AUTHENTICATED_EMAIL_KEY] = email.strip().lower()
+        current_user[AUTHENTICATED_EMAIL_VERIFIED_KEY] = True
+        current_user[AUTHENTICATION_PROVIDER_KEY] = "oidc"
     return current_user
 
 
@@ -145,16 +153,29 @@ def _partner_user(
     }
     if email is not None:
         current_user["email"] = email
+        current_user[AUTHENTICATED_EMAIL_KEY] = email.strip().lower()
+        current_user[AUTHENTICATED_EMAIL_VERIFIED_KEY] = True
+        current_user[AUTHENTICATION_PROVIDER_KEY] = "oidc"
     return current_user
 
 
-def _unassigned_user(*, user_id: int = 51, email: str = "invitee@example.gc.ca") -> dict[str, object]:
-    return {
+def _unassigned_user(
+    *,
+    user_id: int = 51,
+    email: str = "invitee@example.gc.ca",
+    email_verified: bool = True,
+) -> dict[str, object]:
+    current_user: dict[str, object] = {
         "id": user_id,
         "uuid": uuid4(),
         "email": email,
         AUTHORIZATION_STATE_KEY: ResolvedAuthorizationState(),
     }
+    if email_verified:
+        current_user[AUTHENTICATED_EMAIL_KEY] = email.strip().lower()
+        current_user[AUTHENTICATED_EMAIL_VERIFIED_KEY] = True
+        current_user[AUTHENTICATION_PROVIDER_KEY] = "oidc"
+    return current_user
 
 
 @contextmanager
@@ -232,6 +253,31 @@ class TestInvitationCreationAndDelegation:
         mock_db.commit.assert_awaited_once()
 
     @pytest.mark.asyncio
+    async def test_invitation_creation_rejects_email_outside_partner_domain_policy(self, mock_db) -> None:
+        service = RPApplicationDeveloperInvitationService()
+        workspace = _workspace_record()
+
+        with (
+            patch.object(settings, "PARTNER_ACCESS_ALLOWED_EMAIL_DOMAINS", ["example.gc.ca"]),
+            _mock_service_dependencies() as mocks,
+        ):
+            mocks.workspaces.get = AsyncMock(return_value=workspace)
+
+            with pytest.raises(BadRequestException, match="not eligible"):
+                await service.create_developer_invitation(
+                    db=mock_db,
+                    workspace_uuid=workspace["uuid"],
+                    rp_application_uuid=None,
+                    current_user=_cl_admin_user(),
+                    invited_email="invitee@outside.example",
+                    role=RP_ADMIN_ROLE,
+                    invite_expires_at=datetime.now(UTC) + timedelta(days=5),
+                )
+
+        mocks.invitations.create.assert_not_awaited()
+        mocks.users.get.assert_not_awaited()
+
+    @pytest.mark.asyncio
     @pytest.mark.parametrize("delegated_role", [RP_USER_EDIT_ROLE, READ_ONLY_ROLE])
     async def test_create_normalizes_email_hashes_token_and_records_delegated_grant(self, mock_db, delegated_role) -> None:
         service = RPApplicationDeveloperInvitationService()
@@ -268,6 +314,7 @@ class TestInvitationCreationAndDelegation:
                 invited_email=" Invitee@Example.GC.CA ",
                 role=delegated_role,
                 invite_expires_at=datetime.now(UTC) + timedelta(days=5),
+                correlation_id="create-request-123",
             )
 
         created_payload = mocks.invitations.create.call_args.kwargs["object"]
@@ -277,10 +324,11 @@ class TestInvitationCreationAndDelegation:
         assert created_payload.token_hash != "raw-token-value"
         assert mocks.invitations.create.call_args.kwargs["commit"] is False
         mock_db.commit.assert_awaited_once()
-        assert result["acceptance_url"] == (f"{settings.RP_APPLICATION_INVITE_URL_BASE}/raw-token-value")
+        assert result["acceptance_url"] == (f"{settings.RP_APPLICATION_INVITE_URL_BASE}/prepare#token=raw-token-value")
         audit_log = _audit_logs(mock_db)[0]
         assert audit_log.operation == "invite_create"
         assert audit_log.user_uuid == actor["uuid"]
+        assert json.loads(audit_log.description)["correlationId"] == "create-request-123"
         assert "invitee@example.gc.ca" not in audit_log.description
         assert "raw-token-value" not in audit_log.description
 
@@ -522,6 +570,73 @@ class TestInvitationCreationAndDelegation:
 
 class TestInvitationTransitions:
     @pytest.mark.asyncio
+    async def test_focused_workspace_invitation_revalidates_parent_and_role_scope(
+        self,
+        mock_db,
+    ) -> None:
+        service = RPApplicationDeveloperInvitationService()
+        workspace = _workspace_record()
+        lower_role_invitation = _invitation_record(
+            workspace_id=int(workspace["id"]),
+            rp_application_id=None,
+            role=READ_ONLY_ROLE,
+        )
+
+        with _mock_service_dependencies() as mocks:
+            mocks.workspaces.get = AsyncMock(return_value=workspace)
+            mocks.grants.get = AsyncMock(
+                return_value=_access_grant_record(
+                    workspace_id=int(workspace["id"]),
+                    user_id=51,
+                    role=RP_ADMIN_ROLE,
+                )
+            )
+            mocks.invitations.get = AsyncMock(return_value=lower_role_invitation)
+
+            result = await service.get_developer_invitation(
+                db=mock_db,
+                workspace_uuid=workspace["uuid"],
+                invitation_uuid=lower_role_invitation["uuid"],
+                current_user=_partner_user(workspace),
+            )
+
+        assert result["uuid"] == lower_role_invitation["uuid"]
+        assert mocks.invitations.get.await_args.kwargs["workspace_id"] == workspace["id"]
+        assert mocks.invitations.get.await_args.kwargs["uuid"] == lower_role_invitation["uuid"]
+
+    @pytest.mark.asyncio
+    async def test_focused_workspace_invitation_hides_an_unmanageable_rp_admin_record(
+        self,
+        mock_db,
+    ) -> None:
+        service = RPApplicationDeveloperInvitationService()
+        workspace = _workspace_record()
+        rp_admin_invitation = _invitation_record(
+            workspace_id=int(workspace["id"]),
+            rp_application_id=None,
+            role=RP_ADMIN_ROLE,
+        )
+
+        with _mock_service_dependencies() as mocks:
+            mocks.workspaces.get = AsyncMock(return_value=workspace)
+            mocks.grants.get = AsyncMock(
+                return_value=_access_grant_record(
+                    workspace_id=int(workspace["id"]),
+                    user_id=51,
+                    role=RP_ADMIN_ROLE,
+                )
+            )
+            mocks.invitations.get = AsyncMock(return_value=rp_admin_invitation)
+
+            with pytest.raises(NotFoundException, match="Developer invitation not found"):
+                await service.get_developer_invitation(
+                    db=mock_db,
+                    workspace_uuid=workspace["uuid"],
+                    invitation_uuid=rp_admin_invitation["uuid"],
+                    current_user=_partner_user(workspace),
+                )
+
+    @pytest.mark.asyncio
     async def test_list_marks_expired_pending_invitation(self, mock_db) -> None:
         service = RPApplicationDeveloperInvitationService()
         workspace = _workspace_record()
@@ -572,6 +687,7 @@ class TestInvitationTransitions:
                 rp_application_uuid=rp_application["uuid"],
                 invitation_uuid=invitation["uuid"],
                 current_user=actor,
+                correlation_id="revoke-request-123",
             )
 
         update = mocks.invitations.update.call_args.kwargs
@@ -584,6 +700,7 @@ class TestInvitationTransitions:
         audit_log = _audit_logs(mock_db)[0]
         assert audit_log.operation == "invite_revoke"
         assert audit_log.user_uuid == actor["uuid"]
+        assert json.loads(audit_log.description)["correlationId"] == "revoke-request-123"
         mock_db.commit.assert_awaited_once()
 
     @pytest.mark.asyncio
@@ -688,6 +805,7 @@ class TestInvitationTransitions:
                 invitation_uuid=invitation["uuid"],
                 current_user=actor,
                 invite_expires_at=datetime.now(UTC) + timedelta(days=10),
+                correlation_id="reissue-request-123",
             )
 
         first_update = mocks.invitations.update.await_args_list[0].kwargs
@@ -701,13 +819,14 @@ class TestInvitationTransitions:
         assert lineage_update["commit"] is False
         assert mocks.invitations.create.call_args.kwargs["commit"] is False
         mock_db.commit.assert_awaited_once()
-        assert result["acceptance_url"].endswith("/fresh-token")
+        assert result["acceptance_url"].endswith("/prepare#token=fresh-token")
         audit_logs = _audit_logs(mock_db)
         assert [audit_log.operation for audit_log in audit_logs] == [
             "invite_reissue",
             "invite_reissue",
         ]
         assert all(audit_log.user_uuid == actor["uuid"] for audit_log in audit_logs)
+        assert all(json.loads(audit_log.description)["correlationId"] == "reissue-request-123" for audit_log in audit_logs)
         assert all("fresh-token" not in audit_log.description for audit_log in audit_logs)
 
     @pytest.mark.asyncio
@@ -810,6 +929,84 @@ class TestInvitationTransitions:
         mock_db.commit.assert_not_awaited()
 
 
+class TestInvitationPreparation:
+    @pytest.mark.asyncio
+    async def test_live_token_resolves_only_public_uuid_for_server_session(self, mock_db) -> None:
+        service = RPApplicationDeveloperInvitationService()
+        invitation = _invitation_record(workspace_id=17, rp_application_id=None)
+
+        with _mock_service_dependencies() as mocks:
+            mocks.invitations.get = AsyncMock(return_value=invitation)
+
+            result = await service.prepare_developer_invitation(
+                db=mock_db,
+                token="raw-token-value",
+            )
+
+        assert result == invitation["uuid"]
+        lookup = mocks.invitations.get.call_args.kwargs
+        assert lookup["token_hash"] != "raw-token-value"
+        assert "invited_email" not in lookup
+        mocks.grants.get.assert_not_awaited()
+        mocks.grants.create.assert_not_awaited()
+
+    @pytest.mark.asyncio
+    @pytest.mark.parametrize(
+        "invitation",
+        [
+            None,
+            _invitation_record(
+                workspace_id=17,
+                rp_application_id=None,
+                status=REVOKED_INVITATION_STATUS,
+            ),
+            _invitation_record(
+                workspace_id=17,
+                rp_application_id=None,
+                status=EXPIRED_INVITATION_STATUS,
+            ),
+        ],
+    )
+    async def test_unknown_or_inactive_token_has_one_generic_outcome(self, mock_db, invitation) -> None:
+        service = RPApplicationDeveloperInvitationService()
+
+        with _mock_service_dependencies() as mocks:
+            mocks.invitations.get = AsyncMock(return_value=invitation)
+
+            with pytest.raises(NotFoundException, match="Developer invitation is unavailable"):
+                await service.prepare_developer_invitation(
+                    db=mock_db,
+                    token="unavailable-token",
+                )
+
+        mocks.grants.get.assert_not_awaited()
+        mocks.grants.create.assert_not_awaited()
+
+    @pytest.mark.asyncio
+    async def test_elapsed_pending_token_is_expired_then_hidden(self, mock_db) -> None:
+        service = RPApplicationDeveloperInvitationService()
+        workspace = _workspace_record()
+        invitation = _invitation_record(
+            workspace_id=int(workspace["id"]),
+            rp_application_id=None,
+            invite_expires_at=datetime.now(UTC) - timedelta(seconds=1),
+        )
+
+        with _mock_service_dependencies() as mocks:
+            mocks.invitations.get = AsyncMock(return_value=invitation)
+            mocks.workspaces.get = AsyncMock(return_value=workspace)
+
+            with pytest.raises(NotFoundException, match="Developer invitation is unavailable"):
+                await service.prepare_developer_invitation(
+                    db=mock_db,
+                    token="elapsed-token",
+                )
+
+        expiration = mocks.invitations.update.call_args.kwargs
+        assert expiration["object"]["status"] == EXPIRED_INVITATION_STATUS
+        mock_db.commit.assert_awaited_once()
+
+
 class TestInvitationAcceptance:
     @pytest.mark.asyncio
     async def test_workspace_only_invitation_accepts_without_application_lookup(
@@ -843,6 +1040,35 @@ class TestInvitationAcceptance:
         assert result["next_destination"] == f"/workspaces/{workspace['uuid']}"
         mocks.applications.get.assert_not_awaited()
         mock_db.commit.assert_awaited_once()
+
+    @pytest.mark.asyncio
+    async def test_prepared_acceptance_reloads_by_session_bound_uuid(self, mock_db) -> None:
+        service = RPApplicationDeveloperInvitationService()
+        workspace = _workspace_record()
+        invitation = _invitation_record(
+            workspace_id=int(workspace["id"]),
+            rp_application_id=None,
+        )
+        created_grant = _access_grant_record(
+            workspace_id=int(workspace["id"]),
+            user_id=51,
+            source_invitation_uuid=invitation["uuid"],
+        )
+
+        with _mock_service_dependencies() as mocks:
+            mocks.workspaces.get = AsyncMock(return_value=workspace)
+            mocks.invitations.get = AsyncMock(return_value=invitation)
+            mocks.grants.create = AsyncMock(return_value=created_grant)
+
+            result = await service.accept_prepared_developer_invitation(
+                db=mock_db,
+                invitation_uuid=invitation["uuid"],
+                current_user=_unassigned_user(),
+            )
+
+        assert result["access_grant"]["source_invitation_uuid"] == invitation["uuid"]
+        assert len(mocks.invitations.get.await_args_list) == 2
+        assert all(call.kwargs["uuid"] == invitation["uuid"] and "token_hash" not in call.kwargs for call in mocks.invitations.get.await_args_list)
 
     @pytest.mark.asyncio
     async def test_unknown_token_is_rejected_before_lifecycle_lock_or_mutation(self, mock_db) -> None:
@@ -884,6 +1110,7 @@ class TestInvitationAcceptance:
                 db=mock_db,
                 token="token-to-accept",
                 current_user=target,
+                correlation_id="accept-request-123",
             )
 
         grant_payload = mocks.grants.create.call_args.kwargs["object"]
@@ -900,6 +1127,7 @@ class TestInvitationAcceptance:
         assert audit_log.operation == "invite_accept"
         assert audit_log.user_uuid == target["uuid"]
         assert "token-to-accept" not in audit_log.description
+        assert json.loads(audit_log.description)["correlationId"] == "accept-request-123"
         lifecycle_lock, target_lock = mock_db.execute.await_args_list[:2]
         assert lifecycle_lock.args[1]["lock_key"].startswith("rp-developer-invitation:")
         assert target_lock.args[1] == {"lock_key": "authorization:target-user:51"}
@@ -1061,10 +1289,16 @@ class TestInvitationAcceptance:
                     db=mock_db,
                     token="inactive-token",
                     current_user=_unassigned_user(),
+                    correlation_id="inactive-request-123",
                 )
 
         mocks.grants.get.assert_not_awaited()
         mocks.grants.create.assert_not_awaited()
+        event = json.loads(_audit_logs(mock_db)[-1].description)
+        assert event["result"] == "denied"
+        assert event["reasonCode"] == f"invitation_{message}"
+        assert event["correlationId"] == "inactive-request-123"
+        assert "inactive-token" not in _audit_logs(mock_db)[-1].description
 
     @pytest.mark.asyncio
     async def test_elapsed_pending_invitation_transitions_to_expired_before_rejection(self, mock_db) -> None:
@@ -1086,12 +1320,24 @@ class TestInvitationAcceptance:
                     db=mock_db,
                     token="elapsed-token",
                     current_user=_unassigned_user(),
+                    correlation_id="elapsed-request-123",
                 )
 
         expiration = mocks.invitations.update.call_args.kwargs
         assert expiration["object"]["status"] == EXPIRED_INVITATION_STATUS
         assert expiration["commit"] is False
         mocks.grants.create.assert_not_awaited()
+        events = [json.loads(audit_log.description) for audit_log in _audit_logs(mock_db)]
+        assert [(event["eventName"], event["result"]) for event in events] == [
+            ("authorization.invitation_transitioned", "succeeded"),
+            ("authorization.invitation_transition_attempted", "denied"),
+        ]
+        assert [event["correlationId"] for event in events] == [
+            "elapsed-request-123",
+            "elapsed-request-123",
+        ]
+        assert events[-1]["reasonCode"] == "invitation_expired"
+        assert all("elapsed-token" not in audit_log.description for audit_log in _audit_logs(mock_db))
 
     @pytest.mark.asyncio
     async def test_email_mismatch_is_rejected_before_scope_or_grant_mutation(self, mock_db) -> None:
@@ -1107,7 +1353,7 @@ class TestInvitationAcceptance:
             _configure_context(mocks, workspace, rp_application)
             mocks.invitations.get = AsyncMock(return_value=invitation)
 
-            with pytest.raises(ForbiddenException, match="email does not match"):
+            with pytest.raises(ForbiddenException, match="unavailable"):
                 await service.accept_developer_invitation(
                     db=mock_db,
                     token="identity-token",
@@ -1115,6 +1361,84 @@ class TestInvitationAcceptance:
                 )
 
         mocks.grants.create.assert_not_awaited()
+
+    @pytest.mark.asyncio
+    async def test_unverified_session_email_records_minimized_denied_attempt(self, mock_db) -> None:
+        service = RPApplicationDeveloperInvitationService()
+        workspace = _workspace_record()
+        invitation = _invitation_record(
+            workspace_id=int(workspace["id"]),
+            rp_application_id=None,
+        )
+
+        subject = _unassigned_user(email_verified=False)
+        with _mock_service_dependencies() as mocks:
+            mocks.workspaces.get = AsyncMock(return_value=workspace)
+            mocks.invitations.get = AsyncMock(return_value=invitation)
+
+            with pytest.raises(ForbiddenException, match="unavailable"):
+                await service.accept_developer_invitation(
+                    db=mock_db,
+                    token="unverified-email-token",
+                    current_user=subject,
+                    correlation_id="request-123",
+                )
+
+        mocks.grants.create.assert_not_awaited()
+        mocks.applications.get.assert_not_awaited()
+        attempt_log = _audit_logs(mock_db)[-1]
+        event = json.loads(attempt_log.description)
+        assert attempt_log.user_uuid == subject["uuid"]
+        assert attempt_log.target_uuid == invitation["uuid"]
+        assert event == {
+            "eventVersion": 1,
+            "timestamp": event["timestamp"],
+            "actor": {"type": "user", "userUuid": str(subject["uuid"])},
+            "correlationId": "request-123",
+            "reasonCode": "verified_email_unavailable",
+            "eventName": "authorization.invitation_transition_attempted",
+            "action": "accept",
+            "result": "denied",
+            "invitationUuid": str(invitation["uuid"]),
+            "workspaceUuid": str(workspace["uuid"]),
+            "targetUserUuid": str(subject["uuid"]),
+            "role": "read_only",
+            "currentStatus": "pending",
+        }
+        assert "unverified-email-token" not in attempt_log.description
+        assert "invitee@example.gc.ca" not in attempt_log.description
+
+    @pytest.mark.asyncio
+    async def test_matching_email_outside_configured_domain_is_rejected(self, mock_db) -> None:
+        service = RPApplicationDeveloperInvitationService()
+        workspace = _workspace_record()
+        invitation = _invitation_record(
+            workspace_id=int(workspace["id"]),
+            rp_application_id=None,
+            invited_email="invitee@outside.example",
+        )
+
+        with (
+            patch.object(settings, "PARTNER_ACCESS_ALLOWED_EMAIL_DOMAINS", ["example.gc.ca"]),
+            _mock_service_dependencies() as mocks,
+        ):
+            mocks.workspaces.get = AsyncMock(return_value=workspace)
+            mocks.invitations.get = AsyncMock(return_value=invitation)
+
+            with pytest.raises(ForbiddenException, match="unavailable"):
+                await service.accept_developer_invitation(
+                    db=mock_db,
+                    token="outside-domain-token",
+                    current_user=_unassigned_user(email="invitee@outside.example"),
+                    correlation_id="request-domain-123",
+                )
+
+        mocks.grants.create.assert_not_awaited()
+        mocks.applications.get.assert_not_awaited()
+        event = json.loads(_audit_logs(mock_db)[-1].description)
+        assert event["result"] == "denied"
+        assert event["reasonCode"] == "email_domain_not_allowed"
+        assert event["correlationId"] == "request-domain-123"
 
     @pytest.mark.asyncio
     async def test_username_is_not_accepted_as_verified_invitation_email(self, mock_db) -> None:
@@ -1130,7 +1454,7 @@ class TestInvitationAcceptance:
             _configure_context(mocks, workspace, rp_application)
             mocks.invitations.get = AsyncMock(return_value=invitation)
 
-            with pytest.raises(ForbiddenException, match="email does not match"):
+            with pytest.raises(ForbiddenException, match="unavailable"):
                 await service.accept_developer_invitation(
                     db=mock_db,
                     token="username-only-token",
@@ -1206,10 +1530,17 @@ class TestInvitationAcceptance:
                     db=mock_db,
                     token="racing-token",
                     current_user=_unassigned_user(),
+                    correlation_id="conflict-request-123",
                 )
 
         mocks.invitations.update.assert_not_awaited()
         mock_db.rollback.assert_awaited_once()
+        mock_db.commit.assert_awaited_once()
+        event = json.loads(_audit_logs(mock_db)[-1].description)
+        assert event["result"] == "failed"
+        assert event["reasonCode"] == "invitation_acceptance_conflict"
+        assert event["correlationId"] == "conflict-request-123"
+        assert "racing-token" not in _audit_logs(mock_db)[-1].description
 
 
 class TestPendingInvitationLookup:

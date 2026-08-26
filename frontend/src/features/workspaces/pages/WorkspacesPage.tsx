@@ -8,11 +8,9 @@ import { getRequestErrorNotice } from "@/fetch";
 import { hasCapability } from "@/features/auth/authorization";
 import { useSession } from "@/hooks";
 import { useWorkspaces } from "../hooks/use-workspaces";
-import { getWorkspaceOnboardingStateLabel } from "../onboarding-display";
 
 type WorkspaceTableRow = {
 	name: string;
-	onboardingState: string;
 	uuid: string;
 };
 
@@ -41,19 +39,12 @@ export const WorkspacesPage = (): FunctionComponent => {
 	const canAdoptRPRegistrations = canCreateWorkspace;
 	const rows: Array<WorkspaceTableRow> = workspaces.map((workspace) => ({
 		name: workspace.name,
-		onboardingState: workspace.onboardingState?.trim()
-			? getWorkspaceOnboardingStateLabel(t, workspace.onboardingState)
-			: t("common.notAvailable"),
 		uuid: workspace.uuid,
 	}));
 	const columns: Array<DataTableColumn<WorkspaceTableRow>> = [
 		{
 			field: "name",
 			headerName: t("workspaces.nameLabel"),
-		},
-		{
-			field: "onboardingState",
-			headerName: t("workspaces.onboardingStateColumn"),
 		},
 	];
 

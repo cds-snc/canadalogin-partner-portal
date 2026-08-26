@@ -1,6 +1,5 @@
 import pytest
 from pydantic import ValidationError
-
 from src.app.core.config import LOCAL_TEST_SECRET_KEY, Settings
 
 
@@ -77,6 +76,10 @@ class TestSecuritySettings:
         assert config.FILE_LOG_ENABLED is False
         assert config.IBM_RP_APPLICATION_SYNC_ENABLED is False
         assert config.SESSION_COOKIE_DOMAIN is None
+        assert config.PARTNER_ACCESS_ALLOWED_EMAIL_DOMAINS == [
+            "example.gc.ca",
+            "local.example",
+        ]
 
     @pytest.mark.parametrize("environment", ["local", "test"])
     def test_local_and_test_may_explicitly_enable_ibm_rp_application_sync(
@@ -157,10 +160,45 @@ class TestSecuritySettings:
             SECRET_KEY="a" * 32,
             CORS_ORIGINS=["https://portal.example.ca"],
             SESSION_COOKIE_DOMAIN=".example.ca",
+            PARTNER_ACCESS_ALLOWED_EMAIL_DOMAINS=["Example.GC.CA"],
         )
 
         assert config.CORS_ORIGINS == ["https://portal.example.ca"]
         assert config.SESSION_COOKIE_DOMAIN == ".example.ca"
+        assert config.PARTNER_ACCESS_ALLOWED_EMAIL_DOMAINS == ["example.gc.ca"]
+
+    def test_shared_environments_require_partner_access_email_domains(self) -> None:
+        with pytest.raises(
+            ValidationError,
+            match="PARTNER_ACCESS_ALLOWED_EMAIL_DOMAINS must be explicitly configured",
+        ):
+            Settings(
+                _env_file=None,
+                ENVIRONMENT="production",
+                SECRET_KEY="a" * 32,
+                CORS_ORIGINS=["https://portal.example.ca"],
+                SESSION_COOKIE_DOMAIN=".example.ca",
+            )
+
+    @pytest.mark.parametrize(
+        "domain",
+        [
+            "*.example.gc.ca",
+            "https://example.gc.ca",
+            "example.gc.ca/path",
+            "example..gc.ca",
+            "-example.gc.ca",
+            "example-.gc.ca",
+            f"{'a' * 64}.gc.ca",
+            f"{'a' * 250}.gc.ca",
+        ],
+    )
+    def test_partner_access_email_domains_must_be_exact(self, domain: str) -> None:
+        with pytest.raises(ValidationError, match="exact domain names"):
+            Settings(
+                _env_file=None,
+                PARTNER_ACCESS_ALLOWED_EMAIL_DOMAINS=[domain],
+            )
 
     def test_default_cors_headers_allow_idempotent_registration_creation(self) -> None:
         config = Settings(_env_file=None)

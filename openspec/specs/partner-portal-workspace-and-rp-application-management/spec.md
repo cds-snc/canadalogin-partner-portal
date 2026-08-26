@@ -3,8 +3,9 @@
 ## Purpose
 Define the canonical Partner workspace, Application, and RP-configuration
 hierarchy; workspace-scoped collaborator permissions; Application metadata,
-contacts, readiness, and review; and RP-configuration registration,
-Configuration, credentials, Usage, audit, and CL Admin governance boundaries.
+contacts, checklist and CATS evidence availability, and explicit Production
+review; and RP-configuration registration, Configuration, credentials, Usage,
+minimum secret auditability, and CL Admin access boundaries.
 ## Requirements
 ### Requirement: Current client secret stays masked until explicitly revealed
 The credential-management page MUST mask the current client secret by default and require an explicit reveal action before showing the current value.
@@ -44,98 +45,6 @@ expose its name, slug, description, department, and permitted summary data.
 - **THEN** the portal denies the action
 - **AND** the API returns the standard safe error contract instead of mutating the workspace
 
-### Requirement: Onboarding lifecycle state is tracked across core onboarding records
-
-The system SHALL track onboarding state for workspaces, Applications, and RP
-configurations using `draft`, `submitted`, `under_review`, `approved`, and
-`launched` where that lifecycle applies. RP Admin and RP User (Edit) SHALL
-prepare and submit partner-owned records. CL Admin SHALL perform internal
-review-only transitions. Read Only SHALL view permitted state without changing
-it.
-
-Application readiness and internal review belong to the Application parent.
-An RP configuration retains its own technical registration and progression
-state and SHALL NOT create a second copy of the Application's public metadata
-or internal review result.
-
-#### Scenario: New onboarding records start in draft
-
-- **WHEN** an RP Admin or RP User (Edit) creates a workspace-owned Application or RP configuration
-- **THEN** the new record starts in draft until intentionally submitted
-
-#### Scenario: Submitted onboarding records expose review state
-
-- **WHEN** an RP Admin or RP User (Edit) submits a draft onboarding record
-- **THEN** the system records submitted
-- **AND** it makes that state visible to authorized roles in the record's owning hierarchy
-
-#### Scenario: Reviewed onboarding records move through governed states
-
-- **WHEN** a CL Admin advances an authorized submitted onboarding record
-- **THEN** the system can move the applicable record through under_review, approved, and launched as the outcome changes
-- **AND** an Application review and an RP-configuration promotion remain distinct traceable decisions
-
-#### Scenario: Unauthorized actor cannot advance review-only states
-
-- **WHEN** an RP Admin, RP User (Edit), or Read Only user attempts to move a record into under_review, approved, or launched
-- **THEN** the system denies the transition
-- **AND** it preserves the current state
-
-### Requirement: Out-of-band production review remains traceable
-
-The system SHALL track promotion status and external review references when
-CanadaLogin approval occurs outside the portal. A request SHALL identify the
-parent Application, the selected source configuration when one exists, and the
-chosen Production target configuration. RP Admin and RP User (Edit) SHALL
-submit permitted partner-owned request metadata. CL Admin SHALL record the
-internal review outcome. Read Only SHALL view permitted status without
-changing it.
-
-#### Scenario: Promotion request captures review metadata
-
-- **WHEN** an RP Admin or RP User (Edit) creates or updates a Staging-to-Production request
-- **THEN** the portal stores the parent Application, selected source and Production target configuration identifiers, current promotion status, external review reference, reviewing CL Admin identity or team metadata, and relevant timestamps
-- **AND** it does not infer source or target identity from CanadaLogin environment alone
-
-#### Scenario: Platform admin records production review outcome
-
-- **WHEN** a CL Admin records the latest out-of-band Production review result for the chosen target configuration
-- **THEN** the portal updates the tracked promotion status and review metadata
-- **AND** partner roles cannot perform the review-only transition
-
-#### Scenario: Production-bound record cannot appear approved without review trace
-
-- **WHEN** a Production target lacks the required CL Admin review outcome or external reference
-- **THEN** the portal does not present that configuration or its progression as approved or launched
-- **AND** it identifies the missing review-traceability data to authorized roles without exposing internal notes to partner roles
-
-### Requirement: Checklist readiness and process links are visible before production progression
-
-The system SHALL make Application-level onboarding checklist progress,
-external evidence references, and contextual process links visible on the
-focused Application Readiness page before a named RP configuration progresses
-toward Production. Configuration-specific progression context SHALL identify
-the selected Application, source configuration when applicable, and target
-configuration without inferring identity from environment.
-
-RP Admin and RP User (Edit) SHALL update permitted partner-owned checklist
-inputs. Read Only SHALL view them. CL Admin SHALL view and record permitted
-internal review outcomes on the capability-gated Application Internal review
-page without partner secret access. The compact Application hub MAY summarize
-readiness but SHALL NOT duplicate the full checklist or review controls.
-
-#### Scenario: Workspace admin reviews production prerequisites
-
-- **WHEN** an authorized partner user opens Application Readiness or the progression task for a named RP configuration preparing for Production
-- **THEN** the portal displays the checklist, external evidence-reference status, and relevant process links permitted to that role
-- **AND** it identifies the parent Application and selected configuration context
-
-#### Scenario: Missing prerequisites are highlighted before production progression
-
-- **WHEN** tracked checklist items or external evidence references remain incomplete
-- **THEN** the portal highlights the missing prerequisites before submission or resubmission
-- **AND** the hard gate remains outside Partner Portal for MVP2
-
 ### Requirement: Partner workspace access uses canonical workspace-scoped roles
 
 Partner workspace authorization SHALL use RP Admin, RP User (Edit), or Read
@@ -145,46 +54,58 @@ values `workspace_admin` and `workspace_member` SHALL NOT be accepted,
 displayed, or used for authorization after cutover, and no Application- or
 RP-configuration-specific grant is introduced by this hierarchy.
 
-RP Admin SHALL administer workspace metadata, Applications, contacts, RP
-configurations, partner secrets, partner reports, and permitted staff
-invitations. RP User (Edit) SHALL edit Applications, contacts, and RP
-configurations; use permitted secret workflows; submit partner-owned workflow
-metadata; and read reports without managing roles or invitations. Read Only
-SHALL receive permitted Application metadata, contact, configuration, usage,
-and reporting reads without mutation or secret access.
+RP Admin SHALL administer workspace metadata, Applications, contacts, RP-
+configuration creation, editable-draft questionnaire changes, separately
+permitted top-level metadata changes, configuration copy, checklist inputs and
+CATS evidence availability, partner secrets, MAU/usage, and permitted staff invitations. RP User
+(Edit) SHALL edit Applications and contacts; create RP configurations; edit
+incomplete draft questionnaires; update separately permitted top-level
+metadata; copy configurations; update checklist inputs, view CATS evidence
+availability, and update permitted
+secret and Production-review request metadata; and read MAU/usage without
+managing roles or invitations. Neither role's draft-edit authority SHALL
+reopen or mutate completed questionnaire answers. Read Only SHALL receive
+permitted Application metadata, contacts, configuration, checklist and CATS evidence availability,
+Production-review status, and MAU/usage without mutation or secret access.
 
-CL Admin SHALL bootstrap a workspace and its first RP Admin, view authorized
-cross-workspace metadata and status, and perform internal Application review
-actions without retrieving RP secret values or performing partner-side
-configuration changes.
+CL Admin SHALL bootstrap a workspace and its first RP Admin, manage canonical
+Users/access and Invitations, view authorized cross-workspace metadata,
+checklist and CATS evidence-availability status, and explicit Production-review metadata, and record
+Production-review outcomes without retrieving RP secret values or performing
+partner-side configuration changes. No role receives aggregate onboarding
+reports or a generic partner audit browser.
 
-Where existing requirement names or scenarios use workspace administrator or
-owner as a capability description, that description SHALL resolve through
-this canonical matrix and SHALL NOT create a fifth product role.
+Where an existing requirement uses workspace administrator or owner as a
+capability description, that description SHALL resolve through this canonical
+matrix and SHALL NOT create a fifth product role.
 
 #### Scenario: RP Admin manages partner workspace operations
 
-- **WHEN** an RP Admin performs a supported workspace, Application, contact, RP-configuration, secret, reporting, or staff-invitation operation in the assigned workspace
+- **WHEN** an RP Admin performs a supported workspace, Application, contact, RP-configuration, checklist-input or CATS-availability, secret, secret-change-log, MAU/usage, Production-review request, or lower-role invitation/assignment operation in the assigned workspace
 - **THEN** the portal permits the operation within that workspace and verifies any child resource through its complete ancestry
-- **AND** the role does not grant platform or another workspace's authority
+- **AND** the role does not grant CL Admin, another workspace, aggregate-report, generic-audit, or Production-review outcome authority
+- **AND** an RP-configuration mutation is limited to creation, editable-draft questionnaire changes, separately permitted top-level metadata changes, copy, or another focused operation expressly defined by this specification
+- **AND** the draft flow does not reopen or mutate completed questionnaire answers
 
 #### Scenario: RP User Edit manages configuration without roles or invitations
 
-- **WHEN** an RP User (Edit) performs a supported Application, contact, RP-configuration, secret, promotion-request, or reporting operation in the assigned workspace
+- **WHEN** an RP User (Edit) performs a supported Application, contact, RP-configuration, checklist-input or CATS-availability, secret, Production-review request, secret-change-log, or MAU/usage operation in the assigned workspace
 - **THEN** the portal permits the operation within that workspace and verifies any child resource through its complete ancestry
-- **AND** the user cannot mutate workspace roles, invitations, or internal review outcomes
+- **AND** the user cannot mutate workspace roles, invitations, Production-review outcomes, or removed aggregate/audit surfaces
+- **AND** an RP-configuration mutation is limited to creation, editable-draft questionnaire changes, separately permitted top-level metadata changes, copy, or another focused operation expressly defined by this specification
+- **AND** the draft flow does not reopen or mutate completed questionnaire answers
 
 #### Scenario: Read Only receives view-only workspace access
 
-- **WHEN** a Read Only user opens permitted workspace metadata, Application details, contacts, RP configuration, usage, or aggregate reporting in the assigned workspace
+- **WHEN** a Read Only user opens permitted workspace metadata, Application details, contacts, checklist and CATS evidence availability, RP configuration, Production-review status, or MAU/usage in the assigned workspace
 - **THEN** the portal returns the permitted read-only data
-- **AND** no mutation, secret value, or internal review note is available
+- **AND** no mutation, secret value, secret-change log, aggregate report, generic audit event, or internal review note/outcome is available
 
 #### Scenario: CL Admin bootstraps without partner secret authority
 
-- **WHEN** a CL Admin creates or reviews partner metadata and assigns the first RP Admin
+- **WHEN** a CL Admin creates or reviews partner metadata, manages access/invitations, adopts a retained RP, assigns the first RP Admin, or records an explicit Production-review outcome
 - **THEN** the portal permits the applicable global operation whether or not an Application or RP configuration exists yet
-- **AND** it does not expose client credentials, secret values, or partner secret lifecycle controls
+- **AND** it does not expose client credentials, secret values, partner secret lifecycle controls, questionnaire answers, aggregate reports, or internal review notes
 
 #### Scenario: Revoked partner assignment ends workspace access
 
@@ -226,23 +147,44 @@ or secret values.
 
 The credential-management page SHALL allow RP Admin and RP User (Edit) to copy
 the client ID, reveal and copy the current client secret, regenerate the
-current secret, create named rotated secrets, and delete selected rotated
-secrets for RP configurations inside their active workspace and Application
-scope through authorized APIs. Read Only and CL Admin SHALL NOT perform those
-operations, and authorization SHALL fail before any upstream secret retrieval
-or mutation.
+current secret, create named rotated secrets, delete selected rotated secrets,
+and download the minimum secret-change CSV for RP configurations inside their
+active workspace and Application scope through authorized APIs. Read Only and
+CL Admin SHALL NOT perform those operations, and authorization SHALL fail
+before any upstream secret retrieval or mutation.
+
+The secret-change log SHALL identify the selected RP configuration, action,
+actor, and timestamp in the Sentinel-compatible MVP shape. It SHALL NOT become
+a generic audit explorer and SHALL NOT contain current, previous, rotated, or
+generated secret values.
+
+#### Scenario: Authorized partner editor reveals the current client secret
+
+- **WHEN** an RP Admin or RP User (Edit) explicitly reveals the current client secret for an in-scope RP configuration
+- **THEN** the portal applies the existing one-time reveal, masking, authorization, and ancestry contract
+- **AND** it records a minimized event containing safe actor, configuration, reveal action, outcome, timestamp, and correlation identifier
+- **AND** the event and downloadable log contain no client secret, token, credential value, or raw provider response
 
 #### Scenario: Authorized partner editor regenerates the current client secret
 
 - **WHEN** an RP Admin or RP User (Edit) confirms current-secret regeneration for an in-scope RP configuration
-- **THEN** the portal calls the scoped rotation endpoint, refreshes the displayed credentials, and reveals the newly returned current secret
+- **THEN** the portal calls the scoped rotation endpoint, refreshes the displayed credentials, and reveals the newly returned current secret under the one-time reveal contract
 - **AND** every workspace, Application, and configuration identifier is revalidated before mutation
+- **AND** the audit event records safe actor, action, configuration, result, and time without the secret value
 
 #### Scenario: Authorized partner editor creates and deletes rotated secrets
 
 - **WHEN** an RP Admin or RP User (Edit) submits a rotation name or chooses an in-scope rotated secret for deletion
 - **THEN** the portal creates or deletes the selected rotated secret through scoped API endpoints
 - **AND** it refreshes the rotated-secret list for only that RP configuration
+- **AND** the audit event excludes every secret value and unnecessary personal information
+
+#### Scenario: Authorized partner editor downloads the secret-change log
+
+- **WHEN** an RP Admin or RP User (Edit) downloads secret-change history for one in-scope RP configuration
+- **THEN** the portal returns a CSV in the approved Sentinel-compatible shape showing when each secret lifecycle action occurred and which authorized actor performed it
+- **AND** the export is scoped to that selected configuration and contains no secret values, credentials, tokens, questionnaire answers, invitation data, or unrelated audit events
+- **AND** Read Only, CL Admin, and out-of-scope callers receive the standard safe denial or unavailable response
 
 ### Requirement: Grant-authorized MAU reporting is available for accessible RP applications
 
@@ -286,10 +228,11 @@ full ancestry and workspace grant before returning report data.
 The portal SHALL use `/workspaces` as the authorized Partner workspace chooser
 and `/workspaces/$workspaceUuid` as the task-oriented overview and entry page
 for the selected workspace. The selected workspace page SHALL link to focused
-child routes and SHALL NOT embed their full tables, forms, reports, or access
-controls. Workspace children SHALL use the normal focused page layout without
-a persistent left-side navigation rail and SHALL provide stable translated
-parent return links.
+Applications, Access/Invitations, Settings, and permitted MAU/usage discovery.
+It SHALL NOT expose a selected-workspace aggregate report or embed child
+tables, forms, report results, or access controls. Workspace children SHALL use
+the normal focused page layout without a persistent side-navigation rail and
+SHALL provide stable translated parent return links.
 
 #### Scenario: User selects an authorized workspace
 
@@ -302,16 +245,18 @@ parent return links.
 
 - **WHEN** an authorized user opens `/workspaces/$workspaceUuid`
 - **THEN** the page identifies the selected workspace by name in one H1 or equivalent page-heading context
-- **AND** it identifies itself as the selected-workspace overview and groups only available Applications, Access, Reports, and Settings child-task destinations under clear translated headings
+- **AND** it groups only available Applications, Access, Settings, and MAU/usage discovery destinations under clear translated headings
 - **AND** Applications replaces the peer `Application information` and `RP applications` destinations
+- **AND** Access exposes the canonical assignment and Invitation sections permitted to the actor
+- **AND** any Reports destination leads to authorized Application/RP-configuration usage discovery rather than `/workspaces/$workspaceUuid/reports`
 - **AND** each available destination is one responsive single-destination GC Design System card with a concise description
 
 #### Scenario: Workspace hub stays focused on task selection
 
 - **WHEN** an authorized user opens `/workspaces/$workspaceUuid`
-- **THEN** the page may show concise sourced workspace status or context
+- **THEN** the page may show concise sourced workspace context
 - **AND** empty functional groups are omitted and cards follow logical source and keyboard order
-- **AND** it does not embed Application or RP-configuration lists, Access management, reports, settings forms, or audit results
+- **AND** it does not embed Application/RP-configuration lists, Access management, invitation forms, MAU results, aggregate reports, settings forms, or audit results
 
 #### Scenario: Workspace children preserve parent navigation
 
@@ -349,16 +294,25 @@ parent return links.
 ### Requirement: Workspace Access replaces the legacy Members destination
 
 The portal SHALL use `/workspaces/$workspaceUuid/access` as the canonical
-user-facing workspace destination for role assignments and workspace-owned
-invitation management made available by the canonical authorization model.
-Invitation creation SHALL remain available after a workspace exists even when
-the workspace has no Application or RP configuration. An Application or RP-
-configuration entry point MAY link to Workspace Access, but it SHALL NOT host
-or scope a separate access-management model. Discovery SHALL use the workspace
-hub or contextual parent links and SHALL NOT require a persistent workspace
-side-navigation rail.
+user-facing task hub for role assignments and workspace-owned invitation
+management made available by the canonical authorization model. The hub SHALL
+link to focused assignment and invitation collections, create/search forms,
+and record-specific management routes. It SHALL NOT embed the full assignment
+table, invitation table, search form, invite form, and lifecycle controls on
+one page.
 
-The page SHALL apply the actor's delegation boundary: CL Admin MAY manage RP
+Repeated eligible users, assignments, and invitations SHALL use semantic
+comparison tables. Cards SHALL represent only available single-destination
+Access tasks. Invitation creation SHALL remain available after a workspace
+exists even when the workspace has no Application or RP configuration. An
+Application or RP-configuration entry point MAY link to Workspace Access, but
+it SHALL NOT host or scope a separate access-management model. Discovery SHALL
+use the workspace hub or contextual parent links and SHALL NOT require a
+persistent workspace side-navigation rail.
+
+The route family SHALL include focused assignment and invitation collections,
+new flows, and record pages below `/workspaces/$workspaceUuid/access`. Every
+route SHALL enforce the actor's delegation boundary: CL Admin MAY manage RP
 Admin, RP User (Edit), and Read Only in the selected workspace; RP Admin SHALL
 manage only RP User (Edit) and Read Only in the RP Admin's assigned workspace;
 lower partner roles SHALL NOT mutate assignments or invitations.
@@ -367,8 +321,44 @@ lower partner roles SHALL NOT mutate assignments or invitations.
 
 - **WHEN** an authorized user chooses Access from a workspace hub or another permitted workspace-scoped route
 - **THEN** the portal opens `/workspaces/$workspaceUuid/access`
-- **AND** the page presents only the assignment and invitation information or actions permitted for that user in the selected workspace
+- **AND** the page presents only available single-destination assignment and invitation tasks permitted for that user in the selected workspace
 - **AND** the visible title and navigation label use `Access` rather than the retired `Members` concept
+- **AND** it does not embed all Access collections and forms on the hub
+
+#### Scenario: Workspace Access separates access tasks
+
+- **WHEN** an authorized user opens the Workspace Access hub
+- **THEN** current assignments link to `/access/assignments` and invitations link to `/access/invitations`
+- **AND** available add-existing-user and invite-user tasks open focused `/access/assignments/new` and `/access/invitations/new` forms
+- **AND** unavailable mutation tasks are omitted rather than displayed as disabled controls
+
+#### Scenario: Workspace assignments use a comparison table
+
+- **WHEN** an authorized user opens `/workspaces/$workspaceUuid/access/assignments`
+- **THEN** the page presents the minimum permitted assignment fields in a captioned table with headers, a useful row header, text status, and concise action links
+- **AND** each manageable assignment links to `/access/assignments/$assignmentUuid`
+- **AND** assignment creation or mutation forms do not appear beneath the collection
+
+#### Scenario: Workspace invitations use a comparison table
+
+- **WHEN** an authorized user opens `/workspaces/$workspaceUuid/access/invitations`
+- **THEN** the page presents the minimum permitted invitation lifecycle fields in a captioned table with headers, a useful row header, text status, and concise action links
+- **AND** each manageable invitation links to `/access/invitations/$invitationUuid`
+- **AND** invitation creation or lifecycle forms do not appear beneath the collection
+
+#### Scenario: Invitation management opens the selected record
+
+- **WHEN** an authorized user activates `Manage` for one invitation from Workspace Access, centralized Users and access, or a selected-user invitation table
+- **THEN** the destination includes the invitation's public UUID and selected workspace UUID and opens only that record's focused lifecycle page
+- **AND** two invitations in the same workspace retain distinct destinations
+- **AND** invited email, invitation token, notification identifier, and authorization context are absent from the URL
+
+#### Scenario: Focused Access routes preserve context and reauthorize
+
+- **WHEN** a user opens an assignment or invitation child route directly
+- **THEN** breadcrumbs and a visible translated parent link identify the selected workspace and Access hierarchy
+- **AND** the backend revalidates the current session, capability, workspace, record ancestry, active/deleted state, and requested action
+- **AND** missing and out-of-scope records return the same safe unavailable result
 
 #### Scenario: Legacy Members link redirects to Access safely
 
@@ -381,11 +371,11 @@ lower partner roles SHALL NOT mutate assignments or invitations.
 
 - **WHEN** the canonical authorization context does not permit the user to view or manage workspace Access
 - **THEN** the workspace hub and other discovery surfaces omit the Access destination
-- **AND** a direct request fails through the standard safe authorization behavior without revealing assignment or invitation data
+- **AND** a direct hub, collection, form, or record request fails through the standard safe authorization behavior without revealing assignment or invitation data
 
 #### Scenario: Access data stays on safe surfaces
 
-- **WHEN** the Access page reads or changes assignment or invitation data
+- **WHEN** an Access route reads or changes assignment or invitation data
 - **THEN** the portal exposes only the minimum permitted user and lifecycle fields for the selected workspace
 - **AND** it does not place email addresses, invitation tokens, assignment payloads, or authorization context in route parameters, analytics, diagnostic body logs, or real-data fixtures
 - **AND** audit metadata for a consequential access action excludes invitation secrets and unnecessary personal information
@@ -393,14 +383,20 @@ lower partner roles SHALL NOT mutate assignments or invitations.
 #### Scenario: CL Admin invites the first RP Admin before application work
 
 - **WHEN** a CL Admin opens Access for an existing workspace with no Applications or RP configurations
-- **THEN** the portal allows the CL Admin to create an RP Admin invitation for that workspace
+- **THEN** the focused invitation flow allows the CL Admin to create an RP Admin invitation for that workspace
 - **AND** the workflow does not require placeholder Application data, a placeholder RP configuration, or an IBM Verify operation
 
 #### Scenario: RP Admin manages only lower roles in workspace context
 
 - **WHEN** an RP Admin opens Access in the assigned workspace
-- **THEN** the portal permits assignment and invitation actions only for RP User (Edit) and Read Only
+- **THEN** the portal permits focused assignment and invitation actions only for RP User (Edit) and Read Only
 - **AND** RP Admin and cross-workspace actions remain unavailable and denied
+
+#### Scenario: Access routes remain bilingual accessible and responsive
+
+- **WHEN** an authorized user operates an Access hub, table, form, or record page in English or French with keyboard, assistive technology, narrow viewport, or 200 percent zoom
+- **THEN** route labels, headings, breadcrumbs, captions, headers, statuses, actions, errors, confirmations, and accessible names remain equivalent and usable
+- **AND** focus remains visible and content reflows without clipped actions or required page-level horizontal scrolling
 
 ### Requirement: CL Admin reviews unassigned MVP1 RP registration candidates
 
@@ -568,7 +564,7 @@ and `expectedDraftVersion`.
 - **AND** the summary and inline feedback contain only errors for questions rendered on that route
 - **AND** later invalid steps remain visibly pending or unavailable until contiguous progress reaches them
 - **AND** no summary link targets a control on another unrendered route
-- **AND** the last server-saved draft/version and entered values remain recoverable without submission or lifecycle advancement
+- **AND** the last server-saved draft/version and entered values remain recoverable without marking the questionnaire complete or creating or changing Production review
 
 #### Scenario: Correcting one question preserves other validation errors
 
@@ -608,20 +604,23 @@ and `expectedDraftVersion`.
 
 The portal SHALL treat a Partner workspace as the collaboration, tenancy, and
 authorization boundary and SHALL treat each workspace-owned Application as the
-parent of its bilingual public metadata, onboarding narrative, readiness,
-contacts, internal review context, and RP configurations.
+parent of its bilingual public metadata, onboarding narrative, contacts,
+required-artifact/checklist context, CATS evidence availability, process links, and RP
+configurations. It SHALL NOT assign an Application a generic onboarding
+lifecycle, aggregate readiness score, or internal review-note record.
 
 RP Admin and RP User (Edit) SHALL create and edit Applications in an assigned
 workspace. Read Only and CL Admin SHALL receive only the Application metadata,
-status, and review surfaces permitted by their canonical capabilities. A child
-identifier SHALL NOT grant authority independently of the workspace.
+checklist/evidence status, and explicit Production-review surfaces permitted by
+their canonical capabilities. A child identifier SHALL NOT grant authority
+independently of the workspace.
 
 #### Scenario: Partner editor creates an Application
 
 - **WHEN** an RP Admin or RP User (Edit) creates an Application from `/workspaces/$workspaceUuid/applications/new`
 - **THEN** the portal creates one Application in the authorized workspace
-- **AND** it stores canonical English and French public service names plus the onboarding sections for overview, technology/protocol, security/privacy, usage, and migration/transition planning
-- **AND** success opens the new Application hub
+- **AND** it stores canonical English and French public service names plus the approved onboarding sections for overview, technology/protocol, security/privacy, usage, and migration/transition planning
+- **AND** success opens the new Application hub without creating a generic lifecycle or internal review record
 
 #### Scenario: Partner editor updates canonical public metadata
 
@@ -632,27 +631,27 @@ identifier SHALL NOT grant authority independently of the workspace.
 #### Scenario: Application may exist before its first RP configuration
 
 - **WHEN** an authorized partner editor creates an Application and has not created an RP configuration
-- **THEN** the Application remains a valid workspace-owned draft with an actionable RP-configurations empty state
-- **AND** the portal does not create a placeholder RP row or require a Partner environment or CanadaLogin environment until an RP configuration is created
+- **THEN** the Application remains a valid workspace-owned record with an actionable RP-configurations empty state
+- **AND** the portal does not invent an Application lifecycle state, create a placeholder RP row, or require Partner/CanadaLogin environment until an RP configuration is created
 
 #### Scenario: Child resources inherit workspace context
 
-- **WHEN** an Application, contact, or RP configuration is read or mutated
+- **WHEN** an Application, contact, checklist/evidence item, or RP configuration is read or mutated
 - **THEN** the backend derives authorization and effective Department context through its owning workspace
 - **AND** a child-level workspace or Department value cannot override that parent boundary
 
 #### Scenario: Nested identifiers must share one hierarchy
 
-- **WHEN** a route or API combines a workspace UUID, Application UUID, contact UUID, or RP-configuration UUID that do not belong to the same hierarchy
+- **WHEN** a route or API combines workspace, Application, contact, checklist/evidence, or RP-configuration UUIDs that do not belong to the same hierarchy
 - **THEN** the portal returns the standard safe unavailable response
-- **AND** it does not reveal which identifier exists, its actual parent, or any protected metadata
+- **AND** it does not reveal which identifier exists, its actual parent, or protected metadata
 
 #### Scenario: Linked RP configurations block destructive Application deletion
 
-- **WHEN** an authorized partner editor attempts to delete an Application that still owns one or more retained RP configurations in any lifecycle or soft-delete state
+- **WHEN** an authorized partner editor attempts to delete an Application that still owns one or more retained RP configurations in any registration, review, or soft-delete condition
 - **THEN** the system rejects the delete request
 - **AND** it identifies safely that the child configurations must be resolved first
-- **AND** no Application, contact, configuration, credential, audit, or review record is deleted
+- **AND** no Application, contact, configuration, credential, audit-history, checklist/evidence, or Production-review record is deleted
 
 ### Requirement: Application contacts use person identity fields and focused management
 
@@ -663,9 +662,11 @@ be entered once and SHALL NOT have English and French variants. Labels, hints,
 errors, and responsibility/title content SHALL remain bilingual.
 
 RP Admin and RP User (Edit) SHALL manage contacts through focused list, create,
-edit, and confirmed-delete routes. Read Only SHALL receive the permitted
-read-only list. CL Admin SHALL receive contact data only when its oversight
-capability and purpose permit it.
+edit, and confirmed-delete routes. Read Only SHALL receive the permitted read-
+only list. CL Admin SHALL receive contact data only when its oversight purpose
+permits it. Contact confirmation SHALL NOT create an overall readiness score,
+`submit-ready` state, or mandatory contact-type gate that the approved PRD
+still marks TBD.
 
 #### Scenario: Partner editor records a contact
 
@@ -693,7 +694,7 @@ capability and purpose permit it.
 - **THEN** the portal preserves those values without parsing, translating, or guessing first and last name
 - **AND** it renders the retained full name for the active locale until RP Admin or RP User (Edit) confirms first and last name
 - **AND** confirmation records actor and time without overwriting either responsibility value
-- **AND** it identifies the contact as requiring authorized confirmation before the contact counts as readiness-complete
+- **AND** confirmation may satisfy that contact record's identity fields but does not create an overall readiness result or invent a mandatory contact-type gate
 - **AND** no migration writes invented person identity data
 
 #### Scenario: Contact personal information remains protected
@@ -701,88 +702,6 @@ capability and purpose permit it.
 - **WHEN** contact data is created, read, updated, deleted, logged, audited, tested, or shown in evidence
 - **THEN** the system limits values to the authorized Application purpose and scope
 - **AND** it excludes contact values from URLs, query strings, analytics, diagnostic logs, audit detail values, real-data fixtures, and screenshots
-
-### Requirement: Application entry page is a compact task hub with focused children
-
-The portal SHALL provide
-`/workspaces/$workspaceUuid/applications/$applicationUuid` as the canonical
-Application entry page. It SHALL use the localized Application name as its H1,
-show only concise sourced overview and status context, and link to focused
-Details, Readiness, Contacts, RP configurations, and capability-gated Internal
-review pages. For an authorized editor, it SHALL expose a secondary capability-gated Application
-management section whose `Delete application` link opens a focused
-confirmation page.
-
-The hub SHALL NOT embed full metadata sections, edit forms, contact records,
-contact forms, readiness breakdowns, review notes, checklists, RP
-questionnaires, Usage results, credential values, or destructive controls.
-Navigation to a focused confirmation page is not itself a destructive control.
-
-#### Scenario: Authorized user opens an Application hub
-
-- **WHEN** an authorized role opens an in-scope Application
-- **THEN** the page shows the localized Application name in one H1
-- **AND** it may show a concise overview, lifecycle state, overall textual readiness state, and safe contact or configuration counts
-- **AND** each permitted task appears as one single-destination link or GC Design System card
-
-#### Scenario: Application task availability follows capability
-
-- **WHEN** RP Admin, RP User (Edit), Read Only, or CL Admin opens an Application hub
-- **THEN** the hub exposes only task destinations permitted by that role and Application scope
-- **AND** hidden task links do not replace direct-route and backend authorization
-
-#### Scenario: Readiness summary links to a focused breakdown
-
-- **WHEN** the Application has a calculated readiness state
-- **THEN** the hub shows a compact localized text status that does not rely on colour alone
-- **AND** an authorized user can follow a contained link to the focused Readiness page for section-level detail
-- **AND** the hub does not render the complete readiness breakdown inline
-
-#### Scenario: Contacts and RP configurations use focused destinations
-
-- **WHEN** an authorized user needs to view or manage contacts or RP configurations
-- **THEN** the Application hub links to the corresponding focused collection page
-- **AND** it does not place an inline create or edit form on the hub
-
-#### Scenario: Empty Application exposes direct first-configuration creation
-
-- **WHEN** an Application owns no RP configurations and an RP Admin or RP User (Edit) opens its hub
-- **THEN** the hub presents a prominent `Create first RP configuration` action
-- **AND** the action opens the selected Application's nested create route without asking the user to choose the workspace or Application again
-- **AND** a user without RP-configuration write capability does not receive the create action
-
-#### Scenario: Existing configurations are a leading Application task
-
-- **WHEN** an Application owns one or more RP configurations
-- **THEN** the hub presents RP configurations as a leading focused destination with its safe record count and concise status context when available
-- **AND** it does not embed a second configuration collection or a global context chooser
-
-#### Scenario: Application deletion is secondary and focused
-
-- **WHEN** an authorized editor opens an Application hub
-- **THEN** a quiet `Delete application` link appears under a secondary `Application management` heading after the primary tasks
-- **AND** the portal does not expose `Application settings` as a user-facing task or card
-- **AND** the link opens a dedicated confirmation page that revalidates authorization and retained-child safeguards before any deletion
-
-#### Scenario: Internal review remains separately authorized
-
-- **WHEN** a CL Admin with oversight capability opens an Application hub through a permitted oversight path
-- **THEN** Internal review links to a focused review page for that Application
-- **AND** partner roles do not receive internal notes, checklist outcomes, or the review destination merely because they can edit Application data
-
-#### Scenario: Application children preserve parent navigation
-
-- **WHEN** an authorized user opens an Application child page
-- **THEN** breadcrumbs identify Home, Partner workspaces, the selected workspace, and the Application parent as applicable
-- **AND** a stable translated parent link returns to the Application hub or its owning collection without relying on browser history
-- **AND** raw UUIDs are not used as friendly labels
-
-#### Scenario: Application pages remain focused and responsive
-
-- **WHEN** an Application hub or focused child is used with keyboard navigation, assistive technology, a small viewport, long French content, or 200-percent zoom
-- **THEN** heading, source, visual, focus, and task order remain logical
-- **AND** content reflows without clipping or horizontal task scrolling
-- **AND** a details disclosure does not hide a required status, error, form field, instruction, or primary action
 
 ### Requirement: Applications own required named RP configurations
 
@@ -846,13 +765,13 @@ clone SHALL NOT omit the field.
 - **THEN** the system preserves the missing state and renders localized `Not provided` where a value must be shown
 - **AND** it does not derive the value from configuration name, URLs, provider metadata, CanadaLogin environment, or sibling records
 - **AND** contracting the nullable compatibility field requires explicit mappings or authorized confirmations for every retained row
-- **AND** absence of this newly introduced label does not silently change a historical non-draft lifecycle state
+- **AND** absence of this newly introduced label does not change historical registration-completion or Production-review data
 
 #### Scenario: Partner editor confirms missing Partner environment without reopening registration
 
-- **WHEN** an RP Admin or RP User (Edit) supplies a valid Partner environment from the nested `/partner-environment/edit` route for an in-scope retained configuration in any lifecycle state
+- **WHEN** an RP Admin or RP User (Edit) supplies a valid Partner environment from the nested `/partner-environment/edit` route for an in-scope retained configuration whether registration is incomplete or complete and whether Production review is absent or present
 - **THEN** a focused metadata operation revalidates workspace, Application, configuration ancestry, and write capability before updating the top-level field
-- **AND** it does not reopen registration, change lifecycle, or mutate questionnaire answers
+- **AND** it does not reopen registration, change technical completion, create or advance Production review, or mutate questionnaire answers
 - **AND** a Read Only user cannot perform the operation
 - **AND** the audit event records actor, safe field name, result, timestamp, and resource references without the entered label value
 
@@ -876,23 +795,26 @@ clone SHALL NOT omit the field.
 
 ### Requirement: Application and RP configuration collections use focused comparison tables
 
-The portal SHALL distinguish Application summaries from RP-configuration summaries.
-
-The selected-workspace Applications page and each Application's RP
+The portal SHALL distinguish Application summaries from RP-configuration
+summaries. The selected-workspace Applications page and each Application's RP-
 configurations page SHALL use secret-free, server-scoped summary contracts and
 compact GC Design System tables because their rows share comparable facets.
-Application identity SHALL come from the active-language value in localized
-parent metadata. RP-configuration identity SHALL come from configuration name
-plus explicitly labelled Partner and CanadaLogin environments.
+Application identity SHALL come from active-language parent metadata. RP-
+configuration identity SHALL come from configuration name plus explicitly
+labelled Partner and CanadaLogin environments.
+
+Generic `Status`, onboarding lifecycle, and overall readiness columns SHALL
+NOT be used. A configuration collection MAY expose explicitly labelled
+technical `Registration` context and `Production review` status when sourced
+from their separate canonical records. Application rows MAY show safe contact
+or configuration counts and directly sourced missing-artifact attention, but
+not a score, completion count, or `submit-ready` state.
 
 Each record's View, Resume, Add, or Edit navigation SHALL remain within the
 same row as the record it affects. Tables SHALL have an accessible caption or
-equivalent nearby heading, column headers, a stable first-column record
-identity, real text for missing values, GCDS-aligned spacing, and responsive
-behavior. Row-action accessible names SHALL include the displayed record
-identity. These collections SHALL use normal GCDS body cells for their identity
-columns and SHALL NOT enable the visually heavy row-header divider. They SHALL
-NOT become decorative cards, layout tables, or complex data grids.
+equivalent nearby heading, column headers, stable first-column identity, real
+text for missing values, GCDS-aligned spacing, and responsive behavior. Row-
+action accessible names SHALL include the displayed record identity.
 
 #### Scenario: Application list uses parent identity
 
@@ -900,7 +822,7 @@ NOT become decorative cards, layout tables, or complex data grids.
 - **THEN** each row shows exactly one Application Name value from the active interface language in a normal first-column cell
 - **AND** the table does not show separate English-name and French-name columns
 - **AND** each row action includes that displayed name in its accessible name and opens the selected Application context
-- **AND** it may show concise lifecycle, readiness, contact-count, or configuration-count context
+- **AND** it may show safe contact/configuration counts or a directly sourced missing-artifact indicator without lifecycle, readiness-score, or `submit-ready` content
 - **AND** it does not label a child RP configuration as the parent Application
 
 #### Scenario: Application row offers contextual configuration creation
@@ -913,19 +835,18 @@ NOT become decorative cards, layout tables, or complex data grids.
 #### Scenario: RP configuration table uses configuration identity
 
 - **WHEN** an authorized user opens one Application's RP configurations
-- **THEN** the table contains `Name`, `Partner environment`, `CanadaLogin environment`, `Status`, and `Action` columns
+- **THEN** the table contains `Name`, `Partner environment`, `CanadaLogin environment`, applicable explicit `Registration` or `Production review` context, and `Action` columns
 - **AND** each row shows `configurationName` in a normal first-column cell without a heavy divider after it
-- **AND** the row action includes the displayed configuration name in its accessible name
-- **AND** a missing legacy Partner environment uses localized `Not provided` rather than a blank or inferred value
-- **AND** exact displayed name, Partner-environment, and CanadaLogin-environment duplicates show a localized short public reference beneath the name without making a raw UUID the primary label
+- **AND** a missing Partner environment uses localized `Not provided`, an absent review uses localized `Not requested`, and no generic five-state status is shown
+- **AND** exact displayed identity duplicates show a localized short public reference without making a raw UUID the primary label
 
 #### Scenario: Each RP-configuration row has one clear destination
 
 - **WHEN** an authorized user views one RP configuration in an Application's collection
-- **THEN** that row's one Action link is `View RP configuration` and opens the canonical task hub for the selected workspace, Application, and RP configuration
+- **THEN** that row's one Action link is `View RP configuration` and opens the canonical task hub for the selected hierarchy
 - **AND** an incomplete draft does not bypass the hub by opening Registration directly
-- **AND** an authorized editor can continue the draft through the hub's state-appropriate `Resume setup` action
-- **AND** a read-only user reaches the same permitted hub while mutation and credential tasks remain omitted according to capability
+- **AND** an authorized editor can continue the draft through the hub's `Resume setup` action
+- **AND** a read-only user reaches the same permitted hub while mutation and credential tasks remain omitted
 
 #### Scenario: Configuration creation is visible before the collection
 
@@ -937,25 +858,24 @@ NOT become decorative cards, layout tables, or complex data grids.
 #### Scenario: Small RP-configuration table omits unnecessary controls
 
 - **WHEN** the RP-configuration collection is small and its default server order supports the task
-- **THEN** it uses the same shared collection-table presentation as Applications, including a localized record count, sortable comparison columns, and a contained row destination
-- **AND** Name, Partner environment, CanadaLogin environment, and Status are sortable while Action is not sortable
-- **AND** it does not add filtering, pagination, bulk selection, or inline editing
-- **AND** any future control requires evidence that the collection size or comparison task benefits from it
+- **THEN** it uses the shared comparison-table presentation with localized count and contained row destination
+- **AND** Name and environment columns plus any explicitly sourced Registration or Production-review column are sortable while Action is not sortable
+- **AND** it does not add filtering, pagination, bulk selection, inline editing, or a generic Status control
 
 #### Scenario: Collection tables remain accessible and responsive
 
 - **WHEN** a collection is used at mobile width, 200-percent zoom, with long French labels, keyboard navigation, or assistive technology
-- **THEN** table captions, column headers, identity cells, links, and statuses remain understandable in source and focus order
+- **THEN** table captions, column headers, identity cells, links, and explicit status text remain understandable in source and focus order
 - **AND** every row action's accessible name identifies the record it affects
 - **AND** long names, URLs, and status text wrap without clipping or inaccessible horizontal scrolling
-- **AND** responsive column treatment preserves the primary identity, environment distinction, status, and row action needed to complete the task
+- **AND** responsive treatment preserves primary identity, environment distinction, applicable registration/review context, and row action
 
 #### Scenario: Summary requests remain server scoped
 
 - **WHEN** an Application or RP-configuration collection requests summaries
-- **THEN** the backend applies the session, canonical workspace role, selected workspace, parent Application when applicable, and object scope before serialization
+- **THEN** the backend applies session, canonical workspace role, selected workspace, parent Application when applicable, and object scope before serialization
 - **AND** the browser does not receive a wider dataset and reduce it through client-side filtering
-- **AND** the summaries exclude provider identifiers, client identifiers treated as credentials, secrets, raw provider payloads, contact PII, and policy internals
+- **AND** summaries exclude provider/client identifiers treated as credentials, secrets, raw provider payloads, contact PII, policy internals, generic audit events, and retired lifecycle/readiness fields
 
 ### Requirement: Application-scoped RP configuration registration follows the current OIDC questionnaire
 
@@ -972,10 +892,10 @@ configuration name, one locale-neutral Partner environment, one CanadaLogin
 environment, and configuration-specific URLs and endpoints. The server MAY
 persist incomplete answers as draft data without treating the affected step or
 registration as valid. Completing a step SHALL validate every active field and
-constraint owned by that step and all prerequisite steps. Final submission
+constraint owned by that step and all prerequisite steps. Final questionnaire completion
 SHALL validate the complete active questionnaire and all cross-step constraints,
-including Partner environment, before transitioning the RP configuration from
-`draft` to `submitted`.
+including Partner environment, before recording technical completion. It SHALL
+NOT create or advance a Production-review request or a shared onboarding state.
 
 #### Field group: RP configuration identity and endpoints
 
@@ -1070,20 +990,20 @@ while CanadaLogin environment identifies the CanadaLogin target.
 
 #### Scenario: RP configuration registration enforces current questionnaire constraints
 
-- **WHEN** an authorized partner editor completes a step or finally submits RP-configuration registration data
+- **WHEN** an authorized partner editor completes a step or completes RP-configuration registration data
 - **THEN** the portal enforces every current questionnaire constraint whose controlling fields are part of that step or an earlier completed step
-- **AND** final submission requires configuration name, Partner environment, and CanadaLogin environment, requires `openid`, requires PKCE for `public` clients, keeps Authorization Code Flow as the supported response flow, and restricts front-channel logout to `canada.ca` domains
+- **AND** final questionnaire completion requires configuration name, Partner environment, and CanadaLogin environment, requires `openid`, requires PKCE for `public` clients, keeps Authorization Code Flow as the supported response flow, and restricts front-channel logout to `canada.ca` domains
 
 #### Scenario: Incomplete draft persistence does not create a valid submission
 
 - **WHEN** an authorized partner editor uses Save and exit or another safe draft-persistence action before every active field and step is valid
 - **THEN** the portal may retain the incomplete answers in the server-backed draft and identifies the affected step as incomplete
-- **AND** it does not mark that step complete, expose Review as valid, transition onboarding state, or treat the draft as submitted
+- **AND** it does not mark that step complete, expose Review as valid, record questionnaire completion, create or advance Production review, or treat the draft as complete
 
 #### Scenario: Conditional follow-up answers are required for dependent selections
 
 - **WHEN** an authorized partner editor selects `private_key_jwt`, an `Other` algorithm, or an unsupported signing, validation, encryption, or decryption capability answer
-- **THEN** the portal requires the matching key-distribution detail, free-text algorithm field, roadmap answer, and approximate revisit date when applicable before the affected step can be marked complete or the configuration can be submitted
+- **THEN** the portal requires the matching key-distribution detail, free-text algorithm field, roadmap answer, and approximate revisit date when applicable before the affected step can be marked complete or the questionnaire can be completed
 - **AND** incomplete draft persistence may retain the partial answer without presenting it as valid
 
 #### Scenario: Offline key exchange rejects private key material
@@ -1098,363 +1018,6 @@ while CanadaLogin environment identifies the CanadaLogin target.
 - **WHEN** an authorized partner editor answers `No` to message signing, signature validation, message encryption, or message decryption support
 - **THEN** the portal captures whether the capability is on the product roadmap and, when applicable, an approximate revisit date
 - **AND** selecting roadmap `no` records the negative answer without requiring an extra free-text note
-
-### Requirement: Application-scoped RP configuration registration uses a recoverable multi-step flow
-
-The portal SHALL implement the OIDC questionnaire as a PAT-019 route-per-step
-flow beneath one authorized workspace, Application, and server-side RP
-configuration in `draft`. Intermediate persistence SHALL update only that
-draft, distinguish incomplete saved data from a completed step, and SHALL NOT
-perform final submission. Only the explicit final submit action from a
-completely valid Review state SHALL transition `draft` to `submitted`.
-
-The configuration Edit entry SHALL use this lifecycle matrix:
-
-| Current state | Edit behavior | Mutation behavior |
-|---|---|---|
-| `draft` | Resume the earliest incomplete permitted step | Permit authorized, conflict-protected draft writes |
-| `submitted` or `under_review` | Return to the configuration hub with a localized locked-for-review explanation | No draft or registration mutation |
-| `approved` or `launched` | Return to the configuration hub with a localized non-editable explanation | No draft or registration mutation |
-| Missing, unknown, stale, parent-mismatched, or out-of-scope | Fail closed through safe detail, not-found, or denied behavior | No mutation |
-
-For a server-backed draft, the flow SHALL pair its six-step progress indicator
-with a separate semantic `Registration steps` navigation. Available completed
-steps other than the current step SHALL be links, the current step SHALL be a
-non-link identified with `aria-current="step"`, and prerequisite-blocked
-future steps SHALL be labelled non-links. Availability SHALL come from server-
-validated contiguous progress; the navigation SHALL NOT make the progress
-indicator interactive or imply that validation can be skipped.
-
-Choosing a completed step SHALL NOT silently save, validate, complete, or
-submit current work. Back, completed-step links, Cancel, parent or breadcrumb
-links, header destinations, and language switching SHALL preserve current input
-or warn before any loss. The portal SHALL let the user remain on the current
-step with that input when the warning is cancelled. Confirmed navigation that
-cannot carry the current input SHALL use the last server-saved draft.
-
-#### Scenario: User starts an RP configuration draft
-
-- **WHEN** an authorized editor starts registration from `/workspaces/$workspaceUuid/applications/$applicationUuid/rp-configurations/new`
-- **THEN** the portal opens Basics without inventing a configuration UUID or placeholder row
-- **AND** the unsaved Basics route does not expose a completed-step link before a server-backed draft exists
-- **AND** successful Basics validation creates one server-backed RP configuration in `draft` with the required parent Application, configuration name, Partner environment, and CanadaLogin environment
-- **AND** the create request uses one opaque idempotency key for that new-flow attempt
-- **AND** the created representation uses draft version `1`, records `basics` as the last completed step, and exposes opaque workspace, Application, and configuration UUIDs
-- **AND** the portal opens the nested `registration/endpoints` route and can later resume safely
-
-#### Scenario: Retried draft creation does not create a duplicate
-
-- **WHEN** a valid Basics create request is retried with the same idempotency key, actor, workspace, Application, and normalized Basics payload including Partner environment after an ambiguous result
-- **THEN** the backend returns the same RP-configuration draft rather than creating another record
-- **AND** it does not increment, reset, or otherwise change draft version or completed-step state merely because the create request was retried
-- **AND** reusing that key with different input or scope fails with safe `409` code `registration_draft_creation_conflict`
-- **AND** the key contains no personal or questionnaire data and conveys no authorization
-
-#### Scenario: Invalid Basics does not create a placeholder draft
-
-- **WHEN** a user selects Continue on the nested new-configuration Basics route without a valid configuration name, Partner environment, CanadaLogin environment, or Application context
-- **THEN** the page remains on Basics and displays an error summary plus field-level errors
-- **AND** the backend creates no RP row, UUID, placeholder name, or onboarding transition
-- **AND** the portal warns before navigation can discard unsaved input
-
-#### Scenario: Valid Basics can establish a draft before exit
-
-- **WHEN** a user selects Save and exit on Basics with a valid configuration name, Partner environment, CanadaLogin environment, and Application parent
-- **THEN** the backend creates one server-backed RP configuration in `draft` and returns its UUID and draft version
-- **AND** the portal returns to the RP-configuration hub or its Application-scoped list with a contained resume path
-- **AND** invalid minimum Basics remains on the form without promising durable recovery
-
-#### Scenario: User resumes an existing RP configuration draft
-
-- **WHEN** an authorized user opens the nested Edit route for an RP configuration still in `draft`
-- **THEN** the portal resumes at the earliest incomplete permitted canonical step
-- **AND** a legacy Edit entry authorizes and redirects to that route rather than rendering the retired long questionnaire
-
-#### Scenario: Draft API exposes typed hierarchy identifiers
-
-- **WHEN** an authorized editor creates, reads, resumes, or updates a registration draft
-- **THEN** the API response exposes public workspace, Application, and RP-configuration UUIDs, configuration name, nullable Partner environment for compatibility, CanadaLogin environment, onboarding state, draft version, last completed step, and typed authorized answers
-- **AND** it does not expose internal integer IDs, repository models, untyped payloads, policy internals, secret key material, or fields outside authorized scope
-
-#### Scenario: Migrated draft resumes from validated contiguous progress
-
-- **WHEN** an existing draft predates registration-flow metadata and has no stored completed-step marker
-- **THEN** the backend validates stored answers in recorded step order and derives only the last contiguous completed step
-- **AND** non-contiguous later answers do not unlock a future step or Review
-- **AND** missing or invalid data resumes at the earliest incomplete permitted step
-- **AND** a missing Partner environment keeps Basics incomplete and blocks final submission until an authorized editor supplies a valid value
-
-#### Scenario: Non-draft RP configurations are not editable through this flow
-
-- **WHEN** an authorized user requests Edit for a configuration in `submitted`, `under_review`, `approved`, or `launched`
-- **THEN** the portal returns to the configuration hub with the state-appropriate safe explanation
-- **AND** it does not create or mutate a draft, revision, or effective registration
-- **AND** an amendment workflow is not inferred from the forward-only states
-
-#### Scenario: Unknown or stale lifecycle state fails closed
-
-- **WHEN** flow entry or a write observes a missing, unknown, stale, changed, or parent-mismatched lifecycle resource
-- **THEN** the portal uses the standard safe detail, not-found, conflict, or denied behavior
-- **AND** it does not expose or mutate draft data
-
-#### Scenario: Flow presents the recorded step sequence
-
-- **WHEN** an authorized user progresses through a draft
-- **THEN** the flow presents Basics, Endpoints, Client and access, Signing, Encryption, and Review as six ordered steps
-- **AND** each step has one clear heading and only its questionnaire fields and dependent guidance
-- **AND** Confirmation follows successful submission outside the six-step progress indicator
-
-#### Scenario: Saved draft exposes completed-step navigation
-
-- **WHEN** an authorized user opens or resumes a server-backed draft
-- **THEN** a semantic navigation landmark labelled `Registration steps` presents all six localized step names in their recorded order
-- **AND** each available completed step other than the current step is a link to its canonical nested route
-- **AND** the current step is a non-link identified with `aria-current="step"`
-- **AND** each prerequisite-blocked future step is a labelled non-link rather than an unavailable link or control
-- **AND** Review becomes available only while every prerequisite step remains valid
-- **AND** the progress indicator itself is not used as the step-navigation control
-
-#### Scenario: Navigation away from a registration step protects unsaved input
-
-- **WHEN** a user chooses Back, a completed-step link, Cancel, a parent/breadcrumb/header destination, or language switching and that navigation would discard input that differs from the last server-saved draft
-- **THEN** the portal warns that the navigation will leave those unsaved changes behind
-- **AND** cancelling keeps the user on the current step with the input intact
-- **AND** confirming opens the selected destination using the last server-saved draft when the input cannot be carried safely
-- **AND** route navigation does not implicitly save, validate, mark work complete, unlock Review, submit, or advance lifecycle
-
-#### Scenario: Continue validates and saves only the current draft
-
-- **WHEN** a user selects Continue on a registration step
-- **THEN** the portal validates the current step and displays an error summary plus field-level errors when invalid
-- **AND** valid input is saved to the server-backed draft before the next step opens
-- **AND** future-step fields are not required merely to persist or complete the current step
-- **AND** the transition does not submit or advance final onboarding state
-
-#### Scenario: Stale draft write fails without overwriting newer work
-
-- **WHEN** a user submits a draft write or final submission with an expected version older than the current draft and the lifecycle remains `draft`
-- **THEN** the backend rejects it with `409` code `registration_draft_version_conflict`
-- **AND** it does not merge, overwrite, submit, or disclose the newer draft through the stale request
-- **AND** the page offers a safe reload path before changes can be retried
-
-#### Scenario: Back and Save and exit preserve recoverable work
-
-- **WHEN** a user selects Back or Save and exit after a draft exists
-- **THEN** Back follows the unsaved-input protection before opening the previous permitted step and does not discard server-saved answers
-- **AND** Save and exit may persist safe partial current-step answers while marking an invalid step incomplete
-- **AND** partial persistence does not make Review valid or advance onboarding state
-- **AND** Save and exit returns to the configuration hub or Application-scoped configuration list with a clear resume path
-
-#### Scenario: Cancel preserves the last server-saved draft
-
-- **WHEN** a user chooses Cancel during registration
-- **THEN** the portal warns before discarding unsaved current-step input when it exists
-- **AND** it leaves the last successfully saved draft available to resume
-- **AND** it returns to the configuration hub or Application-scoped list without deleting or submitting the draft
-
-#### Scenario: Earlier changes invalidate dependent answers visibly
-
-- **WHEN** a user changes an earlier answer that makes later conditional answers invalid or inapplicable
-- **THEN** the portal clears or invalidates those dependent answers according to questionnaire rules
-- **AND** it identifies later steps that require review before submission
-- **AND** the affected later steps cease to be completed-step links and Review relocks until contiguous progress is valid again
-
-#### Scenario: Direct future-step access recovers safely
-
-- **WHEN** a user requests a step not yet available because earlier steps are incomplete
-- **THEN** the portal routes to the earliest incomplete permitted step
-- **AND** it explains what must be completed without revealing another workspace, Application, configuration, or draft
-
-#### Scenario: Review summarizes the pending submission
-
-- **WHEN** all questionnaire steps are valid and the user opens Review
-- **THEN** the page groups pending values into an itemized summary
-- **AND** each group has a localized Change link to the corresponding completed step
-- **AND** configuration name, parent Application, Partner environment, CanadaLogin environment, important consequences, and the single final submit action are clear
-
-#### Scenario: Final submit occurs once
-
-- **WHEN** an authorized user confirms final submission with `targetState` `submitted` and the expected draft version through the versioned onboarding-state contract
-- **THEN** the backend rechecks authorization, workspace/Application/configuration ancestry, current `draft` state, and the complete active questionnaire
-- **AND** it conditionally checks the version and transitions the RP configuration from `draft` to `submitted` exactly once in one transaction
-- **AND** a retry observing the same configuration already submitted returns the authorized submitted representation without another transition, side effect, or audit event
-- **AND** draft creation, saves, submission, and retry recovery do not call, provision, update, or synchronize IBM Verify or another external system
-- **AND** success opens the nested Confirmation route
-
-#### Scenario: Confirmation provides useful next steps
-
-- **WHEN** final submission succeeds
-- **THEN** Confirmation states the resulting registration status and what happens next
-- **AND** it links to the RP-configuration hub, parent Application, and selected workspace as applicable
-- **AND** it does not ask the user to submit the same draft again
-
-#### Scenario: Refresh and network failure preserve safe recovery
-
-- **WHEN** the user refreshes a step or a draft save fails because of a network or server error
-- **THEN** the portal preserves the last server-saved draft and safely recoverable current input
-- **AND** the affected step shows a scoped error and clear retry, save, or return action
-- **AND** the error does not imply that unsaved input or final submission succeeded
-
-#### Scenario: Session expiry resumes an authorized draft
-
-- **WHEN** the session expires during registration and the user completes applicable admission flows again
-- **THEN** the portal resumes the same draft and equivalent step when current workspace/Application/configuration authorization still permits it
-- **AND** revoked or changed scope uses safe denied or parent-return behavior instead of rendering draft data
-
-#### Scenario: Language switching keeps equivalent draft context
-
-- **WHEN** a user changes official language from a registration step
-- **THEN** the header language control opens the equivalent step for the same authorized draft
-- **AND** saved input is retained and unsaved input is preserved or explicitly warned before loss
-- **AND** step labels, completed/current/blocked navigation states, fields, hints, errors, Review, Change links, Confirmation, and accessible names have English and French parity
-- **AND** configuration name, Partner environment, and other person-entered values are not translated or duplicated
-
-#### Scenario: Sensitive questionnaire content stays out of unsafe client surfaces
-
-- **WHEN** registration answers include a public certificate, public JWK, endpoint, or other potentially sensitive configuration data
-- **THEN** the portal does not place those values in URLs, query parameters, analytics, diagnostic logs, or unstructured local storage
-- **AND** backend authorization and the existing data-handling boundary apply to every read and write
-- **AND** private or symmetric key material is rejected rather than stored
-
-#### Scenario: Draft audit and operational events exclude answer values
-
-- **WHEN** the backend records draft creation, successful save, stale-version conflict, denied write, or final submission
-- **THEN** the event may identify actor reference, workspace/Application/configuration references, step ID, save mode, safe changed field names, result, timestamp, and correlation identifier
-- **AND** it does not contain questionnaire values, contact values, certificate or JWK content, credentials, tokens, or unnecessary personal information
-
-### Requirement: Application-scoped RP configurations expose usage and audit views
-
-The portal SHALL provide focused Usage and bounded audit views for an RP
-configuration beneath its owning workspace and Application. RP Admin, RP User
-(Edit), and Read Only SHALL read only the results permitted by their active
-workspace role. No partner role SHALL read another workspace's, Application's,
-or configuration's results.
-
-#### Scenario: Authorized partner role reviews RP configuration usage
-
-- **WHEN** an RP Admin, RP User (Edit), or Read Only user opens the nested Usage route for an in-scope RP configuration
-- **THEN** the portal loads the usage summary for the selected date or range state
-- **AND** the request verifies workspace, Application, configuration, and reporting capability before returning data
-
-#### Scenario: Authorized partner role reviews bounded RP configuration audit activity
-
-- **WHEN** an RP Admin, RP User (Edit), or Read Only user opens the nested audit route and applies a bounded date range
-- **THEN** the portal loads matching permitted events for that RP configuration
-- **AND** any download remains constrained to the selected hierarchy and role
-
-### Requirement: Applications show advisory readiness indicators
-
-The system SHALL provide section-level completion indicators and an overall
-readiness signal for the Application parent. RP Admin and RP User (Edit) SHALL
-use the indicators while preparing and submitting the Application.
-Read Only and CL Admin SHALL view permitted readiness/status without performing
-partner-side edits.
-
-The Application readiness calculation MAY summarize child RP-configuration
-states as context but SHALL NOT merge them into one configuration or create a
-separate Application review result for each CanadaLogin environment.
-
-The focused Readiness page SHALL show one compact localized overall status and
-completion count followed by simple semantic rows for each required area. Each
-row SHALL identify the area, its visible textual status, and one permitted
-direct next-step link when work remains. It SHALL NOT wrap each basic status
-fact in a large card or Notice. Notices SHALL remain available for actual
-loading, error, or consequential feedback states. Optional production-check
-explanation MAY use `GcdsDetails` or a short supporting section, but required
-status and next steps SHALL remain visible.
-
-#### Scenario: Incomplete Application is flagged
-
-- **WHEN** an authorized role opens an Application with missing required onboarding data or no confirmed required contact
-- **THEN** the portal identifies incomplete sections or required inputs
-- **AND** it keeps the Application below a submit-ready state
-
-#### Scenario: Readiness page uses a compact actionable breakdown
-
-- **WHEN** an authorized role opens the focused Application Readiness page
-- **THEN** the page shows a concise textual overall result and completed-area count without relying on colour alone
-- **AND** each required area appears as a semantic row with area name, textual status, and a direct permitted next step when incomplete
-- **AND** editable gaps link to their focused owner, such as Details edit or Contacts, rather than embedding those forms
-- **AND** simple status facts are not each rendered as a large card or Notice
-
-#### Scenario: Optional production guidance does not hide readiness
-
-- **WHEN** the Readiness page includes production-check explanation or external-process guidance
-- **THEN** optional supporting content may use `GcdsDetails` or a short supporting section
-- **AND** every required readiness status, error, and primary next step remains visible outside the disclosure
-
-#### Scenario: Incomplete readiness remains advisory in MVP2
-
-- **WHEN** an RP Admin or RP User (Edit) submits or continues work on an Application that is not submit-ready
-- **THEN** the portal preserves incomplete indicators for partner and oversight visibility
-- **AND** any hard gating decision remains outside Partner Portal for MVP2
-
-#### Scenario: Complete Application is marked submit-ready
-
-- **WHEN** an RP Admin or RP User (Edit) completes required Application sections and confirmed contacts
-- **THEN** the portal marks the Application submit-ready
-- **AND** it uses that status in the Application hub, onboarding summaries, and review context
-
-#### Scenario: Child configuration state contributes context without replacing parent readiness
-
-- **WHEN** an Application owns zero, one, or several RP configurations in different lifecycle states
-- **THEN** the Readiness page may show a separate summary of those child states
-- **AND** one child's environment or lifecycle does not overwrite another child or redefine the parent Application's canonical metadata
-
-### Requirement: Environment progression remains explicit per named RP configuration
-
-The system SHALL allow independent Test, Staging, and Production RP
-configurations under one Application. Progression SHALL select one explicit
-source configuration and create a distinct named target configuration. The
-target SHALL receive an explicitly entered Partner environment; progression
-SHALL NOT copy or infer it from the source. It SHALL NOT infer a unique source
-or target from CanadaLogin environment and SHALL NOT overwrite an existing
-same-environment configuration.
-
-RP Admin and RP User (Edit) SHALL prepare and request progression. CL Admin
-SHALL record internal production review outcomes. Read Only SHALL view
-permitted progression status without mutation.
-
-#### Scenario: Test and staging RP configuration creation remains allowed
-
-- **WHEN** an RP Admin or RP User (Edit) creates or updates a named configuration targeting Test or Staging
-- **THEN** the portal allows that work without requiring a Production approval outcome first
-- **AND** another configuration in the same CanadaLogin environment does not block it when the normalized name differs
-
-#### Scenario: Partner can start at staging when test is unnecessary
-
-- **WHEN** an RP Admin or RP User (Edit) creates a Staging configuration and Test is not required
-- **THEN** the portal allows the onboarding record to proceed without a Test configuration
-- **AND** it preserves the chosen Application, configuration identity, Partner environment, and CanadaLogin environment path
-
-#### Scenario: Test to staging progression creates a distinct named target
-
-- **WHEN** an authorized editor requests progression from one selected Test configuration to Staging
-- **THEN** the portal requires a valid target configuration name and target Partner environment and creates a distinct Staging draft
-- **AND** it records the source configuration UUID and copies only allowlisted reusable answers
-- **AND** it does not copy or infer Partner environment from the source configuration
-- **AND** it does not overwrite or implicitly select another existing Staging configuration
-- **AND** it marks the progression as self-serve
-
-#### Scenario: Staging to production progression creates a reviewed target
-
-- **WHEN** an authorized editor requests progression from one selected Staging configuration to Production
-- **THEN** the portal requires a valid target configuration name and target Partner environment, creates a distinct Production draft, and records the selected source UUID
-- **AND** it does not copy or infer Partner environment from the source configuration
-- **AND** it creates or associates the review-tracked promotion request with that chosen Production target
-- **AND** it does not treat the target as approved or launched until CL Admin records the review outcome
-
-#### Scenario: Several promotion families coexist
-
-- **WHEN** one Application has several Test, Staging, or Production configurations
-- **THEN** each progression and review identifies its source and target configuration UUIDs
-- **AND** matching CanadaLogin environments or names in another environment do not imply lineage, replacement, or approval
-
-#### Scenario: Legacy source does not supply the target Partner environment
-
-- **WHEN** an authorized editor progresses an in-scope retained source whose Partner environment is `Not provided`
-- **THEN** the source remains selectable when the editor supplies a valid Partner environment for the new target
-- **AND** progression does not copy, infer, or require remediation of the missing source value as a precondition for creating that target
 
 ### Requirement: CL Admin explicitly adopts one retained RP registration into one Application
 
@@ -1499,3 +1062,580 @@ workspace, Application, or permission.
 - **THEN** the portal returns a safe validation or not-found response
 - **AND** the retained candidate remains unlinked and unchanged
 
+### Requirement: RP configuration copying creates an independent named draft
+
+The portal SHALL let an RP Admin or RP User (Edit) copy one explicitly
+selected RP configuration to a distinct named draft under the same Application
+and workspace. The editor SHALL explicitly supply the target configuration
+name and Partner environment and SHALL select Test, Staging, or Production as
+the target CanadaLogin environment. The target MAY use the same CanadaLogin
+environment as the source.
+
+Copy SHALL preserve the source without mutation, SHALL NOT select or overwrite
+an existing sibling by name or environment, and SHALL record the selected
+source as safe lineage. It SHALL transfer only the centrally reviewed
+allowlist of reusable, non-secret answers. It SHALL NOT copy or infer the
+target configuration name, Partner environment, endpoints, application,
+redirect, or logout URLs, credentials, secrets, provider identifiers,
+certificates, private keys, offline or JWK key material, review outcomes,
+audit history, or another environment-specific value.
+
+The copy operation SHALL require an idempotency key, current write authority,
+and active workspace/Application/source ancestry. A copy to Production SHALL
+create a draft only and SHALL NOT create, submit, approve, or advance a
+Production-review request. Production review remains a separate explicit
+action for the chosen Production configuration.
+
+Read Only SHALL view permitted source and lineage status without copying. CL
+Admin SHALL NOT gain partner configuration-copy authority merely from platform
+administration authority.
+
+#### Scenario: Authorized editor starts Copy configuration from one source
+
+- **WHEN** an RP Admin or RP User (Edit) chooses `Copy configuration` for an authorized RP configuration
+- **THEN** the portal opens a focused copy form that identifies the source by safe configuration name, Partner environment, and CanadaLogin environment
+- **AND** it does not label the action Promote, Progress, or next environment
+
+#### Scenario: Copy can target the same CanadaLogin environment
+
+- **WHEN** an authorized editor copies one selected Staging configuration and selects Staging as the target
+- **THEN** the portal permits a distinct target configuration with a new configuration name and explicit Partner environment
+- **AND** the source and target may represent different Partner environments connected to the same CanadaLogin environment
+
+#### Scenario: Copy can target any supported CanadaLogin environment
+
+- **WHEN** an authorized editor copies a Test, Staging, or Production source and selects Test, Staging, or Production as the target
+- **THEN** the service evaluates the explicit supported target rather than deriving a next environment
+- **AND** it does not reject the copy merely because the target equals the source, precedes the source, or is not the old next-environment path
+
+#### Scenario: Copy requires explicit target identity and Partner environment
+
+- **WHEN** an authorized editor submits the copy form
+- **THEN** the target configuration name, target Partner environment, and target CanadaLogin environment are explicit validated inputs
+- **AND** the portal does not copy, infer, or silently reuse the source configuration name or Partner environment
+
+#### Scenario: Copy preserves the source and never overwrites a sibling
+
+- **WHEN** a valid copy request commits
+- **THEN** the service creates a distinct draft/version 1 under the same Application and records the selected source lineage
+- **AND** the source and every existing sibling remain unchanged
+- **AND** an environment match or similar display name never selects an overwrite target
+
+#### Scenario: Copy transfers only allowlisted reusable answers
+
+- **WHEN** the source contains reusable questionnaire answers on the reviewed copy allowlist
+- **THEN** the target receives those values through one centralized copy policy
+- **AND** the policy is versioned and covered by positive and negative field tests
+- **AND** the new draft resumes at the earliest required setup step not satisfied by the copied values
+
+#### Scenario: Environment-specific and secret fields remain unset
+
+- **WHEN** the source contains endpoints, URLs, redirect or logout URIs, credentials, secrets, provider identifiers, certificates, private keys, offline or JWK key material, review outcomes, or audit history
+- **THEN** the target does not receive those values
+- **AND** the copy page tells the editor that environment-specific setup and credentials must be completed separately
+
+#### Scenario: Copy to Production does not create a review request
+
+- **WHEN** an authorized editor copies a selected source to a Production target
+- **THEN** the portal creates only the new Production draft and its safe source lineage
+- **AND** it creates no Production-review request and does not present the draft as submitted, approved, launched, deployed, or promoted
+- **AND** an authorized editor may later choose the separate `Request Production review` action for that selected target
+
+#### Scenario: Several copy lineages coexist
+
+- **WHEN** one Application has several copied Test, Staging, or Production configurations
+- **THEN** each target records its selected source public identity without inferring lineage from name or environment
+- **AND** matching CanadaLogin environments do not imply replacement, approval, or a unique family
+
+#### Scenario: Retried copy creates at most one target
+
+- **WHEN** the same authorized copy request is retried with the same idempotency key and equivalent payload
+- **THEN** the service returns the original successful result without creating another configuration
+- **AND** an incompatible replay returns the standard idempotency conflict without partial mutation
+
+#### Scenario: Legacy source does not supply missing target metadata
+
+- **WHEN** an authorized editor copies an in-scope retained source whose Partner environment is `Not provided`
+- **THEN** the source remains eligible when the editor explicitly supplies valid target identity, Partner environment, and CanadaLogin environment
+- **AND** copy does not infer the missing source value or require source remediation before creating the target
+
+#### Scenario: Unauthorized or mismatched copy fails safely
+
+- **WHEN** the actor lacks copy authority or the source does not belong to the selected active workspace and Application
+- **THEN** the service creates no target, lineage, review request, provider mutation, or partial audit payload
+- **AND** it returns the standard safe unavailable or denied result without revealing the owning hierarchy
+
+#### Scenario: Independent configuration creation remains available
+
+- **WHEN** an authorized editor does not need reusable answers from a source
+- **THEN** the portal continues to allow an independent named Test, Staging, or Production configuration under the selected Application
+- **AND** several configurations may target the same CanadaLogin environment when their required identities are valid
+
+#### Scenario: Copy audit remains minimized
+
+- **WHEN** a copy succeeds or reaches an auditable failure outcome
+- **THEN** the portal records only the permitted actor, source and target public identifiers, selected target environment, outcome, correlation identifier, and timestamp
+- **AND** copied answers, endpoints, credentials, secrets, invitation data, unnecessary personal information, and raw provider payloads are absent from audit and operational logs
+
+#### Scenario: Legacy progression API delegates to copy without implicit review
+
+- **WHEN** an authorized compatibility caller submits the existing source-scoped POST `/progression` request with its required idempotency key and valid Staging or Production target payload
+- **THEN** the adapter delegates to the same copy service and preserves the existing 201 lineage-and-draft response shape, validation status, safe error envelope, and idempotent replay behavior
+- **AND** the deprecated `promotionStatus` response field is `null` and `selfServe` identifies target creation as self-service
+- **AND** a Production target creates no Production-review request or review-state transition
+- **AND** callers use the separate Production-review endpoint when that later intention applies
+
+#### Scenario: Legacy progression API cannot broaden copy scope
+
+- **WHEN** a compatibility caller requests an unsupported target, changes the payload for an existing idempotency key, lacks current write authority, or names a mismatched hierarchy
+- **THEN** the adapter returns the existing safe validation, conflict, unavailable, or denied contract as applicable
+- **AND** it creates no target, review request, provider mutation, or partial lineage
+
+### Requirement: Production review uses a separate traceable request for one Production configuration
+
+The system SHALL track an explicit Production-review request when CanadaLogin
+review occurs outside the portal. When no request exists, no Production-review
+status SHALL exist. A created request SHALL start as `pending`, and only a
+traceable CL Admin outcome SHALL change it to `approved` or `rejected`. The
+portal SHALL NOT use
+`launched` or the retired generic onboarding lifecycle as Production-review
+status. A Production-review
+request SHALL identify the parent Application and one explicitly selected
+Production RP configuration. It MAY record a source configuration as optional
+lineage when the target was copied, but source lineage SHALL NOT be required
+and SHALL NOT be inferred from CanadaLogin environment.
+
+RP Admin and RP User (Edit) SHALL explicitly create a `pending` request when
+none exists and MAY update permitted partner-owned reference/context metadata
+only while that request remains pending. They SHALL NOT change reviewer or
+outcome metadata or reset an `approved` or `rejected` request. CL Admin SHALL
+record only the traceable terminal `approved` or `rejected` out-of-band
+outcome. Read Only SHALL view permitted status without changing it. A later
+review cycle or resubmission SHALL require a separately approved contract and
+SHALL NOT overwrite prior outcome history. Copying a configuration SHALL NOT
+create, submit, update, approve, or otherwise advance this request.
+
+A retained historical review row whose legacy status cannot be mapped safely
+to the canonical vocabulary SHALL NOT be treated as an absent request. The
+portal SHALL return a safe reconciliation-required response without
+serializing a canonical status, overwriting that row, or creating a replacement
+request. Resolving such a row requires a separately approved reconciliation
+that preserves its prior history.
+
+#### Scenario: Production review request captures review metadata
+
+- **WHEN** an RP Admin or RP User (Edit) explicitly creates the first review request for one selected Production configuration
+- **THEN** the portal stores the parent Application, Production configuration identifier, `pending` status, external review reference, reviewing CL Admin identity or team metadata when assigned, and relevant timestamps
+- **AND** it stores a source configuration identifier only when explicit copy lineage exists
+- **AND** it does not infer source or target identity from CanadaLogin environment alone
+
+#### Scenario: Partner editor updates only pending request metadata
+
+- **WHEN** an RP Admin or RP User (Edit) updates permitted external reference or partner-owned context for an existing pending request
+- **THEN** the request remains `pending` and retains its original creation trace plus the metadata-change actor and time
+- **AND** the partner cannot set reviewer identity, outcome, `approved`, or `rejected`
+
+#### Scenario: Terminal Production-review outcome cannot be reset by a partner
+
+- **WHEN** an RP Admin or RP User (Edit) attempts to update or resubmit a request whose CL Admin outcome is `approved` or `rejected`
+- **THEN** the portal rejects the mutation without changing the terminal request or its history
+- **AND** it does not infer a new review cycle, replace the prior external reference, or return the request to `pending`
+
+#### Scenario: Production review can target an independently created configuration
+
+- **WHEN** an authorized editor requests review for a Production configuration that was created independently without a copy source
+- **THEN** the portal accepts the request without inventing source lineage
+- **AND** the selected Production configuration remains the authoritative review target
+
+#### Scenario: CL Admin records production review outcome
+
+- **WHEN** a CL Admin records the latest out-of-band Production review result for the chosen target configuration
+- **THEN** the portal records `approved` or `rejected` plus reviewer metadata and outcome time against the existing request
+- **AND** partner roles cannot perform the review-only transition
+
+#### Scenario: Production-bound record cannot appear approved without review trace
+
+- **WHEN** a Production target lacks the required CL Admin review outcome or external reference
+- **THEN** the portal does not present that configuration as approved
+- **AND** it identifies the missing review-traceability data to authorized roles without creating or exposing free-form internal review notes
+
+#### Scenario: Copy does not create Production review
+
+- **WHEN** an authorized editor copies any source to a Production draft
+- **THEN** no Production-review request or status exists until the editor explicitly starts one for that selected target
+- **AND** oversight and partner-facing surfaces do not present the copy as review work
+
+#### Scenario: Ambiguous historical review remains unchanged until reconciliation
+
+- **WHEN** a retained historical review row has no safely mapped canonical Production-review status
+- **THEN** the portal does not serialize it as `pending`, `approved`, `rejected`, or absent
+- **AND** secret-free RP-configuration list and detail summary projections identify that reconciliation is required instead of displaying `Not requested`
+- **AND** the canonical cross-workspace Production-review queue omits that unreconciled historical row until an approved reconciliation establishes a canonical request
+- **AND** partner roles, Read Only, and CL Admin cannot update, decide, reset, or replace that row
+- **AND** creating a canonical pending request requires a separately approved reconciliation that preserves the historical row and its audit history
+
+### Requirement: Checklist and CATS evidence support an explicit Production review request
+
+The system SHALL make Application-level onboarding checklist progress, CATS
+evidence availability, and contextual process links visible on
+the focused Application Checklist and evidence page before an authorized
+editor requests Production review for one selected Production RP
+configuration. A CATS evidence record MAY ultimately be an upload, an external
+reference, or both; this change SHALL NOT select the mechanism or implement
+evidence persistence. Until a later approved change supplies that mechanism,
+the page SHALL show an explicit `not configured / no Partner Portal record`
+state rather than fabricating a traceable record. The review
+context SHALL identify the selected Application, the Production target, and
+its source configuration when lineage exists without inferring identity from
+environment.
+
+RP Admin and RP User (Edit) SHALL update permitted partner-owned checklist
+inputs. CATS evidence mutation SHALL remain unavailable until its mechanism is
+approved separately. Read Only SHALL view the checklist and current evidence-
+availability state. CL Admin SHALL
+view only the checklist/evidence and Production-review metadata permitted by
+its status-visibility purpose and SHALL NOT record free-form internal notes or
+internal checklist outcomes. The compact Application hub MAY identify directly
+sourced missing-input attention but SHALL NOT calculate an overall score,
+completion count, or `submit-ready` state or duplicate full controls.
+
+Copying a configuration, including copying to Production, SHALL NOT imply that
+checklist/evidence has been completed or that Production review was requested.
+
+#### Scenario: Authorized partner reviews Production prerequisites
+
+- **WHEN** an authorized partner user opens Application Checklist and evidence
+- **THEN** the portal displays directly sourced checklist item statuses, current CATS evidence availability, and relevant process links permitted to that role
+- **AND** when no mechanism is configured, it explicitly states that no Partner Portal evidence record exists and does not offer a fabricated upload or reference control
+- **AND** it identifies the parent Application
+
+#### Scenario: Production review points to checklist and evidence context
+
+- **WHEN** an authorized partner user or CL Admin opens the explicit Production-review record for a named Production configuration
+- **THEN** the portal identifies the parent Application, selected Production target, and explicit source lineage when it exists
+- **AND** it presents a non-blocking warning and link to review the focused checklist and current CATS evidence-availability context without duplicating evidence controls or inventing a portal hard gate
+
+#### Scenario: Missing prerequisites are highlighted before production review
+
+- **WHEN** tracked checklist items remain incomplete or the CATS evidence mechanism/record is unavailable
+- **THEN** the focused checklist page highlights those directly sourced gaps
+- **AND** the Production-review page points to that context before an authorized partner creates or updates a pending explicit request
+- **AND** the hard gate remains outside Partner Portal for MVP2
+
+#### Scenario: Production copy remains separate from checklist and review
+
+- **WHEN** an authorized editor creates a Production draft by copying another configuration
+- **THEN** Application checklist/evidence and review-request state remain unchanged
+- **AND** the copy success page points to the appropriate setup or checklist/evidence task without completing or submitting either one implicitly
+
+### Requirement: Application-scoped RP configuration registration uses a recoverable draft and completion flow
+
+The portal SHALL implement the OIDC questionnaire as a PAT-019 route-per-step
+flow beneath one authorized workspace, Application, and server-side RP
+configuration with an incomplete editable draft. Intermediate persistence
+SHALL update only that draft, distinguish incomplete saved data from a
+completed step, and SHALL NOT complete the questionnaire or create or advance
+Production review. Only the explicit final questionnaire-completion action
+from a completely valid Review state SHALL record immutable technical
+completion metadata and end mutation through the draft flow.
+
+The configuration Edit entry SHALL use this registration matrix:
+
+| Registration condition | Edit behavior | Mutation behavior |
+|---|---|---|
+| Incomplete editable draft | Resume the earliest incomplete permitted step | Permit authorized, conflict-protected draft writes |
+| Questionnaire technically complete | Return to the configuration hub with a localized completed explanation | No questionnaire mutation through the draft flow; separately permitted top-level metadata and focused operations remain distinct |
+| Missing, unknown, stale, parent-mismatched, or out-of-scope | Fail closed through safe detail, not-found, or denied behavior | No mutation |
+
+For a server-backed draft, the flow SHALL pair its six-step progress indicator
+with a separate semantic `Registration steps` navigation. Available completed
+steps other than the current step SHALL be links, the current step SHALL be a
+non-link identified with `aria-current="step"`, and prerequisite-blocked
+future steps SHALL be labelled non-links. Availability SHALL come from server-
+validated contiguous progress; the navigation SHALL NOT make the progress
+indicator interactive or imply that validation can be skipped.
+
+Choosing a completed step SHALL NOT silently save, validate, complete, or
+submit current work. Back, completed-step links, Cancel, parent or breadcrumb
+links, header destinations, and language switching SHALL preserve current input
+or warn before any loss. The portal SHALL let the user remain on the current
+step with that input when the warning is cancelled. Confirmed navigation that
+cannot carry the current input SHALL use the last server-saved draft.
+
+#### Scenario: User starts an RP configuration draft
+
+- **WHEN** an authorized editor starts registration from `/workspaces/$workspaceUuid/applications/$applicationUuid/rp-configurations/new`
+- **THEN** the portal opens Basics without inventing a configuration UUID or placeholder row
+- **AND** the unsaved Basics route does not expose a completed-step link before a server-backed draft exists
+- **AND** successful Basics validation creates one server-backed RP configuration in `draft` with the required parent Application, configuration name, Partner environment, and CanadaLogin environment
+- **AND** the create request uses one opaque idempotency key for that new-flow attempt
+- **AND** the created representation uses draft version `1`, records `basics` as the last completed step, and exposes opaque workspace, Application, and configuration UUIDs
+- **AND** the portal opens the nested `registration/endpoints` route and can later resume safely
+
+#### Scenario: Retried draft creation does not create a duplicate
+
+- **WHEN** a valid Basics create request is retried with the same idempotency key, actor, workspace, Application, and normalized Basics payload including Partner environment after an ambiguous result
+- **THEN** the backend returns the same RP-configuration draft rather than creating another record
+- **AND** it does not increment, reset, or otherwise change draft version or completed-step state merely because the create request was retried
+- **AND** reusing that key with different input or scope fails with safe `409` code `registration_draft_creation_conflict`
+- **AND** the key contains no personal or questionnaire data and conveys no authorization
+
+#### Scenario: Invalid Basics does not create a placeholder draft
+
+- **WHEN** a user selects Continue on the nested new-configuration Basics route without a valid configuration name, Partner environment, CanadaLogin environment, or Application context
+- **THEN** the page remains on Basics and displays an error summary plus field-level errors
+- **AND** the backend creates no RP row, UUID, placeholder name, or registration completion
+- **AND** the portal warns before navigation can discard unsaved input
+
+#### Scenario: Valid Basics can establish a draft before exit
+
+- **WHEN** a user selects Save and exit on Basics with a valid configuration name, Partner environment, CanadaLogin environment, and Application parent
+- **THEN** the backend creates one server-backed RP configuration in `draft` and returns its UUID and draft version
+- **AND** the portal returns to the RP-configuration hub or its Application-scoped list with a contained resume path
+- **AND** invalid minimum Basics remains on the form without promising durable recovery
+
+#### Scenario: User resumes an existing RP configuration draft
+
+- **WHEN** an authorized user opens the nested Edit route for an RP configuration still in `draft`
+- **THEN** the portal resumes at the earliest incomplete permitted canonical step
+- **AND** a legacy Edit entry authorizes and redirects to that route rather than rendering the retired long questionnaire
+
+#### Scenario: Draft API exposes typed hierarchy identifiers
+
+- **WHEN** an authorized editor creates, reads, resumes, or updates a registration draft
+- **THEN** the API response exposes public workspace, Application, and RP-configuration UUIDs, configuration name, nullable Partner environment for compatibility, CanadaLogin environment, editable-draft or technical-completion metadata, draft version, last completed step, and typed authorized answers
+- **AND** it does not expose internal integer IDs, repository models, untyped payloads, policy internals, secret key material, or fields outside authorized scope
+
+#### Scenario: Generic legacy questionnaire detail and update operations are retired
+
+- **WHEN** a caller attempts the deprecated generic `GET` or `PATCH /workspaces/{workspaceUuid}/applications/{rpConfigurationUuid}` operation
+- **THEN** the API exposes no such operation and returns the standard safe unavailable response
+- **AND** authorized reads use the typed nested summary, configuration, or registration-draft contract appropriate to the task
+- **AND** questionnaire writes use the versioned draft contract while the questionnaire remains incomplete
+- **AND** the compatibility surface cannot expose internal integer identifiers or untyped questionnaire payloads and cannot mutate a technically completed questionnaire
+
+#### Scenario: Migrated draft resumes from validated contiguous progress
+
+- **WHEN** an existing draft predates registration-flow metadata and has no stored completed-step marker
+- **THEN** the backend validates stored answers in recorded step order and derives only the last contiguous completed step
+- **AND** non-contiguous later answers do not unlock a future step or Review
+- **AND** missing or invalid data resumes at the earliest incomplete permitted step
+- **AND** a missing Partner environment keeps Basics incomplete and blocks final questionnaire completion until an authorized editor supplies a valid value
+
+#### Scenario: Completed RP configurations are not editable through the draft flow
+
+- **WHEN** an authorized user requests draft Edit for a configuration whose questionnaire is technically complete
+- **THEN** the portal returns to the configuration hub with a localized completed explanation
+- **AND** it does not create or mutate a draft, revision, or completed questionnaire answer
+- **AND** separately permitted top-level metadata and focused operations remain available through their own contracts
+- **AND** an amendment or reopen workflow is not inferred
+
+#### Scenario: Unknown or stale registration state fails closed
+
+- **WHEN** flow entry or a write observes missing, unknown, stale, changed, or parent-mismatched registration metadata
+- **THEN** the portal uses the standard safe detail, not-found, conflict, or denied behavior
+- **AND** it does not expose or mutate draft data
+
+#### Scenario: Flow presents the recorded step sequence
+
+- **WHEN** an authorized user progresses through a draft
+- **THEN** the flow presents Basics, Endpoints, Client and access, Signing, Encryption, and Review as six ordered steps
+- **AND** each step has one clear heading and only its questionnaire fields and dependent guidance
+- **AND** Confirmation follows successful questionnaire completion outside the six-step progress indicator
+
+#### Scenario: Saved draft exposes completed-step navigation
+
+- **WHEN** an authorized user opens or resumes a server-backed draft
+- **THEN** a semantic navigation landmark labelled `Registration steps` presents all six localized step names in their recorded order
+- **AND** each available completed step other than the current step is a link to its canonical nested route
+- **AND** the current step is a non-link identified with `aria-current="step"`
+- **AND** each prerequisite-blocked future step is a labelled non-link rather than an unavailable link or control
+- **AND** Review becomes available only while every prerequisite step remains valid
+- **AND** the progress indicator itself is not used as the step-navigation control
+
+#### Scenario: Navigation away from a registration step protects unsaved input
+
+- **WHEN** a user chooses Back, a completed-step link, Cancel, a parent/breadcrumb/header destination, or language switching and that navigation would discard input that differs from the last server-saved draft
+- **THEN** the portal warns that the navigation will leave those unsaved changes behind
+- **AND** cancelling keeps the user on the current step with the input intact
+- **AND** confirming opens the selected destination using the last server-saved draft when the input cannot be carried safely
+- **AND** route navigation does not implicitly save, validate, mark work complete, unlock Review, complete the questionnaire, or create or advance Production review
+
+#### Scenario: Continue validates and saves only the current draft
+
+- **WHEN** a user selects Continue on a registration step
+- **THEN** the portal validates the current step and displays an error summary plus field-level errors when invalid
+- **AND** valid input is saved to the server-backed draft before the next step opens
+- **AND** future-step fields are not required merely to persist or complete the current step
+- **AND** the transition does not complete the questionnaire or create or advance Production review
+
+#### Scenario: Stale draft write fails without overwriting newer work
+
+- **WHEN** a user submits a draft write or final questionnaire completion with an expected version older than the current editable draft
+- **THEN** the backend rejects it with `409` code `registration_draft_version_conflict`
+- **AND** it does not merge, overwrite, complete, or disclose the newer draft through the stale request
+- **AND** the page offers a safe reload path before changes can be retried
+
+#### Scenario: Back and Save and exit preserve recoverable work
+
+- **WHEN** a user selects Back or Save and exit after a draft exists
+- **THEN** Back follows the unsaved-input protection before opening the previous permitted step and does not discard server-saved answers
+- **AND** Save and exit may persist safe partial current-step answers while marking an invalid step incomplete
+- **AND** partial persistence does not make Review valid, complete the questionnaire, or create or advance Production review
+- **AND** Save and exit returns to the configuration hub or Application-scoped configuration list with a clear resume path
+
+#### Scenario: Cancel preserves the last server-saved draft
+
+- **WHEN** a user chooses Cancel during registration
+- **THEN** the portal warns before discarding unsaved current-step input when it exists
+- **AND** it leaves the last successfully saved draft available to resume
+- **AND** it returns to the configuration hub or Application-scoped list without deleting or completing the draft
+
+#### Scenario: Earlier changes invalidate dependent answers visibly
+
+- **WHEN** a user changes an earlier answer that makes later conditional answers invalid or inapplicable
+- **THEN** the portal clears or invalidates those dependent answers according to questionnaire rules
+- **AND** it identifies later steps that require review before questionnaire completion
+- **AND** the affected later steps cease to be completed-step links and Review relocks until contiguous progress is valid again
+
+#### Scenario: Direct future-step access recovers safely
+
+- **WHEN** a user requests a step not yet available because earlier steps are incomplete
+- **THEN** the portal routes to the earliest incomplete permitted step
+- **AND** it explains what must be completed without revealing another workspace, Application, configuration, or draft
+
+#### Scenario: Review summarizes pending questionnaire completion
+
+- **WHEN** all questionnaire steps are valid and the user opens Review
+- **THEN** the page groups values pending final questionnaire completion into an itemized summary
+- **AND** each group has a localized Change link to the corresponding completed step
+- **AND** configuration name, parent Application, Partner environment, CanadaLogin environment, important consequences, and the single final completion action are clear
+
+#### Scenario: Final questionnaire completion occurs once
+
+- **WHEN** an authorized user confirms final questionnaire completion with the expected draft version
+- **THEN** the backend rechecks authorization, workspace/Application/configuration ancestry, current editable-draft condition, and the complete active questionnaire
+- **AND** it conditionally checks the version and records immutable technical completion metadata exactly once in one transaction without assigning a product onboarding state
+- **AND** a retry observing the same configuration already complete returns the authorized completed representation without another transition, side effect, or audit event
+- **AND** draft creation, saves, completion, and retry recovery do not call, provision, update, or synchronize IBM Verify or another external system
+- **AND** completion does not create or advance a Production-review request
+- **AND** success opens the nested Confirmation route
+
+#### Scenario: Confirmation provides useful next steps
+
+- **WHEN** final questionnaire completion succeeds
+- **THEN** Confirmation states that registration information is complete and explains the available next tasks without presenting a generic onboarding status
+- **AND** it links to the RP-configuration hub, parent Application, and selected workspace as applicable
+- **AND** it does not ask the user to complete the same draft again
+- **AND** it offers a separate Production-review request only when the selected configuration and current authorization make that task applicable
+
+#### Scenario: Refresh and network failure preserve safe recovery
+
+- **WHEN** the user refreshes a step or a draft save fails because of a network or server error
+- **THEN** the portal preserves the last server-saved draft and safely recoverable current input
+- **AND** the affected step shows a scoped error and clear retry, save, or return action
+- **AND** the error does not imply that unsaved input or final questionnaire completion succeeded
+
+#### Scenario: Session expiry resumes an authorized draft
+
+- **WHEN** the session expires during registration and the user completes applicable admission flows again
+- **THEN** the portal resumes the same draft and equivalent step when current workspace/Application/configuration authorization still permits it
+- **AND** revoked or changed scope uses safe denied or parent-return behavior instead of rendering draft data
+
+#### Scenario: Language switching keeps equivalent draft context
+
+- **WHEN** a user changes official language from a registration step
+- **THEN** the header language control opens the equivalent step for the same authorized draft
+- **AND** saved input is retained and unsaved input is preserved or explicitly warned before loss
+- **AND** step labels, completed/current/blocked navigation states, fields, hints, errors, Review, Change links, Confirmation, and accessible names have English and French parity
+- **AND** configuration name, Partner environment, and other person-entered values are not translated or duplicated
+
+#### Scenario: Sensitive questionnaire content stays out of unsafe client surfaces
+
+- **WHEN** registration answers include a public certificate, public JWK, endpoint, or other potentially sensitive configuration data
+- **THEN** the portal does not place those values in URLs, query parameters, analytics, diagnostic logs, or unstructured local storage
+- **AND** backend authorization and the existing data-handling boundary apply to every read and write
+- **AND** private or symmetric key material is rejected rather than stored
+
+#### Scenario: Draft audit and operational events exclude answer values
+
+- **WHEN** the backend records draft creation, successful save, stale-version conflict, denied write, or final questionnaire completion
+- **THEN** the event may identify actor reference, workspace/Application/configuration references, step ID, save mode, safe changed field names, result, timestamp, and correlation identifier
+- **AND** it does not contain questionnaire values, contact values, certificate or JWK content, credentials, tokens, or unnecessary personal information
+
+### Requirement: Application task hub exposes approved onboarding work
+
+The portal SHALL provide
+`/workspaces/$workspaceUuid/applications/$applicationUuid` as the canonical
+Application entry page. It SHALL use the localized Application name as its H1,
+show only concise sourced overview and item-level attention context, and link
+to focused Details, Checklist and evidence, Contacts, and RP configurations.
+For an authorized editor, it SHALL expose a secondary capability-gated
+Application management section whose `Delete application` link opens a focused
+confirmation page.
+
+The hub SHALL NOT embed full metadata sections, edit forms, contact records,
+contact forms, checklist/evidence detail, RP questionnaires, Usage results,
+credential values, review notes/outcomes, overall readiness scores/counts, or
+destructive controls. Navigation to a focused confirmation page is not itself
+a destructive control.
+
+#### Scenario: Authorized user opens an Application hub
+
+- **WHEN** an authorized role opens an in-scope Application
+- **THEN** the page shows the localized Application name in one H1
+- **AND** it may show a concise overview, safe contact/configuration counts, and directly sourced checklist/evidence attention without a generic lifecycle or readiness score
+- **AND** each permitted task appears as one single-destination link or GC Design System card
+
+#### Scenario: Application task availability follows capability
+
+- **WHEN** RP Admin, RP User (Edit), Read Only, or CL Admin opens an Application hub
+- **THEN** the hub exposes only task destinations permitted by that role and Application scope
+- **AND** hidden task links do not replace direct-route and backend authorization
+
+#### Scenario: Checklist and evidence summary links to focused detail
+
+- **WHEN** the Application has tracked checklist items, required artifacts, CATS evidence availability, or process links
+- **THEN** the hub may identify directly sourced missing-input attention without calculating an overall result
+- **AND** an authorized user can follow a contained link to the focused Checklist and evidence page
+- **AND** the hub does not render the complete checklist, evidence detail, or Production-review controls inline
+
+#### Scenario: Contacts and RP configurations use focused destinations
+
+- **WHEN** an authorized user needs to view or manage contacts or RP configurations
+- **THEN** the Application hub links to the corresponding focused collection page
+- **AND** it does not place an inline create or edit form on the hub
+
+#### Scenario: Empty Application exposes direct first-configuration creation
+
+- **WHEN** an Application owns no RP configurations and an RP Admin or RP User (Edit) opens its hub
+- **THEN** the hub presents a prominent `Create first RP configuration` action
+- **AND** the action opens the selected Application's nested create route without asking the user to choose the workspace or Application again
+- **AND** a user without RP-configuration write capability does not receive the create action
+
+#### Scenario: Existing configurations are a leading Application task
+
+- **WHEN** an Application owns one or more RP configurations
+- **THEN** the hub presents RP configurations as a leading focused destination with its safe record count and explicit registration/Production-review context when applicable
+- **AND** it does not embed a second configuration collection or a global context chooser
+
+#### Scenario: Application deletion is secondary and focused
+
+- **WHEN** an authorized editor opens an Application hub
+- **THEN** a quiet `Delete application` link appears under a secondary `Application management` heading after the primary tasks
+- **AND** the portal does not expose `Application settings` as a user-facing task or card
+- **AND** the link opens a dedicated confirmation page that revalidates authorization and retained-child safeguards before any deletion
+
+#### Scenario: Application children preserve parent navigation
+
+- **WHEN** an authorized user opens an Application child page
+- **THEN** breadcrumbs identify Home, Partner workspaces, the selected workspace, and the Application parent as applicable
+- **AND** a stable translated parent link returns to the Application hub or its owning collection without relying on browser history
+- **AND** raw UUIDs are not used as friendly labels
+
+#### Scenario: Application pages remain focused and responsive
+
+- **WHEN** an Application hub or focused child is used with keyboard navigation, assistive technology, a small viewport, long French content, or 200-percent zoom
+- **THEN** heading, source, visual, focus, and task order remain logical
+- **AND** content reflows without clipping or horizontal task scrolling
+- **AND** a details disclosure does not hide a required status, error, form field, instruction, or primary action

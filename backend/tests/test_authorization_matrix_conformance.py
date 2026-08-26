@@ -3,7 +3,6 @@
 from itertools import product
 
 import pytest
-
 from src.app.core.authorization import (
     CANONICAL_ROLE_CODES,
     ROLE_PERMISSION_MATRIX,
@@ -15,7 +14,7 @@ from src.app.core.authorization import (
 EXPECTED_CAPABILITIES: dict[CanonicalRoleCode, frozenset[Capability]] = {
     CanonicalRoleCode.CL_ADMIN: frozenset(
         {
-            Capability.PLATFORM_GOVERNANCE,
+            Capability.ACCESS_ADMINISTRATION,
             Capability.PARTNER_BOOTSTRAP,
             Capability.CL_ADMIN_ASSIGNMENT,
             Capability.RP_ADMIN_ASSIGNMENT,
@@ -23,7 +22,6 @@ EXPECTED_CAPABILITIES: dict[CanonicalRoleCode, frozenset[Capability]] = {
             Capability.CROSS_WORKSPACE_METADATA_READ,
             Capability.ONBOARDING_OVERSIGHT_READ,
             Capability.PRODUCTION_REVIEW,
-            Capability.AGGREGATE_REPORT_READ,
         }
     ),
     CanonicalRoleCode.RP_ADMIN: frozenset(
@@ -36,12 +34,8 @@ EXPECTED_CAPABILITIES: dict[CanonicalRoleCode, frozenset[Capability]] = {
             Capability.RP_CONFIGURATION_WRITE,
             Capability.PARTNER_SECRET_READ,
             Capability.PARTNER_SECRET_LIFECYCLE,
-            Capability.PROMOTION_REQUEST_WRITE,
-            Capability.CATS_FIELDS_WRITE,
+            Capability.PRODUCTION_REVIEW_REQUEST_WRITE,
             Capability.MAU_REPORT_READ,
-            Capability.AGGREGATE_REPORT_READ,
-            Capability.PARTNER_AUDIT_READ,
-            Capability.PARTNER_AUDIT_SENSITIVE_FIELDS_READ,
             Capability.PARTNER_INVITATION_MANAGE,
             Capability.PARTNER_STAFF_ASSIGNMENT,
         }
@@ -55,12 +49,8 @@ EXPECTED_CAPABILITIES: dict[CanonicalRoleCode, frozenset[Capability]] = {
             Capability.RP_CONFIGURATION_WRITE,
             Capability.PARTNER_SECRET_READ,
             Capability.PARTNER_SECRET_LIFECYCLE,
-            Capability.PROMOTION_REQUEST_WRITE,
-            Capability.CATS_FIELDS_WRITE,
+            Capability.PRODUCTION_REVIEW_REQUEST_WRITE,
             Capability.MAU_REPORT_READ,
-            Capability.AGGREGATE_REPORT_READ,
-            Capability.PARTNER_AUDIT_READ,
-            Capability.PARTNER_AUDIT_SENSITIVE_FIELDS_READ,
         }
     ),
     CanonicalRoleCode.READ_ONLY: frozenset(
@@ -69,8 +59,6 @@ EXPECTED_CAPABILITIES: dict[CanonicalRoleCode, frozenset[Capability]] = {
             Capability.APPLICATION_INFORMATION_READ,
             Capability.RP_CONFIGURATION_READ,
             Capability.MAU_REPORT_READ,
-            Capability.AGGREGATE_REPORT_READ,
-            Capability.PARTNER_AUDIT_READ,
         }
     ),
 }

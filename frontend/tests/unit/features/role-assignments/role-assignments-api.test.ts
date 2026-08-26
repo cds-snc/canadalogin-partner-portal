@@ -4,9 +4,12 @@ import {
 	assignWorkspaceRole,
 	getClAdminAssignmentEligibility,
 	getClAdminRoleAssignments,
+	getWorkspaceRoleAssignment,
 	getWorkspaceRoleAssignments,
+	replaceWorkspaceRoleAssignment,
 	replaceWorkspaceRole,
 	revokeClAdminRole,
+	revokeWorkspaceRoleAssignment,
 	revokeWorkspaceRole,
 	searchWorkspaceRoleAssignmentCandidates,
 } from "@/fetch/role-assignments";
@@ -158,6 +161,45 @@ describe("canonical role-assignment API", () => {
 		expect(fetchMock).toHaveBeenNthCalledWith(
 			5,
 			`${base}/role-assignments/candidate-uuid-1`,
+			expect.objectContaining({ method: "DELETE" })
+		);
+	});
+
+	it("uses the focused assignment UUID contract for direct record operations", async () => {
+		const fetchMock = vi
+			.spyOn(globalThis, "fetch")
+			.mockResolvedValueOnce(jsonResponse(assignment))
+			.mockResolvedValueOnce(
+				jsonResponse({ ...assignment, role: "rp_user_edit" })
+			)
+			.mockResolvedValueOnce(jsonResponse({ message: "revoked" }));
+
+		await getWorkspaceRoleAssignment("workspace/uuid", "assignment/uuid");
+		await replaceWorkspaceRoleAssignment(
+			"workspace/uuid",
+			"assignment/uuid",
+			"rp_user_edit"
+		);
+		await revokeWorkspaceRoleAssignment("workspace/uuid", "assignment/uuid");
+
+		const url =
+			"http://localhost:8000/api/v1/workspaces/workspace%2Fuuid/access/assignments/assignment%2Fuuid";
+		expect(fetchMock).toHaveBeenNthCalledWith(
+			1,
+			url,
+			expect.objectContaining({ cache: "no-store", method: "GET" })
+		);
+		expect(fetchMock).toHaveBeenNthCalledWith(
+			2,
+			url,
+			expect.objectContaining({
+				body: JSON.stringify({ role: "rp_user_edit" }),
+				method: "PATCH",
+			})
+		);
+		expect(fetchMock).toHaveBeenNthCalledWith(
+			3,
+			url,
 			expect.objectContaining({ method: "DELETE" })
 		);
 	});

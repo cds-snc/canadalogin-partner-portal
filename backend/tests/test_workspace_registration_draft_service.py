@@ -1,18 +1,18 @@
 import json
 import logging
+from datetime import UTC, datetime
 from pathlib import Path
 from unittest.mock import AsyncMock, patch
 
 import pytest
 from src.app.core.exceptions.http_exceptions import (
     BadRequestException,
+    NotFoundException,
     RegistrationDraftConflictException,
 )
 from src.app.core.logging_privacy import hash_log_value
-from src.app.schemas.onboarding import (
-    WorkspaceRPApplicationOnboardingLifecycleTransitionRequest,
-)
 from src.app.schemas.rp_application import (
+    WorkspaceRPApplicationRegistrationCompletionRequest,
     WorkspaceRPApplicationRegistrationCreate,
     WorkspaceRPApplicationRegistrationDraftCreate,
     WorkspaceRPApplicationRegistrationDraftPatch,
@@ -23,6 +23,7 @@ WORKSPACE_UUID = "018f6f83-0000-0000-0000-000000000201"
 APPLICATION_UUID = "018f6f83-0000-0000-0000-000000000701"
 CREATION_KEY = "018f6f83-0000-0000-0000-000000000801"
 APPLICATION_INFORMATION_UUID = "018f6f83-0000-0000-0000-000000000901"
+COMPLETED_AT = datetime(2026, 8, 25, 19, 0, tzinfo=UTC)
 ENDPOINTS_CONTRACT_PATH = Path(__file__).resolve().parents[2] / "tests/contracts/workspace-rp-registration-endpoints-complete-step.json"
 
 
@@ -53,9 +54,9 @@ def _draft(**overrides: object) -> dict:
             "service_name_en": "Benefits Portal",
             "service_name_fr": "Portail des prestations",
         },
-        "onboarding_state": "draft",
         "registration_draft_version": 1,
         "registration_last_completed_step": "basics",
+        "registration_completed_at": None,
         "uuid": APPLICATION_UUID,
         "workspace_id": 9,
         **overrides,
@@ -121,6 +122,50 @@ def _complete_answers() -> dict:
         exclude={"application_information_uuid", "configuration_name", "partner_environment"},
         exclude_none=True,
     )
+
+
+@pytest.mark.asyncio
+async def test_completed_registration_has_no_readable_draft(mock_db) -> None:
+    service = _service()
+    service._get_workspace_rp_application = AsyncMock(  # type: ignore[method-assign]
+        return_value=_draft(registration_completed_at=COMPLETED_AT)
+    )
+
+    with pytest.raises(NotFoundException, match="Registration draft not found"):
+        await service.get_workspace_rp_application_registration_draft(
+            db=mock_db,
+            workspace_uuid=WORKSPACE_UUID,
+            rp_application_uuid=APPLICATION_UUID,
+            current_user={"id": 42},
+        )
+
+    service._resolve_workspace_application_information_uuid.assert_not_awaited()  # type: ignore[attr-defined]
+
+
+@pytest.mark.asyncio
+async def test_completed_registration_cannot_be_patched_as_a_draft(mock_db) -> None:
+    service = _service()
+    service._get_workspace_rp_application = AsyncMock(  # type: ignore[method-assign]
+        return_value=_draft(registration_completed_at=COMPLETED_AT)
+    )
+    payload = WorkspaceRPApplicationRegistrationDraftPatch(
+        expectedDraftVersion=1,
+        registrationAnswers={"serviceNameEn": "Changed after completion"},
+        saveMode="partial",
+        stepId="basics",
+    )
+
+    with pytest.raises(NotFoundException, match="Registration draft not found"):
+        await service.update_workspace_rp_application_registration_draft(
+            db=mock_db,
+            workspace_uuid=WORKSPACE_UUID,
+            rp_application_uuid=APPLICATION_UUID,
+            payload=payload,
+            current_user={"id": 42},
+            correlation_id="request-completed-draft",
+        )
+
+    service._resolve_workspace_application_information_uuid.assert_not_awaited()  # type: ignore[attr-defined]
 
 
 @pytest.mark.asyncio
@@ -320,7 +365,7 @@ async def test_completed_step_update_is_versioned_and_path_scope_conditional(
 
     update_kwargs = applications.update.await_args.kwargs
     assert update_kwargs["workspace_id"] == 9
-    assert update_kwargs["onboarding_state"] == "draft"
+    assert update_kwargs["registration_completed_at"] is None
     assert update_kwargs["registration_draft_version"] == 1
     assert update_kwargs["object"]["registration_draft_version"] == 2
     assert update_kwargs["object"]["oidc_registration_payload"]["post_logout_redirect_uris"] == ["https://benefits.canada.ca/signed-out"]
@@ -334,9 +379,9 @@ async def test_completed_step_update_is_versioned_and_path_scope_conditional(
         "configuration_name",
         "partner_environment",
         "oidc_registration_payload",
-        "onboarding_state",
         "registration_draft_version",
         "registration_last_completed_step",
+        "registration_completed_at",
     ]
     assert result["registration_last_completed_step"] == "endpoints"
     assert result["registration_draft_version"] == 2
@@ -473,29 +518,29 @@ async def test_future_step_and_stale_version_fail_without_writes(mock_db) -> Non
 
 
 @pytest.mark.asyncio
-async def test_final_submission_is_complete_versioned_and_atomic(mock_db, caplog) -> None:
+async def test_final_completion_is_complete_versioned_and_atomic(mock_db, caplog) -> None:
     service = _service()
     existing = _draft(
         registration_draft_version=3,
         registration_last_completed_step="encryption",
         oidc_registration_payload=_complete_answers(),
     )
-    submitted = _draft(
-        onboarding_state="submitted",
+    completed = _draft(
+        registration_completed_at=COMPLETED_AT,
         registration_draft_version=4,
         registration_last_completed_step="encryption",
         oidc_registration_payload=_complete_answers(),
     )
     service._get_workspace_rp_application = AsyncMock(return_value=existing)  # type: ignore[method-assign]
-    payload = WorkspaceRPApplicationOnboardingLifecycleTransitionRequest(
-        targetState="submitted",
-        expectedDraftVersion=3,
-    )
+    payload = WorkspaceRPApplicationRegistrationCompletionRequest(expectedDraftVersion=3)
 
-    with patch("src.app.services.workspace_service.crud_rp_applications") as applications:
-        applications.update = AsyncMock(return_value=submitted)
+    with (
+        patch("src.app.services.workspace_service.crud_rp_applications") as applications,
+        patch("src.app.services.workspace_service.crud_rp_application_promotion_requests") as production_reviews,
+    ):
+        applications.update = AsyncMock(return_value=completed)
         with caplog.at_level(logging.INFO):
-            result = await service.transition_workspace_rp_application_onboarding_state(
+            result = await service.complete_workspace_rp_application_registration(
                 db=mock_db,
                 workspace_uuid=WORKSPACE_UUID,
                 rp_application_uuid=APPLICATION_UUID,
@@ -507,10 +552,10 @@ async def test_final_submission_is_complete_versioned_and_atomic(mock_db, caplog
     update = applications.update.await_args.kwargs
     assert update["workspace_id"] == 9
     assert update["uuid"] == APPLICATION_UUID
-    assert update["onboarding_state"] == "draft"
+    assert update["registration_completed_at"] is None
     assert update["registration_draft_version"] == 3
     assert update["is_deleted"] is False
-    assert update["object"]["onboarding_state"] == "submitted"
+    assert update["object"]["registration_completed_at"] is not None
     assert update["object"]["registration_draft_version"] == 4
     assert update["return_columns"] == [
         "uuid",
@@ -518,29 +563,34 @@ async def test_final_submission_is_complete_versioned_and_atomic(mock_db, caplog
         "configuration_name",
         "partner_environment",
         "oidc_registration_payload",
-        "onboarding_state",
         "registration_draft_version",
         "registration_last_completed_step",
+        "registration_completed_at",
     ]
     assert result == {
         "workspace_uuid": WORKSPACE_UUID,
+        "application_information_uuid": APPLICATION_INFORMATION_UUID,
         "rp_application_uuid": APPLICATION_UUID,
-        "onboarding_state": "submitted",
+        "registration_completed_at": "2026-08-25T19:00:00Z",
         "registration_draft_version": 4,
         "service_name_en": "Benefits Portal",
         "service_name_fr": "Portail des prestations",
     }
-    assert "event=final_submit" in caplog.text
+    assert "event=registration_complete" in caplog.text
     assert f"application_information_reference={hash_log_value(APPLICATION_INFORMATION_UUID)}" in caplog.text
     assert APPLICATION_INFORMATION_UUID not in caplog.text
     assert APPLICATION_UUID not in caplog.text
     assert "result=success" in caplog.text
     assert "correlation_id=request-789" in caplog.text
     assert "Benefits Portal" not in caplog.text
+    mock_db.add.assert_called_once()
+    mock_db.commit.assert_awaited_once()
+    production_reviews.create.assert_not_called()
+    production_reviews.update.assert_not_called()
 
 
 @pytest.mark.asyncio
-async def test_final_submission_rejects_stale_or_incomplete_draft_without_write(
+async def test_final_completion_rejects_stale_or_incomplete_draft_without_write(
     mock_db,
     caplog,
 ) -> None:
@@ -550,25 +600,19 @@ async def test_final_submission_rejects_stale_or_incomplete_draft_without_write(
     with patch("src.app.services.workspace_service.crud_rp_applications") as applications:
         applications.update = AsyncMock()
         with pytest.raises(RegistrationDraftConflictException) as conflict:
-            await service.transition_workspace_rp_application_onboarding_state(
+            await service.complete_workspace_rp_application_registration(
                 db=mock_db,
                 workspace_uuid=WORKSPACE_UUID,
                 rp_application_uuid=APPLICATION_UUID,
-                payload=WorkspaceRPApplicationOnboardingLifecycleTransitionRequest(
-                    targetState="submitted",
-                    expectedDraftVersion=0,
-                ),
+                payload=WorkspaceRPApplicationRegistrationCompletionRequest(expectedDraftVersion=0),
                 current_user={"id": 42},
             )
         with pytest.raises(BadRequestException, match="questionnaire must be complete"):
-            await service.transition_workspace_rp_application_onboarding_state(
+            await service.complete_workspace_rp_application_registration(
                 db=mock_db,
                 workspace_uuid=WORKSPACE_UUID,
                 rp_application_uuid=APPLICATION_UUID,
-                payload=WorkspaceRPApplicationOnboardingLifecycleTransitionRequest(
-                    targetState="submitted",
-                    expectedDraftVersion=1,
-                ),
+                payload=WorkspaceRPApplicationRegistrationCompletionRequest(expectedDraftVersion=1),
                 current_user={"id": 42},
             )
 
@@ -577,7 +621,7 @@ async def test_final_submission_rejects_stale_or_incomplete_draft_without_write(
 
 
 @pytest.mark.asyncio
-async def test_final_submission_rejects_complete_answers_when_partner_environment_is_missing(mock_db) -> None:
+async def test_final_completion_rejects_complete_answers_when_partner_environment_is_missing(mock_db) -> None:
     service = _service()
     service._get_workspace_rp_application = AsyncMock(  # type: ignore[method-assign]
         return_value=_draft(
@@ -591,14 +635,11 @@ async def test_final_submission_rejects_complete_answers_when_partner_environmen
     with patch("src.app.services.workspace_service.crud_rp_applications") as applications:
         applications.update = AsyncMock()
         with pytest.raises(BadRequestException, match="questionnaire must be complete"):
-            await service.transition_workspace_rp_application_onboarding_state(
+            await service.complete_workspace_rp_application_registration(
                 db=mock_db,
                 workspace_uuid=WORKSPACE_UUID,
                 rp_application_uuid=APPLICATION_UUID,
-                payload=WorkspaceRPApplicationOnboardingLifecycleTransitionRequest(
-                    targetState="submitted",
-                    expectedDraftVersion=3,
-                ),
+                payload=WorkspaceRPApplicationRegistrationCompletionRequest(expectedDraftVersion=3),
                 current_user={"id": 42},
             )
 
@@ -606,36 +647,33 @@ async def test_final_submission_rejects_complete_answers_when_partner_environmen
 
 
 @pytest.mark.asyncio
-async def test_final_submission_retry_returns_existing_submitted_record_without_write(
+async def test_final_completion_retry_returns_existing_completion_without_write(
     mock_db,
     caplog,
 ) -> None:
     service = _service()
-    submitted = _draft(
-        onboarding_state="submitted",
+    completed = _draft(
+        registration_completed_at=COMPLETED_AT,
         registration_draft_version=4,
         registration_last_completed_step="encryption",
         oidc_registration_payload=_complete_answers(),
     )
-    service._get_workspace_rp_application = AsyncMock(return_value=submitted)  # type: ignore[method-assign]
+    service._get_workspace_rp_application = AsyncMock(return_value=completed)  # type: ignore[method-assign]
 
     with patch("src.app.services.workspace_service.crud_rp_applications") as applications:
         applications.update = AsyncMock()
         with caplog.at_level(logging.INFO):
-            result = await service.transition_workspace_rp_application_onboarding_state(
+            result = await service.complete_workspace_rp_application_registration(
                 db=mock_db,
                 workspace_uuid=WORKSPACE_UUID,
                 rp_application_uuid=APPLICATION_UUID,
-                payload=WorkspaceRPApplicationOnboardingLifecycleTransitionRequest(
-                    targetState="submitted",
-                    expectedDraftVersion=3,
-                ),
+                payload=WorkspaceRPApplicationRegistrationCompletionRequest(expectedDraftVersion=3),
                 current_user={"id": 42},
             )
 
-    assert result["onboarding_state"] == "submitted"
+    assert result["registration_completed_at"] == "2026-08-25T19:00:00Z"
     assert result["registration_draft_version"] == 4
     assert result["rp_application_uuid"] == APPLICATION_UUID
     assert "oidc_registration_payload" not in result
-    assert "event=final_submit" not in caplog.text
+    assert "event=registration_complete" not in caplog.text
     applications.update.assert_not_awaited()

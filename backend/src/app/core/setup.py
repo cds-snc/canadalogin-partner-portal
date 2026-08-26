@@ -325,12 +325,22 @@ def create_application(
     validate_local_dev_session_configuration(settings)
 
     if isinstance(settings, AppSettings):
-        to_update = {
+        to_update: dict[str, Any] = {
             "title": settings.APP_NAME,
             "description": settings.APP_DESCRIPTION,
-            "contact": {"name": settings.CONTACT_NAME, "email": settings.CONTACT_EMAIL},
-            "license_info": {"name": settings.LICENSE_NAME},
         }
+        contact: dict[str, str] = {}
+        if settings.CONTACT_NAME:
+            contact["name"] = settings.CONTACT_NAME
+        if settings.CONTACT_EMAIL:
+            contact["email"] = settings.CONTACT_EMAIL
+        if contact:
+            to_update["contact"] = contact
+
+        license_name = settings.LICENSE_NAME.strip() if settings.LICENSE_NAME else ""
+        if license_name:
+            to_update["license_info"] = {"name": license_name}
+
         kwargs.update(to_update)
 
     if isinstance(settings, EnvironmentSettings):

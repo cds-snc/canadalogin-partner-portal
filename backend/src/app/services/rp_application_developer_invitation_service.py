@@ -4,7 +4,7 @@ import secrets
 import uuid as uuid_pkg
 from collections.abc import Mapping
 from datetime import UTC, datetime
-from typing import Any, cast
+from typing import Any, Literal, TypeAlias, cast
 
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -23,6 +23,15 @@ from ..core.authorization import (
 )
 from ..core.config import settings
 from ..core.exceptions.http_exceptions import BadRequestException, DuplicateValueException, ForbiddenException, NotFoundException
+from ..core.identity import (
+    AUTHENTICATED_EMAIL_KEY,
+    AUTHENTICATED_EMAIL_VERIFIED_KEY,
+    AUTHENTICATION_PROVIDER_KEY,
+    email_satisfies_partner_access_policy,
+    normalize_email_identity,
+)
+from ..core.logger import logging
+from ..core.logging_privacy import hash_log_value
 from ..models.audit_log import AuditLog
 from ..repositories.crud_rp_application_access_grants import crud_rp_application_access_grants
 from ..repositories.crud_rp_application_developer_invitations import crud_rp_application_developer_invitations
@@ -34,6 +43,7 @@ from ..schemas.authorization_audit import (
     AuthorizationAuditActor,
     AuthorizationAuditResult,
     InvitationTransitionAction,
+    InvitationTransitionAttemptAuditEvent,
     InvitationTransitionAuditEvent,
 )
 from ..schemas.rp_application import RPApplicationRead
@@ -75,6 +85,12 @@ VALID_INVITATION_STATUSES = frozenset(
         LifecycleStatus.REVOKED,
     }
 )
+logger = logging.getLogger(__name__)
+
+_InvitationAttemptAuditResult: TypeAlias = Literal[
+    AuthorizationAuditResult.DENIED,
+    AuthorizationAuditResult.FAILED,
+]
 
 
 class RPApplicationDeveloperInvitationService:
@@ -107,16 +123,12 @@ class RPApplicationDeveloperInvitationService:
             return None
 
     def _extract_current_user_email(self, current_user: Mapping[str, Any]) -> str | None:
-        for key in ("email", "mail"):
-            value = current_user.get(key)
-            if value is None:
-                continue
-
-            normalized = str(value).strip().lower()
-            if normalized:
-                return normalized
-
-        return None
+        if current_user.get(AUTHENTICATED_EMAIL_VERIFIED_KEY) is not True:
+            return None
+        provider = current_user.get(AUTHENTICATION_PROVIDER_KEY)
+        if not isinstance(provider, str) or not provider.strip():
+            return None
+        return normalize_email_identity(current_user.get(AUTHENTICATED_EMAIL_KEY))
 
     def _normalize_current_user_uuid(
         self,
@@ -143,10 +155,32 @@ class RPApplicationDeveloperInvitationService:
         return user_id, user_uuid
 
     def _normalize_email(self, invited_email: str) -> str:
-        normalized_email = str(invited_email).strip().lower()
-        if not normalized_email:
+        normalized_email = normalize_email_identity(invited_email)
+        if normalized_email is None:
             raise BadRequestException("Invited email is required")
         return normalized_email
+
+    def _email_satisfies_partner_access_policy(self, email: object) -> bool:
+        return email_satisfies_partner_access_policy(
+            email,
+            settings.PARTNER_ACCESS_ALLOWED_EMAIL_DOMAINS,
+        )
+
+    def _log_acceptance_denial(
+        self,
+        *,
+        reason_code: str,
+        invitation_uuid: object,
+        current_user: Mapping[str, Any],
+        correlation_id: str | None,
+    ) -> None:
+        logger.warning(
+            "Invitation acceptance denied reason=%s invitation_uuid=%s user_uuid=%s correlation_id=%s",
+            reason_code,
+            hash_log_value(invitation_uuid),
+            hash_log_value(current_user.get("uuid", "unknown")),
+            correlation_id or "none",
+        )
 
     def _canonicalize_invitation_role(self, role: Any) -> PartnerRoleCode:
         raw_role = str(role or "").strip()
@@ -184,7 +218,7 @@ class RPApplicationDeveloperInvitationService:
 
     def _build_acceptance_url(self, token: str) -> str:
         base_url = settings.RP_APPLICATION_INVITE_URL_BASE.rstrip("/")
-        return f"{base_url}/{token}"
+        return f"{base_url}/prepare#token={token}"
 
     def _hash_token(self, token: str) -> str:
         return hashlib.sha256(token.encode("utf-8")).hexdigest()
@@ -464,9 +498,11 @@ class RPApplicationDeveloperInvitationService:
         replacement_invitation_uuid: uuid_pkg.UUID | None = None,
         prior_invitation_uuid: uuid_pkg.UUID | None = None,
         reason_code: str | None = None,
+        correlation_id: str | None = None,
     ) -> None:
         event = InvitationTransitionAuditEvent(
             timestamp=timestamp,
+            correlation_id=correlation_id,
             actor=AuthorizationAuditActor(
                 type=(AuthorizationActorType.USER if actor_user_uuid is not None else AuthorizationActorType.SYSTEM),
                 user_uuid=actor_user_uuid,
@@ -497,6 +533,80 @@ class RPApplicationDeveloperInvitationService:
                 created_at=timestamp,
             )
         )
+
+    def _record_invitation_attempt_audit(
+        self,
+        db: AsyncSession,
+        *,
+        actor_user_uuid: uuid_pkg.UUID | None,
+        invitation_uuid: uuid_pkg.UUID,
+        workspace_uuid: uuid_pkg.UUID,
+        target_user_uuid: uuid_pkg.UUID | None,
+        role: PartnerRoleCode,
+        current_status: InvitationStatus,
+        result: _InvitationAttemptAuditResult,
+        reason_code: str,
+        correlation_id: str | None,
+        timestamp: datetime,
+    ) -> None:
+        event = InvitationTransitionAttemptAuditEvent(
+            timestamp=timestamp,
+            correlation_id=correlation_id,
+            actor=AuthorizationAuditActor(
+                type=(AuthorizationActorType.USER if actor_user_uuid is not None else AuthorizationActorType.SYSTEM),
+                user_uuid=actor_user_uuid,
+            ),
+            result=result,
+            action=InvitationTransitionAction.ACCEPT,
+            invitation_uuid=invitation_uuid,
+            workspace_uuid=workspace_uuid,
+            target_user_uuid=target_user_uuid,
+            role=role,
+            current_status=current_status,
+            reason_code=reason_code,
+        )
+        db.add(
+            AuditLog(
+                user=("authorization_actor" if actor_user_uuid is not None else "authorization_system"),
+                user_uuid=actor_user_uuid,
+                target="developer_invitation",
+                target_uuid=invitation_uuid,
+                operation="invite_accept",
+                description=json.dumps(
+                    event.model_dump(mode="json"),
+                    separators=(",", ":"),
+                ),
+                created_at=timestamp,
+            )
+        )
+
+    async def _commit_invitation_acceptance_attempt(
+        self,
+        db: AsyncSession,
+        *,
+        invitation_uuid: uuid_pkg.UUID,
+        workspace_uuid: uuid_pkg.UUID,
+        target_user_uuid: uuid_pkg.UUID,
+        role: PartnerRoleCode,
+        current_status: InvitationStatus,
+        result: _InvitationAttemptAuditResult,
+        reason_code: str,
+        correlation_id: str | None,
+    ) -> None:
+        self._record_invitation_attempt_audit(
+            db,
+            actor_user_uuid=target_user_uuid,
+            invitation_uuid=invitation_uuid,
+            workspace_uuid=workspace_uuid,
+            target_user_uuid=target_user_uuid,
+            role=role,
+            current_status=current_status,
+            result=result,
+            reason_code=reason_code,
+            correlation_id=correlation_id,
+            timestamp=datetime.now(UTC),
+        )
+        await db.commit()
 
     async def _find_target_user_by_email(
         self,
@@ -555,6 +665,7 @@ class RPApplicationDeveloperInvitationService:
         invitation: dict[str, Any],
         *,
         commit: bool = True,
+        correlation_id: str | None = None,
     ) -> dict[str, Any]:
         status = self._validate_invitation_status(invitation.get("status"))
         if status is not LifecycleStatus.PENDING:
@@ -599,6 +710,7 @@ class RPApplicationDeveloperInvitationService:
             new_status=LifecycleStatus.EXPIRED,
             timestamp=updated_at,
             reason_code="invite_expired",
+            correlation_id=correlation_id,
         )
         if commit:
             await db.commit()
@@ -739,7 +851,6 @@ class RPApplicationDeveloperInvitationService:
         role: str,
         invite_expires_at: datetime,
         delegated_by_grant_uuid: uuid_pkg.UUID | None,
-        gc_notify_notification_id: str | None = None,
         commit: bool = True,
     ) -> dict[str, Any]:
         raw_token = secrets.token_urlsafe(32)
@@ -756,7 +867,6 @@ class RPApplicationDeveloperInvitationService:
                 status=PENDING_INVITATION_STATUS,
                 revoked_by_user_id=None,
                 revocation_actor_source=None,
-                gc_notify_notification_id=gc_notify_notification_id,
                 delegated_by_grant_uuid=delegated_by_grant_uuid,
                 revocation_reason=None,
                 replaced_by_invitation_uuid=None,
@@ -813,6 +923,50 @@ class RPApplicationDeveloperInvitationService:
             reverse=True,
         )
 
+    async def get_developer_invitation(
+        self,
+        db: AsyncSession,
+        workspace_uuid: uuid_pkg.UUID | str,
+        invitation_uuid: uuid_pkg.UUID | str,
+        current_user: Mapping[str, Any],
+    ) -> dict[str, Any]:
+        """Read one workspace invitation without revealing mismatched ancestry."""
+
+        normalized_workspace_uuid = self._preauthorize_workspace_management_scope(
+            current_user,
+            workspace_uuid,
+        )
+        workspace_data, _ = await self._get_invitation_context(
+            db=db,
+            workspace_uuid=normalized_workspace_uuid,
+            rp_application_uuid=None,
+        )
+        await self._ensure_management_access(
+            db=db,
+            current_user=current_user,
+            workspace_id=workspace_data["id"],
+            workspace_uuid=workspace_data["uuid"],
+        )
+        invitation = await crud_rp_application_developer_invitations.get(
+            db=db,
+            uuid=invitation_uuid,
+            workspace_id=workspace_data["id"],
+            is_deleted=False,
+            schema_to_select=RPApplicationDeveloperInvitationReadInternal,
+        )
+        if invitation is None:
+            raise NotFoundException("Developer invitation not found")
+        invitation_data = await self._mark_invitation_expired_if_needed(
+            db=db,
+            invitation=self._as_dict(invitation),
+        )
+        authorization_state = get_resolved_authorization_state(current_user)
+        if authorization_state is None:
+            raise ForbiddenException("Canonical authorization state is required to manage developer invitations")
+        if not authorization_state.is_cl_admin and self._canonicalize_invitation_role(invitation_data.get("role")) not in DELEGATED_INVITATION_ROLES:
+            raise NotFoundException("Developer invitation not found")
+        return invitation_data
+
     async def create_developer_invitation(
         self,
         db: AsyncSession,
@@ -823,6 +977,7 @@ class RPApplicationDeveloperInvitationService:
         invited_email: str,
         role: str,
         invite_expires_at: datetime,
+        correlation_id: str | None = None,
     ) -> dict[str, Any]:
         normalized_workspace_uuid = self._preauthorize_workspace_management_scope(
             current_user,
@@ -843,6 +998,8 @@ class RPApplicationDeveloperInvitationService:
         actor_user_id, actor_user_uuid = self._require_current_user_actor(current_user)
 
         normalized_email = self._normalize_email(invited_email)
+        if not self._email_satisfies_partner_access_policy(normalized_email):
+            raise BadRequestException("Invited email is not eligible for partner access")
         target_user = await self._find_target_user_by_email(
             db,
             invited_email=normalized_email,
@@ -894,6 +1051,7 @@ class RPApplicationDeveloperInvitationService:
                 previous_status=None,
                 new_status=LifecycleStatus.PENDING,
                 timestamp=created_at,
+                correlation_id=correlation_id,
             )
             await db.commit()
             return created_invitation
@@ -928,21 +1086,120 @@ class RPApplicationDeveloperInvitationService:
 
         return False
 
-    async def accept_developer_invitation(
+    async def prepare_developer_invitation(
         self,
         db: AsyncSession,
         token: str,
-        current_user: Mapping[str, Any],
-    ) -> dict[str, Any]:
+        correlation_id: str | None = None,
+    ) -> uuid_pkg.UUID:
+        """Resolve one live bearer to an opaque session-safe invitation UUID."""
+
         normalized_token = str(token).strip()
         if not normalized_token:
-            raise NotFoundException("Developer invitation not found")
+            raise NotFoundException("Developer invitation is unavailable")
 
         invitation = await crud_rp_application_developer_invitations.get(
             db=db,
             token_hash=self._hash_token(normalized_token),
             is_deleted=False,
             schema_to_select=RPApplicationDeveloperInvitationReadInternal,
+        )
+        if invitation is None:
+            raise NotFoundException("Developer invitation is unavailable")
+
+        try:
+            invitation_data = await self._mark_invitation_expired_if_needed(
+                db=db,
+                invitation=self._as_dict(invitation),
+                correlation_id=correlation_id,
+            )
+            status = self._validate_invitation_status(invitation_data.get("status"))
+        except (BadRequestException, NotFoundException) as exc:
+            raise NotFoundException("Developer invitation is unavailable") from exc
+
+        # Accepted invitations remain eligible for the existing idempotent
+        # replay check. Expired and revoked bearers use the same public outcome
+        # as an unknown token.
+        if status not in {LifecycleStatus.PENDING, LifecycleStatus.ACCEPTED}:
+            raise NotFoundException("Developer invitation is unavailable")
+
+        invitation_uuid = invitation_data.get("uuid")
+        if not isinstance(invitation_uuid, uuid_pkg.UUID):
+            raise NotFoundException("Developer invitation is unavailable")
+        return invitation_uuid
+
+    async def accept_developer_invitation(
+        self,
+        db: AsyncSession,
+        token: str,
+        current_user: Mapping[str, Any],
+        correlation_id: str | None = None,
+    ) -> dict[str, Any]:
+        normalized_token = str(token).strip()
+        if not normalized_token:
+            raise NotFoundException("Developer invitation not found")
+
+        return await self._accept_developer_invitation_by_lookup(
+            db=db,
+            lookup_token_hash=self._hash_token(normalized_token),
+            current_user=current_user,
+            correlation_id=correlation_id,
+        )
+
+    async def accept_prepared_developer_invitation(
+        self,
+        db: AsyncSession,
+        invitation_uuid: uuid_pkg.UUID,
+        current_user: Mapping[str, Any],
+        correlation_id: str | None = None,
+    ) -> dict[str, Any]:
+        """Accept the invitation selected by the server-owned session."""
+
+        return await self._accept_developer_invitation_by_lookup(
+            db=db,
+            lookup_invitation_uuid=invitation_uuid,
+            current_user=current_user,
+            correlation_id=correlation_id,
+        )
+
+    async def _get_invitation_for_acceptance(
+        self,
+        db: AsyncSession,
+        *,
+        lookup_token_hash: str | None,
+        lookup_invitation_uuid: uuid_pkg.UUID | None,
+    ) -> dict[str, Any] | None:
+        if lookup_token_hash is not None:
+            return await crud_rp_application_developer_invitations.get(
+                db=db,
+                token_hash=lookup_token_hash,
+                is_deleted=False,
+                schema_to_select=RPApplicationDeveloperInvitationReadInternal,
+            )
+        if lookup_invitation_uuid is not None:
+            return await crud_rp_application_developer_invitations.get(
+                db=db,
+                uuid=lookup_invitation_uuid,
+                is_deleted=False,
+                schema_to_select=RPApplicationDeveloperInvitationReadInternal,
+            )
+        return None
+
+    async def _accept_developer_invitation_by_lookup(
+        self,
+        db: AsyncSession,
+        *,
+        lookup_token_hash: str | None = None,
+        lookup_invitation_uuid: uuid_pkg.UUID | None = None,
+        current_user: Mapping[str, Any],
+        correlation_id: str | None,
+    ) -> dict[str, Any]:
+        """Run the shared locked acceptance flow for a token or prepared UUID."""
+
+        invitation = await self._get_invitation_for_acceptance(
+            db,
+            lookup_token_hash=lookup_token_hash,
+            lookup_invitation_uuid=lookup_invitation_uuid,
         )
         if invitation is None:
             raise NotFoundException("Developer invitation not found")
@@ -959,14 +1216,50 @@ class RPApplicationDeveloperInvitationService:
             email=invited_email,
             target_user_id=target_user_id,
         )
+        attempt_context: (
+            tuple[
+                uuid_pkg.UUID,
+                uuid_pkg.UUID,
+                PartnerRoleCode,
+                InvitationStatus,
+            ]
+            | None
+        ) = None
+        attempt_recorded = False
+
+        async def record_attempt(
+            result: _InvitationAttemptAuditResult,
+            reason_code: str,
+        ) -> None:
+            nonlocal attempt_recorded
+            if attempt_context is None:
+                return
+            attempt_recorded = True
+            (
+                audit_invitation_uuid,
+                audit_workspace_uuid,
+                audit_role,
+                audit_status,
+            ) = attempt_context
+            await self._commit_invitation_acceptance_attempt(
+                db,
+                invitation_uuid=audit_invitation_uuid,
+                workspace_uuid=audit_workspace_uuid,
+                target_user_uuid=target_user_uuid,
+                role=audit_role,
+                current_status=audit_status,
+                result=result,
+                reason_code=reason_code,
+                correlation_id=correlation_id,
+            )
+
         try:
             # Re-read after the lifecycle lock so concurrent acceptance/reissue
             # cannot reuse a stale status or token outcome.
-            locked_invitation = await crud_rp_application_developer_invitations.get(
-                db=db,
-                token_hash=self._hash_token(normalized_token),
-                is_deleted=False,
-                schema_to_select=RPApplicationDeveloperInvitationReadInternal,
+            locked_invitation = await self._get_invitation_for_acceptance(
+                db,
+                lookup_token_hash=lookup_token_hash,
+                lookup_invitation_uuid=lookup_invitation_uuid,
             )
             if locked_invitation is None:
                 raise NotFoundException("Developer invitation not found")
@@ -975,24 +1268,86 @@ class RPApplicationDeveloperInvitationService:
                 db=db,
                 invitation=self._as_dict(locked_invitation),
                 commit=False,
+                correlation_id=correlation_id,
             )
             status = self._validate_invitation_status(invitation_data.get("status"))
             canonical_role = self._canonicalize_invitation_role(invitation_data.get("role"))
             invited_email = self._normalize_email(str(invitation_data.get("invited_email", "")))
-
-            if status is LifecycleStatus.REVOKED:
-                raise BadRequestException("Developer invitation is revoked")
-            if status is LifecycleStatus.EXPIRED:
-                await db.commit()
-                raise BadRequestException("Developer invitation is expired")
-
-            current_user_email = self._extract_current_user_email(current_user)
-            if current_user_email != invited_email:
-                raise ForbiddenException("Signed-in email does not match this invitation")
-            _, _, workspace_uuid = await self._validate_invitation_scope(
+            invitation_uuid = invitation_data.get("uuid")
+            if not isinstance(invitation_uuid, uuid_pkg.UUID):
+                raise NotFoundException("Developer invitation is unavailable")
+            workspace_uuid = await self._get_invitation_workspace_uuid(
                 db=db,
                 invitation=invitation_data,
             )
+            attempt_context = (
+                invitation_uuid,
+                workspace_uuid,
+                canonical_role,
+                status,
+            )
+
+            if status is LifecycleStatus.REVOKED:
+                await record_attempt(
+                    AuthorizationAuditResult.DENIED,
+                    "invitation_revoked",
+                )
+                raise BadRequestException("Developer invitation is revoked")
+            if status is LifecycleStatus.EXPIRED:
+                await record_attempt(
+                    AuthorizationAuditResult.DENIED,
+                    "invitation_expired",
+                )
+                raise BadRequestException("Developer invitation is expired")
+
+            current_user_email = self._extract_current_user_email(current_user)
+            if current_user_email is None:
+                self._log_acceptance_denial(
+                    reason_code="verified_email_unavailable",
+                    invitation_uuid=invitation_data.get("uuid"),
+                    current_user=current_user,
+                    correlation_id=correlation_id,
+                )
+                await record_attempt(
+                    AuthorizationAuditResult.DENIED,
+                    "verified_email_unavailable",
+                )
+                raise ForbiddenException("Developer invitation is unavailable")
+            if current_user_email != invited_email:
+                self._log_acceptance_denial(
+                    reason_code="verified_email_mismatch",
+                    invitation_uuid=invitation_data.get("uuid"),
+                    current_user=current_user,
+                    correlation_id=correlation_id,
+                )
+                await record_attempt(
+                    AuthorizationAuditResult.DENIED,
+                    "verified_email_mismatch",
+                )
+                raise ForbiddenException("Developer invitation is unavailable")
+            if not self._email_satisfies_partner_access_policy(current_user_email):
+                self._log_acceptance_denial(
+                    reason_code="email_domain_not_allowed",
+                    invitation_uuid=invitation_data.get("uuid"),
+                    current_user=current_user,
+                    correlation_id=correlation_id,
+                )
+                await record_attempt(
+                    AuthorizationAuditResult.DENIED,
+                    "email_domain_not_allowed",
+                )
+                raise ForbiddenException("Developer invitation is unavailable")
+            try:
+                _, _, workspace_uuid = await self._validate_invitation_scope(
+                    db=db,
+                    invitation=invitation_data,
+                )
+            except (BadRequestException, ForbiddenException, NotFoundException):
+                await record_attempt(
+                    AuthorizationAuditResult.DENIED,
+                    "invitation_scope_unavailable",
+                )
+                raise
 
             if status is LifecycleStatus.ACCEPTED:
                 access_grant = await self._get_replay_access_grant(
@@ -1048,6 +1403,7 @@ class RPApplicationDeveloperInvitationService:
                 previous_status=LifecycleStatus.PENDING,
                 new_status=LifecycleStatus.ACCEPTED,
                 timestamp=accepted_at,
+                correlation_id=correlation_id,
             )
             await db.commit()
             return {
@@ -1057,9 +1413,27 @@ class RPApplicationDeveloperInvitationService:
             }
         except IntegrityError as exc:
             await db.rollback()
+            if not attempt_recorded:
+                await record_attempt(
+                    AuthorizationAuditResult.FAILED,
+                    "invitation_acceptance_conflict",
+                )
             raise DuplicateValueException("Invitation acceptance conflicts with an existing partner role or lineage") from exc
+        except DuplicateValueException:
+            await db.rollback()
+            if not attempt_recorded:
+                await record_attempt(
+                    AuthorizationAuditResult.DENIED,
+                    "invitation_acceptance_conflict",
+                )
+            raise
         except Exception:
             await db.rollback()
+            if not attempt_recorded:
+                await record_attempt(
+                    AuthorizationAuditResult.FAILED,
+                    "invitation_acceptance_failed",
+                )
             raise
 
     async def revoke_developer_invitation(
@@ -1069,6 +1443,7 @@ class RPApplicationDeveloperInvitationService:
         rp_application_uuid: uuid_pkg.UUID | str | None,
         invitation_uuid: uuid_pkg.UUID | str,
         current_user: Mapping[str, Any],
+        correlation_id: str | None = None,
     ) -> dict[str, Any]:
         normalized_workspace_uuid = self._preauthorize_workspace_management_scope(
             current_user,
@@ -1124,6 +1499,7 @@ class RPApplicationDeveloperInvitationService:
                 db=db,
                 invitation=locked_invitation_data,
                 commit=False,
+                correlation_id=correlation_id,
             )
 
             status = self._validate_invitation_status(invitation_data.get("status"))
@@ -1169,6 +1545,7 @@ class RPApplicationDeveloperInvitationService:
                 new_status=LifecycleStatus.REVOKED,
                 timestamp=revoked_at,
                 reason_code="revoked_by_authorized_actor",
+                correlation_id=correlation_id,
             )
             await db.commit()
             return invitation_data
@@ -1185,6 +1562,7 @@ class RPApplicationDeveloperInvitationService:
         current_user: Mapping[str, Any],
         *,
         invite_expires_at: datetime,
+        correlation_id: str | None = None,
     ) -> dict[str, Any]:
         normalized_workspace_uuid = self._preauthorize_workspace_management_scope(
             current_user,
@@ -1246,6 +1624,7 @@ class RPApplicationDeveloperInvitationService:
                 db=db,
                 invitation=locked_invitation_data,
                 commit=False,
+                correlation_id=correlation_id,
             )
             status = self._validate_invitation_status(invitation_data.get("status"))
             if status is LifecycleStatus.ACCEPTED:
@@ -1323,6 +1702,7 @@ class RPApplicationDeveloperInvitationService:
                 timestamp=reissued_at,
                 prior_invitation_uuid=invitation_data["uuid"],
                 reason_code="reissued",
+                correlation_id=correlation_id,
             )
             if status in {LifecycleStatus.PENDING, LifecycleStatus.REVOKED}:
                 await crud_rp_application_developer_invitations.update(
@@ -1350,6 +1730,7 @@ class RPApplicationDeveloperInvitationService:
                     timestamp=revoked_at,
                     replacement_invitation_uuid=created_invitation["uuid"],
                     reason_code="reissued",
+                    correlation_id=correlation_id,
                 )
             await db.commit()
             return created_invitation

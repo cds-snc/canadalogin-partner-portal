@@ -15,7 +15,6 @@ const createUserFixture = (): Record<string, unknown> => ({
 	email: "jane@example.com",
 	profileImageUrl: "https://example.com/avatar.png",
 	termsVersion: "v1",
-	tierUuid: "tier-uuid-2",
 	username: "jane@example.com",
 });
 
@@ -131,10 +130,8 @@ describe("fetch auth", () => {
 	});
 
 	it("adds locale and redirect parameters to the backend OIDC login URL when provided", () => {
-		expect(
-			getOidcLoginUrl("fr", "/invitations/rp-applications/token-123")
-		).toBe(
-			"http://localhost:8000/api/v1/auth/oidc/login?ui_locales=fr&redirect=%2Finvitations%2Frp-applications%2Ftoken-123"
+		expect(getOidcLoginUrl("fr", "/invitations/rp-applications/accept")).toBe(
+			"http://localhost:8000/api/v1/auth/oidc/login?ui_locales=fr&redirect=%2Finvitations%2Frp-applications%2Faccept"
 		);
 	});
 });

@@ -1,7 +1,8 @@
 import uuid as uuid_pkg
 from datetime import datetime
+from typing import Literal
 
-from pydantic import BaseModel, ConfigDict, EmailStr, Field
+from pydantic import BaseModel, ConfigDict, EmailStr, Field, field_validator
 from pydantic.alias_generators import to_camel
 
 from ..core.authorization import (
@@ -63,7 +64,6 @@ class RPApplicationDeveloperInvitationReadInternal(PersistentDeletion):
     revoked_at: datetime | None = None
     revoked_by_user_id: int | None = None
     revocation_actor_source: RevocationActorSource | None = None
-    gc_notify_notification_id: str | None = None
     delegated_by_grant_uuid: uuid_pkg.UUID | None = None
     revocation_reason: str | None = None
     replaced_by_invitation_uuid: uuid_pkg.UUID | None = None
@@ -101,7 +101,7 @@ class RPApplicationDeveloperInvitationWriteResponse(RPApplicationDeveloperInvita
     acceptance_url: str
 
 
-class RPApplicationDeveloperInvitationAcceptRequest(BaseModel):
+class RPApplicationDeveloperInvitationPrepareRequest(BaseModel):
     model_config = ConfigDict(
         extra="forbid",
         validate_by_name=True,
@@ -110,7 +110,30 @@ class RPApplicationDeveloperInvitationAcceptRequest(BaseModel):
         populate_by_name=True,
     )
 
-    token: str = Field(..., min_length=1)
+    token: str = Field(..., min_length=1, max_length=512)
+
+    @field_validator("token", mode="before")
+    @classmethod
+    def redact_invalid_token_before_constraint_validation(cls, value: object) -> object:
+        """Prevent validation details from reflecting malformed bearer input."""
+
+        if not isinstance(value, str) or not 1 <= len(value) <= 512:
+            return ""
+        return value
+
+
+class RPApplicationDeveloperInvitationPrepareResponse(BaseModel):
+    model_config = ConfigDict(
+        extra="ignore",
+        frozen=True,
+        validate_by_name=True,
+        validate_by_alias=True,
+        alias_generator=to_camel,
+        populate_by_name=True,
+        serialize_by_alias=True,
+    )
+
+    prepared: Literal[True] = True
 
 
 class RPApplicationDeveloperInvitationAcceptResponse(BaseModel):
@@ -144,7 +167,6 @@ class RPApplicationDeveloperInvitationCreateInternal(BaseModel):
     revoked_at: datetime | None = None
     revoked_by_user_id: int | None = None
     revocation_actor_source: RevocationActorSource | None = None
-    gc_notify_notification_id: str | None = Field(None, max_length=64)
     delegated_by_grant_uuid: uuid_pkg.UUID | None = None
     revocation_reason: str | None = Field(None, max_length=255)
     replaced_by_invitation_uuid: uuid_pkg.UUID | None = None
@@ -161,7 +183,6 @@ class RPApplicationDeveloperInvitationUpdate(BaseModel):
     revoked_at: datetime | None = None
     revoked_by_user_id: int | None = None
     revocation_actor_source: RevocationActorSource | None = None
-    gc_notify_notification_id: str | None = Field(None, max_length=64)
     delegated_by_grant_uuid: uuid_pkg.UUID | None = None
     revocation_reason: str | None = Field(None, max_length=255)
     replaced_by_invitation_uuid: uuid_pkg.UUID | None = None

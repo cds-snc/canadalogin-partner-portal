@@ -3,7 +3,6 @@ import {
 	createEmptyWorkspaceRPApplicationForm,
 	getWorkspaceRPApplicationStepFieldErrorKeys,
 	toWorkspaceRPApplicationDraftFormState,
-	toWorkspaceRPApplicationFormState,
 	toWorkspaceRPApplicationRegistrationAnswers,
 	validateWorkspaceRPApplicationForm,
 	validateWorkspaceRPApplicationStep,
@@ -118,48 +117,6 @@ describe("workspace-rp-application-form", () => {
 		});
 	});
 
-	it("hydrates edit form state from the workspace RP application read model", () => {
-		const form = toWorkspaceRPApplicationFormState(
-			{
-				applicationInformationId: 14,
-				canadaLoginEnvironment: "production",
-				createdAt: "2026-07-31T10:05:00Z",
-				createdBy: 7,
-				dnrAppName: "Benefits Portal",
-				id: 21,
-				isDeleted: false,
-				oidcRegistrationPayload: {
-					application_environment_url_en: "https://benefits.canada.ca",
-					application_environment_url_fr: "https://prestations.canada.ca",
-					client_auth_method: "client_secret_basic",
-					client_type: "confidential",
-					logout_mode: "front_channel",
-					logout_uri: "https://benefits.canada.ca/logout",
-					pkce_supported: true,
-					pkce_algorithms: ["S256"],
-					redirect_uris: ["https://benefits.canada.ca/callback"],
-					requested_scopes: ["openid", "profile"],
-					sector_identifier: "https://benefits.canada.ca",
-					service_name_en: "Benefits Portal",
-					service_name_fr: "Portail des prestations",
-					supports_authorization_code_flow: true,
-				},
-				status: "active",
-				uuid: "rp-application-uuid-1",
-				workspaceId: 9,
-			},
-			"application-information-uuid-1"
-		);
-
-		expect(form.applicationInformationUuid).toBe(
-			"application-information-uuid-1"
-		);
-		expect(form.canadaLoginEnvironment).toBe("production");
-		expect(form.redirectUris).toBe("https://benefits.canada.ca/callback");
-		expect(form.requestedScopes).toEqual(["openid", "profile"]);
-		expect(form.supportsAuthorizationCodeFlow).toBe("yes");
-	});
-
 	it("flags invalid questionnaire combinations before save", () => {
 		const form: ReturnType<typeof createEmptyWorkspaceRPApplicationForm> = {
 			...createEmptyWorkspaceRPApplicationForm(),
@@ -260,7 +217,7 @@ describe("workspace-rp-application-form", () => {
 		const form = toWorkspaceRPApplicationDraftFormState({
 			applicationInformationUuid: "application-information-uuid-1",
 			configurationName: "Staging integration A",
-			onboardingState: "draft",
+			registrationCompletedAt: null,
 			registrationAnswers: {
 				canadaLoginEnvironment: "staging",
 				redirectUris: ["https://benefits.canada.ca/callback"],

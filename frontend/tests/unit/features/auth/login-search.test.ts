@@ -42,6 +42,9 @@ describe("login-search", () => {
 		"/\\evil.example/path",
 		"javascript:alert(1)",
 		"/unknown-product-route",
+		"/departments",
+		"/tiers",
+		"/policies",
 	])("rejects unsafe or unknown intended destination %s", (target) => {
 		expect(sanitizeAppPath(target, "/support")).toBe("/support");
 	});
@@ -54,11 +57,14 @@ describe("login-search", () => {
 		).toBe("/workspaces/workspace-uuid/settings");
 	});
 
-	it("preserves a tokenized invitation path without copying extra query state", () => {
+	it("preserves only the static invitation acceptance path", () => {
 		expect(
 			sanitizeAppPath(
-				"/invitations/rp-applications/token-123?capability=platform_governance"
+				"/invitations/rp-applications/accept?capability=access_administration"
 			)
-		).toBe("/invitations/rp-applications/token-123");
+		).toBe("/invitations/rp-applications/accept");
+		expect(
+			sanitizeAppPath("/invitations/rp-applications/raw-token", "/support")
+		).toBe("/support");
 	});
 });

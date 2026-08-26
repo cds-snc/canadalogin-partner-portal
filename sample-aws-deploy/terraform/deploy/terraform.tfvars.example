@@ -50,6 +50,7 @@ oidc_provider_name         = "CanadaLogin"
 oidc_server_metadata_url  = "https://tenant.ibm.com/auth2/.well-known/openid-configuration"
 oidc_client_id            = "1234567890"
 oidc_scopes               = "openid profile email"
+partner_access_allowed_email_domains = ["department.example.gc.ca"]
 oidc_access_denied_redirect = "https://test.cloudfront.net/access-denied"
 oidc_post_login_redirect = "/auth-complete"
 oidc_redirect_path ="/api/v1/auth/oidc/callback"

@@ -5,7 +5,6 @@ from src.app.schemas.rp_application import (
     WorkspaceRPApplicationRegistrationDraftCreate,
     WorkspaceRPApplicationRegistrationDraftPatch,
     WorkspaceRPApplicationRegistrationDraftRead,
-    WorkspaceRPApplicationRegistrationUpdate,
 )
 
 
@@ -218,19 +217,3 @@ class TestWorkspaceRPApplicationRegistrationSchemas:
             match="request_encryption_roadmap is required when request_encryption_supported is false",
         ):
             WorkspaceRPApplicationRegistrationCreate(**payload)
-
-    def test_update_allows_partial_questionnaire_changes(self) -> None:
-        payload = WorkspaceRPApplicationRegistrationUpdate(
-            request_signing_supported=False,
-            request_signing_roadmap=False,
-        )
-
-        assert payload.request_signing_supported is False
-        assert payload.request_signing_roadmap is False
-
-    def test_update_requires_private_key_distribution_when_switching_auth_method(self) -> None:
-        with pytest.raises(
-            ValidationError,
-            match="private_key_distribution_method is required when client_auth_method is private_key_jwt",
-        ):
-            WorkspaceRPApplicationRegistrationUpdate(client_auth_method="private_key_jwt")

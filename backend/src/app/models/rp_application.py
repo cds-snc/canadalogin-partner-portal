@@ -98,10 +98,17 @@ class RPApplication(Base):
         nullable=True,
         default=None,
     )
+    registration_completed_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True),
+        nullable=True,
+        default=None,
+    )
+    # Retained for historical compatibility. Product code derives registration
+    # state from registration_completed_at and does not write this lifecycle.
     onboarding_state: Mapped[str | None] = mapped_column(
         String(32),
         nullable=True,
-        default="draft",
+        default=None,
         index=True,
     )
     submitted_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), default=None)

@@ -76,7 +76,7 @@ PORTAL_LOCAL_REGISTRATION_ROUTES = (
     ),
     (
         "POST",
-        "/api/v1/workspaces/{workspace_uuid}/applications/{rp_application_uuid}/onboarding-state",
+        "/api/v1/workspaces/{workspace_uuid}/applications/{rp_application_uuid}/registration/complete",
     ),
 )
 

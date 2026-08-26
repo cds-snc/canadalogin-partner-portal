@@ -20,6 +20,7 @@ import {
 	deleteAccessibleRPApplicationRotatedClientSecret,
 	getAccessibleRPApplicationClientCredentials,
 	getAccessibleRPApplicationRotatedClientSecrets,
+	getAccessibleRPApplicationSecretChangeLog,
 	getApplicationRPConfiguration,
 	rotateAccessibleRPApplicationClientSecret,
 	type ApplicationRPConfigurationSummaryRead,
@@ -49,6 +50,15 @@ const getRotatedSecretId = (
 
 const getDefaultRotationExpiryEpochSeconds = (): number =>
 	Math.floor(Date.now() / 1000) + ROTATION_EXPIRY_DAYS * 24 * 60 * 60;
+
+const downloadBlob = (blob: Blob, filename: string): void => {
+	const url = URL.createObjectURL(blob);
+	const anchor = document.createElement("a");
+	anchor.download = filename;
+	anchor.href = url;
+	anchor.click();
+	URL.revokeObjectURL(url);
+};
 
 const formatEpochForDisplay = (
 	epochSeconds: number | null | undefined,
@@ -96,6 +106,9 @@ export const ManageCredentialsPage = (): FunctionComponent => {
 	const [isRegenerating, setIsRegenerating] = useState(false);
 	const [isCreatingRotation, setIsCreatingRotation] = useState(false);
 	const [isDeletingRotatedSecret, setIsDeletingRotatedSecret] = useState(false);
+	const [isDownloadingSecretChangeLog, setIsDownloadingSecretChangeLog] =
+		useState(false);
+	const [secretChangeLogError, setSecretChangeLogError] = useState(false);
 	const [selectedSecretId, setSelectedSecretId] = useState<string | null>(null);
 	const [deleteSecretId, setDeleteSecretId] = useState<string | null>(null);
 	const lang = i18n.resolvedLanguage?.startsWith("fr") ? "fr" : "en";
@@ -301,6 +314,24 @@ export const ManageCredentialsPage = (): FunctionComponent => {
 		}
 	};
 
+	const handleDownloadSecretChangeLog = async (): Promise<void> => {
+		setIsDownloadingSecretChangeLog(true);
+		setSecretChangeLogError(false);
+		try {
+			const log = await getAccessibleRPApplicationSecretChangeLog(
+				rpApplicationUuid,
+				workspaceUuid,
+				applicationInformationUuid
+			);
+			downloadBlob(log, `secret-change-log-${rpApplicationUuid}.csv`);
+			toast.success(t("manageCredentials.secretChangeLogDownloadSuccess"));
+		} catch {
+			setSecretChangeLogError(true);
+		} finally {
+			setIsDownloadingSecretChangeLog(false);
+		}
+	};
+
 	if (isLoading) {
 		return (
 			<>
@@ -492,6 +523,34 @@ export const ManageCredentialsPage = (): FunctionComponent => {
 						</Button>
 					</div>
 				</form>
+			</Container>
+
+			<Container id="rp-application-secret-change-log" tag="section">
+				<Heading marginTop="0" tag="h2">
+					{t("manageCredentials.secretChangeLogTitle")}
+				</Heading>
+				<Text>{t("manageCredentials.secretChangeLogBody")}</Text>
+				{secretChangeLogError ? (
+					<Notice
+						noticeRole="danger"
+						noticeTitle={t("manageCredentials.secretChangeLogErrorTitle")}
+						noticeTitleTag="h3"
+					>
+						<Text>{t("manageCredentials.secretChangeLogErrorBody")}</Text>
+					</Notice>
+				) : null}
+				<Button
+					buttonRole="secondary"
+					disabled={isDownloadingSecretChangeLog}
+					type="button"
+					onGcdsClick={() => {
+						void handleDownloadSecretChangeLog();
+					}}
+				>
+					{isDownloadingSecretChangeLog
+						? t("manageCredentials.secretChangeLogDownloadingAction")
+						: t("manageCredentials.secretChangeLogDownloadAction")}
+				</Button>
 			</Container>
 
 			{rotatedSecretCheckboxOptions.length > 0 ? (

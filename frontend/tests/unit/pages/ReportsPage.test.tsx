@@ -2,13 +2,10 @@ import type { PropsWithChildren, ReactElement } from "react";
 import { render, screen } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 import { ReportsPage } from "@/features/reports/pages/ReportsPage";
-import { useSession } from "@/hooks";
 
 vi.mock("react-i18next", () => ({
 	useTranslation: () => ({ t: (key: string): string => key }),
 }));
-
-vi.mock("@/hooks", () => ({ useSession: vi.fn() }));
 
 vi.mock("@/components/ui", () => ({
 	Card: ({
@@ -30,55 +27,19 @@ vi.mock("@/components/ui", () => ({
 }));
 
 describe("ReportsPage", () => {
-	it("shows platform and workspace reporting to a CL Admin", () => {
-		vi.mocked(useSession).mockReturnValue({
-			currentUser: {
-				authorizationContext: { globalRole: "cl_admin", partnerAccess: [] },
-			},
-		} as never);
-
+	it("exposes only the scoped application MAU report family", () => {
 		render(<ReportsPage />);
 
 		expect(
 			screen
-				.getByRole("link", { name: "reports.cards.onboarding.title" })
+				.getByRole("link", { name: "reports.cards.applications.title" })
 				.getAttribute("href")
-		).toBe("/onboarding-oversight/reports");
+		).toBe("/reports/applications");
 		expect(
-			screen
-				.getByRole("link", { name: "reports.cards.workspaces.title" })
-				.getAttribute("href")
-		).toBe("/reports/workspaces");
+			screen.queryByRole("link", { name: "reports.cards.onboarding.title" })
+		).toBeNull();
 		expect(
-			screen.queryByRole("link", {
-				name: "reports.cards.applications.title",
-			})
+			screen.queryByRole("link", { name: "reports.cards.workspaces.title" })
 		).toBeNull();
 	});
-
-	it.each(["rp_admin", "rp_user_edit", "read_only"] as const)(
-		"shows only partner report families allowed by the %s role",
-		(role) => {
-			vi.mocked(useSession).mockReturnValue({
-				currentUser: {
-					authorizationContext: {
-						globalRole: null,
-						partnerAccess: [{ role, workspaceUuid: "workspace-uuid-1" }],
-					},
-				},
-			} as never);
-
-			render(<ReportsPage />);
-
-			expect(
-				screen.queryByRole("link", { name: "reports.cards.onboarding.title" })
-			).toBeNull();
-			expect(
-				screen.getByRole("link", { name: "reports.cards.workspaces.title" })
-			).toBeTruthy();
-			expect(
-				screen.getByRole("link", { name: "reports.cards.applications.title" })
-			).toBeTruthy();
-		}
-	);
 });

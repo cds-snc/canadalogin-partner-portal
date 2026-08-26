@@ -10,7 +10,7 @@ const createApplicationDraftMock = vi.fn(() =>
 	Promise.resolve({
 		applicationInformationUuid: "application-1",
 		configurationName: "Partner staging A",
-		onboardingState: "draft" as const,
+		registrationCompletedAt: null,
 		registrationAnswers: {},
 		registrationDraftVersion: 1,
 		registrationLastCompletedStep: "basics" as const,
@@ -108,9 +108,9 @@ describe("ApplicationRPConfigurationCreatePage", () => {
 			createDraft: vi.fn(),
 			isCreating: false,
 			isSaving: false,
-			isSubmitting: false,
+			isCompleting: false,
 			saveDraft: vi.fn(),
-			submit: vi.fn(),
+			complete: vi.fn(),
 		});
 	});
 

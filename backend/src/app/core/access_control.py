@@ -49,17 +49,9 @@ def casbin_error_factory(_user: str, *_args) -> Exception:
 
 
 CANONICAL_CASBIN_POLICIES = (
-    (CanonicalRoleCode.CL_ADMIN.value, "audit_log", "read"),
-    (CanonicalRoleCode.CL_ADMIN.value, "departments", "read|write"),
-    (CanonicalRoleCode.CL_ADMIN.value, "isv_user", "read"),
-    (CanonicalRoleCode.CL_ADMIN.value, "isv_application", "read|write"),
-    (CanonicalRoleCode.CL_ADMIN.value, "isv_group", "read|write"),
-    (CanonicalRoleCode.CL_ADMIN.value, "mau_report", "read"),
-    (CanonicalRoleCode.CL_ADMIN.value, "rate_limits", "read|write"),
     (CanonicalRoleCode.CL_ADMIN.value, "roles", "read"),
     (CanonicalRoleCode.CL_ADMIN.value, "rp_applications", "read"),
     (CanonicalRoleCode.CL_ADMIN.value, "tasks", "read|write"),
-    (CanonicalRoleCode.CL_ADMIN.value, "tiers", "read|write"),
     (CanonicalRoleCode.CL_ADMIN.value, "users_admin", "read|write"),
     (CanonicalRoleCode.CL_ADMIN.value, "workspace", "read|write"),
 )

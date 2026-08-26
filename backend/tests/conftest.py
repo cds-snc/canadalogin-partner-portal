@@ -10,10 +10,9 @@ from sqlalchemy import create_engine
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy.orm.session import Session
-from starsessions import InMemoryStore
-
 from src.app.core.config import settings
 from src.app.main import app
+from starsessions import InMemoryStore
 
 DATABASE_URI = settings.POSTGRES_URI
 DATABASE_PREFIX = settings.POSTGRES_SYNC_PREFIX
@@ -99,9 +98,8 @@ def sample_user_data():
 @pytest.fixture
 def sample_user_read():
     """Generate a sample UserRead object."""
-    from uuid6 import uuid7
-
     from src.app.schemas.user import UserRead
+    from uuid6 import uuid7
 
     email = fake.email()
 
@@ -111,7 +109,6 @@ def sample_user_read():
         username=email,
         email=email,
         profile_image_url=fake.image_url(),
-        tier_uuid=None,
     )
 
 

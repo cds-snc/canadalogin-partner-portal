@@ -46,6 +46,8 @@ locals {
     { name = "OIDC_SERVER_METADATA_URL", value = var.oidc_server_metadata_url },
     { name = "OIDC_CLIENT_ID", value = var.oidc_client_id },
     { name = "OIDC_SCOPES", value = var.oidc_scopes },
+    { name = "PARTNER_ACCESS_ALLOWED_EMAIL_DOMAINS", value = jsonencode(var.partner_access_allowed_email_domains) },
+    { name = "RP_APPLICATION_INVITE_URL_BASE", value = "${trimsuffix(var.frontend_url, "/")}/invitations/rp-applications" },
     { name = "OIDC_REDIRECT_URI", value = "${var.api_url}/api/v1/auth/oidc/callback" },
     { name = "OIDC_REDIRECT_PATH", value = "/api/v1/auth/oidc/callback" },
     { name = "OIDC_POST_LOGIN_REDIRECT", value = "${var.frontend_url}${var.oidc_post_login_redirect}" },

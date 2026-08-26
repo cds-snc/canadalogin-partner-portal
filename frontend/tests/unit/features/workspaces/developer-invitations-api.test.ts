@@ -1,10 +1,12 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import {
-	acceptRPApplicationDeveloperInvitation,
+	acceptPreparedRPApplicationDeveloperInvitation,
 	createWorkspaceDeveloperInvitation,
 	createWorkspaceRPApplicationDeveloperInvitation,
+	getWorkspaceDeveloperInvitation,
 	getWorkspaceDeveloperInvitations,
 	getWorkspaceRPApplicationDeveloperInvitations,
+	prepareRPApplicationDeveloperInvitation,
 	reissueWorkspaceDeveloperInvitation,
 	revokeWorkspaceDeveloperInvitation,
 	type RPApplicationAccessGrantRead,
@@ -88,6 +90,30 @@ describe("developer-invitations-api", () => {
 			})
 		);
 		expect(response).toEqual([invitation]);
+	});
+
+	it("loads one workspace invitation by its public UUID", async () => {
+		const fetchMock = vi.spyOn(globalThis, "fetch").mockResolvedValue({
+			headers: new Headers({ "content-type": "application/json" }),
+			json: () => Promise.resolve(invitation),
+			ok: true,
+			status: 200,
+		} as Response);
+
+		const response = await getWorkspaceDeveloperInvitation(
+			"workspace/uuid",
+			"invitation/uuid"
+		);
+
+		expect(fetchMock).toHaveBeenCalledWith(
+			"http://localhost:8000/api/v1/workspaces/workspace%2Fuuid/invitations/invitation%2Fuuid",
+			expect.objectContaining({
+				cache: "no-store",
+				credentials: "include",
+				method: "GET",
+			})
+		);
+		expect(response).toEqual(invitation);
 	});
 
 	it("creates a workspace-owned invitation without an IBM or application field", async () => {
@@ -204,7 +230,28 @@ describe("developer-invitations-api", () => {
 		expect(body).not.toHaveProperty("gcNotifyNotificationId");
 	});
 
-	it("consumes public UUID invitation and grant projections after acceptance", async () => {
+	it("prepares the bearer in the server session without redirect side effects", async () => {
+		const fetchMock = vi.spyOn(globalThis, "fetch").mockResolvedValue({
+			headers: new Headers({ "content-type": "application/json" }),
+			json: () => Promise.resolve({ prepared: true }),
+			ok: true,
+			status: 200,
+		} as Response);
+
+		await prepareRPApplicationDeveloperInvitation("token-123");
+
+		expect(fetchMock).toHaveBeenCalledWith(
+			"http://localhost:8000/api/v1/rp-application-developer-invitations/prepare",
+			expect.objectContaining({
+				body: JSON.stringify({ token: "token-123" }),
+				cache: "no-store",
+				credentials: "include",
+				method: "POST",
+			})
+		);
+	});
+
+	it("consumes public UUID invitation and grant projections after prepared acceptance", async () => {
 		const fetchMock = vi.spyOn(globalThis, "fetch").mockResolvedValue({
 			headers: new Headers({ "content-type": "application/json" }),
 			json: () =>
@@ -222,12 +269,13 @@ describe("developer-invitations-api", () => {
 			status: 200,
 		} as Response);
 
-		const response = await acceptRPApplicationDeveloperInvitation("token-123");
+		const response = await acceptPreparedRPApplicationDeveloperInvitation();
 
 		expect(fetchMock).toHaveBeenCalledWith(
-			"http://localhost:8000/api/v1/rp-application-developer-invitations/accept",
+			"http://localhost:8000/api/v1/rp-application-developer-invitations/accept-prepared",
 			expect.objectContaining({
-				body: JSON.stringify({ token: "token-123" }),
+				body: JSON.stringify({}),
+				cache: "no-store",
 				credentials: "include",
 				method: "POST",
 			})

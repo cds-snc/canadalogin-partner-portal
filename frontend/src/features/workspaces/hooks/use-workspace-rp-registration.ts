@@ -4,15 +4,15 @@ import {
 	createWorkspaceRPApplicationRegistrationDraft,
 	getApplicationRPConfigurationRegistrationDraft,
 	getWorkspaceRPApplicationRegistrationDraft,
-	submitApplicationRPConfigurationRegistration,
-	submitWorkspaceRPApplicationRegistration,
+	completeApplicationRPConfigurationRegistration,
+	completeWorkspaceRPApplicationRegistration,
 	updateApplicationRPConfigurationRegistrationDraft,
 	updateWorkspaceRPApplicationRegistrationDraft,
 	type ApplicationRPConfigurationRegistrationDraftCreate,
 	type WorkspaceRPApplicationRegistrationDraftCreate,
 	type WorkspaceRPApplicationRegistrationDraftPatch,
 	type WorkspaceRPApplicationRegistrationDraftRead,
-	type WorkspaceRPApplicationRegistrationSubmissionRead,
+	type WorkspaceRPApplicationRegistrationCompletionRead,
 } from "@/fetch/rp-applications";
 import {
 	workspaceRPApplicationQueryKey,
@@ -52,19 +52,19 @@ export type WorkspaceRPRegistrationActions = {
 	) => Promise<WorkspaceRPApplicationRegistrationDraftRead>;
 	isCreating: boolean;
 	isSaving: boolean;
-	isSubmitting: boolean;
+	isCompleting: boolean;
 	saveDraft: (
 		workspaceUuid: string,
 		rpApplicationUuid: string,
 		payload: WorkspaceRPApplicationRegistrationDraftPatch,
 		applicationInformationUuid?: string
 	) => Promise<WorkspaceRPApplicationRegistrationDraftRead>;
-	submit: (
+	complete: (
 		workspaceUuid: string,
 		rpApplicationUuid: string,
 		expectedDraftVersion: number,
 		applicationInformationUuid?: string
-	) => Promise<WorkspaceRPApplicationRegistrationSubmissionRead>;
+	) => Promise<WorkspaceRPApplicationRegistrationCompletionRead>;
 };
 
 export const useWorkspaceRPRegistrationDraft = (
@@ -208,7 +208,7 @@ export const useWorkspaceRPRegistrationActions =
 				);
 			},
 		});
-		const submitMutation = useMutation({
+		const completeMutation = useMutation({
 			mutationFn: ({
 				applicationInformationUuid,
 				expectedDraftVersion,
@@ -221,13 +221,13 @@ export const useWorkspaceRPRegistrationActions =
 				workspaceUuid: string;
 			}) =>
 				applicationInformationUuid
-					? submitApplicationRPConfigurationRegistration(
+					? completeApplicationRPConfigurationRegistration(
 							workspaceUuid,
 							applicationInformationUuid,
 							rpApplicationUuid,
 							expectedDraftVersion
 						)
-					: submitWorkspaceRPApplicationRegistration(
+					: completeWorkspaceRPApplicationRegistration(
 							workspaceUuid,
 							rpApplicationUuid,
 							expectedDraftVersion
@@ -276,7 +276,7 @@ export const useWorkspaceRPRegistrationActions =
 			isCreating:
 				createMutation.isPending || createApplicationMutation.isPending,
 			isSaving: saveMutation.isPending,
-			isSubmitting: submitMutation.isPending,
+			isCompleting: completeMutation.isPending,
 			saveDraft: (
 				workspaceUuid: string,
 				rpApplicationUuid: string,
@@ -289,13 +289,13 @@ export const useWorkspaceRPRegistrationActions =
 					rpApplicationUuid,
 					workspaceUuid,
 				}),
-			submit: (
+			complete: (
 				workspaceUuid: string,
 				rpApplicationUuid: string,
 				expectedDraftVersion: number,
 				applicationInformationUuid = ""
-			): Promise<WorkspaceRPApplicationRegistrationSubmissionRead> =>
-				submitMutation.mutateAsync({
+			): Promise<WorkspaceRPApplicationRegistrationCompletionRead> =>
+				completeMutation.mutateAsync({
 					applicationInformationUuid,
 					expectedDraftVersion,
 					rpApplicationUuid,

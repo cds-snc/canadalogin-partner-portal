@@ -2,14 +2,14 @@
 
 Type: Architecture Note
 Status: Active
-Last verified: 2026-08-11
+Last verified: 2026-08-25
 
 ## Context
 
 The CanadaLogin Partner Portal is a browser application with a React frontend,
 a FastAPI backend-for-frontend (BFF), PostgreSQL persistence, Redis-backed
-runtime services, and integrations with CanadaLogin, IBM Security Verify,
-GC Notify, and AWS S3.
+runtime services, and integrations with CanadaLogin, bounded IBM Security
+Verify operations, and the approved AWS S3 MAU source.
 
 This note describes the current codebase shape and the dependency direction new
 work should preserve. It does not turn known legacy exceptions into preferred
@@ -21,13 +21,18 @@ The portal owns:
 
 - browser navigation and user-facing portal workflows;
 - the browser session and current-user projection;
-- local users, roles, departments, access policies, RP application metadata,
-  and audit data;
-- orchestration of IBM Security Verify, GC Notify, and MAU data access; and
+- local users, immutable role references, scoped assignments, Department
+  references, workspaces, Applications, RP configurations, invitation history,
+  Production-review records, and the minimum required audit history;
+- orchestration of bounded IBM Security Verify and scoped MAU data access; and
 - asynchronous synchronization and data-loading jobs.
 
-CanadaLogin remains the OIDC identity provider. IBM Security Verify, GC Notify,
-and AWS S3 remain external systems.
+CanadaLogin remains the OIDC identity provider. IBM Security Verify and the
+approved AWS S3 MAU source remain external systems. The portal does not send
+invitation email: create and reissue return one tokenized link for an
+authorized administrator to copy and share through a separately approved
+external channel. Historical GC Notify code or columns are compatibility data,
+not a current portal dependency.
 
 ```mermaid
 flowchart LR
@@ -52,7 +57,7 @@ flowchart LR
         Worker["Separate ARQ worker"]
     end
 
-    External["CanadaLogin, IBM Verify, GC Notify, and S3"]
+    External["CanadaLogin, bounded IBM Verify operations, and approved MAU S3 data"]
 
     Browser --> Route --> Page --> Fetch --> API
     API --> Guard --> Service --> Repository
@@ -76,7 +81,7 @@ flowchart LR
 | `backend/src/app/api/` | HTTP routes, dependency injection, response models, and permission decorators. |
 | `backend/src/app/services/` | Business rules, orchestration, and calls to repositories or the queue. |
 | `backend/src/app/repositories/` | SQLAlchemy/FastCRUD access and adapters for external systems. |
-| `backend/src/app/workflows/` | Explicit lifecycle transition logic where a domain has state transitions. |
+| `backend/src/app/workflows/` | Explicit transition logic for a domain that owns states; domains do not share a generic product lifecycle. |
 | `backend/src/app/models/` | SQLAlchemy persistence models. |
 | `backend/src/app/schemas/` | Pydantic request, response, and internal transfer models. |
 | `backend/src/app/core/` | Configuration, sessions, authorization, exceptions, caching, logging, and workers. |
@@ -164,6 +169,30 @@ current-user projection exposes role and public workspace context without
 policy internals. This accepted boundary is recorded in
 [ADR-003](adrs/adr-003-casbin-authorization-model.md).
 
+The canonical roles are CL Admin globally and RP Admin, RP User (Edit), or Read
+Only for one workspace. Administration is limited to users and access,
+invitations, and immutable role reference. Department reference/association
+remains, but Department, tier, policy, reusable-role, and provider catalog CRUD
+is outside the product boundary. Runtime rate limiting remains a backend
+infrastructure concern and is not a tier-management product feature.
+
+## Product State And Reporting Boundaries
+
+- RP registration is an editable incomplete draft with separate technical
+  completion metadata. Completion does not submit a review.
+- Production review is an explicit, separate record: absent, `pending`,
+  `approved`, or `rejected`.
+- Invitation state is `pending`, `accepted`, `expired`, or `revoked`; reissue
+  creates a new one-time link and invalidates the earlier pending token.
+- Checklist/CATS surfaces show item-level evidence and missing inputs without
+  an overall score, completion count, or submit-ready state. Upload versus
+  reference remains TBD.
+- User-facing reporting is scoped MAU/usage for an accessible RP configuration.
+  Aggregate reports and generic audit explorers are not product surfaces.
+- Required audit capture remains for sensitive actions. The retained MVP
+  secret-change CSV contains action time, actor, action, and RP configuration
+  identity without secret values.
+
 ## Background Processing
 
 ARQ jobs live under `backend/src/app/core/worker/`. Services enqueue work
@@ -181,6 +210,10 @@ the queue pool; it does not spawn a daemon worker thread.
 - Secrets and real `.env` files are not committed.
 - External systems are accessed through backend services or repositories, not
   directly from the browser.
+- Invitation acceptance trusts only the backend-owned verified email context,
+  requires exact normalized email equality, and reapplies the configured
+  partner-domain policy. Raw invitation tokens are hashed at rest and excluded
+  from logs, analytics, evidence, referrers, and list/detail responses.
 - GC Design System wrappers and the configured accessibility linting remain the
   frontend baseline.
 - PostgreSQL is persistent state. Redis supports sessions, cache, queueing, and
@@ -196,6 +229,13 @@ the queue pool; it does not spawn a daemon worker thread.
 - ADR-003 is accepted and defines the deterministic four-role authorization
   model, stable policy subjects, normalized assignment sources, workspace
   scope, and CL Admin secret boundary.
+- ADR-004 is accepted and defines Workspace -> Application -> RP configuration
+  ownership. Its checklist/CATS and Production-review wording is aligned to
+  the approved scope correction.
+- The requirement source order is explicit approved decisions and confirmed
+  onboarding-PRD expansions, then the MVP PRD as fallback. The broader
+  `partner-portal-prd.md` and derived backlog are historical and
+  non-authoritative.
 - Some generic backend and frontend documentation predates the current portal
   architecture. The implementation, accepted ADRs, and this note take
   precedence when those documents conflict.

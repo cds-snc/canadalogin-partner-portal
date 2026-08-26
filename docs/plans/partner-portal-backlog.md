@@ -1,10 +1,23 @@
 # CanadaLogin Partner Portal Backlog
 
+> **Historical, non-authoritative backlog.** This backlog was derived from the
+> broader [historical Partner Portal PRD](partner-portal-prd.md) and includes
+> work that is not approved for the current product. Do not treat unchecked
+> entries as delivery commitments or OpenSpec inputs. Current requirements
+> come first from explicit approved decisions recorded in
+> [`align-partner-portal-to-approved-product-scope`](../../openspec/changes/align-partner-portal-to-approved-product-scope/).
+> Those decisions and the confirmed expansions in
+> [the Partner Portal Onboarding PRD](partner-portal-onboarding-prd.md) take
+> precedence, with [the Partner Portal MVP PRD](partner-portal-mvp.md) as the
+> fallback source.
+> The entries below remain unchanged as historical context.
+
 ## Document Status
 
-- Status: Draft
+- Status: Historical and non-authoritative; originally a draft
 - Date: 2026-05-13
-- Source: Derived from the current repository-backed PRD in `docs/plans/partner-portal-prd.md`
+- Source: Derived from the now-historical repository-backed PRD in
+  `docs/plans/partner-portal-prd.md`
 - Purpose: Translate the PRD into a delivery-oriented backlog grouped by epic, release horizon, and user story
 
 ## 1. Backlog Framing

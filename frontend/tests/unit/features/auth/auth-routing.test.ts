@@ -46,7 +46,6 @@ const sampleUser = {
 	name: "Jane Doe",
 	profileImageUrl: "https://example.com/jane.png",
 	termsVersion: "2026-01",
-	tierUuid: "tier-uuid-3",
 	uuid: "user-uuid-7",
 	username: "jane@example.com",
 };
@@ -270,7 +269,7 @@ describe("auth-routing", () => {
 			intendedDestination: "/your-applications/rp-application-uuid",
 		},
 		{
-			caseName: "a tokenized invitation before department setup",
+			caseName: "a prepared invitation before department setup",
 			currentUser: {
 				...sampleUser,
 				authorizationContext: { globalRole: null, partnerAccess: [] },
@@ -279,10 +278,9 @@ describe("auth-routing", () => {
 			},
 			expectedOptions: {
 				replace: true,
-				to: "/invitations/rp-applications/invitation-token",
+				to: "/invitations/rp-applications/accept",
 			},
-			intendedDestination:
-				"/invitations/rp-applications/invitation-token?role=cl_admin",
+			intendedDestination: "/invitations/rp-applications/accept?role=cl_admin",
 		},
 		{
 			caseName: "applicable department setup before normal routing",
@@ -381,15 +379,11 @@ describe("auth-routing", () => {
 		).resolves.toEqual(sampleUser);
 	});
 
-	it("admits Reports when any reporting capability is available and denies an empty role", async () => {
+	it("admits Reports for MAU capability and denies an empty role", async () => {
 		vi.mocked(revalidateCurrentUser).mockResolvedValue(sampleUser);
 
 		await expect(
-			requireAnyCapability("/reports", [
-				"onboarding_oversight_read",
-				"aggregate_report_read",
-				"mau_report_read",
-			])
+			requireAnyCapability("/reports", ["mau_report_read"])
 		).resolves.toEqual(sampleUser);
 
 		vi.mocked(revalidateCurrentUser).mockResolvedValue({
@@ -397,11 +391,28 @@ describe("auth-routing", () => {
 			authorizationContext: { globalRole: null, partnerAccess: [] },
 		});
 		await expect(
-			requireAnyCapability("/reports", [
-				"onboarding_oversight_read",
-				"aggregate_report_read",
-				"mau_report_read",
-			])
+			requireAnyCapability("/reports", ["mau_report_read"])
+		).rejects.toMatchObject({
+			options: { replace: true, to: "/access-denied" },
+		});
+	});
+
+	it("scopes any-capability checks to the requested workspace", async () => {
+		vi.mocked(revalidateCurrentUser).mockResolvedValue(sampleUser);
+
+		await expect(
+			requireAnyCapability(
+				"/workspaces/workspace-uuid-1/review",
+				["rp_configuration_read"],
+				"workspace-uuid-1"
+			)
+		).resolves.toEqual(sampleUser);
+		await expect(
+			requireAnyCapability(
+				"/workspaces/workspace-uuid-2/review",
+				["rp_configuration_read"],
+				"workspace-uuid-2"
+			)
 		).rejects.toMatchObject({
 			options: { replace: true, to: "/access-denied" },
 		});
@@ -478,7 +489,7 @@ describe("auth-routing", () => {
 
 		await expect(
 			requireAuthenticatedUserWithoutDepartmentSelection(
-				"/invitations/rp-applications/token-123"
+				"/invitations/rp-applications/accept"
 			)
 		).resolves.toEqual({
 			...sampleUser,
