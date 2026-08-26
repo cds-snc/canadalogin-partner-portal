@@ -1,4 +1,4 @@
-# CanadaLogin Partner Portal MVP PRD
+# CanadaLogin Partner Portal MVP (V1) PRD
 
 ## Document Status
 
