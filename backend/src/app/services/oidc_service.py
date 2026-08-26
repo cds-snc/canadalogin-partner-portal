@@ -1,4 +1,3 @@
-from typing import Optional
 
 from fastapi.responses import RedirectResponse
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -7,15 +6,18 @@ from starsessions.session import generate_session_id, get_session_handler
 
 from ..core.config import settings
 from ..core.exceptions.http_exceptions import ForbiddenException, UnauthorizedException
+from ..core.logger import logging
 from ..core.oidc import build_oidc_redirect_uri, get_oidc_client, sync_oidc_user
 from .oidc_logout_service import OidcLogoutService
+
+logger = logging.getLogger(__name__)
 
 
 class OidcService:
     def __init__(self, logout_service: OidcLogoutService | None = None) -> None:
         self.logout_service = logout_service or OidcLogoutService()
 
-    async def login(self, request: Request, ui_locales: Optional[str] = None):
+    async def login(self, request: Request, ui_locales: str | None = None):
         client = get_oidc_client()
         redirect_uri = build_oidc_redirect_uri(request)
         if ui_locales:
@@ -49,6 +51,7 @@ class OidcService:
         post_login_url = settings.OIDC_POST_LOGIN_REDIRECT
         if ui_locales:
             post_login_url = f"{post_login_url}?ui_locales={ui_locales}"
+        logger.info("user login: %s", oidc_user["uuid"])
         return RedirectResponse(url=post_login_url)
 
     async def backchannel_logout(self, logout_token: str) -> dict[str, str]:

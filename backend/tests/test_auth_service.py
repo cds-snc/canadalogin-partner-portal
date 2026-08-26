@@ -52,6 +52,18 @@ class TestAuthService:
         logout_service.remove_local_session.assert_awaited_once_with("sid-123")
 
     @pytest.mark.asyncio
+    async def test_logout_logs_successful_user_logout(self) -> None:
+        service = AuthService()
+        user_uuid = "019cfc22-bff2-7168-ae43-387a301d8fcb"
+        request = Mock(session={"user_uuid": user_uuid})
+
+        with patch("src.app.services.auth_service.logger") as mock_logger:
+            result = await service.logout(request=request)
+
+        assert result == {"message": "Logged out successfully", "clear_cookies": True}
+        mock_logger.info.assert_called_once_with("user logout: %s", user_uuid)
+
+    @pytest.mark.asyncio
     async def test_refresh_access_token_requires_cookie(self, mock_db) -> None:
         service = AuthService()
         request = Mock(cookies={})

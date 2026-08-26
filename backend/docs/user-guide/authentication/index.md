@@ -6,6 +6,7 @@ Learn how the backend authenticates Partner Portal users with OIDC and server-si
 
 - **[User Management](user-management.md)** - Manage the authenticated user profile and portal-owned metadata
 - **[Permissions](permissions.md)** - Implement role-based access control and authorization
+- **[Session Lifecycle](session-lifecycle.md)** - Understand OIDC login, session validation, logout, and authentication observability
 
 ## Authentication Overview
 

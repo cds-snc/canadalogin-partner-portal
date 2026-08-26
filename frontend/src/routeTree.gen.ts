@@ -9,92 +9,32 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
-import { Route as YourApplicationsRouteImport } from './routes/your-applications'
-import { Route as UsersRouteImport } from './routes/users'
-import { Route as TiersRouteImport } from './routes/tiers'
-import { Route as TermsAndConditionsRouteImport } from './routes/terms-and-conditions'
-import { Route as SupportRouteImport } from './routes/support'
-import { Route as RolesRouteImport } from './routes/roles'
-import { Route as PoliciesRouteImport } from './routes/policies'
-import { Route as LogoutRouteImport } from './routes/logout'
-import { Route as ErrorRouteImport } from './routes/error'
-import { Route as DepartmentsRouteImport } from './routes/departments'
-import { Route as AuthCompleteRouteImport } from './routes/auth-complete'
-import { Route as AuditLogsRouteImport } from './routes/audit-logs'
-import { Route as AccessDeniedRouteImport } from './routes/access-denied'
-import { Route as AcceptTermsRouteImport } from './routes/accept-terms'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as AcceptTermsRouteImport } from './routes/accept-terms'
+import { Route as AccessDeniedRouteImport } from './routes/access-denied'
+import { Route as AuditLogsRouteImport } from './routes/audit-logs'
+import { Route as AuthCompleteRouteImport } from './routes/auth-complete'
+import { Route as DepartmentsRouteImport } from './routes/departments'
+import { Route as ErrorRouteImport } from './routes/error'
+import { Route as LogoutRouteImport } from './routes/logout'
+import { Route as PoliciesRouteImport } from './routes/policies'
+import { Route as RolesRouteImport } from './routes/roles'
+import { Route as SupportRouteImport } from './routes/support'
+import { Route as TermsAndConditionsRouteImport } from './routes/terms-and-conditions'
+import { Route as TiersRouteImport } from './routes/tiers'
+import { Route as UsersRouteImport } from './routes/users'
+import { Route as YourApplicationsRouteImport } from './routes/your-applications'
+import { Route as ProfileSetupRouteImport } from './routes/profile/setup'
 import { Route as YourApplicationsIndexRouteImport } from './routes/your-applications/index'
 import { Route as YourApplicationsRpApplicationUuidRouteImport } from './routes/your-applications/$rpApplicationUuid'
-import { Route as ProfileSetupRouteImport } from './routes/profile/setup'
 import { Route as YourApplicationsRpApplicationUuidIndexRouteImport } from './routes/your-applications/$rpApplicationUuid/index'
-import { Route as YourApplicationsRpApplicationUuidMauReportRouteImport } from './routes/your-applications/$rpApplicationUuid/mau-report'
-import { Route as YourApplicationsRpApplicationUuidManageCredentialsRouteImport } from './routes/your-applications/$rpApplicationUuid/manage-credentials'
 import { Route as YourApplicationsRpApplicationUuidDepartmentSetupRouteImport } from './routes/your-applications/$rpApplicationUuid/department-setup'
+import { Route as YourApplicationsRpApplicationUuidManageCredentialsRouteImport } from './routes/your-applications/$rpApplicationUuid/manage-credentials'
+import { Route as YourApplicationsRpApplicationUuidMauReportRouteImport } from './routes/your-applications/$rpApplicationUuid/mau-report'
 
-const YourApplicationsRoute = YourApplicationsRouteImport.update({
-  id: '/your-applications',
-  path: '/your-applications',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const UsersRoute = UsersRouteImport.update({
-  id: '/users',
-  path: '/users',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const TiersRoute = TiersRouteImport.update({
-  id: '/tiers',
-  path: '/tiers',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const TermsAndConditionsRoute = TermsAndConditionsRouteImport.update({
-  id: '/terms-and-conditions',
-  path: '/terms-and-conditions',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const SupportRoute = SupportRouteImport.update({
-  id: '/support',
-  path: '/support',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const RolesRoute = RolesRouteImport.update({
-  id: '/roles',
-  path: '/roles',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const PoliciesRoute = PoliciesRouteImport.update({
-  id: '/policies',
-  path: '/policies',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const LogoutRoute = LogoutRouteImport.update({
-  id: '/logout',
-  path: '/logout',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const ErrorRoute = ErrorRouteImport.update({
-  id: '/error',
-  path: '/error',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const DepartmentsRoute = DepartmentsRouteImport.update({
-  id: '/departments',
-  path: '/departments',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const AuthCompleteRoute = AuthCompleteRouteImport.update({
-  id: '/auth-complete',
-  path: '/auth-complete',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const AuditLogsRoute = AuditLogsRouteImport.update({
-  id: '/audit-logs',
-  path: '/audit-logs',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const AccessDeniedRoute = AccessDeniedRouteImport.update({
-  id: '/access-denied',
-  path: '/access-denied',
+const IndexRoute = IndexRouteImport.update({
+  id: '/',
+  path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
 const AcceptTermsRoute = AcceptTermsRouteImport.update({
@@ -102,9 +42,74 @@ const AcceptTermsRoute = AcceptTermsRouteImport.update({
   path: '/accept-terms',
   getParentRoute: () => rootRouteImport,
 } as any)
-const IndexRoute = IndexRouteImport.update({
-  id: '/',
-  path: '/',
+const AccessDeniedRoute = AccessDeniedRouteImport.update({
+  id: '/access-denied',
+  path: '/access-denied',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AuditLogsRoute = AuditLogsRouteImport.update({
+  id: '/audit-logs',
+  path: '/audit-logs',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AuthCompleteRoute = AuthCompleteRouteImport.update({
+  id: '/auth-complete',
+  path: '/auth-complete',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const DepartmentsRoute = DepartmentsRouteImport.update({
+  id: '/departments',
+  path: '/departments',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ErrorRoute = ErrorRouteImport.update({
+  id: '/error',
+  path: '/error',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const LogoutRoute = LogoutRouteImport.update({
+  id: '/logout',
+  path: '/logout',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const PoliciesRoute = PoliciesRouteImport.update({
+  id: '/policies',
+  path: '/policies',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const RolesRoute = RolesRouteImport.update({
+  id: '/roles',
+  path: '/roles',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const SupportRoute = SupportRouteImport.update({
+  id: '/support',
+  path: '/support',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const TermsAndConditionsRoute = TermsAndConditionsRouteImport.update({
+  id: '/terms-and-conditions',
+  path: '/terms-and-conditions',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const TiersRoute = TiersRouteImport.update({
+  id: '/tiers',
+  path: '/tiers',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const UsersRoute = UsersRouteImport.update({
+  id: '/users',
+  path: '/users',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const YourApplicationsRoute = YourApplicationsRouteImport.update({
+  id: '/your-applications',
+  path: '/your-applications',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ProfileSetupRoute = ProfileSetupRouteImport.update({
+  id: '/profile/setup',
+  path: '/profile/setup',
   getParentRoute: () => rootRouteImport,
 } as any)
 const YourApplicationsIndexRoute = YourApplicationsIndexRouteImport.update({
@@ -118,21 +123,16 @@ const YourApplicationsRpApplicationUuidRoute =
     path: '/$rpApplicationUuid',
     getParentRoute: () => YourApplicationsRoute,
   } as any)
-const ProfileSetupRoute = ProfileSetupRouteImport.update({
-  id: '/profile/setup',
-  path: '/profile/setup',
-  getParentRoute: () => rootRouteImport,
-} as any)
 const YourApplicationsRpApplicationUuidIndexRoute =
   YourApplicationsRpApplicationUuidIndexRouteImport.update({
     id: '/',
     path: '/',
     getParentRoute: () => YourApplicationsRpApplicationUuidRoute,
   } as any)
-const YourApplicationsRpApplicationUuidMauReportRoute =
-  YourApplicationsRpApplicationUuidMauReportRouteImport.update({
-    id: '/mau-report',
-    path: '/mau-report',
+const YourApplicationsRpApplicationUuidDepartmentSetupRoute =
+  YourApplicationsRpApplicationUuidDepartmentSetupRouteImport.update({
+    id: '/department-setup',
+    path: '/department-setup',
     getParentRoute: () => YourApplicationsRpApplicationUuidRoute,
   } as any)
 const YourApplicationsRpApplicationUuidManageCredentialsRoute =
@@ -141,10 +141,10 @@ const YourApplicationsRpApplicationUuidManageCredentialsRoute =
     path: '/manage-credentials',
     getParentRoute: () => YourApplicationsRpApplicationUuidRoute,
   } as any)
-const YourApplicationsRpApplicationUuidDepartmentSetupRoute =
-  YourApplicationsRpApplicationUuidDepartmentSetupRouteImport.update({
-    id: '/department-setup',
-    path: '/department-setup',
+const YourApplicationsRpApplicationUuidMauReportRoute =
+  YourApplicationsRpApplicationUuidMauReportRouteImport.update({
+    id: '/mau-report',
+    path: '/mau-report',
     getParentRoute: () => YourApplicationsRpApplicationUuidRoute,
   } as any)
 
@@ -313,95 +313,11 @@ export interface RootRouteChildren {
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
-    '/your-applications': {
-      id: '/your-applications'
-      path: '/your-applications'
-      fullPath: '/your-applications'
-      preLoaderRoute: typeof YourApplicationsRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/users': {
-      id: '/users'
-      path: '/users'
-      fullPath: '/users'
-      preLoaderRoute: typeof UsersRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/tiers': {
-      id: '/tiers'
-      path: '/tiers'
-      fullPath: '/tiers'
-      preLoaderRoute: typeof TiersRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/terms-and-conditions': {
-      id: '/terms-and-conditions'
-      path: '/terms-and-conditions'
-      fullPath: '/terms-and-conditions'
-      preLoaderRoute: typeof TermsAndConditionsRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/support': {
-      id: '/support'
-      path: '/support'
-      fullPath: '/support'
-      preLoaderRoute: typeof SupportRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/roles': {
-      id: '/roles'
-      path: '/roles'
-      fullPath: '/roles'
-      preLoaderRoute: typeof RolesRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/policies': {
-      id: '/policies'
-      path: '/policies'
-      fullPath: '/policies'
-      preLoaderRoute: typeof PoliciesRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/logout': {
-      id: '/logout'
-      path: '/logout'
-      fullPath: '/logout'
-      preLoaderRoute: typeof LogoutRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/error': {
-      id: '/error'
-      path: '/error'
-      fullPath: '/error'
-      preLoaderRoute: typeof ErrorRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/departments': {
-      id: '/departments'
-      path: '/departments'
-      fullPath: '/departments'
-      preLoaderRoute: typeof DepartmentsRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/auth-complete': {
-      id: '/auth-complete'
-      path: '/auth-complete'
-      fullPath: '/auth-complete'
-      preLoaderRoute: typeof AuthCompleteRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/audit-logs': {
-      id: '/audit-logs'
-      path: '/audit-logs'
-      fullPath: '/audit-logs'
-      preLoaderRoute: typeof AuditLogsRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/access-denied': {
-      id: '/access-denied'
-      path: '/access-denied'
-      fullPath: '/access-denied'
-      preLoaderRoute: typeof AccessDeniedRouteImport
+    '/': {
+      id: '/'
+      path: '/'
+      fullPath: '/'
+      preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/accept-terms': {
@@ -411,11 +327,102 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AcceptTermsRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/': {
-      id: '/'
-      path: '/'
-      fullPath: '/'
-      preLoaderRoute: typeof IndexRouteImport
+    '/access-denied': {
+      id: '/access-denied'
+      path: '/access-denied'
+      fullPath: '/access-denied'
+      preLoaderRoute: typeof AccessDeniedRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/audit-logs': {
+      id: '/audit-logs'
+      path: '/audit-logs'
+      fullPath: '/audit-logs'
+      preLoaderRoute: typeof AuditLogsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/auth-complete': {
+      id: '/auth-complete'
+      path: '/auth-complete'
+      fullPath: '/auth-complete'
+      preLoaderRoute: typeof AuthCompleteRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/departments': {
+      id: '/departments'
+      path: '/departments'
+      fullPath: '/departments'
+      preLoaderRoute: typeof DepartmentsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/error': {
+      id: '/error'
+      path: '/error'
+      fullPath: '/error'
+      preLoaderRoute: typeof ErrorRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/logout': {
+      id: '/logout'
+      path: '/logout'
+      fullPath: '/logout'
+      preLoaderRoute: typeof LogoutRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/policies': {
+      id: '/policies'
+      path: '/policies'
+      fullPath: '/policies'
+      preLoaderRoute: typeof PoliciesRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/roles': {
+      id: '/roles'
+      path: '/roles'
+      fullPath: '/roles'
+      preLoaderRoute: typeof RolesRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/support': {
+      id: '/support'
+      path: '/support'
+      fullPath: '/support'
+      preLoaderRoute: typeof SupportRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/terms-and-conditions': {
+      id: '/terms-and-conditions'
+      path: '/terms-and-conditions'
+      fullPath: '/terms-and-conditions'
+      preLoaderRoute: typeof TermsAndConditionsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/tiers': {
+      id: '/tiers'
+      path: '/tiers'
+      fullPath: '/tiers'
+      preLoaderRoute: typeof TiersRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/users': {
+      id: '/users'
+      path: '/users'
+      fullPath: '/users'
+      preLoaderRoute: typeof UsersRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/your-applications': {
+      id: '/your-applications'
+      path: '/your-applications'
+      fullPath: '/your-applications'
+      preLoaderRoute: typeof YourApplicationsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/profile/setup': {
+      id: '/profile/setup'
+      path: '/profile/setup'
+      fullPath: '/profile/setup'
+      preLoaderRoute: typeof ProfileSetupRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/your-applications/': {
@@ -432,13 +439,6 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof YourApplicationsRpApplicationUuidRouteImport
       parentRoute: typeof YourApplicationsRoute
     }
-    '/profile/setup': {
-      id: '/profile/setup'
-      path: '/profile/setup'
-      fullPath: '/profile/setup'
-      preLoaderRoute: typeof ProfileSetupRouteImport
-      parentRoute: typeof rootRouteImport
-    }
     '/your-applications/$rpApplicationUuid/': {
       id: '/your-applications/$rpApplicationUuid/'
       path: '/'
@@ -446,11 +446,11 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof YourApplicationsRpApplicationUuidIndexRouteImport
       parentRoute: typeof YourApplicationsRpApplicationUuidRoute
     }
-    '/your-applications/$rpApplicationUuid/mau-report': {
-      id: '/your-applications/$rpApplicationUuid/mau-report'
-      path: '/mau-report'
-      fullPath: '/your-applications/$rpApplicationUuid/mau-report'
-      preLoaderRoute: typeof YourApplicationsRpApplicationUuidMauReportRouteImport
+    '/your-applications/$rpApplicationUuid/department-setup': {
+      id: '/your-applications/$rpApplicationUuid/department-setup'
+      path: '/department-setup'
+      fullPath: '/your-applications/$rpApplicationUuid/department-setup'
+      preLoaderRoute: typeof YourApplicationsRpApplicationUuidDepartmentSetupRouteImport
       parentRoute: typeof YourApplicationsRpApplicationUuidRoute
     }
     '/your-applications/$rpApplicationUuid/manage-credentials': {
@@ -460,11 +460,11 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof YourApplicationsRpApplicationUuidManageCredentialsRouteImport
       parentRoute: typeof YourApplicationsRpApplicationUuidRoute
     }
-    '/your-applications/$rpApplicationUuid/department-setup': {
-      id: '/your-applications/$rpApplicationUuid/department-setup'
-      path: '/department-setup'
-      fullPath: '/your-applications/$rpApplicationUuid/department-setup'
-      preLoaderRoute: typeof YourApplicationsRpApplicationUuidDepartmentSetupRouteImport
+    '/your-applications/$rpApplicationUuid/mau-report': {
+      id: '/your-applications/$rpApplicationUuid/mau-report'
+      path: '/mau-report'
+      fullPath: '/your-applications/$rpApplicationUuid/mau-report'
+      preLoaderRoute: typeof YourApplicationsRpApplicationUuidMauReportRouteImport
       parentRoute: typeof YourApplicationsRpApplicationUuidRoute
     }
   }
