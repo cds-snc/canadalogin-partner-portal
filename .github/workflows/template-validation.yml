@@ -16,6 +16,11 @@ jobs:
     name: Validate template
     runs-on: ubuntu-latest
     env:
+      APP_NAME: "CanadaLogin Partner Portal"
+      APP_DESCRIPTION: "CanadaLogin Partner Portal local development"
+      CONTACT_NAME: "CDS Auth Team"
+      CONTACT_EMAIL: "dev@example.com"
+      LICENSE_NAME: "MIT"
       CORS_ORIGINS: '["http://127.0.0.1:3000","http://localhost:3000"]'
       CORS_METHODS: '["GET","POST","PUT","PATCH","DELETE","OPTIONS"]'
       CORS_HEADERS: '["Accept","Authorization","Content-Type","Idempotency-Key","Origin","X-Requested-With","X-Request-ID"]'
