@@ -1,6 +1,9 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { mauReportQueryKey } from "@/features/mau-reports/hooks/use-mau-report";
-import { getAccessibleRPApplicationMauReport } from "@/fetch/mau-report";
+import {
+	getAccessibleMauReportDestinations,
+	getAccessibleRPApplicationMauReport,
+} from "@/fetch/mau-report";
 
 describe("accessible RP application MAU report API", () => {
 	afterEach(() => {
@@ -59,5 +62,25 @@ describe("accessible RP application MAU report API", () => {
 			"2026-08-01",
 			"2026-08-10",
 		]);
+	});
+
+	it("loads only server-scoped MAU report destinations", async () => {
+		const fetchMock = vi.spyOn(globalThis, "fetch").mockResolvedValue({
+			headers: new Headers({ "content-type": "application/json" }),
+			json: () => Promise.resolve([]),
+			ok: true,
+			status: 200,
+		} as Response);
+
+		await getAccessibleMauReportDestinations();
+
+		expect(fetchMock).toHaveBeenCalledWith(
+			"http://localhost:8000/api/v1/rp-applications/accessible/mau-report-destinations",
+			expect.objectContaining({
+				cache: "no-store",
+				credentials: "include",
+				method: "GET",
+			})
+		);
 	});
 });

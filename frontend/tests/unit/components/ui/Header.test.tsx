@@ -272,7 +272,6 @@ describe("Header", () => {
 				email: "jane@example.com",
 				profileImageUrl: "https://example.com/jane.png",
 				termsVersion: "2026-01",
-				tierUuid: "tier-uuid-2",
 				uuid: "user-uuid-7",
 				username: "jane@example.com",
 			},
@@ -298,9 +297,7 @@ describe("Header", () => {
 			document.querySelector("a[data-href='/onboarding-oversight']")
 				?.textContent
 		).toBe("Onboarding oversight");
-		expect(document.querySelector("a[data-href='/reports']")?.textContent).toBe(
-			"Reports"
-		);
+		expect(document.querySelector("a[data-href='/reports']")).toBeNull();
 		expect(document.querySelector("a[data-href='/users']")).toBeNull();
 		expect(
 			document
@@ -325,7 +322,6 @@ describe("Header", () => {
 				name: "Partner Admin",
 				profileImageUrl: "",
 				termsVersion: "2026-01",
-				tierUuid: null,
 				uuid: "user-uuid-8",
 				username: "partner@example.com",
 			},

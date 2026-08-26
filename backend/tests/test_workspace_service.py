@@ -5,7 +5,6 @@ from uuid import UUID
 
 import pytest
 from sqlalchemy.exc import IntegrityError
-
 from src.app.core.authorization import (
     CanonicalRoleCode,
     Capability,
@@ -24,12 +23,6 @@ from src.app.schemas.application_information import (
     ApplicationInformationContactCreate,
     ApplicationInformationContactUpdate,
     ApplicationInformationCreate,
-    ApplicationInformationReviewChecklistSummaryWrite,
-    ApplicationInformationReviewNoteCreate,
-)
-from src.app.schemas.onboarding import (
-    OnboardingLifecycleTransitionRequest,
-    WorkspaceRPApplicationOnboardingLifecycleTransitionRequest,
 )
 from src.app.schemas.rp_application import (
     ApplicationRPConfigurationCopyCreate,
@@ -38,7 +31,6 @@ from src.app.schemas.rp_application import (
     ApplicationRPConfigurationRegistrationDraftCreate,
     WorkspaceRPApplicationRegistrationCreate,
     WorkspaceRPApplicationRegistrationDraftPatch,
-    WorkspaceRPApplicationRegistrationUpdate,
 )
 from src.app.schemas.rp_application_promotion_request import (
     PromotionRequestUpsert,
@@ -383,7 +375,7 @@ class TestWorkspaceService:
 
         assert result["source_rp_configuration_uuid"] == str(source_uuid)
         assert result["target_rp_configuration_uuid"] == str(target_uuid)
-        assert result["promotion_status"] is None
+        assert "promotion_status" not in result
         assert result["self_serve"] is True
         create_object = mock_configurations.create.await_args.kwargs["object"]
         assert create_object.source_rp_configuration_id == 33
@@ -1243,472 +1235,7 @@ class TestWorkspaceService:
         )
 
     @pytest.mark.asyncio
-    async def test_transition_workspace_onboarding_state_submits_draft_for_workspace_admin(self, mock_db) -> None:
-        service = WorkspaceService()
-        workspace_uuid = "018f6f83-0000-0000-0000-000000000201"
-        current_user = _partner()
-        existing_workspace = {
-            "id": 9,
-            "uuid": workspace_uuid,
-            "name": "Benefits Workspace",
-            "slug": "benefits-workspace",
-            "department_id": 7,
-            "description": "Primary workspace",
-            "created_by": 42,
-            "created_at": "2026-07-30T12:00:00",
-            "updated_at": None,
-            "deleted_at": None,
-            "is_deleted": False,
-            "onboarding_state": None,
-        }
-        updated_workspace = {
-            **existing_workspace,
-            "onboarding_state": "submitted",
-            "submitted_at": "2026-08-11T12:00:00+00:00",
-        }
-
-        with (
-            patch.object(
-                service,
-                "_require_workspace_capability",
-                _allowed_scope(existing_workspace),
-            ) as require_scope,
-            patch.object(
-                service,
-                "_get_workspace_record",
-                AsyncMock(return_value=updated_workspace),
-            ) as get_workspace_record,
-            patch("src.app.services.workspace_service.crud_workspaces") as mock_workspaces,
-        ):
-            mock_workspaces.update = AsyncMock(return_value=None)
-
-            result = await service.transition_workspace_onboarding_state(
-                db=mock_db,
-                workspace_uuid=workspace_uuid,
-                payload=OnboardingLifecycleTransitionRequest(target_state="submitted"),
-                current_user=current_user,
-            )
-
-        assert result["onboarding_state"] == "submitted"
-        require_scope.assert_awaited_once()
-        mock_workspaces.update.assert_awaited_once()
-        update_kwargs = mock_workspaces.update.await_args.kwargs
-        assert update_kwargs["db"] is mock_db
-        assert update_kwargs["uuid"] == workspace_uuid
-        assert update_kwargs["object"]["onboarding_state"] == "submitted"
-        assert update_kwargs["object"]["updated_at"] is not None
-        assert update_kwargs["object"]["submitted_at"] is not None
-        assert "under_review_at" not in update_kwargs["object"]
-        get_workspace_record.assert_awaited_once()
-
-    @pytest.mark.asyncio
-    async def test_transition_workspace_onboarding_state_allows_platform_admin_review_transition(self, mock_db) -> None:
-        service = WorkspaceService()
-        workspace_uuid = "018f6f83-0000-0000-0000-000000000201"
-        existing_workspace = {
-            "id": 9,
-            "uuid": workspace_uuid,
-            "name": "Benefits Workspace",
-            "slug": "benefits-workspace",
-            "department_id": 7,
-            "description": "Primary workspace",
-            "created_by": 42,
-            "created_at": "2026-07-30T12:00:00",
-            "updated_at": None,
-            "deleted_at": None,
-            "is_deleted": False,
-            "onboarding_state": "submitted",
-            "submitted_at": "2026-08-11T11:00:00+00:00",
-        }
-        updated_workspace = {
-            **existing_workspace,
-            "onboarding_state": "under_review",
-            "under_review_at": "2026-08-11T12:00:00+00:00",
-        }
-
-        with (
-            patch.object(
-                service,
-                "_require_workspace_capability",
-                _allowed_scope(existing_workspace, CanonicalRoleCode.CL_ADMIN),
-            ),
-            patch.object(
-                service,
-                "_get_workspace_record",
-                AsyncMock(return_value=updated_workspace),
-            ) as get_workspace_record,
-            patch("src.app.services.workspace_service.crud_workspaces") as mock_workspaces,
-        ):
-            mock_workspaces.update = AsyncMock(return_value=None)
-
-            result = await service.transition_workspace_onboarding_state(
-                db=mock_db,
-                workspace_uuid=workspace_uuid,
-                payload=OnboardingLifecycleTransitionRequest(target_state="under_review"),
-                current_user=_cl_admin(),
-            )
-
-        assert result["onboarding_state"] == "under_review"
-        update_kwargs = mock_workspaces.update.await_args.kwargs
-        assert update_kwargs["object"]["onboarding_state"] == "under_review"
-        assert update_kwargs["object"]["under_review_at"] is not None
-        get_workspace_record.assert_awaited_once()
-
-    @pytest.mark.asyncio
-    async def test_transition_workspace_onboarding_state_rejects_review_only_state_for_workspace_admin(self, mock_db) -> None:
-        service = WorkspaceService()
-        workspace_uuid = "018f6f83-0000-0000-0000-000000000201"
-
-        with patch("src.app.services.workspace_service.crud_workspaces") as mock_workspaces:
-            mock_workspaces.update = AsyncMock(return_value=None)
-
-            with pytest.raises(ForbiddenException, match="You do not have enough privileges."):
-                await service.transition_workspace_onboarding_state(
-                    db=mock_db,
-                    workspace_uuid=workspace_uuid,
-                    payload=OnboardingLifecycleTransitionRequest(target_state="approved"),
-                    current_user=_partner(),
-                )
-
-        mock_workspaces.update.assert_not_called()
-
-    @pytest.mark.asyncio
-    async def test_transition_workspace_onboarding_state_rejects_invalid_skip_transition(self, mock_db) -> None:
-        service = WorkspaceService()
-        workspace_uuid = "018f6f83-0000-0000-0000-000000000201"
-        existing_workspace = {
-            "id": 9,
-            "uuid": workspace_uuid,
-            "name": "Benefits Workspace",
-            "slug": "benefits-workspace",
-            "department_id": 7,
-            "description": "Primary workspace",
-            "created_by": 42,
-            "created_at": "2026-07-30T12:00:00",
-            "updated_at": None,
-            "deleted_at": None,
-            "is_deleted": False,
-            "onboarding_state": "draft",
-        }
-
-        with (
-            patch.object(
-                service,
-                "_require_workspace_capability",
-                _allowed_scope(existing_workspace, CanonicalRoleCode.CL_ADMIN),
-            ),
-            patch("src.app.services.workspace_service.crud_workspaces") as mock_workspaces,
-        ):
-            mock_workspaces.update = AsyncMock(return_value=None)
-
-            with pytest.raises(
-                BadRequestException,
-                match="Target onboarding state 'under_review' is not allowed from 'draft'",
-            ):
-                await service.transition_workspace_onboarding_state(
-                    db=mock_db,
-                    workspace_uuid=workspace_uuid,
-                    payload=OnboardingLifecycleTransitionRequest(target_state="under_review"),
-                    current_user=_cl_admin(),
-                )
-
-        mock_workspaces.update.assert_not_called()
-
-    @pytest.mark.asyncio
-    async def test_transition_workspace_application_information_onboarding_state_submits_draft_for_workspace_admin(self, mock_db) -> None:
-        service = WorkspaceService()
-        workspace_uuid = "018f6f83-0000-0000-0000-000000000201"
-        application_information_uuid = "018f6f83-0000-0000-0000-000000000501"
-        workspace = {
-            "id": 9,
-            "uuid": workspace_uuid,
-            "name": "Benefits Workspace",
-        }
-        existing_record = {
-            "id": 17,
-            "uuid": application_information_uuid,
-            "workspace_id": 9,
-            "service_name_en": "Example service",
-            "service_name_fr": "Service exemple",
-            "overview": "Overview text",
-            "technology_and_protocol": "OIDC with backend mediation",
-            "security_and_privacy": "Protected B controls apply",
-            "usage": "Partner onboarding usage",
-            "migration_or_transition_plan": "Phased transition",
-            "created_by": 42,
-            "created_at": "2026-07-30T15:00:00",
-            "updated_at": None,
-            "deleted_at": None,
-            "is_deleted": False,
-            "onboarding_state": None,
-        }
-        updated_record = {
-            **existing_record,
-            "onboarding_state": "submitted",
-            "submitted_at": "2026-08-11T12:00:00+00:00",
-        }
-
-        with (
-            patch.object(
-                service,
-                "_require_workspace_capability",
-                _allowed_scope(workspace),
-            ) as require_scope,
-            patch.object(
-                service,
-                "_get_workspace_application_information",
-                AsyncMock(side_effect=[existing_record, updated_record]),
-            ) as mock_get_record,
-            patch("src.app.services.workspace_service.crud_application_information") as mock_application_information,
-        ):
-            mock_application_information.update = AsyncMock(return_value=None)
-
-            result = await service.transition_workspace_application_information_onboarding_state(
-                db=mock_db,
-                workspace_uuid=workspace_uuid,
-                application_information_uuid=application_information_uuid,
-                payload=OnboardingLifecycleTransitionRequest(target_state="submitted"),
-                current_user=_partner(),
-            )
-
-        assert result["onboarding_state"] == "submitted"
-        require_scope.assert_awaited_once()
-        mock_application_information.update.assert_awaited_once()
-        update_kwargs = mock_application_information.update.await_args.kwargs
-        assert update_kwargs["db"] is mock_db
-        assert update_kwargs["uuid"] == application_information_uuid
-        assert update_kwargs["object"]["onboarding_state"] == "submitted"
-        assert update_kwargs["object"]["submitted_at"] is not None
-        assert mock_get_record.await_count == 2
-
-    @pytest.mark.asyncio
-    async def test_transition_workspace_rp_application_onboarding_state_submits_draft_for_workspace_admin(self, mock_db) -> None:
-        service = WorkspaceService()
-        workspace_uuid = "018f6f83-0000-0000-0000-000000000201"
-        rp_application_uuid = "018f6f83-0000-0000-0000-000000000701"
-        workspace = {
-            "id": 9,
-            "uuid": workspace_uuid,
-            "name": "Benefits Workspace",
-        }
-        existing_record = {
-            "id": 33,
-            "uuid": rp_application_uuid,
-            "workspace_id": 9,
-            "department_id": 7,
-            "application_information_id": 17,
-            "dnr_app_name": "Benefits Portal",
-            "configuration_name": "Staging integration A",
-            "partner_environment": "Partner staging",
-            "canada_login_environment": "staging",
-            "status": None,
-            "created_by": 42,
-            "created_at": "2026-07-30T16:00:00",
-            "updated_at": None,
-            "deleted_at": None,
-            "is_deleted": False,
-            "onboarding_state": None,
-            "registration_draft_version": 4,
-            "registration_last_completed_step": "encryption",
-            "oidc_registration_payload": _complete_registration_answers(),
-        }
-        updated_record = {
-            **existing_record,
-            "onboarding_state": "submitted",
-            "submitted_at": "2026-08-11T12:00:00+00:00",
-            "registration_draft_version": 5,
-        }
-
-        with (
-            patch.object(
-                service,
-                "_require_workspace_capability",
-                _allowed_scope(workspace),
-            ) as require_scope,
-            patch.object(
-                service,
-                "_get_workspace_rp_application",
-                AsyncMock(return_value=existing_record),
-            ) as mock_get_record,
-            patch.object(
-                service,
-                "_resolve_workspace_application_information_uuid",
-                AsyncMock(return_value=UUID("018f6f83-0000-0000-0000-000000000301")),
-            ),
-            patch("src.app.services.workspace_service.crud_rp_applications") as mock_rp_applications,
-        ):
-            mock_rp_applications.update = AsyncMock(return_value=updated_record)
-
-            result = await service.transition_workspace_rp_application_onboarding_state(
-                db=mock_db,
-                workspace_uuid=workspace_uuid,
-                rp_application_uuid=rp_application_uuid,
-                payload=WorkspaceRPApplicationOnboardingLifecycleTransitionRequest(
-                    target_state="submitted",
-                    expected_draft_version=4,
-                ),
-                current_user=_partner(),
-            )
-
-        assert result["onboarding_state"] == "submitted"
-        assert result["rp_application_uuid"] == rp_application_uuid
-        assert "oidc_registration_payload" not in result
-        require_scope.assert_awaited_once()
-        mock_rp_applications.update.assert_awaited_once()
-        update_kwargs = mock_rp_applications.update.await_args.kwargs
-        assert update_kwargs["db"] is mock_db
-        assert update_kwargs["uuid"] == rp_application_uuid
-        assert update_kwargs["workspace_id"] == 9
-        assert update_kwargs["onboarding_state"] == "draft"
-        assert update_kwargs["registration_draft_version"] == 4
-        assert update_kwargs["object"]["onboarding_state"] == "submitted"
-        assert update_kwargs["object"]["submitted_at"] is not None
-        assert update_kwargs["object"]["registration_draft_version"] == 5
-        assert update_kwargs["object"]["registration_last_completed_step"] == "encryption"
-        assert mock_get_record.await_count == 1
-
-    @pytest.mark.asyncio
-    async def test_transition_workspace_rp_application_onboarding_state_rejects_production_approval_without_promotion_request(self, mock_db) -> None:
-        service = WorkspaceService()
-        workspace_uuid = "018f6f83-0000-0000-0000-000000000201"
-        rp_application_uuid = "018f6f83-0000-0000-0000-000000000701"
-        workspace = {
-            "id": 9,
-            "uuid": workspace_uuid,
-            "name": "Benefits Workspace",
-        }
-        existing_record = {
-            "id": 33,
-            "uuid": rp_application_uuid,
-            "workspace_id": 9,
-            "department_id": 7,
-            "application_information_id": 17,
-            "dnr_app_name": "Benefits Portal",
-            "canada_login_environment": "production",
-            "status": None,
-            "created_by": 42,
-            "created_at": "2026-07-30T16:00:00",
-            "updated_at": None,
-            "deleted_at": None,
-            "is_deleted": False,
-            "onboarding_state": "under_review",
-            "under_review_at": "2026-08-11T12:00:00+00:00",
-        }
-
-        with (
-            patch.object(
-                service,
-                "_require_workspace_capability",
-                _allowed_scope(workspace, CanonicalRoleCode.CL_ADMIN),
-            ) as require_scope,
-            patch.object(service, "_get_workspace_rp_application", AsyncMock(return_value=existing_record)),
-            patch("src.app.services.workspace_service.crud_rp_application_promotion_requests") as mock_promotion_requests,
-            patch("src.app.services.workspace_service.crud_rp_applications") as mock_rp_applications,
-        ):
-            mock_promotion_requests.get = AsyncMock(return_value=None)
-            mock_rp_applications.update = AsyncMock(return_value=None)
-
-            with pytest.raises(
-                BadRequestException,
-                match="Production RP applications cannot move to 'approved' or 'launched' without a recorded promotion request",
-            ):
-                await service.transition_workspace_rp_application_onboarding_state(
-                    db=mock_db,
-                    workspace_uuid=workspace_uuid,
-                    rp_application_uuid=rp_application_uuid,
-                    payload=OnboardingLifecycleTransitionRequest(target_state="approved"),
-                    current_user=_cl_admin(),
-                )
-
-        require_scope.assert_awaited_once()
-        mock_rp_applications.update.assert_not_called()
-
-    @pytest.mark.asyncio
-    async def test_transition_workspace_rp_application_onboarding_state_allows_production_approval_with_reviewed_promotion_request(
-        self,
-        mock_db,
-    ) -> None:
-        service = WorkspaceService()
-        workspace_uuid = "018f6f83-0000-0000-0000-000000000201"
-        rp_application_uuid = "018f6f83-0000-0000-0000-000000000701"
-        workspace = {
-            "id": 9,
-            "uuid": workspace_uuid,
-            "name": "Benefits Workspace",
-        }
-        existing_record = {
-            "id": 33,
-            "uuid": rp_application_uuid,
-            "workspace_id": 9,
-            "department_id": 7,
-            "application_information_id": 17,
-            "dnr_app_name": "Benefits Portal",
-            "canada_login_environment": "production",
-            "status": None,
-            "created_by": 42,
-            "created_at": "2026-07-30T16:00:00",
-            "updated_at": None,
-            "deleted_at": None,
-            "is_deleted": False,
-            "onboarding_state": "under_review",
-            "under_review_at": "2026-08-11T12:00:00+00:00",
-        }
-        updated_record = {
-            **existing_record,
-            "onboarding_state": "approved",
-            "approved_at": "2026-08-11T12:30:00+00:00",
-        }
-        promotion_request = {
-            "id": 4,
-            "rp_application_id": 33,
-            "target_environment": "production",
-            "status": "approved",
-            "external_reference": "CAB-123",
-            "reviewed_by_user_id": 1,
-            "reviewed_by_team": "CanadaLogin",
-            "requested_at": "2026-08-11T11:45:00+00:00",
-            "reviewed_at": "2026-08-11T12:15:00+00:00",
-            "decided_at": "2026-08-11T12:15:00+00:00",
-        }
-
-        with (
-            patch.object(
-                service,
-                "_require_workspace_capability",
-                _allowed_scope(workspace, CanonicalRoleCode.CL_ADMIN),
-            ) as require_scope,
-            patch.object(
-                service,
-                "_get_workspace_rp_application",
-                AsyncMock(side_effect=[existing_record, updated_record]),
-            ) as mock_get_record,
-            patch("src.app.services.workspace_service.crud_rp_application_promotion_requests") as mock_promotion_requests,
-            patch("src.app.services.workspace_service.crud_rp_applications") as mock_rp_applications,
-        ):
-            mock_promotion_requests.get = AsyncMock(return_value=promotion_request)
-            mock_rp_applications.update = AsyncMock(return_value=None)
-
-            result = await service.transition_workspace_rp_application_onboarding_state(
-                db=mock_db,
-                workspace_uuid=workspace_uuid,
-                rp_application_uuid=rp_application_uuid,
-                payload=OnboardingLifecycleTransitionRequest(target_state="approved"),
-                current_user=_cl_admin(),
-            )
-
-        assert result["onboarding_state"] == "approved"
-        require_scope.assert_awaited_once()
-        mock_promotion_requests.get.assert_awaited_once_with(
-            db=mock_db,
-            rp_application_id=33,
-            target_environment="production",
-            is_deleted=False,
-        )
-        mock_rp_applications.update.assert_awaited_once()
-        assert mock_get_record.await_count == 2
-
-    @pytest.mark.asyncio
-    async def test_upsert_workspace_rp_application_promotion_request_creates_review_tracked_request(self, mock_db) -> None:
+    async def test_upsert_workspace_rp_application_promotion_request_creates_pending_request(self, mock_db) -> None:
         service = WorkspaceService()
         workspace_uuid = "018f6f83-0000-0000-0000-000000000201"
         rp_application_uuid = "018f6f83-0000-0000-0000-000000000701"
@@ -1733,12 +1260,20 @@ class TestWorkspaceService:
             "is_deleted": False,
             "onboarding_state": "submitted",
         }
-        updated_record = {
-            **rp_application,
-            "promotion_target_environment": "production",
-            "promotion_status": "review_tracked",
-            "promotion_external_reference": "CAB-123",
-            "promotion_requested_at": "2026-08-11T12:00:00+00:00",
+        stored_request = {
+            "id": 4,
+            "rp_application_id": 33,
+            "target_environment": "production",
+            "status": "review_tracked",
+            "review_status": "pending",
+            "external_reference": "CAB-123",
+            "reviewed_by_user_id": None,
+            "reviewed_by_team": None,
+            "requested_at": datetime(2026, 8, 11, 12, 0, tzinfo=UTC),
+            "reviewed_at": None,
+            "decided_at": None,
+            "created_at": datetime(2026, 8, 11, 12, 0, tzinfo=UTC),
+            "updated_at": None,
         }
 
         with (
@@ -1750,11 +1285,11 @@ class TestWorkspaceService:
             patch.object(
                 service,
                 "_get_workspace_rp_application",
-                AsyncMock(side_effect=[rp_application, updated_record]),
+                AsyncMock(return_value=rp_application),
             ),
             patch("src.app.services.workspace_service.crud_rp_application_promotion_requests") as mock_promotion_requests,
         ):
-            mock_promotion_requests.get = AsyncMock(return_value=None)
+            mock_promotion_requests.get = AsyncMock(side_effect=[None, stored_request])
             mock_promotion_requests.create = AsyncMock(return_value={"id": 4})
 
             result = await service.upsert_workspace_rp_application_promotion_request(
@@ -1765,15 +1300,222 @@ class TestWorkspaceService:
                 current_user=_partner(),
             )
 
-        assert result["promotion_status"] == "review_tracked"
+        assert result["status"] == "pending"
         mock_promotion_requests.create.assert_awaited_once()
         create_kwargs = mock_promotion_requests.create.await_args.kwargs
         assert create_kwargs["db"] is mock_db
         assert create_kwargs["object"].rp_application_id == 33
         assert create_kwargs["object"].target_environment == "production"
         assert create_kwargs["object"].status == "review_tracked"
+        assert create_kwargs["object"].review_status == "pending"
         assert create_kwargs["object"].external_reference == "CAB-123"
         assert create_kwargs["object"].requested_at is not None
+        assert create_kwargs["commit"] is False
+        assert mock_db.add.call_args.args[0].operation == "review_request"
+        mock_db.commit.assert_awaited_once()
+
+    @pytest.mark.asyncio
+    async def test_pending_production_review_metadata_update_preserves_request_time_and_outcome_fields(
+        self,
+        mock_db,
+    ) -> None:
+        service = WorkspaceService()
+        requested_at = datetime(2026, 8, 11, 12, 0, tzinfo=UTC)
+        workspace = {
+            "id": 9,
+            "uuid": WORKSPACE_UUID,
+            "name": "Benefits Workspace",
+        }
+        rp_application = {
+            "id": 33,
+            "uuid": "018f6f83-0000-0000-0000-000000000701",
+            "workspace_id": 9,
+            "canada_login_environment": "production",
+        }
+        pending_request = {
+            "id": 4,
+            "rp_application_id": 33,
+            "target_environment": "production",
+            "status": "review_tracked",
+            "review_status": "pending",
+            "external_reference": "CAB-123",
+            "reviewed_by_user_id": None,
+            "reviewed_by_team": None,
+            "requested_at": requested_at,
+            "reviewed_at": None,
+            "decided_at": None,
+            "created_at": requested_at,
+            "updated_at": None,
+        }
+        stored_request = {
+            **pending_request,
+            "external_reference": "CAB-456",
+            "updated_at": datetime(2026, 8, 11, 12, 30, tzinfo=UTC),
+        }
+
+        with (
+            patch.object(service, "_require_workspace_capability", _allowed_scope(workspace)),
+            patch.object(
+                service,
+                "_get_workspace_rp_application",
+                AsyncMock(return_value=rp_application),
+            ),
+            patch("src.app.services.workspace_service.crud_rp_application_promotion_requests") as mock_reviews,
+        ):
+            mock_reviews.get = AsyncMock(side_effect=[pending_request, stored_request])
+            mock_reviews.update = AsyncMock(return_value={"id": 4})
+
+            result = await service.upsert_workspace_rp_application_promotion_request(
+                db=mock_db,
+                workspace_uuid=WORKSPACE_UUID,
+                rp_application_uuid=rp_application["uuid"],
+                payload=PromotionRequestUpsert(external_reference="CAB-456"),
+                current_user=_partner(),
+            )
+
+        assert result["status"] == "pending"
+        assert result["external_reference"] == "CAB-456"
+        assert result["requested_at"] == requested_at
+        update = mock_reviews.update.await_args.kwargs
+        assert set(update["object"]) == {"external_reference", "updated_at"}
+        assert update["object"]["external_reference"] == "CAB-456"
+        assert update["review_status"] == "pending"
+        assert update["commit"] is False
+        assert mock_db.add.call_args.args[0].operation == "review_update"
+        mock_db.commit.assert_awaited_once()
+
+    @pytest.mark.asyncio
+    @pytest.mark.parametrize("review_status", ["approved", "rejected"])
+    async def test_partner_cannot_reset_terminal_production_review(
+        self,
+        mock_db,
+        review_status: str,
+    ) -> None:
+        service = WorkspaceService()
+        workspace = {"id": 9, "uuid": WORKSPACE_UUID, "name": "Benefits Workspace"}
+        rp_application = {
+            "id": 33,
+            "uuid": "018f6f83-0000-0000-0000-000000000701",
+            "canada_login_environment": "production",
+        }
+
+        with (
+            patch.object(service, "_require_workspace_capability", _allowed_scope(workspace)),
+            patch.object(
+                service,
+                "_get_workspace_rp_application",
+                AsyncMock(return_value=rp_application),
+            ),
+            patch("src.app.services.workspace_service.crud_rp_application_promotion_requests") as mock_reviews,
+        ):
+            mock_reviews.get = AsyncMock(
+                return_value={
+                    "id": 4,
+                    "rp_application_id": 33,
+                    "review_status": review_status,
+                }
+            )
+            mock_reviews.update = AsyncMock()
+
+            with pytest.raises(
+                BadRequestException,
+                match="Only a pending Production-review request can be updated",
+            ):
+                await service.upsert_workspace_rp_application_promotion_request(
+                    db=mock_db,
+                    workspace_uuid=WORKSPACE_UUID,
+                    rp_application_uuid=rp_application["uuid"],
+                    payload=PromotionRequestUpsert(external_reference="CAB-456"),
+                    current_user=_partner(),
+                )
+
+        mock_reviews.update.assert_not_awaited()
+        mock_db.add.assert_not_called()
+        mock_db.commit.assert_not_awaited()
+
+    @pytest.mark.asyncio
+    async def test_ambiguous_historical_review_is_not_mapped_or_replaced(self, mock_db) -> None:
+        service = WorkspaceService()
+        workspace = {"id": 9, "uuid": WORKSPACE_UUID, "name": "Benefits Workspace"}
+        rp_application = {
+            "id": 33,
+            "uuid": "018f6f83-0000-0000-0000-000000000701",
+            "canada_login_environment": "production",
+        }
+
+        with (
+            patch.object(service, "_require_workspace_capability", _allowed_scope(workspace)),
+            patch.object(
+                service,
+                "_get_workspace_rp_application",
+                AsyncMock(return_value=rp_application),
+            ),
+            patch("src.app.services.workspace_service.crud_rp_application_promotion_requests") as mock_reviews,
+        ):
+            mock_reviews.get = AsyncMock(
+                return_value={
+                    "id": 4,
+                    "rp_application_id": 33,
+                    "target_environment": "production",
+                    "status": "changes_requested",
+                    "review_status": None,
+                    "requested_at": datetime(2026, 8, 11, 12, 0, tzinfo=UTC),
+                    "created_at": datetime(2026, 8, 11, 12, 0, tzinfo=UTC),
+                }
+            )
+            mock_reviews.create = AsyncMock()
+            mock_reviews.update = AsyncMock()
+
+            with pytest.raises(
+                BadRequestException,
+                match="Historical Production-review record requires reconciliation",
+            ):
+                await service.get_workspace_rp_application_promotion_request(
+                    db=mock_db,
+                    workspace_uuid=WORKSPACE_UUID,
+                    rp_application_uuid=rp_application["uuid"],
+                    current_user=_partner(CanonicalRoleCode.READ_ONLY),
+                )
+
+            with pytest.raises(
+                BadRequestException,
+                match="Historical Production-review record requires reconciliation",
+            ):
+                await service.upsert_workspace_rp_application_promotion_request(
+                    db=mock_db,
+                    workspace_uuid=WORKSPACE_UUID,
+                    rp_application_uuid=rp_application["uuid"],
+                    payload=PromotionRequestUpsert(external_reference="CAB-456"),
+                    current_user=_partner(),
+                )
+
+            with pytest.raises(
+                BadRequestException,
+                match="Historical Production-review record requires reconciliation",
+            ):
+                await service.review_workspace_rp_application_promotion_request(
+                    db=mock_db,
+                    workspace_uuid=WORKSPACE_UUID,
+                    rp_application_uuid=rp_application["uuid"],
+                    payload=PromotionReviewUpdate(
+                        status="rejected",
+                        reviewed_by_team="CanadaLogin review",
+                    ),
+                    current_user=_cl_admin(),
+                )
+
+            summary = await service._attach_rp_application_promotion_request_summary(
+                mock_db,
+                rp_application,
+            )
+
+        assert summary["production_review_reconciliation_required"] is True
+        assert summary.get("production_review_status") is None
+
+        mock_reviews.create.assert_not_awaited()
+        mock_reviews.update.assert_not_awaited()
+        mock_db.add.assert_not_called()
+        mock_db.commit.assert_not_awaited()
 
     @pytest.mark.asyncio
     async def test_nested_promotion_read_exposes_public_source_and_target_lineage(self, mock_db) -> None:
@@ -1818,7 +1560,7 @@ class TestWorkspaceService:
                 AsyncMock(
                     return_value={
                         "target_environment": "production",
-                        "status": "review_tracked",
+                        "status": "pending",
                         "external_reference": "CAB-123",
                         "reviewed_by_user_uuid": None,
                         "reviewed_by_team": None,
@@ -1875,21 +1617,23 @@ class TestWorkspaceService:
             "rp_application_id": 33,
             "target_environment": "production",
             "status": "review_tracked",
+            "review_status": "pending",
             "external_reference": "CAB-123",
             "reviewed_by_user_id": None,
             "reviewed_by_team": None,
             "requested_at": "2026-08-11T11:45:00+00:00",
             "reviewed_at": None,
             "decided_at": None,
+            "created_at": "2026-08-11T11:45:00+00:00",
         }
-        updated_record = {
-            **rp_application,
-            "promotion_target_environment": "production",
-            "promotion_status": "approved",
-            "promotion_external_reference": "CAB-123",
-            "promotion_reviewed_by_team": "CanadaLogin",
-            "promotion_reviewed_at": "2026-08-11T12:15:00+00:00",
-            "promotion_decided_at": "2026-08-11T12:15:00+00:00",
+        approved_request = {
+            **promotion_request,
+            "review_status": "approved",
+            "reviewed_by_user_id": 1,
+            "reviewed_by_team": "CanadaLogin",
+            "reviewed_at": "2026-08-11T12:15:00+00:00",
+            "decided_at": "2026-08-11T12:15:00+00:00",
+            "updated_at": "2026-08-11T12:15:00+00:00",
         }
 
         with (
@@ -1901,12 +1645,14 @@ class TestWorkspaceService:
             patch.object(
                 service,
                 "_get_workspace_rp_application",
-                AsyncMock(side_effect=[rp_application, updated_record]),
+                AsyncMock(return_value=rp_application),
             ),
             patch("src.app.services.workspace_service.crud_rp_application_promotion_requests") as mock_promotion_requests,
+            patch("src.app.services.workspace_service.crud_users") as mock_users,
         ):
-            mock_promotion_requests.get = AsyncMock(return_value=promotion_request)
-            mock_promotion_requests.update = AsyncMock(return_value=None)
+            mock_promotion_requests.get = AsyncMock(side_effect=[promotion_request, approved_request])
+            mock_promotion_requests.update = AsyncMock(return_value={"id": 4})
+            mock_users.get = AsyncMock(return_value=None)
 
             result = await service.review_workspace_rp_application_promotion_request(
                 db=mock_db,
@@ -1920,17 +1666,75 @@ class TestWorkspaceService:
                 current_user=_cl_admin(),
             )
 
-        assert result["promotion_status"] == "approved"
+        assert result["status"] == "approved"
         mock_promotion_requests.update.assert_awaited_once()
         update_kwargs = mock_promotion_requests.update.await_args.kwargs
         assert update_kwargs["db"] is mock_db
         assert update_kwargs["id"] == 4
-        assert update_kwargs["object"]["status"] == "approved"
+        assert update_kwargs["object"]["review_status"] == "approved"
+        assert "status" not in update_kwargs["object"]
         assert update_kwargs["object"]["external_reference"] == "CAB-123"
         assert update_kwargs["object"]["reviewed_by_team"] == "CanadaLogin"
         assert update_kwargs["object"]["reviewed_by_user_id"] == 1
         assert update_kwargs["object"]["reviewed_at"] is not None
         assert update_kwargs["object"]["decided_at"] is not None
+        assert update_kwargs["review_status"] == "pending"
+        assert update_kwargs["commit"] is False
+        assert mock_db.add.call_args.args[0].operation == "review_decision"
+        mock_db.commit.assert_awaited_once()
+
+    @pytest.mark.asyncio
+    @pytest.mark.parametrize("review_status", ["approved", "rejected"])
+    async def test_cl_admin_cannot_decide_terminal_production_review_again(
+        self,
+        mock_db,
+        review_status: str,
+    ) -> None:
+        service = WorkspaceService()
+        workspace = {"id": 9, "uuid": WORKSPACE_UUID, "name": "Benefits Workspace"}
+        rp_application = {
+            "id": 33,
+            "uuid": "018f6f83-0000-0000-0000-000000000701",
+            "canada_login_environment": "production",
+        }
+
+        with (
+            patch.object(
+                service,
+                "_require_workspace_capability",
+                _allowed_scope(workspace, CanonicalRoleCode.CL_ADMIN),
+            ),
+            patch.object(
+                service,
+                "_get_workspace_rp_application",
+                AsyncMock(return_value=rp_application),
+            ),
+            patch("src.app.services.workspace_service.crud_rp_application_promotion_requests") as mock_reviews,
+        ):
+            mock_reviews.get = AsyncMock(
+                return_value={
+                    "id": 4,
+                    "rp_application_id": 33,
+                    "review_status": review_status,
+                }
+            )
+            mock_reviews.update = AsyncMock()
+
+            with pytest.raises(
+                BadRequestException,
+                match="Only a pending Production-review request can receive an outcome",
+            ):
+                await service.review_workspace_rp_application_promotion_request(
+                    db=mock_db,
+                    workspace_uuid=WORKSPACE_UUID,
+                    rp_application_uuid=rp_application["uuid"],
+                    payload=PromotionReviewUpdate(status="rejected"),
+                    current_user=_cl_admin(),
+                )
+
+        mock_reviews.update.assert_not_awaited()
+        mock_db.add.assert_not_called()
+        mock_db.commit.assert_not_awaited()
 
     def test_workspace_member_crud_methods_are_retired(self) -> None:
         service = WorkspaceService()
@@ -2101,7 +1905,6 @@ class TestWorkspaceService:
             "partner_environment": None,
             "canada_login_environment": "staging",
             "onboarding_state": "draft",
-            "promotion_status": None,
             "registration_draft_version": 6,
             "registration_last_completed_step": "encryption",
             "oidc_registration_payload": {
@@ -2458,283 +2261,6 @@ class TestWorkspaceService:
         assert "identity_confirmed_by" not in result
 
     @pytest.mark.asyncio
-    async def test_get_workspace_application_information_review_context_returns_note_history_and_summary(self, mock_db) -> None:
-        service = WorkspaceService()
-
-        with (
-            patch.object(
-                service,
-                "_require_workspace_capability",
-                _allowed_scope(
-                    {"id": 9, "uuid": str(WORKSPACE_UUID)},
-                    CanonicalRoleCode.CL_ADMIN,
-                ),
-            ),
-            patch.object(
-                service,
-                "_get_workspace_application_information",
-                AsyncMock(
-                    return_value={
-                        "id": 17,
-                        "uuid": "018f6f83-0000-0000-0000-000000000501",
-                        "workspace_id": 9,
-                        "onboarding_state": "under_review",
-                    }
-                ),
-            ),
-            patch("src.app.services.workspace_service.crud_application_information_review_notes") as mock_notes,
-            patch("src.app.services.workspace_service.crud_application_information_review_checklists") as mock_checklists,
-            patch("src.app.services.workspace_service.crud_users") as mock_users,
-        ):
-            mock_notes.get_multi = AsyncMock(
-                return_value={
-                    "data": [
-                        {
-                            "id": 2,
-                            "uuid": "018f6f83-0000-0000-0000-000000000911",
-                            "application_information_id": 17,
-                            "author_id": 1,
-                            "body": "Newest note",
-                            "created_at": "2026-08-11T12:30:00+00:00",
-                            "updated_at": None,
-                            "deleted_at": None,
-                            "is_deleted": False,
-                        },
-                        {
-                            "id": 1,
-                            "uuid": "018f6f83-0000-0000-0000-000000000910",
-                            "application_information_id": 17,
-                            "author_id": 1,
-                            "body": "Older note",
-                            "created_at": "2026-08-11T12:00:00+00:00",
-                            "updated_at": None,
-                            "deleted_at": None,
-                            "is_deleted": False,
-                        },
-                    ]
-                }
-            )
-            mock_checklists.get = AsyncMock(
-                return_value={
-                    "id": 3,
-                    "uuid": "018f6f83-0000-0000-0000-000000000912",
-                    "application_information_id": 17,
-                    "reviewed_by_user_id": 1,
-                    "review_disposition": "changes_requested",
-                    "application_information_status": "complete",
-                    "contacts_status": "incomplete",
-                    "environment_registration_status": "complete",
-                    "promotion_metadata_status": "not_started",
-                    "evidence_reference_status": "incomplete",
-                    "process_links_status": "complete",
-                    "rationale": "Need evidence reference",
-                    "created_at": "2026-08-11T12:10:00+00:00",
-                    "updated_at": "2026-08-11T12:35:00+00:00",
-                    "deleted_at": None,
-                    "is_deleted": False,
-                }
-            )
-            mock_users.get = AsyncMock(
-                return_value={
-                    "id": 1,
-                    "uuid": "018f6f83-0000-0000-0000-000000000001",
-                    "name": "CL Admin",
-                    "email": "admin@example.gc.ca",
-                }
-            )
-
-            result = await service.get_workspace_application_information_review_context(
-                db=mock_db,
-                workspace_uuid="018f6f83-0000-0000-0000-000000000201",
-                application_information_uuid="018f6f83-0000-0000-0000-000000000501",
-                current_user=_cl_admin(),
-            )
-
-        assert result["notes"][0]["body"] == "Newest note"
-        assert result["notes"][0]["author_name"] == "CL Admin"
-        assert result["checklist_summary"]["review_disposition"] == "changes_requested"
-        assert result["checklist_summary"]["reviewed_by_name"] == "CL Admin"
-
-    @pytest.mark.asyncio
-    async def test_add_workspace_application_information_review_note_creates_append_only_note(self, mock_db) -> None:
-        service = WorkspaceService()
-
-        with (
-            patch.object(
-                service,
-                "_require_workspace_capability",
-                _allowed_scope(
-                    {"id": 9, "uuid": str(WORKSPACE_UUID)},
-                    CanonicalRoleCode.CL_ADMIN,
-                ),
-            ),
-            patch.object(
-                service,
-                "_get_workspace_application_information",
-                AsyncMock(
-                    return_value={
-                        "id": 17,
-                        "uuid": "018f6f83-0000-0000-0000-000000000501",
-                        "workspace_id": 9,
-                        "onboarding_state": "submitted",
-                    }
-                ),
-            ),
-            patch("src.app.services.workspace_service.crud_application_information_review_notes") as mock_notes,
-            patch("src.app.services.workspace_service.crud_users") as mock_users,
-        ):
-            mock_notes.create = AsyncMock(
-                return_value={
-                    "id": 2,
-                    "uuid": "018f6f83-0000-0000-0000-000000000911",
-                    "application_information_id": 17,
-                    "author_id": 1,
-                    "body": "Needs a production evidence reference",
-                    "created_at": "2026-08-11T12:30:00+00:00",
-                    "updated_at": None,
-                    "deleted_at": None,
-                    "is_deleted": False,
-                }
-            )
-            mock_users.get = AsyncMock(
-                return_value={
-                    "id": 1,
-                    "uuid": "018f6f83-0000-0000-0000-000000000001",
-                    "name": "CL Admin",
-                    "email": "admin@example.gc.ca",
-                }
-            )
-
-            result = await service.add_workspace_application_information_review_note(
-                db=mock_db,
-                workspace_uuid="018f6f83-0000-0000-0000-000000000201",
-                application_information_uuid="018f6f83-0000-0000-0000-000000000501",
-                payload=ApplicationInformationReviewNoteCreate(body="Needs a production evidence reference"),
-                current_user=_cl_admin(),
-            )
-
-        assert result["body"] == "Needs a production evidence reference"
-        create_kwargs = mock_notes.create.await_args.kwargs
-        assert create_kwargs["object"].application_information_id == 17
-        assert create_kwargs["object"].author_id == 1
-        assert create_kwargs["object"].body == "Needs a production evidence reference"
-
-    @pytest.mark.asyncio
-    async def test_upsert_workspace_application_information_review_checklist_updates_summary_and_appends_rationale_note(self, mock_db) -> None:
-        service = WorkspaceService()
-
-        with (
-            patch.object(
-                service,
-                "_require_workspace_capability",
-                _allowed_scope(
-                    {"id": 9, "uuid": str(WORKSPACE_UUID)},
-                    CanonicalRoleCode.CL_ADMIN,
-                ),
-            ),
-            patch.object(
-                service,
-                "_get_workspace_application_information",
-                AsyncMock(
-                    return_value={
-                        "id": 17,
-                        "uuid": "018f6f83-0000-0000-0000-000000000501",
-                        "workspace_id": 9,
-                        "onboarding_state": "under_review",
-                    }
-                ),
-            ),
-            patch("src.app.services.workspace_service.crud_application_information_review_checklists") as mock_checklists,
-            patch("src.app.services.workspace_service.crud_application_information_review_notes") as mock_notes,
-            patch("src.app.services.workspace_service.crud_users") as mock_users,
-        ):
-            mock_checklists.get = AsyncMock(
-                side_effect=[
-                    {
-                        "id": 3,
-                        "uuid": "018f6f83-0000-0000-0000-000000000912",
-                        "application_information_id": 17,
-                        "reviewed_by_user_id": 1,
-                        "review_disposition": "pending",
-                        "application_information_status": "incomplete",
-                        "contacts_status": "incomplete",
-                        "environment_registration_status": "not_started",
-                        "promotion_metadata_status": "not_started",
-                        "evidence_reference_status": "not_started",
-                        "process_links_status": "not_started",
-                        "rationale": None,
-                        "created_at": "2026-08-11T12:10:00+00:00",
-                        "updated_at": None,
-                        "deleted_at": None,
-                        "is_deleted": False,
-                    },
-                    {
-                        "id": 3,
-                        "uuid": "018f6f83-0000-0000-0000-000000000912",
-                        "application_information_id": 17,
-                        "reviewed_by_user_id": 1,
-                        "review_disposition": "ready_for_next_step",
-                        "application_information_status": "complete",
-                        "contacts_status": "complete",
-                        "environment_registration_status": "complete",
-                        "promotion_metadata_status": "incomplete",
-                        "evidence_reference_status": "incomplete",
-                        "process_links_status": "complete",
-                        "rationale": "Ready for external review once evidence is linked",
-                        "created_at": "2026-08-11T12:10:00+00:00",
-                        "updated_at": "2026-08-11T12:45:00+00:00",
-                        "deleted_at": None,
-                        "is_deleted": False,
-                    },
-                ]
-            )
-            mock_checklists.update = AsyncMock(return_value=None)
-            mock_notes.create = AsyncMock(
-                return_value={
-                    "id": 4,
-                    "uuid": "018f6f83-0000-0000-0000-000000000913",
-                    "application_information_id": 17,
-                    "author_id": 1,
-                    "body": "Ready for external review once evidence is linked",
-                    "created_at": "2026-08-11T12:45:00+00:00",
-                    "updated_at": None,
-                    "deleted_at": None,
-                    "is_deleted": False,
-                }
-            )
-            mock_users.get = AsyncMock(
-                return_value={
-                    "id": 1,
-                    "uuid": "018f6f83-0000-0000-0000-000000000001",
-                    "name": "CL Admin",
-                    "email": "admin@example.gc.ca",
-                }
-            )
-
-            result = await service.upsert_workspace_application_information_review_checklist(
-                db=mock_db,
-                workspace_uuid="018f6f83-0000-0000-0000-000000000201",
-                application_information_uuid="018f6f83-0000-0000-0000-000000000501",
-                payload=ApplicationInformationReviewChecklistSummaryWrite(
-                    review_disposition="ready_for_next_step",
-                    application_information_status="complete",
-                    contacts_status="complete",
-                    environment_registration_status="complete",
-                    promotion_metadata_status="incomplete",
-                    evidence_reference_status="incomplete",
-                    process_links_status="complete",
-                    rationale="Ready for external review once evidence is linked",
-                ),
-                current_user=_cl_admin(),
-            )
-
-        assert result["review_disposition"] == "ready_for_next_step"
-        update_kwargs = mock_checklists.update.await_args.kwargs
-        assert update_kwargs["uuid"] == "018f6f83-0000-0000-0000-000000000912"
-        assert update_kwargs["object"]["reviewed_by_user_id"] == 1
-        mock_notes.create.assert_awaited_once()
-
-    @pytest.mark.asyncio
     async def test_create_workspace_rp_application_sets_workspace_department_and_registration_payload(self, mock_db) -> None:
         service = WorkspaceService()
         service._resolve_workspace_application_information_id = AsyncMock(return_value=17)  # type: ignore[method-assign]
@@ -2983,99 +2509,6 @@ class TestWorkspaceService:
         mock_workspace_members.get.assert_not_awaited()
 
     @pytest.mark.asyncio
-    async def test_update_workspace_rp_application_merges_questionnaire_payload(self, mock_db) -> None:
-        service = WorkspaceService()
-
-        with (
-            patch("src.app.services.workspace_service.crud_workspaces") as mock_workspaces,
-            patch("src.app.services.workspace_service.crud_workspace_members", create=True) as mock_workspace_members,
-            patch("src.app.services.workspace_service.crud_rp_applications") as mock_rp_applications,
-        ):
-            mock_workspaces.get = AsyncMock(
-                return_value={
-                    "id": 9,
-                    "uuid": "018f6f83-0000-0000-0000-000000000201",
-                    "name": "Benefits Workspace",
-                    "slug": "benefits-workspace",
-                    "department_id": 7,
-                    "description": "Primary workspace",
-                    "created_by": 42,
-                    "created_at": "2026-07-30T12:00:00",
-                    "updated_at": None,
-                    "deleted_at": None,
-                    "is_deleted": False,
-                }
-            )
-            mock_workspace_members.get = AsyncMock(return_value={"role": "workspace_admin"})
-            mock_rp_applications.get = AsyncMock(
-                side_effect=[
-                    {
-                        "id": 33,
-                        "uuid": "018f6f83-0000-0000-0000-000000000701",
-                        "workspace_id": 9,
-                        "department_id": 7,
-                        "application_information_id": 17,
-                        "dnr_app_name": "Benefits Portal",
-                        "canada_login_environment": "staging",
-                        "status": None,
-                        "created_by": 42,
-                        "created_at": "2026-07-30T16:00:00",
-                        "deleted_at": None,
-                        "is_deleted": False,
-                        "ibm_sv_application_id": None,
-                        "oidc_registration_payload": {
-                            "service_name_en": "Benefits Portal",
-                            "pkce_supported": True,
-                            "requested_scopes": ["openid", "profile"],
-                        },
-                        "application_owner": None,
-                    },
-                    {
-                        "id": 33,
-                        "uuid": "018f6f83-0000-0000-0000-000000000701",
-                        "workspace_id": 9,
-                        "department_id": 7,
-                        "application_information_id": 17,
-                        "dnr_app_name": "Benefits Portal Updated",
-                        "canada_login_environment": "staging",
-                        "status": None,
-                        "created_by": 42,
-                        "created_at": "2026-07-30T16:00:00",
-                        "deleted_at": None,
-                        "is_deleted": False,
-                        "ibm_sv_application_id": None,
-                        "oidc_registration_payload": {
-                            "service_name_en": "Benefits Portal Updated",
-                            "pkce_supported": True,
-                            "requested_scopes": ["openid", "profile", "email"],
-                        },
-                        "application_owner": None,
-                    },
-                ]
-            )
-            mock_rp_applications.update = AsyncMock(return_value=None)
-
-            result = await service.update_workspace_rp_application(
-                db=mock_db,
-                workspace_uuid="018f6f83-0000-0000-0000-000000000201",
-                rp_application_uuid="018f6f83-0000-0000-0000-000000000701",
-                payload=WorkspaceRPApplicationRegistrationUpdate(
-                    service_name_en="Benefits Portal Updated",
-                    requested_scopes=["openid", "profile", "email"],
-                ),
-                current_user=_partner(),
-            )
-
-        assert result["dnr_app_name"] == "Benefits Portal Updated"
-        update_kwargs = mock_rp_applications.update.await_args.kwargs
-        assert update_kwargs["object"]["dnr_app_name"] == "Benefits Portal Updated"
-        assert update_kwargs["object"]["oidc_registration_payload"]["requested_scopes"] == [
-            "openid",
-            "profile",
-            "email",
-        ]
-
-    @pytest.mark.asyncio
     async def test_get_workspace_rp_application_usage_summary_uses_ibm_admin_telemetry_for_selected_day(
         self,
         mock_db,
@@ -3139,76 +2572,6 @@ class TestWorkspaceService:
             application_id="ibm-app-123",
             from_date="1775692800000",
             to_date="1775779199999",
-        )
-
-    @pytest.mark.asyncio
-    async def test_get_workspace_rp_application_audit_events_search_after_delegates_cursor(
-        self,
-        mock_db,
-    ) -> None:
-        service = WorkspaceService()
-        mock_ibm_sv_admin_service = Mock()
-        mock_ibm_sv_admin_service.get_application_audit_trail_search_after = AsyncMock(return_value={"events": [], "next": None, "total": 20})
-
-        with (
-            patch("src.app.services.workspace_service.crud_workspaces") as mock_workspaces,
-            patch("src.app.services.workspace_service.crud_workspace_members", create=True) as mock_workspace_members,
-            patch("src.app.services.workspace_service.crud_rp_applications") as mock_rp_applications,
-        ):
-            mock_workspaces.get = AsyncMock(
-                return_value={
-                    "id": 9,
-                    "uuid": "018f6f83-0000-0000-0000-000000000201",
-                    "name": "Benefits Workspace",
-                    "slug": "benefits-workspace",
-                    "department_id": 7,
-                    "description": "Primary workspace",
-                    "created_by": 42,
-                    "created_at": "2026-07-30T12:00:00",
-                    "updated_at": None,
-                    "deleted_at": None,
-                    "is_deleted": False,
-                }
-            )
-            mock_workspace_members.get = AsyncMock(return_value={"role": "workspace_admin"})
-            mock_rp_applications.get = AsyncMock(
-                return_value={
-                    "id": 33,
-                    "uuid": "018f6f83-0000-0000-0000-000000000701",
-                    "workspace_id": 9,
-                    "department_id": 7,
-                    "application_information_id": 17,
-                    "dnr_app_name": "Benefits Portal",
-                    "canada_login_environment": "staging",
-                    "status": None,
-                    "created_by": 42,
-                    "created_at": "2026-07-30T16:00:00",
-                    "deleted_at": None,
-                    "is_deleted": False,
-                    "ibm_sv_application_id": "ibm-app-123",
-                    "oidc_registration_payload": {},
-                    "application_owner": None,
-                }
-            )
-
-            result = await service.get_workspace_rp_application_audit_events_search_after(
-                db=mock_db,
-                workspace_uuid="018f6f83-0000-0000-0000-000000000201",
-                rp_application_uuid="018f6f83-0000-0000-0000-000000000701",
-                current_user=_partner(),
-                ibm_sv_admin_service=mock_ibm_sv_admin_service,
-                selected_date="1775692800000",
-                size=25,
-                search_after='"1775692800000", "event-2"',
-            )
-
-        assert result == {"events": [], "next": None, "total": 20}
-        mock_ibm_sv_admin_service.get_application_audit_trail_search_after.assert_awaited_once_with(
-            application_id="ibm-app-123",
-            from_date="1775692800000",
-            to_date="1775779199999",
-            size=25,
-            search_after='"1775692800000", "event-2"',
         )
 
     @pytest.mark.asyncio

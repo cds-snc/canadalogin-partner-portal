@@ -9,11 +9,9 @@ import { hasCapability } from "@/features/auth/authorization";
 import { useSession } from "@/hooks";
 import { useWorkspace } from "../hooks/use-workspace";
 import { useWorkspaceApplicationInformationList } from "../hooks/use-workspace-application-information";
-import { getWorkspaceOnboardingStateLabel } from "../onboarding-display";
 
 type ApplicationInformationRow = {
 	name: string;
-	onboardingState: string;
 	uuid: string;
 };
 
@@ -62,22 +60,12 @@ export const ApplicationInformationListPage = (): FunctionComponent => {
 					? applicationInformation.serviceNameFr
 					: applicationInformation.serviceNameEn
 				).trim() || t("common.notAvailable"),
-			onboardingState: applicationInformation.onboardingState?.trim()
-				? getWorkspaceOnboardingStateLabel(
-						t,
-						applicationInformation.onboardingState
-					)
-				: t("common.notAvailable"),
 			uuid: applicationInformation.uuid,
 		}));
 	const columns: Array<DataTableColumn<ApplicationInformationRow>> = [
 		{
 			field: "name",
 			headerName: t("workspaces.appInfoServiceNameLabel"),
-		},
-		{
-			field: "onboardingState",
-			headerName: t("workspaces.onboardingStateColumn"),
 		},
 	];
 

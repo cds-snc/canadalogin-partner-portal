@@ -21,16 +21,6 @@ class RPApplicationDepartmentRequiredException(Exception):
         self.message = message
 
 
-class OnboardingReportRequestException(Exception):
-    """Raised when onboarding report filters do not match the supported
-    first-release reporting contract."""
-
-    def __init__(self, code: str, message: str) -> None:
-        super().__init__(message)
-        self.code = code
-        self.message = message
-
-
 class RegistrationDraftConflictException(Exception):
     """Stable 409 for idempotency or optimistic registration conflicts."""
 

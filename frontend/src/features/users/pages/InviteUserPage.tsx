@@ -10,6 +10,7 @@ import {
 } from "@/features/auth/authorization";
 import { getRequestErrorNotice } from "@/fetch";
 import { useWorkspaces } from "@/features/workspaces/hooks/use-workspaces";
+import { InvitationLinkNotice } from "@/features/invitations/components/InvitationLinkNotice";
 import { useInviteUser } from "../hooks/use-invite-user";
 
 const invitationRoles: ReadonlyArray<PartnerRole> = [
@@ -91,14 +92,10 @@ export const InviteUserPage = (): FunctionComponent => {
 				</Notice>
 			) : null}
 			{acceptanceUrl ? (
-				<Notice
-					noticeRole="success"
-					noticeTitle={t("users.inviteSuccessTitle")}
-					noticeTitleTag="h2"
-				>
-					<Text>{t("users.inviteSuccessBody")}</Text>
-					<Text>{acceptanceUrl}</Text>
-				</Notice>
+				<InvitationLinkNotice
+					acceptanceUrl={acceptanceUrl}
+					title={t("users.inviteSuccessTitle")}
+				/>
 			) : null}
 			<div className="grid max-w-3xl gap-300">
 				<Input

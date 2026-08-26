@@ -3,13 +3,14 @@ import {
 	type PropsWithChildren,
 	type ReactElement,
 } from "react";
-import { render, screen, waitFor } from "@testing-library/react";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { ManageCredentialsPage } from "@/features/your-applications/pages/ManageCredentialsPage";
 import { HttpRequestError } from "@/fetch/errors";
 import {
 	getAccessibleRPApplicationClientCredentials,
 	getAccessibleRPApplicationRotatedClientSecrets,
+	getAccessibleRPApplicationSecretChangeLog,
 	getApplicationRPConfiguration,
 } from "@/fetch/rp-applications";
 
@@ -30,6 +31,13 @@ vi.mock("react-i18next", async (importOriginal) => ({
 				"manageCredentials.applicationClientLoadingTitle":
 					"Loading credentials",
 				"manageCredentials.clientCredentials": "Client credentials",
+				"manageCredentials.secretChangeLogBody":
+					"Download the secret-change log.",
+				"manageCredentials.secretChangeLogDownloadAction":
+					"Download secret-change log (CSV)",
+				"manageCredentials.secretChangeLogDownloadSuccess":
+					"Secret-change log downloaded",
+				"manageCredentials.secretChangeLogTitle": "Secret-change log",
 			};
 			return translations[key] ?? key;
 		},
@@ -51,12 +59,20 @@ vi.mock("@/components/ui/Toast", () => ({
 vi.mock("@/components/ui", () => ({
 	Button: ({
 		children,
+		disabled,
 		href,
-	}: PropsWithChildren<{ href?: string }>): ReactElement =>
+		onGcdsClick,
+	}: PropsWithChildren<{
+		disabled?: boolean;
+		href?: string;
+		onGcdsClick?: () => void;
+	}>): ReactElement =>
 		href ? (
 			<a href={href}>{children}</a>
 		) : (
-			<button type="button">{children}</button>
+			<button disabled={disabled} type="button" onClick={onGcdsClick}>
+				{children}
+			</button>
 		),
 	Checkboxes: (): null => null,
 	ConfirmDialog: (): null => null,
@@ -89,12 +105,14 @@ vi.mock("@/fetch/rp-applications", () => ({
 	deleteAccessibleRPApplicationRotatedClientSecret: vi.fn(),
 	getAccessibleRPApplicationClientCredentials: vi.fn(),
 	getAccessibleRPApplicationRotatedClientSecrets: vi.fn(),
+	getAccessibleRPApplicationSecretChangeLog: vi.fn(),
 	getApplicationRPConfiguration: vi.fn(),
 	rotateAccessibleRPApplicationClientSecret: vi.fn(),
 }));
 
 describe("ManageCredentialsPage", () => {
 	beforeEach(() => {
+		vi.clearAllMocks();
 		vi.mocked(getApplicationRPConfiguration).mockResolvedValue({
 			configurationName: "Benefits Portal",
 			serviceNameEn: "Benefits service",
@@ -107,6 +125,11 @@ describe("ManageCredentialsPage", () => {
 		vi.mocked(getAccessibleRPApplicationRotatedClientSecrets).mockRejectedValue(
 			providerUnavailable
 		);
+	});
+
+	afterEach(() => {
+		vi.unstubAllGlobals();
+		vi.restoreAllMocks();
 	});
 
 	it("keeps the focused route and renders a scoped provider-outage notice", async () => {
@@ -129,5 +152,47 @@ describe("ManageCredentialsPage", () => {
 		).toBe(
 			"/workspaces/workspace-uuid-1/applications/application-information-uuid-1/rp-configurations/rp-application-uuid-1"
 		);
+	});
+
+	it("downloads the scoped secret-change CSV without exposing secret values", async () => {
+		vi.mocked(getAccessibleRPApplicationClientCredentials).mockResolvedValue({
+			clientId: "client-id-1",
+			clientSecret: null,
+			clientSecretId: null,
+		});
+		vi.mocked(getAccessibleRPApplicationRotatedClientSecrets).mockResolvedValue(
+			[]
+		);
+		const csv = new Blob(
+			[
+				"TimeGenerated,Actor,Action,RPConfigurationId\n2026-08-25T12:00:00Z,user-1,ROTATE_SECRET,rp-application-uuid-1",
+			],
+			{ type: "text/csv" }
+		);
+		vi.mocked(getAccessibleRPApplicationSecretChangeLog).mockResolvedValue(csv);
+		const createObjectURL = vi.fn(() => "blob:secret-change-log");
+		const revokeObjectURL = vi.fn();
+		vi.stubGlobal("URL", { createObjectURL, revokeObjectURL });
+		const anchorClick = vi
+			.spyOn(HTMLAnchorElement.prototype, "click")
+			.mockImplementation(() => undefined);
+
+		render(<ManageCredentialsPage />);
+
+		const downloadButton = await screen.findByRole("button", {
+			name: "Download secret-change log (CSV)",
+		});
+		fireEvent.click(downloadButton);
+
+		await waitFor(() => {
+			expect(getAccessibleRPApplicationSecretChangeLog).toHaveBeenCalledWith(
+				"rp-application-uuid-1",
+				"workspace-uuid-1",
+				"application-information-uuid-1"
+			);
+		});
+		expect(createObjectURL).toHaveBeenCalledWith(csv);
+		expect(anchorClick).toHaveBeenCalledTimes(1);
+		expect(revokeObjectURL).toHaveBeenCalledWith("blob:secret-change-log");
 	});
 });

@@ -6,16 +6,18 @@ import type { RouteBackLinkContext } from "@/types/route-breadcrumbs";
 
 const OnboardingOversightQueuePage = lazy(async () => ({
 	default: (
-		await import(
-			"../../features/onboarding-oversight/pages/OnboardingOversightQueuePage"
-		)
+		await import("../../features/onboarding-oversight/pages/OnboardingOversightQueuePage")
 	).OnboardingOversightQueuePage,
 }));
 
 export const Route = createFileRoute("/onboarding-oversight/queue")({
-	beforeLoad: () => ({
-		backLink: { href: "/", label: i18n.t("nav.home") },
-	}) satisfies RouteBackLinkContext,
+	beforeLoad: () =>
+		({
+			backLink: {
+				href: "/onboarding-oversight",
+				label: i18n.t("nav.onboardingOversight"),
+			},
+		}) satisfies RouteBackLinkContext,
 	component: OnboardingOversightQueuePage,
 	validateSearch: normalizeOnboardingOversightQueueFilters,
 });

@@ -5,14 +5,11 @@ from uuid import UUID
 
 import pytest
 from pydantic import ValidationError
-
 from src.app.core.authorization import (
     CANONICAL_ROLE_CODES,
     CANONICAL_ROLE_DEFINITIONS,
     PARTNER_ROLE_CODES,
     ROLE_PERMISSION_MATRIX,
-    VERIFY_ADMIN_OPERATION_ALLOWLIST,
-    VERIFY_SECRET_OPERATIONS,
     CanonicalResourceScopeDecisionPoint,
     CanonicalRoleCode,
     Capability,
@@ -21,8 +18,6 @@ from src.app.core.authorization import (
     ResourceScopeDecisionReason,
     ResourceScopeRequest,
     RoleScope,
-    VerifyAdminOperation,
-    is_verify_admin_operation_allowed,
     role_allows,
 )
 from src.app.schemas.authorization import (
@@ -93,7 +88,7 @@ class TestPermissionMatrix:
         with pytest.raises(TypeError):
             ROLE_PERMISSION_MATRIX[CanonicalRoleCode.CL_ADMIN] = ROLE_PERMISSION_MATRIX[CanonicalRoleCode.CL_ADMIN]  # type: ignore[index]
 
-        assert role_allows(CanonicalRoleCode.CL_ADMIN, Capability.PLATFORM_GOVERNANCE)
+        assert role_allows(CanonicalRoleCode.CL_ADMIN, Capability.ACCESS_ADMINISTRATION)
         assert not role_allows(
             CanonicalRoleCode.CL_ADMIN,
             Capability.APPLICATION_INFORMATION_READ,
@@ -112,26 +107,9 @@ class TestPermissionMatrix:
         assert role_allows(CanonicalRoleCode.RP_USER_EDIT, Capability.RP_CONFIGURATION_WRITE)
         assert not role_allows(CanonicalRoleCode.RP_USER_EDIT, Capability.PARTNER_INVITATION_MANAGE)
 
-        assert role_allows(CanonicalRoleCode.READ_ONLY, Capability.AGGREGATE_REPORT_READ)
+        assert role_allows(CanonicalRoleCode.READ_ONLY, Capability.MAU_REPORT_READ)
         assert not role_allows(CanonicalRoleCode.READ_ONLY, Capability.RP_CONFIGURATION_WRITE)
-        assert not role_allows(CanonicalRoleCode.READ_ONLY, Capability.PARTNER_AUDIT_SENSITIVE_FIELDS_READ)
-
-    def test_verify_allowlist_excludes_secrets_and_unknown_operations(self):
-        assert VerifyAdminOperation.USER_LIST in VERIFY_ADMIN_OPERATION_ALLOWLIST
-        assert VerifyAdminOperation.APPLICATION_AUDIT_QUERY in VERIFY_ADMIN_OPERATION_ALLOWLIST
-        assert VerifyAdminOperation.APPLICATION_ENTITLEMENT_READ in VERIFY_ADMIN_OPERATION_ALLOWLIST
-        assert VerifyAdminOperation.GROUP_MEMBERSHIP_ADD in VERIFY_ADMIN_OPERATION_ALLOWLIST
-        assert not is_verify_admin_operation_allowed(VerifyAdminOperation.APPLICATION_UPDATE)
-        assert not is_verify_admin_operation_allowed(VerifyAdminOperation.APPLICATION_DELETE)
-
-        assert VERIFY_SECRET_OPERATIONS == {
-            VerifyAdminOperation.CLIENT_CREDENTIAL_READ,
-            VerifyAdminOperation.CLIENT_SECRET_READ,
-            VerifyAdminOperation.CLIENT_SECRET_ROTATE,
-            VerifyAdminOperation.CLIENT_SECRET_DELETE,
-        }
-        assert all(not is_verify_admin_operation_allowed(operation) for operation in VERIFY_SECRET_OPERATIONS)
-        assert not is_verify_admin_operation_allowed("application.magic_admin")
+        assert not role_allows(CanonicalRoleCode.READ_ONLY, Capability.APPLICATION_INFORMATION_WRITE)
 
 
 class TestResourceScopeDecisionPoint:
@@ -194,7 +172,7 @@ class TestResourceScopeDecisionPoint:
                     EffectiveRoleScope(CanonicalRoleCode.CL_ADMIN),
                     EffectiveRoleScope(CanonicalRoleCode.READ_ONLY, WORKSPACE_ALPHA_UUID),
                 ),
-                capability=Capability.AGGREGATE_REPORT_READ,
+                capability=Capability.MAU_REPORT_READ,
                 resource_workspace_uuid=WORKSPACE_ALPHA_UUID,
             )
         )
@@ -204,7 +182,7 @@ class TestResourceScopeDecisionPoint:
                     EffectiveRoleScope(CanonicalRoleCode.RP_ADMIN, WORKSPACE_ALPHA_UUID),
                     EffectiveRoleScope(CanonicalRoleCode.READ_ONLY, WORKSPACE_ALPHA_UUID),
                 ),
-                capability=Capability.AGGREGATE_REPORT_READ,
+                capability=Capability.MAU_REPORT_READ,
                 resource_workspace_uuid=WORKSPACE_ALPHA_UUID,
             )
         )
@@ -304,6 +282,7 @@ class TestAuthorizationApiContracts:
         workspace_schema = RPApplicationRead.model_json_schema(by_alias=True)
 
         assert "applicationOwner" not in accessible_schema["properties"]
+        assert "ibmSvApplicationId" not in accessible_schema["properties"]
         assert "applicationOwner" not in workspace_schema["properties"]
 
 
@@ -401,13 +380,12 @@ class TestAuthorizationAuditContracts:
             resource_type=PrivilegedResourceType.VERIFY,
             resource_uuid=RP_APPLICATION_UUID,
             decision_reason=ResourceScopeDecisionReason.CAPABILITY_NOT_ALLOWED,
-            verify_operation=VerifyAdminOperation.CLIENT_SECRET_READ,
             reason_code="secret_boundary",
         )
         payload = event.model_dump(mode="json")
 
         assert payload["result"] == "denied"
-        assert payload["verifyOperation"] == "client_secret.read"
+        assert "verifyOperation" not in payload
         assert {"email", "token", "secret", "claims", "metadata"}.isdisjoint(payload)
 
         with pytest.raises(ValidationError, match="Extra inputs are not permitted"):

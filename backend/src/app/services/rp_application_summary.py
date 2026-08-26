@@ -5,7 +5,6 @@ from collections.abc import Mapping
 from typing import Any, cast
 
 from ..core.authorization import CanonicalRoleCode
-from ..schemas.onboarding import OnboardingState
 from ..schemas.rp_application import (
     ApplicationRPConfigurationSummaryRead,
     RegistrationDataStep,
@@ -56,7 +55,11 @@ def build_rp_application_summary(
     payload = _registration_payload(application)
     service_name_en = _text(_value(payload, "service_name_en", "serviceNameEn")) or _text(_value(application, "dnr_app_name", "dnrAppName"))
     service_name_fr = _text(_value(payload, "service_name_fr", "serviceNameFr")) or service_name_en
-    onboarding_state = _text(_value(application, "onboarding_state", "onboardingState")) or None
+    registration_completed_at = _value(
+        application,
+        "registration_completed_at",
+        "registrationCompletedAt",
+    )
     last_completed_step = _text(_value(application, "registration_last_completed_step", "registrationLastCompletedStep")) or None
     application_information_uuid = _value(
         application,
@@ -64,7 +67,7 @@ def build_rp_application_summary(
         "applicationInformationUuid",
     )
     resume_task_path: str | None = None
-    if can_resume_registration and onboarding_state == "draft" and application_information_uuid:
+    if can_resume_registration and registration_completed_at is None and application_information_uuid:
         next_step = _next_registration_step(last_completed_step)
         resume_task_path = (
             f"/workspaces/{workspace_uuid}/applications/{application_information_uuid}"
@@ -80,8 +83,15 @@ def build_rp_application_summary(
         configuration_name=_text(_value(application, "configuration_name", "configurationName")) or None,
         partner_environment=_text(_value(application, "partner_environment", "partnerEnvironment")) or None,
         canada_login_environment=_value(application, "canada_login_environment", "canadaLoginEnvironment"),
-        onboarding_state=cast(OnboardingState | None, onboarding_state),
-        promotion_status=_text(_value(application, "promotion_status", "promotionStatus")) or None,
+        registration_completed_at=registration_completed_at,
+        production_review_status=(_text(_value(application, "production_review_status", "productionReviewStatus")) or None),
+        production_review_reconciliation_required=bool(
+            _value(
+                application,
+                "production_review_reconciliation_required",
+                "productionReviewReconciliationRequired",
+            )
+        ),
         registration_last_completed_step=cast(RegistrationDataStep | None, last_completed_step),
         resume_task_path=resume_task_path,
         role=role,

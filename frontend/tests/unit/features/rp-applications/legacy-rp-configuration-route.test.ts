@@ -35,12 +35,11 @@ describe("legacy RP configuration route resolution", () => {
 		);
 	});
 
-	it("maps detail, Usage, credentials, audit, and registration without loading sensitive data", async () => {
+	it("maps detail, Usage, credentials, and registration without loading sensitive data", async () => {
 		for (const [legacySuffix, expectedSuffix] of [
 			["", ""],
 			["/mau-report", "/usage"],
 			["/manage-credentials", "/manage-credentials"],
-			["/audit", "/audit"],
 			["/registration/basics", "/registration/basics"],
 		] as const) {
 			await expect(
@@ -52,7 +51,7 @@ describe("legacy RP configuration route resolution", () => {
 				`/workspaces/workspace-uuid-1/applications/application-information-uuid-1/rp-configurations/rp-configuration-uuid-1${expectedSuffix}`
 			);
 		}
-		expect(getAccessibleRPApplication).toHaveBeenCalledTimes(5);
+		expect(getAccessibleRPApplication).toHaveBeenCalledTimes(4);
 	});
 
 	it("fails closed for missing or revoked access", async () => {
@@ -85,6 +84,15 @@ describe("legacy RP configuration route resolution", () => {
 	it("rejects unknown legacy child paths instead of guessing a destination", () => {
 		expect(
 			buildCanonicalRPConfigurationPath(configuration, "/unknown-task")
+		).toBeNull();
+		expect(
+			buildCanonicalRPConfigurationPath(configuration, "/audit")
+		).toBeNull();
+		expect(
+			buildCanonicalRPConfigurationPath(configuration, "/department-setup")
+		).toBeNull();
+		expect(
+			buildCanonicalRPConfigurationPath(configuration, "/edit")
 		).toBeNull();
 	});
 

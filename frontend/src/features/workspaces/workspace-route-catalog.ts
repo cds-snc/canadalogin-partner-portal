@@ -10,7 +10,6 @@ export const WORKSPACE_ROUTE_IDS = [
 	"overview",
 	"applicationInformation",
 	"access",
-	"reports",
 	"settings",
 ] as const;
 
@@ -78,20 +77,6 @@ export const WORKSPACE_ROUTE_CATALOG = {
 		returnRouteId: "chooser",
 		surfaces: allWorkspaceSurfaces,
 		visibility: { kind: "workspaceRead" },
-	},
-	reports: {
-		activePathSuffixes: ["/reports"],
-		breadcrumbRouteIds: ["overview"],
-		compatibilityPathSuffixes: [],
-		id: "reports",
-		labelKey: "workspaces.navigation.reports",
-		pathSuffix: "/reports",
-		returnRouteId: "overview",
-		surfaces: allWorkspaceSurfaces,
-		visibility: {
-			capability: "aggregate_report_read",
-			kind: "capability",
-		},
 	},
 	settings: {
 		activePathSuffixes: ["/settings"],

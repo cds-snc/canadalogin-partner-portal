@@ -4,31 +4,12 @@ from typing import Any
 from fastcrud import compute_offset, paginated_response
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from ..core.exceptions.http_exceptions import DuplicateValueException, NotFoundException
+from ..core.exceptions.http_exceptions import NotFoundException
 from ..repositories.crud_departments import crud_departments
-from ..schemas.department import DepartmentCreate, DepartmentCreateInternal, DepartmentRead, DepartmentUpdate
+from ..schemas.department import DepartmentRead
 
 
 class DepartmentService:
-    async def create_department(self, db: AsyncSession, department: DepartmentCreate) -> dict[str, Any]:
-        if await crud_departments.exists(db=db, name=department.name, is_deleted=False):
-            raise DuplicateValueException("Department name not available")
-        if department.gc_org_id is not None and await crud_departments.exists(
-            db=db,
-            gc_org_id=department.gc_org_id,
-            is_deleted=False,
-        ):
-            raise DuplicateValueException("Department gc_org_id not available")
-
-        created_department = await crud_departments.create(
-            db=db,
-            object=DepartmentCreateInternal(**department.model_dump()),
-            schema_to_select=DepartmentRead,
-        )
-        if created_department is None:
-            raise NotFoundException("Failed to create department")
-        return created_department
-
     async def list_departments(self, db: AsyncSession, page: int, items_per_page: int) -> dict[str, Any]:
         departments_data = await crud_departments.get_multi(
             db=db,
@@ -61,13 +42,3 @@ class DepartmentService:
         if db_department is None:
             raise NotFoundException("Department not found")
         return db_department
-
-    async def update_department(self, db: AsyncSession, department_uuid: uuid_pkg.UUID | str, values: DepartmentUpdate) -> dict[str, str]:
-        await self.get_department_by_uuid(db=db, department_uuid=department_uuid)
-        await crud_departments.update(db=db, object=values, uuid=department_uuid)
-        return {"message": "Department updated"}
-
-    async def delete_department(self, db: AsyncSession, department_uuid: uuid_pkg.UUID | str) -> dict[str, str]:
-        await self.get_department_by_uuid(db=db, department_uuid=department_uuid)
-        await crud_departments.delete(db=db, uuid=department_uuid)
-        return {"message": "Department deleted"}

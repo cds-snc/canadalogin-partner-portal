@@ -7,13 +7,32 @@ Applications and RP configurations.
 ## Requirements
 ### Requirement: Invitation acceptance validates token and signed-in identity
 
-The system SHALL validate invitation acceptance using the existing tokenized
-compatibility route `/invitations/rp-applications/$token` and SHALL accept an
-invitation only when the signed-in CanadaLogin user matches the invited email
-identity for a currently pending, unexpired invitation. Validation SHALL
-complete before any partner assignment is created or changed. An invitation
-SHALL use its required Partner workspace as authorization context and SHALL
-NOT require an Application or RP configuration.
+The generated acceptance URL SHALL use
+`/invitations/rp-applications/prepare#token=...` so the bearer is initially
+available only in the URL fragment. The public preparation page SHALL remove
+the fragment from the browser address before any authentication redirect,
+submit the token only in a non-cacheable POST body, and SHALL NOT retain it in
+browser, analytics, referrer, server-session, or redirect state. After the
+backend validates the live invitation, the opaque server session SHALL retain
+only the public invitation reference needed to resume the tokenless
+`/invitations/rp-applications/accept` flow. A missing, stale, or replaced
+prepared reference SHALL fail closed and require the latest manually shared
+link.
+
+The system SHALL accept an invitation only when the server-owned authenticated
+session contains exactly one usable CanadaLogin email identity whose
+verification claim is true. The
+backend SHALL apply one canonical email-normalization function to the trusted
+claim and invited address. That function SHALL trim surrounding whitespace and
+lowercase both values, then require exact equality without provider-specific
+alias, plus-address, or dot rewriting. Missing, unverified,
+conflicting, or ambiguous identity data SHALL fail closed. Validation SHALL
+also reapply the configured domain-restricted partner-access policy to the
+trusted verified email; possession of an invitation token SHALL NOT bypass
+that policy. Validation SHALL complete before a local identity or partner
+assignment is created or changed. An invitation SHALL use its required Partner
+workspace as authorization context and SHALL NOT require an Application or RP
+configuration.
 
 Optional source provenance MAY identify an Application or RP configuration
 from which the invitation was initiated. Before using that provenance for a
@@ -24,15 +43,16 @@ SHALL NOT prevent acceptance or reveal another resource.
 
 #### Scenario: Invitee accepts a valid invitation
 
-- **WHEN** an invited user signs in with the invited email address and opens a valid pending invitation link
-- **THEN** the system accepts the invitation
+- **WHEN** an invited user signs in with a verified CanadaLogin email whose canonical normalized value exactly equals the invited email and opens a valid pending invitation link
+- **THEN** the public preparation step validates the bearer, removes it from browser-visible navigation state, and resumes through the tokenless authenticated acceptance route
+- **AND** the system accepts the prepared invitation
 - **AND** the portal creates exactly one canonical workspace-scoped partner assignment on first acceptance
 - **AND** the portal redirects the user to the assigned workspace or, when validated source provenance exists, the in-scope Application hub or RP-configuration task
 
 #### Scenario: First login checks pending invitations before denying access
 
 - **WHEN** a signed-in CanadaLogin user has no active canonical role assignment
-- **AND** the user's signed-in email matches an active pending invitation
+- **AND** the user's server-owned verified email exactly matches an active pending invitation after canonical normalization
 - **THEN** the portal permits that invitation acceptance path before denying access
 - **AND** other protected product routes remain unavailable until acceptance succeeds
 
@@ -64,9 +84,21 @@ SHALL NOT prevent acceptance or reveal another resource.
 
 #### Scenario: Signed-in email mismatch does not accept the invitation
 
-- **WHEN** a signed-in user opens a pending invitation for a different invited email address
+- **WHEN** a signed-in user's verified email does not exactly equal the invited email after the same canonical normalization
 - **THEN** the system does not accept the invitation
-- **AND** the portal does not grant partner-scoped access for that invitation
+- **AND** the portal does not grant partner-scoped access, change a local identity, or reveal the invited address for that invitation
+
+#### Scenario: Missing unverified or ambiguous signed-in email does not accept the invitation
+
+- **WHEN** the authenticated session has no usable email, an unverified email, or conflicting or ambiguous email claims
+- **THEN** the backend rejects acceptance before creating or changing a local identity or canonical assignment
+- **AND** the response uses the same safe unavailable behavior and does not reveal which invited identity would match
+
+#### Scenario: Verified email outside the permitted domain does not accept the invitation
+
+- **WHEN** the authenticated session has one verified email that matches the invited address but does not satisfy the configured partner-access domain policy
+- **THEN** the backend rejects acceptance before creating or changing a local identity or canonical assignment
+- **AND** the invitation token does not bypass or weaken domain-restricted admission
 
 #### Scenario: Expired or revoked invitation cannot be accepted
 
@@ -92,15 +124,18 @@ Accepted invitations SHALL grant exactly one canonical partner role for the
 invitation workspace and SHALL NOT create CL Admin, a reusable role, an
 Application-specific grant, an RP-configuration-specific grant, or a second
 workspace membership role. The active workspace grant SHALL authorize only the
-permitted workspace metadata, Applications, RP configurations, configuration
-copy, Production-review request metadata, secrets, reporting, and invitation
-actions defined by the four-role matrix.
+permitted workspace metadata, Applications, contacts, RP-configuration
+creation, editable-draft questionnaire changes, separately permitted top-level
+metadata changes, configuration copy, checklist inputs and CATS evidence availability, explicit
+Production-review request or status, secrets, MAU/usage, and invitation actions
+defined by the four-role matrix. Draft-edit authority SHALL NOT reopen or
+mutate completed questionnaire answers.
 
 The role SHALL apply consistently to every Application and RP configuration in
 the assigned workspace. Separate child-specific permission assignments SHALL
-NOT be required for this phase. Copy authority SHALL NOT imply Production-
-review outcome authority, and an invitation SHALL NOT grant CL Admin review
-transitions.
+NOT be required. Copy authority SHALL NOT imply Production-review outcome
+authority, and an invitation SHALL NOT grant CL Admin review transitions,
+aggregate reporting, generic audit browsing, or internal review-note access.
 
 #### Scenario: Accepted invitee sees partner-scoped RP applications in current-user scope
 
@@ -123,20 +158,22 @@ transitions.
 #### Scenario: RP Admin manages partner-scoped application collaboration and secrets
 
 - **WHEN** an accepted user holds RP Admin for one Partner workspace
-- **THEN** the portal allows permitted workspace and Application administration, contact management, RP-configuration management and copy, Production-review request metadata, secrets, reports, bounded partner audit, and RP User (Edit) or Read Only invitations in that workspace
-- **AND** the RP Admin cannot assign another RP Admin or record a Production-review outcome
+- **THEN** the portal allows permitted workspace and Application administration, contacts, RP-configuration creation, editable-draft questionnaire changes, separately permitted top-level metadata changes, configuration copy, checklist inputs and CATS evidence availability, Production-review requests, secrets, MAU/usage, and RP User (Edit) or Read Only invitations in that workspace
+- **AND** the RP Admin cannot assign another RP Admin, record a Production-review outcome, access aggregate reports, or use a generic audit browser
+- **AND** the RP Admin cannot reopen or mutate completed questionnaire answers through the draft flow
 
 #### Scenario: RP User (Edit) manages partner-scoped application configuration but not invitations
 
 - **WHEN** an accepted user holds RP User (Edit) for one Partner workspace
-- **THEN** the portal allows permitted Application, contact, RP-configuration create/edit/copy, secret, Production-review request, report, and bounded-audit operations in that workspace
-- **AND** the user cannot manage invitations, role assignments, or Production-review outcomes
+- **THEN** the portal allows permitted Application and contact changes, RP-configuration creation, editable-draft questionnaire changes, separately permitted top-level metadata changes, configuration copy, checklist inputs and CATS evidence availability, secret, Production-review request, and MAU/usage operations in that workspace
+- **AND** the user cannot manage invitations, role assignments, Production-review outcomes, aggregate reports, or generic audit browsing
+- **AND** the user cannot reopen or mutate completed questionnaire answers through the draft flow
 
 #### Scenario: Read Only can view partner-scoped application details without secret access
 
 - **WHEN** an accepted user holds Read Only for one Partner workspace
-- **THEN** the portal allows permitted Application details, contacts, readiness, RP Configuration, copy lineage, Production-review status, Usage, aggregate reports, and redacted bounded audit in that workspace
-- **AND** the user cannot mutate or copy data, request Production review, view or change secrets, view internal review notes, or manage invitations
+- **THEN** the portal allows permitted Application details, contacts, checklist and CATS evidence availability, RP configurations, copy lineage, Production-review status, and MAU/usage in that workspace
+- **AND** the user cannot mutate or copy data, request Production review, view or change secrets, use aggregate or audit-report surfaces, or manage invitations
 
 #### Scenario: Invitation-backed users do not use department self-setup
 
@@ -152,7 +189,7 @@ transitions.
 
 #### Scenario: Unauthorized invited-role subresources resolve as unavailable
 
-- **WHEN** an accepted partner user requests credentials, invitations, internal review, Production-review outcomes, or another protected subresource outside the canonical role matrix
+- **WHEN** an accepted partner user requests credentials, invitations, Production-review outcomes, platform administration, or another protected subresource outside the canonical role matrix
 - **THEN** the portal resolves it as unavailable
 - **AND** it does not confirm the protected subresource exists
 
@@ -182,17 +219,6 @@ RP configuration in its assigned workspace.
 - **WHEN** a partner user accesses an Application or RP-configuration screen
 - **THEN** the portal confirms the active canonical role and assigned workspace
 - **AND** the guidance explains that the role applies to all Applications and configurations in that workspace and does not grant another workspace
-
-### Requirement: Partner-scoped roles can read aggregate onboarding reports inside granted scope
-The portal SHALL allow accepted `RP Admin`, `RP User (Edit)`, and `Read Only` users to read aggregate onboarding reports for their granted partner scope without granting cross-workspace oversight access.
-
-#### Scenario: All first-release partner roles can view the same report families
-- **WHEN** an accepted `RP Admin`, `RP User (Edit)`, or `Read Only` user opens the aggregate onboarding reporting route
-- **THEN** the portal allows that user to view onboarding throughput, invitation conversion, and secret-rotation hygiene reports for the user's granted partner scope
-
-#### Scenario: Partner report visibility does not grant oversight workflow access
-- **WHEN** an accepted partner-side user can view aggregate onboarding reports
-- **THEN** that user still cannot access cross-workspace onboarding overview, queue, or internal review-note workflows that remain reserved for internal oversight users
 
 ### Requirement: Canonical roles manage partner-scoped developer invitations
 
@@ -354,3 +380,75 @@ state SHALL fail safely without mutating access.
 - **WHEN** identity resolution is ambiguous or finds disabled, deleted, mixed-access, or otherwise ineligible state
 - **THEN** the portal returns a safe recoverable failure
 - **AND** it creates no user, invitation, or assignment
+
+### Requirement: Manual invitation delivery returns a copyable acceptance link
+
+An authorized invitation create or reissue operation SHALL generate an opaque,
+expiring acceptance token, persist only a one-way hash of the token, and return
+the plaintext tokenized acceptance URL only in that successful write response.
+The portal SHALL NOT send invitation email. The success surface SHALL let the
+authorized inviter copy the link for delivery through an approved out-of-band
+channel and SHALL explain that the link cannot be retrieved after the user
+leaves the create or reissue result.
+
+Normal invitation list/detail responses SHALL omit token hashes and acceptance
+URLs. Invitation write responses SHALL be private and non-cacheable, and token
+values SHALL be excluded from application logs, analytics, referrer data,
+browser persistence, and evidence.
+
+#### Scenario: Authorized inviter creates a manually delivered invitation
+
+- **WHEN** a CL Admin or same-workspace RP Admin creates an invitation permitted by the canonical delegation matrix
+- **THEN** the backend creates one pending invitation and returns its opaque expiring acceptance URL
+- **AND** the success page provides a bilingual `Copy invitation link` control and copied confirmation
+- **AND** the page explains that the portal sends no email and the inviter must share the link through an approved external channel selected by the responsible operational owner before non-local launch
+
+#### Scenario: Plaintext invitation link is shown only after a successful write
+
+- **WHEN** an authorized inviter leaves the create or reissue success result and later opens an invitation list or detail
+- **THEN** the portal does not reconstruct or return the plaintext token or acceptance URL
+- **AND** the UI explains that reissue is required when the link was not retained or is no longer safe to use
+
+#### Scenario: Reissue replaces the manually delivered link
+
+- **WHEN** an authorized actor reissues a manageable pending, expired, or revoked invitation
+- **THEN** the portal returns one new copyable acceptance URL under the same manual-delivery warning
+- **AND** the prior token remains unacceptable and normal reads omit both old and new plaintext tokens
+
+#### Scenario: Invitation link handling does not leak bearer material
+
+- **WHEN** an invitation is created, copied, reissued, opened, rejected, or accepted
+- **THEN** the server stores only the token hash and normal structured logs, analytics, evidence, and provider payloads omit the token and tokenized URL
+- **AND** create/reissue responses are private and non-cacheable
+- **AND** the acceptance page prevents the tokenized URL from being sent as referrer data to unrelated destinations
+
+### Requirement: Invitation lifecycle actions retain minimized audit history
+
+The portal SHALL record minimized internal audit history for invitation create,
+accept, revoke, reissue, expiry processing, and consequential failed attempts.
+Each event SHALL identify the permitted actor or authenticated subject
+reference, workspace and public invitation reference, requested canonical
+role when applicable, action, outcome, timestamp, and correlation identifier.
+
+Audit capture SHALL remain distinct from the retired user-facing audit
+explorer. It SHALL NOT contain plaintext invitation tokens, tokenized URLs,
+full invited email values, raw identity claims, provider payloads, secrets, or
+unnecessary personal information.
+
+#### Scenario: Invitation create revoke and reissue are auditable
+
+- **WHEN** an authorized actor creates, revokes, or reissues a workspace invitation
+- **THEN** the portal records the actor, workspace, affected public invitation references, permitted role, action, outcome, time, and correlation identifier
+- **AND** reissue history links the replaced and replacement public records without recording either plaintext token or tokenized URL
+
+#### Scenario: Invitation acceptance is auditable
+
+- **WHEN** an authenticated user successfully accepts an invitation or acceptance fails for a security-relevant lifecycle or identity reason
+- **THEN** the portal records the authenticated subject reference when available, workspace and public invitation reference, action, safe outcome/code, time, and correlation identifier
+- **AND** the event excludes the presented token, token hash, full invited email, raw claims, and provider payload
+
+#### Scenario: Audit capture does not create a product audit browser
+
+- **WHEN** invitation audit events are retained
+- **THEN** they remain available only through approved operational, security, or records-management paths
+- **AND** RP Admin, RP User (Edit), Read Only, and CL Admin receive no generic invitation-audit explorer or aggregate invitation analytics merely because the events exist

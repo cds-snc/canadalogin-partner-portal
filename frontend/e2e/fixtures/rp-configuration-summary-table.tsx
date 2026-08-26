@@ -15,10 +15,10 @@ const configurations: Array<RPApplicationSummaryRead> = [
 		canadaLoginEnvironment: "staging",
 		configurationName:
 			"Configuration de préproduction pour le service de prestations canadiennes",
-		onboardingState: "approved",
 		partnerEnvironment:
 			"Environnement partenaire de préproduction et de validation intégrée",
-		promotionStatus: null,
+		productionReviewStatus: null,
+		registrationCompletedAt: "2026-08-25T12:00:00Z",
 		registrationLastCompletedStep: "encryption",
 		resumeTaskPath: null,
 		role: "read_only",

@@ -1,7 +1,6 @@
 from unittest.mock import Mock, call
 
 import pytest
-
 from src.app.core.access_control import (
     MultiSubjectEnforcer,
     canonical_enforcer_provider,
@@ -88,3 +87,18 @@ class TestCanonicalPolicyBoundary:
 
         assert await enforcer.enforce("cl_admin", "rp_applications", "read") is True
         assert await enforcer.enforce("cl_admin", "rp_applications", "write") is False
+
+    @pytest.mark.asyncio
+    async def test_catalog_and_verify_administration_policies_are_absent(self):
+        enforcer = canonical_enforcer_provider()
+
+        for resource in (
+            "departments",
+            "tiers",
+            "rate_limits",
+            "isv_user",
+            "isv_application",
+            "isv_group",
+        ):
+            assert await enforcer.enforce("cl_admin", resource, "read") is False
+            assert await enforcer.enforce("cl_admin", resource, "write") is False

@@ -12,19 +12,15 @@ import { Route as rootRouteImport } from './routes/__root'
 import { Route as YourApplicationsRouteImport } from './routes/your-applications'
 import { Route as WorkspacesRouteImport } from './routes/workspaces'
 import { Route as UsersRouteImport } from './routes/users'
-import { Route as TiersRouteImport } from './routes/tiers'
 import { Route as TermsAndConditionsRouteImport } from './routes/terms-and-conditions'
 import { Route as SupportRouteImport } from './routes/support'
 import { Route as RolesRouteImport } from './routes/roles'
 import { Route as ReportsRouteImport } from './routes/reports'
-import { Route as PoliciesRouteImport } from './routes/policies'
 import { Route as OnboardingOversightRouteImport } from './routes/onboarding-oversight'
 import { Route as LogoutRouteImport } from './routes/logout'
 import { Route as InvitationsRouteImport } from './routes/invitations'
 import { Route as ErrorRouteImport } from './routes/error'
-import { Route as DepartmentsRouteImport } from './routes/departments'
 import { Route as AuthCompleteRouteImport } from './routes/auth-complete'
-import { Route as AuditLogsRouteImport } from './routes/audit-logs'
 import { Route as AdministrationRouteImport } from './routes/administration'
 import { Route as AccountRouteImport } from './routes/account'
 import { Route as AccessDeniedRouteImport } from './routes/access-denied'
@@ -41,10 +37,8 @@ import { Route as WorkspacesNewRouteImport } from './routes/workspaces/new'
 import { Route as WorkspacesWorkspaceUuidRouteImport } from './routes/workspaces/$workspaceUuid'
 import { Route as UsersInviteRouteImport } from './routes/users/invite'
 import { Route as UsersUserUuidRouteImport } from './routes/users/$userUuid'
-import { Route as ReportsWorkspacesRouteImport } from './routes/reports/workspaces'
 import { Route as ReportsApplicationsRouteImport } from './routes/reports/applications'
 import { Route as ProfileSetupRouteImport } from './routes/profile/setup'
-import { Route as OnboardingOversightReportsRouteImport } from './routes/onboarding-oversight/reports'
 import { Route as OnboardingOversightQueueRouteImport } from './routes/onboarding-oversight/queue'
 import { Route as InvitationsRpApplicationsRouteImport } from './routes/invitations/rp-applications'
 import { Route as YourApplicationsRpApplicationUuidIndexRouteImport } from './routes/your-applications/$rpApplicationUuid/index'
@@ -57,7 +51,6 @@ import { Route as YourApplicationsRpApplicationUuidManageCredentialsRouteImport 
 import { Route as YourApplicationsRpApplicationUuidDepartmentSetupRouteImport } from './routes/your-applications/$rpApplicationUuid/department-setup'
 import { Route as WorkspacesRpRegistrationAdoptionRpApplicationUuidRouteImport } from './routes/workspaces/rp-registration-adoption/$rpApplicationUuid'
 import { Route as WorkspacesWorkspaceUuidSettingsRouteImport } from './routes/workspaces/$workspaceUuid/settings'
-import { Route as WorkspacesWorkspaceUuidReportsRouteImport } from './routes/workspaces/$workspaceUuid/reports'
 import { Route as WorkspacesWorkspaceUuidMembersRouteImport } from './routes/workspaces/$workspaceUuid/members'
 import { Route as WorkspacesWorkspaceUuidApplicationsRouteImport } from './routes/workspaces/$workspaceUuid/applications'
 import { Route as WorkspacesWorkspaceUuidApplicationInformationRouteImport } from './routes/workspaces/$workspaceUuid/application-information'
@@ -65,7 +58,8 @@ import { Route as WorkspacesWorkspaceUuidAccessRouteImport } from './routes/work
 import { Route as UsersUserUuidWorkspaceAccessRouteImport } from './routes/users/$userUuid/workspace-access'
 import { Route as UsersUserUuidInvitationsRouteImport } from './routes/users/$userUuid/invitations'
 import { Route as UsersUserUuidGlobalAccessRouteImport } from './routes/users/$userUuid/global-access'
-import { Route as InvitationsRpApplicationsTokenRouteImport } from './routes/invitations/rp-applications/$token'
+import { Route as InvitationsRpApplicationsPrepareRouteImport } from './routes/invitations/rp-applications/prepare'
+import { Route as InvitationsRpApplicationsAcceptRouteImport } from './routes/invitations/rp-applications/accept'
 import { Route as WorkspacesWorkspaceUuidApplicationsIndexRouteImport } from './routes/workspaces/$workspaceUuid/applications/index'
 import { Route as WorkspacesWorkspaceUuidAccessIndexRouteImport } from './routes/workspaces/$workspaceUuid/access/index'
 import { Route as UsersUserUuidWorkspaceAccessIndexRouteImport } from './routes/users/$userUuid/workspace-access/index'
@@ -81,11 +75,11 @@ import { Route as WorkspacesWorkspaceUuidAccessAssignmentsIndexRouteImport } fro
 import { Route as WorkspacesWorkspaceUuidApplicationsApplicationInformationUuidSettingsRouteImport } from './routes/workspaces/$workspaceUuid/applications/$applicationInformationUuid/settings'
 import { Route as WorkspacesWorkspaceUuidApplicationsApplicationInformationUuidRpConfigurationsRouteImport } from './routes/workspaces/$workspaceUuid/applications/$applicationInformationUuid/rp-configurations'
 import { Route as WorkspacesWorkspaceUuidApplicationsApplicationInformationUuidReadinessRouteImport } from './routes/workspaces/$workspaceUuid/applications/$applicationInformationUuid/readiness'
-import { Route as WorkspacesWorkspaceUuidApplicationsApplicationInformationUuidInternalReviewRouteImport } from './routes/workspaces/$workspaceUuid/applications/$applicationInformationUuid/internal-review'
 import { Route as WorkspacesWorkspaceUuidApplicationsApplicationInformationUuidEditRouteImport } from './routes/workspaces/$workspaceUuid/applications/$applicationInformationUuid/edit'
 import { Route as WorkspacesWorkspaceUuidApplicationsApplicationInformationUuidDetailsRouteImport } from './routes/workspaces/$workspaceUuid/applications/$applicationInformationUuid/details'
 import { Route as WorkspacesWorkspaceUuidApplicationsApplicationInformationUuidDeleteRouteImport } from './routes/workspaces/$workspaceUuid/applications/$applicationInformationUuid/delete'
 import { Route as WorkspacesWorkspaceUuidApplicationsApplicationInformationUuidContactsRouteImport } from './routes/workspaces/$workspaceUuid/applications/$applicationInformationUuid/contacts'
+import { Route as WorkspacesWorkspaceUuidApplicationsApplicationInformationUuidChecklistAndEvidenceRouteImport } from './routes/workspaces/$workspaceUuid/applications/$applicationInformationUuid/checklist-and-evidence'
 import { Route as WorkspacesWorkspaceUuidApplicationsApplicationInformationUuidSplatRouteImport } from './routes/workspaces/$workspaceUuid/applications/$applicationInformationUuid/$'
 import { Route as WorkspacesWorkspaceUuidAccessInvitationsNewRouteImport } from './routes/workspaces/$workspaceUuid/access/invitations/new'
 import { Route as WorkspacesWorkspaceUuidAccessInvitationsInvitationUuidRouteImport } from './routes/workspaces/$workspaceUuid/access/invitations/$invitationUuid'
@@ -105,7 +99,6 @@ import { Route as WorkspacesWorkspaceUuidApplicationsApplicationInformationUuidR
 import { Route as WorkspacesWorkspaceUuidApplicationsApplicationInformationUuidRpConfigurationsRpConfigurationUuidManageCredentialsRouteImport } from './routes/workspaces/$workspaceUuid/applications/$applicationInformationUuid/rp-configurations/$rpConfigurationUuid/manage-credentials'
 import { Route as WorkspacesWorkspaceUuidApplicationsApplicationInformationUuidRpConfigurationsRpConfigurationUuidCopyRouteImport } from './routes/workspaces/$workspaceUuid/applications/$applicationInformationUuid/rp-configurations/$rpConfigurationUuid/copy'
 import { Route as WorkspacesWorkspaceUuidApplicationsApplicationInformationUuidRpConfigurationsRpConfigurationUuidConfigurationRouteImport } from './routes/workspaces/$workspaceUuid/applications/$applicationInformationUuid/rp-configurations/$rpConfigurationUuid/configuration'
-import { Route as WorkspacesWorkspaceUuidApplicationsApplicationInformationUuidRpConfigurationsRpConfigurationUuidAuditRouteImport } from './routes/workspaces/$workspaceUuid/applications/$applicationInformationUuid/rp-configurations/$rpConfigurationUuid/audit'
 import { Route as WorkspacesWorkspaceUuidApplicationsApplicationInformationUuidContactsContactUuidEditRouteImport } from './routes/workspaces/$workspaceUuid/applications/$applicationInformationUuid/contacts/$contactUuid/edit'
 import { Route as WorkspacesWorkspaceUuidApplicationsApplicationInformationUuidRpConfigurationsRpConfigurationUuidRegistrationConfirmationRouteImport } from './routes/workspaces/$workspaceUuid/applications/$applicationInformationUuid/rp-configurations/$rpConfigurationUuid/registration/confirmation'
 import { Route as WorkspacesWorkspaceUuidApplicationsApplicationInformationUuidRpConfigurationsRpConfigurationUuidRegistrationStepRouteImport } from './routes/workspaces/$workspaceUuid/applications/$applicationInformationUuid/rp-configurations/$rpConfigurationUuid/registration/$step'
@@ -124,11 +117,6 @@ const WorkspacesRoute = WorkspacesRouteImport.update({
 const UsersRoute = UsersRouteImport.update({
   id: '/users',
   path: '/users',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const TiersRoute = TiersRouteImport.update({
-  id: '/tiers',
-  path: '/tiers',
   getParentRoute: () => rootRouteImport,
 } as any)
 const TermsAndConditionsRoute = TermsAndConditionsRouteImport.update({
@@ -151,11 +139,6 @@ const ReportsRoute = ReportsRouteImport.update({
   path: '/reports',
   getParentRoute: () => rootRouteImport,
 } as any)
-const PoliciesRoute = PoliciesRouteImport.update({
-  id: '/policies',
-  path: '/policies',
-  getParentRoute: () => rootRouteImport,
-} as any)
 const OnboardingOversightRoute = OnboardingOversightRouteImport.update({
   id: '/onboarding-oversight',
   path: '/onboarding-oversight',
@@ -176,19 +159,9 @@ const ErrorRoute = ErrorRouteImport.update({
   path: '/error',
   getParentRoute: () => rootRouteImport,
 } as any)
-const DepartmentsRoute = DepartmentsRouteImport.update({
-  id: '/departments',
-  path: '/departments',
-  getParentRoute: () => rootRouteImport,
-} as any)
 const AuthCompleteRoute = AuthCompleteRouteImport.update({
   id: '/auth-complete',
   path: '/auth-complete',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const AuditLogsRoute = AuditLogsRouteImport.update({
-  id: '/audit-logs',
-  path: '/audit-logs',
   getParentRoute: () => rootRouteImport,
 } as any)
 const AdministrationRoute = AdministrationRouteImport.update({
@@ -274,11 +247,6 @@ const UsersUserUuidRoute = UsersUserUuidRouteImport.update({
   path: '/$userUuid',
   getParentRoute: () => UsersRoute,
 } as any)
-const ReportsWorkspacesRoute = ReportsWorkspacesRouteImport.update({
-  id: '/workspaces',
-  path: '/workspaces',
-  getParentRoute: () => ReportsRoute,
-} as any)
 const ReportsApplicationsRoute = ReportsApplicationsRouteImport.update({
   id: '/applications',
   path: '/applications',
@@ -289,12 +257,6 @@ const ProfileSetupRoute = ProfileSetupRouteImport.update({
   path: '/profile/setup',
   getParentRoute: () => rootRouteImport,
 } as any)
-const OnboardingOversightReportsRoute =
-  OnboardingOversightReportsRouteImport.update({
-    id: '/reports',
-    path: '/reports',
-    getParentRoute: () => OnboardingOversightRoute,
-  } as any)
 const OnboardingOversightQueueRoute =
   OnboardingOversightQueueRouteImport.update({
     id: '/queue',
@@ -366,12 +328,6 @@ const WorkspacesWorkspaceUuidSettingsRoute =
     path: '/settings',
     getParentRoute: () => WorkspacesWorkspaceUuidRoute,
   } as any)
-const WorkspacesWorkspaceUuidReportsRoute =
-  WorkspacesWorkspaceUuidReportsRouteImport.update({
-    id: '/reports',
-    path: '/reports',
-    getParentRoute: () => WorkspacesWorkspaceUuidRoute,
-  } as any)
 const WorkspacesWorkspaceUuidMembersRoute =
   WorkspacesWorkspaceUuidMembersRouteImport.update({
     id: '/members',
@@ -414,10 +370,16 @@ const UsersUserUuidGlobalAccessRoute =
     path: '/global-access',
     getParentRoute: () => UsersUserUuidRoute,
   } as any)
-const InvitationsRpApplicationsTokenRoute =
-  InvitationsRpApplicationsTokenRouteImport.update({
-    id: '/$token',
-    path: '/$token',
+const InvitationsRpApplicationsPrepareRoute =
+  InvitationsRpApplicationsPrepareRouteImport.update({
+    id: '/prepare',
+    path: '/prepare',
+    getParentRoute: () => InvitationsRpApplicationsRoute,
+  } as any)
+const InvitationsRpApplicationsAcceptRoute =
+  InvitationsRpApplicationsAcceptRouteImport.update({
+    id: '/accept',
+    path: '/accept',
     getParentRoute: () => InvitationsRpApplicationsRoute,
   } as any)
 const WorkspacesWorkspaceUuidApplicationsIndexRoute =
@@ -524,15 +486,6 @@ const WorkspacesWorkspaceUuidApplicationsApplicationInformationUuidReadinessRout
         WorkspacesWorkspaceUuidApplicationsApplicationInformationUuidRoute,
     } as any,
   )
-const WorkspacesWorkspaceUuidApplicationsApplicationInformationUuidInternalReviewRoute =
-  WorkspacesWorkspaceUuidApplicationsApplicationInformationUuidInternalReviewRouteImport.update(
-    {
-      id: '/internal-review',
-      path: '/internal-review',
-      getParentRoute: () =>
-        WorkspacesWorkspaceUuidApplicationsApplicationInformationUuidRoute,
-    } as any,
-  )
 const WorkspacesWorkspaceUuidApplicationsApplicationInformationUuidEditRoute =
   WorkspacesWorkspaceUuidApplicationsApplicationInformationUuidEditRouteImport.update(
     {
@@ -565,6 +518,15 @@ const WorkspacesWorkspaceUuidApplicationsApplicationInformationUuidContactsRoute
     {
       id: '/contacts',
       path: '/contacts',
+      getParentRoute: () =>
+        WorkspacesWorkspaceUuidApplicationsApplicationInformationUuidRoute,
+    } as any,
+  )
+const WorkspacesWorkspaceUuidApplicationsApplicationInformationUuidChecklistAndEvidenceRoute =
+  WorkspacesWorkspaceUuidApplicationsApplicationInformationUuidChecklistAndEvidenceRouteImport.update(
+    {
+      id: '/checklist-and-evidence',
+      path: '/checklist-and-evidence',
       getParentRoute: () =>
         WorkspacesWorkspaceUuidApplicationsApplicationInformationUuidRoute,
     } as any,
@@ -728,15 +690,6 @@ const WorkspacesWorkspaceUuidApplicationsApplicationInformationUuidRpConfigurati
         WorkspacesWorkspaceUuidApplicationsApplicationInformationUuidRpConfigurationsRpConfigurationUuidRoute,
     } as any,
   )
-const WorkspacesWorkspaceUuidApplicationsApplicationInformationUuidRpConfigurationsRpConfigurationUuidAuditRoute =
-  WorkspacesWorkspaceUuidApplicationsApplicationInformationUuidRpConfigurationsRpConfigurationUuidAuditRouteImport.update(
-    {
-      id: '/audit',
-      path: '/audit',
-      getParentRoute: () =>
-        WorkspacesWorkspaceUuidApplicationsApplicationInformationUuidRpConfigurationsRpConfigurationUuidRoute,
-    } as any,
-  )
 const WorkspacesWorkspaceUuidApplicationsApplicationInformationUuidContactsContactUuidEditRoute =
   WorkspacesWorkspaceUuidApplicationsApplicationInformationUuidContactsContactUuidEditRouteImport.update(
     {
@@ -780,28 +733,22 @@ export interface FileRoutesByFullPath {
   '/access-denied': typeof AccessDeniedRoute
   '/account': typeof AccountRoute
   '/administration': typeof AdministrationRoute
-  '/audit-logs': typeof AuditLogsRoute
   '/auth-complete': typeof AuthCompleteRoute
-  '/departments': typeof DepartmentsRoute
   '/error': typeof ErrorRoute
   '/invitations': typeof InvitationsRouteWithChildren
   '/logout': typeof LogoutRoute
   '/onboarding-oversight': typeof OnboardingOversightRouteWithChildren
-  '/policies': typeof PoliciesRoute
   '/reports': typeof ReportsRouteWithChildren
   '/roles': typeof RolesRoute
   '/support': typeof SupportRoute
   '/terms-and-conditions': typeof TermsAndConditionsRoute
-  '/tiers': typeof TiersRoute
   '/users': typeof UsersRouteWithChildren
   '/workspaces': typeof WorkspacesRouteWithChildren
   '/your-applications': typeof YourApplicationsRouteWithChildren
   '/invitations/rp-applications': typeof InvitationsRpApplicationsRouteWithChildren
   '/onboarding-oversight/queue': typeof OnboardingOversightQueueRoute
-  '/onboarding-oversight/reports': typeof OnboardingOversightReportsRoute
   '/profile/setup': typeof ProfileSetupRoute
   '/reports/applications': typeof ReportsApplicationsRoute
-  '/reports/workspaces': typeof ReportsWorkspacesRoute
   '/users/$userUuid': typeof UsersUserUuidRouteWithChildren
   '/users/invite': typeof UsersInviteRoute
   '/workspaces/$workspaceUuid': typeof WorkspacesWorkspaceUuidRouteWithChildren
@@ -813,7 +760,8 @@ export interface FileRoutesByFullPath {
   '/users/': typeof UsersIndexRoute
   '/workspaces/': typeof WorkspacesIndexRoute
   '/your-applications/': typeof YourApplicationsIndexRoute
-  '/invitations/rp-applications/$token': typeof InvitationsRpApplicationsTokenRoute
+  '/invitations/rp-applications/accept': typeof InvitationsRpApplicationsAcceptRoute
+  '/invitations/rp-applications/prepare': typeof InvitationsRpApplicationsPrepareRoute
   '/users/$userUuid/global-access': typeof UsersUserUuidGlobalAccessRoute
   '/users/$userUuid/invitations': typeof UsersUserUuidInvitationsRoute
   '/users/$userUuid/workspace-access': typeof UsersUserUuidWorkspaceAccessRouteWithChildren
@@ -821,7 +769,6 @@ export interface FileRoutesByFullPath {
   '/workspaces/$workspaceUuid/application-information': typeof WorkspacesWorkspaceUuidApplicationInformationRouteWithChildren
   '/workspaces/$workspaceUuid/applications': typeof WorkspacesWorkspaceUuidApplicationsRouteWithChildren
   '/workspaces/$workspaceUuid/members': typeof WorkspacesWorkspaceUuidMembersRoute
-  '/workspaces/$workspaceUuid/reports': typeof WorkspacesWorkspaceUuidReportsRoute
   '/workspaces/$workspaceUuid/settings': typeof WorkspacesWorkspaceUuidSettingsRoute
   '/workspaces/rp-registration-adoption/$rpApplicationUuid': typeof WorkspacesRpRegistrationAdoptionRpApplicationUuidRoute
   '/your-applications/$rpApplicationUuid/department-setup': typeof YourApplicationsRpApplicationUuidDepartmentSetupRoute
@@ -846,11 +793,11 @@ export interface FileRoutesByFullPath {
   '/workspaces/$workspaceUuid/access/invitations/$invitationUuid': typeof WorkspacesWorkspaceUuidAccessInvitationsInvitationUuidRoute
   '/workspaces/$workspaceUuid/access/invitations/new': typeof WorkspacesWorkspaceUuidAccessInvitationsNewRoute
   '/workspaces/$workspaceUuid/applications/$applicationInformationUuid/$': typeof WorkspacesWorkspaceUuidApplicationsApplicationInformationUuidSplatRoute
+  '/workspaces/$workspaceUuid/applications/$applicationInformationUuid/checklist-and-evidence': typeof WorkspacesWorkspaceUuidApplicationsApplicationInformationUuidChecklistAndEvidenceRoute
   '/workspaces/$workspaceUuid/applications/$applicationInformationUuid/contacts': typeof WorkspacesWorkspaceUuidApplicationsApplicationInformationUuidContactsRouteWithChildren
   '/workspaces/$workspaceUuid/applications/$applicationInformationUuid/delete': typeof WorkspacesWorkspaceUuidApplicationsApplicationInformationUuidDeleteRoute
   '/workspaces/$workspaceUuid/applications/$applicationInformationUuid/details': typeof WorkspacesWorkspaceUuidApplicationsApplicationInformationUuidDetailsRouteWithChildren
   '/workspaces/$workspaceUuid/applications/$applicationInformationUuid/edit': typeof WorkspacesWorkspaceUuidApplicationsApplicationInformationUuidEditRoute
-  '/workspaces/$workspaceUuid/applications/$applicationInformationUuid/internal-review': typeof WorkspacesWorkspaceUuidApplicationsApplicationInformationUuidInternalReviewRoute
   '/workspaces/$workspaceUuid/applications/$applicationInformationUuid/readiness': typeof WorkspacesWorkspaceUuidApplicationsApplicationInformationUuidReadinessRoute
   '/workspaces/$workspaceUuid/applications/$applicationInformationUuid/rp-configurations': typeof WorkspacesWorkspaceUuidApplicationsApplicationInformationUuidRpConfigurationsRouteWithChildren
   '/workspaces/$workspaceUuid/applications/$applicationInformationUuid/settings': typeof WorkspacesWorkspaceUuidApplicationsApplicationInformationUuidSettingsRoute
@@ -864,7 +811,6 @@ export interface FileRoutesByFullPath {
   '/workspaces/$workspaceUuid/applications/$applicationInformationUuid/contacts/': typeof WorkspacesWorkspaceUuidApplicationsApplicationInformationUuidContactsIndexRoute
   '/workspaces/$workspaceUuid/applications/$applicationInformationUuid/rp-configurations/': typeof WorkspacesWorkspaceUuidApplicationsApplicationInformationUuidRpConfigurationsIndexRoute
   '/workspaces/$workspaceUuid/applications/$applicationInformationUuid/contacts/$contactUuid/edit': typeof WorkspacesWorkspaceUuidApplicationsApplicationInformationUuidContactsContactUuidEditRoute
-  '/workspaces/$workspaceUuid/applications/$applicationInformationUuid/rp-configurations/$rpConfigurationUuid/audit': typeof WorkspacesWorkspaceUuidApplicationsApplicationInformationUuidRpConfigurationsRpConfigurationUuidAuditRoute
   '/workspaces/$workspaceUuid/applications/$applicationInformationUuid/rp-configurations/$rpConfigurationUuid/configuration': typeof WorkspacesWorkspaceUuidApplicationsApplicationInformationUuidRpConfigurationsRpConfigurationUuidConfigurationRoute
   '/workspaces/$workspaceUuid/applications/$applicationInformationUuid/rp-configurations/$rpConfigurationUuid/copy': typeof WorkspacesWorkspaceUuidApplicationsApplicationInformationUuidRpConfigurationsRpConfigurationUuidCopyRoute
   '/workspaces/$workspaceUuid/applications/$applicationInformationUuid/rp-configurations/$rpConfigurationUuid/manage-credentials': typeof WorkspacesWorkspaceUuidApplicationsApplicationInformationUuidRpConfigurationsRpConfigurationUuidManageCredentialsRoute
@@ -883,22 +829,16 @@ export interface FileRoutesByTo {
   '/access-denied': typeof AccessDeniedRoute
   '/account': typeof AccountRoute
   '/administration': typeof AdministrationRoute
-  '/audit-logs': typeof AuditLogsRoute
   '/auth-complete': typeof AuthCompleteRoute
-  '/departments': typeof DepartmentsRoute
   '/error': typeof ErrorRoute
   '/invitations': typeof InvitationsRouteWithChildren
   '/logout': typeof LogoutRoute
-  '/policies': typeof PoliciesRoute
   '/roles': typeof RolesRoute
   '/support': typeof SupportRoute
   '/terms-and-conditions': typeof TermsAndConditionsRoute
-  '/tiers': typeof TiersRoute
   '/onboarding-oversight/queue': typeof OnboardingOversightQueueRoute
-  '/onboarding-oversight/reports': typeof OnboardingOversightReportsRoute
   '/profile/setup': typeof ProfileSetupRoute
   '/reports/applications': typeof ReportsApplicationsRoute
-  '/reports/workspaces': typeof ReportsWorkspacesRoute
   '/users/invite': typeof UsersInviteRoute
   '/workspaces/new': typeof WorkspacesNewRoute
   '/onboarding-oversight': typeof OnboardingOversightIndexRoute
@@ -906,12 +846,12 @@ export interface FileRoutesByTo {
   '/users': typeof UsersIndexRoute
   '/workspaces': typeof WorkspacesIndexRoute
   '/your-applications': typeof YourApplicationsIndexRoute
-  '/invitations/rp-applications/$token': typeof InvitationsRpApplicationsTokenRoute
+  '/invitations/rp-applications/accept': typeof InvitationsRpApplicationsAcceptRoute
+  '/invitations/rp-applications/prepare': typeof InvitationsRpApplicationsPrepareRoute
   '/users/$userUuid/global-access': typeof UsersUserUuidGlobalAccessRoute
   '/users/$userUuid/invitations': typeof UsersUserUuidInvitationsRoute
   '/workspaces/$workspaceUuid/application-information': typeof WorkspacesWorkspaceUuidApplicationInformationRouteWithChildren
   '/workspaces/$workspaceUuid/members': typeof WorkspacesWorkspaceUuidMembersRoute
-  '/workspaces/$workspaceUuid/reports': typeof WorkspacesWorkspaceUuidReportsRoute
   '/workspaces/$workspaceUuid/settings': typeof WorkspacesWorkspaceUuidSettingsRoute
   '/workspaces/rp-registration-adoption/$rpApplicationUuid': typeof WorkspacesRpRegistrationAdoptionRpApplicationUuidRoute
   '/your-applications/$rpApplicationUuid/department-setup': typeof YourApplicationsRpApplicationUuidDepartmentSetupRoute
@@ -933,10 +873,10 @@ export interface FileRoutesByTo {
   '/workspaces/$workspaceUuid/access/invitations/$invitationUuid': typeof WorkspacesWorkspaceUuidAccessInvitationsInvitationUuidRoute
   '/workspaces/$workspaceUuid/access/invitations/new': typeof WorkspacesWorkspaceUuidAccessInvitationsNewRoute
   '/workspaces/$workspaceUuid/applications/$applicationInformationUuid/$': typeof WorkspacesWorkspaceUuidApplicationsApplicationInformationUuidSplatRoute
+  '/workspaces/$workspaceUuid/applications/$applicationInformationUuid/checklist-and-evidence': typeof WorkspacesWorkspaceUuidApplicationsApplicationInformationUuidChecklistAndEvidenceRoute
   '/workspaces/$workspaceUuid/applications/$applicationInformationUuid/delete': typeof WorkspacesWorkspaceUuidApplicationsApplicationInformationUuidDeleteRoute
   '/workspaces/$workspaceUuid/applications/$applicationInformationUuid/details': typeof WorkspacesWorkspaceUuidApplicationsApplicationInformationUuidDetailsRouteWithChildren
   '/workspaces/$workspaceUuid/applications/$applicationInformationUuid/edit': typeof WorkspacesWorkspaceUuidApplicationsApplicationInformationUuidEditRoute
-  '/workspaces/$workspaceUuid/applications/$applicationInformationUuid/internal-review': typeof WorkspacesWorkspaceUuidApplicationsApplicationInformationUuidInternalReviewRoute
   '/workspaces/$workspaceUuid/applications/$applicationInformationUuid/readiness': typeof WorkspacesWorkspaceUuidApplicationsApplicationInformationUuidReadinessRoute
   '/workspaces/$workspaceUuid/applications/$applicationInformationUuid/settings': typeof WorkspacesWorkspaceUuidApplicationsApplicationInformationUuidSettingsRoute
   '/workspaces/$workspaceUuid/access/assignments': typeof WorkspacesWorkspaceUuidAccessAssignmentsIndexRoute
@@ -948,7 +888,6 @@ export interface FileRoutesByTo {
   '/workspaces/$workspaceUuid/applications/$applicationInformationUuid/contacts': typeof WorkspacesWorkspaceUuidApplicationsApplicationInformationUuidContactsIndexRoute
   '/workspaces/$workspaceUuid/applications/$applicationInformationUuid/rp-configurations': typeof WorkspacesWorkspaceUuidApplicationsApplicationInformationUuidRpConfigurationsIndexRoute
   '/workspaces/$workspaceUuid/applications/$applicationInformationUuid/contacts/$contactUuid/edit': typeof WorkspacesWorkspaceUuidApplicationsApplicationInformationUuidContactsContactUuidEditRoute
-  '/workspaces/$workspaceUuid/applications/$applicationInformationUuid/rp-configurations/$rpConfigurationUuid/audit': typeof WorkspacesWorkspaceUuidApplicationsApplicationInformationUuidRpConfigurationsRpConfigurationUuidAuditRoute
   '/workspaces/$workspaceUuid/applications/$applicationInformationUuid/rp-configurations/$rpConfigurationUuid/configuration': typeof WorkspacesWorkspaceUuidApplicationsApplicationInformationUuidRpConfigurationsRpConfigurationUuidConfigurationRoute
   '/workspaces/$workspaceUuid/applications/$applicationInformationUuid/rp-configurations/$rpConfigurationUuid/copy': typeof WorkspacesWorkspaceUuidApplicationsApplicationInformationUuidRpConfigurationsRpConfigurationUuidCopyRoute
   '/workspaces/$workspaceUuid/applications/$applicationInformationUuid/rp-configurations/$rpConfigurationUuid/manage-credentials': typeof WorkspacesWorkspaceUuidApplicationsApplicationInformationUuidRpConfigurationsRpConfigurationUuidManageCredentialsRoute
@@ -968,28 +907,22 @@ export interface FileRoutesById {
   '/access-denied': typeof AccessDeniedRoute
   '/account': typeof AccountRoute
   '/administration': typeof AdministrationRoute
-  '/audit-logs': typeof AuditLogsRoute
   '/auth-complete': typeof AuthCompleteRoute
-  '/departments': typeof DepartmentsRoute
   '/error': typeof ErrorRoute
   '/invitations': typeof InvitationsRouteWithChildren
   '/logout': typeof LogoutRoute
   '/onboarding-oversight': typeof OnboardingOversightRouteWithChildren
-  '/policies': typeof PoliciesRoute
   '/reports': typeof ReportsRouteWithChildren
   '/roles': typeof RolesRoute
   '/support': typeof SupportRoute
   '/terms-and-conditions': typeof TermsAndConditionsRoute
-  '/tiers': typeof TiersRoute
   '/users': typeof UsersRouteWithChildren
   '/workspaces': typeof WorkspacesRouteWithChildren
   '/your-applications': typeof YourApplicationsRouteWithChildren
   '/invitations/rp-applications': typeof InvitationsRpApplicationsRouteWithChildren
   '/onboarding-oversight/queue': typeof OnboardingOversightQueueRoute
-  '/onboarding-oversight/reports': typeof OnboardingOversightReportsRoute
   '/profile/setup': typeof ProfileSetupRoute
   '/reports/applications': typeof ReportsApplicationsRoute
-  '/reports/workspaces': typeof ReportsWorkspacesRoute
   '/users/$userUuid': typeof UsersUserUuidRouteWithChildren
   '/users/invite': typeof UsersInviteRoute
   '/workspaces/$workspaceUuid': typeof WorkspacesWorkspaceUuidRouteWithChildren
@@ -1001,7 +934,8 @@ export interface FileRoutesById {
   '/users/': typeof UsersIndexRoute
   '/workspaces/': typeof WorkspacesIndexRoute
   '/your-applications/': typeof YourApplicationsIndexRoute
-  '/invitations/rp-applications/$token': typeof InvitationsRpApplicationsTokenRoute
+  '/invitations/rp-applications/accept': typeof InvitationsRpApplicationsAcceptRoute
+  '/invitations/rp-applications/prepare': typeof InvitationsRpApplicationsPrepareRoute
   '/users/$userUuid/global-access': typeof UsersUserUuidGlobalAccessRoute
   '/users/$userUuid/invitations': typeof UsersUserUuidInvitationsRoute
   '/users/$userUuid/workspace-access': typeof UsersUserUuidWorkspaceAccessRouteWithChildren
@@ -1009,7 +943,6 @@ export interface FileRoutesById {
   '/workspaces/$workspaceUuid/application-information': typeof WorkspacesWorkspaceUuidApplicationInformationRouteWithChildren
   '/workspaces/$workspaceUuid/applications': typeof WorkspacesWorkspaceUuidApplicationsRouteWithChildren
   '/workspaces/$workspaceUuid/members': typeof WorkspacesWorkspaceUuidMembersRoute
-  '/workspaces/$workspaceUuid/reports': typeof WorkspacesWorkspaceUuidReportsRoute
   '/workspaces/$workspaceUuid/settings': typeof WorkspacesWorkspaceUuidSettingsRoute
   '/workspaces/rp-registration-adoption/$rpApplicationUuid': typeof WorkspacesRpRegistrationAdoptionRpApplicationUuidRoute
   '/your-applications/$rpApplicationUuid/department-setup': typeof YourApplicationsRpApplicationUuidDepartmentSetupRoute
@@ -1034,11 +967,11 @@ export interface FileRoutesById {
   '/workspaces/$workspaceUuid/access/invitations/$invitationUuid': typeof WorkspacesWorkspaceUuidAccessInvitationsInvitationUuidRoute
   '/workspaces/$workspaceUuid/access/invitations/new': typeof WorkspacesWorkspaceUuidAccessInvitationsNewRoute
   '/workspaces/$workspaceUuid/applications/$applicationInformationUuid/$': typeof WorkspacesWorkspaceUuidApplicationsApplicationInformationUuidSplatRoute
+  '/workspaces/$workspaceUuid/applications/$applicationInformationUuid/checklist-and-evidence': typeof WorkspacesWorkspaceUuidApplicationsApplicationInformationUuidChecklistAndEvidenceRoute
   '/workspaces/$workspaceUuid/applications/$applicationInformationUuid/contacts': typeof WorkspacesWorkspaceUuidApplicationsApplicationInformationUuidContactsRouteWithChildren
   '/workspaces/$workspaceUuid/applications/$applicationInformationUuid/delete': typeof WorkspacesWorkspaceUuidApplicationsApplicationInformationUuidDeleteRoute
   '/workspaces/$workspaceUuid/applications/$applicationInformationUuid/details': typeof WorkspacesWorkspaceUuidApplicationsApplicationInformationUuidDetailsRouteWithChildren
   '/workspaces/$workspaceUuid/applications/$applicationInformationUuid/edit': typeof WorkspacesWorkspaceUuidApplicationsApplicationInformationUuidEditRoute
-  '/workspaces/$workspaceUuid/applications/$applicationInformationUuid/internal-review': typeof WorkspacesWorkspaceUuidApplicationsApplicationInformationUuidInternalReviewRoute
   '/workspaces/$workspaceUuid/applications/$applicationInformationUuid/readiness': typeof WorkspacesWorkspaceUuidApplicationsApplicationInformationUuidReadinessRoute
   '/workspaces/$workspaceUuid/applications/$applicationInformationUuid/rp-configurations': typeof WorkspacesWorkspaceUuidApplicationsApplicationInformationUuidRpConfigurationsRouteWithChildren
   '/workspaces/$workspaceUuid/applications/$applicationInformationUuid/settings': typeof WorkspacesWorkspaceUuidApplicationsApplicationInformationUuidSettingsRoute
@@ -1052,7 +985,6 @@ export interface FileRoutesById {
   '/workspaces/$workspaceUuid/applications/$applicationInformationUuid/contacts/': typeof WorkspacesWorkspaceUuidApplicationsApplicationInformationUuidContactsIndexRoute
   '/workspaces/$workspaceUuid/applications/$applicationInformationUuid/rp-configurations/': typeof WorkspacesWorkspaceUuidApplicationsApplicationInformationUuidRpConfigurationsIndexRoute
   '/workspaces/$workspaceUuid/applications/$applicationInformationUuid/contacts/$contactUuid/edit': typeof WorkspacesWorkspaceUuidApplicationsApplicationInformationUuidContactsContactUuidEditRoute
-  '/workspaces/$workspaceUuid/applications/$applicationInformationUuid/rp-configurations/$rpConfigurationUuid/audit': typeof WorkspacesWorkspaceUuidApplicationsApplicationInformationUuidRpConfigurationsRpConfigurationUuidAuditRoute
   '/workspaces/$workspaceUuid/applications/$applicationInformationUuid/rp-configurations/$rpConfigurationUuid/configuration': typeof WorkspacesWorkspaceUuidApplicationsApplicationInformationUuidRpConfigurationsRpConfigurationUuidConfigurationRoute
   '/workspaces/$workspaceUuid/applications/$applicationInformationUuid/rp-configurations/$rpConfigurationUuid/copy': typeof WorkspacesWorkspaceUuidApplicationsApplicationInformationUuidRpConfigurationsRpConfigurationUuidCopyRoute
   '/workspaces/$workspaceUuid/applications/$applicationInformationUuid/rp-configurations/$rpConfigurationUuid/manage-credentials': typeof WorkspacesWorkspaceUuidApplicationsApplicationInformationUuidRpConfigurationsRpConfigurationUuidManageCredentialsRoute
@@ -1073,28 +1005,22 @@ export interface FileRouteTypes {
     | '/access-denied'
     | '/account'
     | '/administration'
-    | '/audit-logs'
     | '/auth-complete'
-    | '/departments'
     | '/error'
     | '/invitations'
     | '/logout'
     | '/onboarding-oversight'
-    | '/policies'
     | '/reports'
     | '/roles'
     | '/support'
     | '/terms-and-conditions'
-    | '/tiers'
     | '/users'
     | '/workspaces'
     | '/your-applications'
     | '/invitations/rp-applications'
     | '/onboarding-oversight/queue'
-    | '/onboarding-oversight/reports'
     | '/profile/setup'
     | '/reports/applications'
-    | '/reports/workspaces'
     | '/users/$userUuid'
     | '/users/invite'
     | '/workspaces/$workspaceUuid'
@@ -1106,7 +1032,8 @@ export interface FileRouteTypes {
     | '/users/'
     | '/workspaces/'
     | '/your-applications/'
-    | '/invitations/rp-applications/$token'
+    | '/invitations/rp-applications/accept'
+    | '/invitations/rp-applications/prepare'
     | '/users/$userUuid/global-access'
     | '/users/$userUuid/invitations'
     | '/users/$userUuid/workspace-access'
@@ -1114,7 +1041,6 @@ export interface FileRouteTypes {
     | '/workspaces/$workspaceUuid/application-information'
     | '/workspaces/$workspaceUuid/applications'
     | '/workspaces/$workspaceUuid/members'
-    | '/workspaces/$workspaceUuid/reports'
     | '/workspaces/$workspaceUuid/settings'
     | '/workspaces/rp-registration-adoption/$rpApplicationUuid'
     | '/your-applications/$rpApplicationUuid/department-setup'
@@ -1139,11 +1065,11 @@ export interface FileRouteTypes {
     | '/workspaces/$workspaceUuid/access/invitations/$invitationUuid'
     | '/workspaces/$workspaceUuid/access/invitations/new'
     | '/workspaces/$workspaceUuid/applications/$applicationInformationUuid/$'
+    | '/workspaces/$workspaceUuid/applications/$applicationInformationUuid/checklist-and-evidence'
     | '/workspaces/$workspaceUuid/applications/$applicationInformationUuid/contacts'
     | '/workspaces/$workspaceUuid/applications/$applicationInformationUuid/delete'
     | '/workspaces/$workspaceUuid/applications/$applicationInformationUuid/details'
     | '/workspaces/$workspaceUuid/applications/$applicationInformationUuid/edit'
-    | '/workspaces/$workspaceUuid/applications/$applicationInformationUuid/internal-review'
     | '/workspaces/$workspaceUuid/applications/$applicationInformationUuid/readiness'
     | '/workspaces/$workspaceUuid/applications/$applicationInformationUuid/rp-configurations'
     | '/workspaces/$workspaceUuid/applications/$applicationInformationUuid/settings'
@@ -1157,7 +1083,6 @@ export interface FileRouteTypes {
     | '/workspaces/$workspaceUuid/applications/$applicationInformationUuid/contacts/'
     | '/workspaces/$workspaceUuid/applications/$applicationInformationUuid/rp-configurations/'
     | '/workspaces/$workspaceUuid/applications/$applicationInformationUuid/contacts/$contactUuid/edit'
-    | '/workspaces/$workspaceUuid/applications/$applicationInformationUuid/rp-configurations/$rpConfigurationUuid/audit'
     | '/workspaces/$workspaceUuid/applications/$applicationInformationUuid/rp-configurations/$rpConfigurationUuid/configuration'
     | '/workspaces/$workspaceUuid/applications/$applicationInformationUuid/rp-configurations/$rpConfigurationUuid/copy'
     | '/workspaces/$workspaceUuid/applications/$applicationInformationUuid/rp-configurations/$rpConfigurationUuid/manage-credentials'
@@ -1176,22 +1101,16 @@ export interface FileRouteTypes {
     | '/access-denied'
     | '/account'
     | '/administration'
-    | '/audit-logs'
     | '/auth-complete'
-    | '/departments'
     | '/error'
     | '/invitations'
     | '/logout'
-    | '/policies'
     | '/roles'
     | '/support'
     | '/terms-and-conditions'
-    | '/tiers'
     | '/onboarding-oversight/queue'
-    | '/onboarding-oversight/reports'
     | '/profile/setup'
     | '/reports/applications'
-    | '/reports/workspaces'
     | '/users/invite'
     | '/workspaces/new'
     | '/onboarding-oversight'
@@ -1199,12 +1118,12 @@ export interface FileRouteTypes {
     | '/users'
     | '/workspaces'
     | '/your-applications'
-    | '/invitations/rp-applications/$token'
+    | '/invitations/rp-applications/accept'
+    | '/invitations/rp-applications/prepare'
     | '/users/$userUuid/global-access'
     | '/users/$userUuid/invitations'
     | '/workspaces/$workspaceUuid/application-information'
     | '/workspaces/$workspaceUuid/members'
-    | '/workspaces/$workspaceUuid/reports'
     | '/workspaces/$workspaceUuid/settings'
     | '/workspaces/rp-registration-adoption/$rpApplicationUuid'
     | '/your-applications/$rpApplicationUuid/department-setup'
@@ -1226,10 +1145,10 @@ export interface FileRouteTypes {
     | '/workspaces/$workspaceUuid/access/invitations/$invitationUuid'
     | '/workspaces/$workspaceUuid/access/invitations/new'
     | '/workspaces/$workspaceUuid/applications/$applicationInformationUuid/$'
+    | '/workspaces/$workspaceUuid/applications/$applicationInformationUuid/checklist-and-evidence'
     | '/workspaces/$workspaceUuid/applications/$applicationInformationUuid/delete'
     | '/workspaces/$workspaceUuid/applications/$applicationInformationUuid/details'
     | '/workspaces/$workspaceUuid/applications/$applicationInformationUuid/edit'
-    | '/workspaces/$workspaceUuid/applications/$applicationInformationUuid/internal-review'
     | '/workspaces/$workspaceUuid/applications/$applicationInformationUuid/readiness'
     | '/workspaces/$workspaceUuid/applications/$applicationInformationUuid/settings'
     | '/workspaces/$workspaceUuid/access/assignments'
@@ -1241,7 +1160,6 @@ export interface FileRouteTypes {
     | '/workspaces/$workspaceUuid/applications/$applicationInformationUuid/contacts'
     | '/workspaces/$workspaceUuid/applications/$applicationInformationUuid/rp-configurations'
     | '/workspaces/$workspaceUuid/applications/$applicationInformationUuid/contacts/$contactUuid/edit'
-    | '/workspaces/$workspaceUuid/applications/$applicationInformationUuid/rp-configurations/$rpConfigurationUuid/audit'
     | '/workspaces/$workspaceUuid/applications/$applicationInformationUuid/rp-configurations/$rpConfigurationUuid/configuration'
     | '/workspaces/$workspaceUuid/applications/$applicationInformationUuid/rp-configurations/$rpConfigurationUuid/copy'
     | '/workspaces/$workspaceUuid/applications/$applicationInformationUuid/rp-configurations/$rpConfigurationUuid/manage-credentials'
@@ -1260,28 +1178,22 @@ export interface FileRouteTypes {
     | '/access-denied'
     | '/account'
     | '/administration'
-    | '/audit-logs'
     | '/auth-complete'
-    | '/departments'
     | '/error'
     | '/invitations'
     | '/logout'
     | '/onboarding-oversight'
-    | '/policies'
     | '/reports'
     | '/roles'
     | '/support'
     | '/terms-and-conditions'
-    | '/tiers'
     | '/users'
     | '/workspaces'
     | '/your-applications'
     | '/invitations/rp-applications'
     | '/onboarding-oversight/queue'
-    | '/onboarding-oversight/reports'
     | '/profile/setup'
     | '/reports/applications'
-    | '/reports/workspaces'
     | '/users/$userUuid'
     | '/users/invite'
     | '/workspaces/$workspaceUuid'
@@ -1293,7 +1205,8 @@ export interface FileRouteTypes {
     | '/users/'
     | '/workspaces/'
     | '/your-applications/'
-    | '/invitations/rp-applications/$token'
+    | '/invitations/rp-applications/accept'
+    | '/invitations/rp-applications/prepare'
     | '/users/$userUuid/global-access'
     | '/users/$userUuid/invitations'
     | '/users/$userUuid/workspace-access'
@@ -1301,7 +1214,6 @@ export interface FileRouteTypes {
     | '/workspaces/$workspaceUuid/application-information'
     | '/workspaces/$workspaceUuid/applications'
     | '/workspaces/$workspaceUuid/members'
-    | '/workspaces/$workspaceUuid/reports'
     | '/workspaces/$workspaceUuid/settings'
     | '/workspaces/rp-registration-adoption/$rpApplicationUuid'
     | '/your-applications/$rpApplicationUuid/department-setup'
@@ -1326,11 +1238,11 @@ export interface FileRouteTypes {
     | '/workspaces/$workspaceUuid/access/invitations/$invitationUuid'
     | '/workspaces/$workspaceUuid/access/invitations/new'
     | '/workspaces/$workspaceUuid/applications/$applicationInformationUuid/$'
+    | '/workspaces/$workspaceUuid/applications/$applicationInformationUuid/checklist-and-evidence'
     | '/workspaces/$workspaceUuid/applications/$applicationInformationUuid/contacts'
     | '/workspaces/$workspaceUuid/applications/$applicationInformationUuid/delete'
     | '/workspaces/$workspaceUuid/applications/$applicationInformationUuid/details'
     | '/workspaces/$workspaceUuid/applications/$applicationInformationUuid/edit'
-    | '/workspaces/$workspaceUuid/applications/$applicationInformationUuid/internal-review'
     | '/workspaces/$workspaceUuid/applications/$applicationInformationUuid/readiness'
     | '/workspaces/$workspaceUuid/applications/$applicationInformationUuid/rp-configurations'
     | '/workspaces/$workspaceUuid/applications/$applicationInformationUuid/settings'
@@ -1344,7 +1256,6 @@ export interface FileRouteTypes {
     | '/workspaces/$workspaceUuid/applications/$applicationInformationUuid/contacts/'
     | '/workspaces/$workspaceUuid/applications/$applicationInformationUuid/rp-configurations/'
     | '/workspaces/$workspaceUuid/applications/$applicationInformationUuid/contacts/$contactUuid/edit'
-    | '/workspaces/$workspaceUuid/applications/$applicationInformationUuid/rp-configurations/$rpConfigurationUuid/audit'
     | '/workspaces/$workspaceUuid/applications/$applicationInformationUuid/rp-configurations/$rpConfigurationUuid/configuration'
     | '/workspaces/$workspaceUuid/applications/$applicationInformationUuid/rp-configurations/$rpConfigurationUuid/copy'
     | '/workspaces/$workspaceUuid/applications/$applicationInformationUuid/rp-configurations/$rpConfigurationUuid/manage-credentials'
@@ -1364,19 +1275,15 @@ export interface RootRouteChildren {
   AccessDeniedRoute: typeof AccessDeniedRoute
   AccountRoute: typeof AccountRoute
   AdministrationRoute: typeof AdministrationRoute
-  AuditLogsRoute: typeof AuditLogsRoute
   AuthCompleteRoute: typeof AuthCompleteRoute
-  DepartmentsRoute: typeof DepartmentsRoute
   ErrorRoute: typeof ErrorRoute
   InvitationsRoute: typeof InvitationsRouteWithChildren
   LogoutRoute: typeof LogoutRoute
   OnboardingOversightRoute: typeof OnboardingOversightRouteWithChildren
-  PoliciesRoute: typeof PoliciesRoute
   ReportsRoute: typeof ReportsRouteWithChildren
   RolesRoute: typeof RolesRoute
   SupportRoute: typeof SupportRoute
   TermsAndConditionsRoute: typeof TermsAndConditionsRoute
-  TiersRoute: typeof TiersRoute
   UsersRoute: typeof UsersRouteWithChildren
   WorkspacesRoute: typeof WorkspacesRouteWithChildren
   YourApplicationsRoute: typeof YourApplicationsRouteWithChildren
@@ -1404,13 +1311,6 @@ declare module '@tanstack/react-router' {
       path: '/users'
       fullPath: '/users'
       preLoaderRoute: typeof UsersRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/tiers': {
-      id: '/tiers'
-      path: '/tiers'
-      fullPath: '/tiers'
-      preLoaderRoute: typeof TiersRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/terms-and-conditions': {
@@ -1441,13 +1341,6 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ReportsRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/policies': {
-      id: '/policies'
-      path: '/policies'
-      fullPath: '/policies'
-      preLoaderRoute: typeof PoliciesRouteImport
-      parentRoute: typeof rootRouteImport
-    }
     '/onboarding-oversight': {
       id: '/onboarding-oversight'
       path: '/onboarding-oversight'
@@ -1476,25 +1369,11 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ErrorRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/departments': {
-      id: '/departments'
-      path: '/departments'
-      fullPath: '/departments'
-      preLoaderRoute: typeof DepartmentsRouteImport
-      parentRoute: typeof rootRouteImport
-    }
     '/auth-complete': {
       id: '/auth-complete'
       path: '/auth-complete'
       fullPath: '/auth-complete'
       preLoaderRoute: typeof AuthCompleteRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/audit-logs': {
-      id: '/audit-logs'
-      path: '/audit-logs'
-      fullPath: '/audit-logs'
-      preLoaderRoute: typeof AuditLogsRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/administration': {
@@ -1609,13 +1488,6 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof UsersUserUuidRouteImport
       parentRoute: typeof UsersRoute
     }
-    '/reports/workspaces': {
-      id: '/reports/workspaces'
-      path: '/workspaces'
-      fullPath: '/reports/workspaces'
-      preLoaderRoute: typeof ReportsWorkspacesRouteImport
-      parentRoute: typeof ReportsRoute
-    }
     '/reports/applications': {
       id: '/reports/applications'
       path: '/applications'
@@ -1629,13 +1501,6 @@ declare module '@tanstack/react-router' {
       fullPath: '/profile/setup'
       preLoaderRoute: typeof ProfileSetupRouteImport
       parentRoute: typeof rootRouteImport
-    }
-    '/onboarding-oversight/reports': {
-      id: '/onboarding-oversight/reports'
-      path: '/reports'
-      fullPath: '/onboarding-oversight/reports'
-      preLoaderRoute: typeof OnboardingOversightReportsRouteImport
-      parentRoute: typeof OnboardingOversightRoute
     }
     '/onboarding-oversight/queue': {
       id: '/onboarding-oversight/queue'
@@ -1721,13 +1586,6 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof WorkspacesWorkspaceUuidSettingsRouteImport
       parentRoute: typeof WorkspacesWorkspaceUuidRoute
     }
-    '/workspaces/$workspaceUuid/reports': {
-      id: '/workspaces/$workspaceUuid/reports'
-      path: '/reports'
-      fullPath: '/workspaces/$workspaceUuid/reports'
-      preLoaderRoute: typeof WorkspacesWorkspaceUuidReportsRouteImport
-      parentRoute: typeof WorkspacesWorkspaceUuidRoute
-    }
     '/workspaces/$workspaceUuid/members': {
       id: '/workspaces/$workspaceUuid/members'
       path: '/members'
@@ -1777,11 +1635,18 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof UsersUserUuidGlobalAccessRouteImport
       parentRoute: typeof UsersUserUuidRoute
     }
-    '/invitations/rp-applications/$token': {
-      id: '/invitations/rp-applications/$token'
-      path: '/$token'
-      fullPath: '/invitations/rp-applications/$token'
-      preLoaderRoute: typeof InvitationsRpApplicationsTokenRouteImport
+    '/invitations/rp-applications/prepare': {
+      id: '/invitations/rp-applications/prepare'
+      path: '/prepare'
+      fullPath: '/invitations/rp-applications/prepare'
+      preLoaderRoute: typeof InvitationsRpApplicationsPrepareRouteImport
+      parentRoute: typeof InvitationsRpApplicationsRoute
+    }
+    '/invitations/rp-applications/accept': {
+      id: '/invitations/rp-applications/accept'
+      path: '/accept'
+      fullPath: '/invitations/rp-applications/accept'
+      preLoaderRoute: typeof InvitationsRpApplicationsAcceptRouteImport
       parentRoute: typeof InvitationsRpApplicationsRoute
     }
     '/workspaces/$workspaceUuid/applications/': {
@@ -1889,13 +1754,6 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof WorkspacesWorkspaceUuidApplicationsApplicationInformationUuidReadinessRouteImport
       parentRoute: typeof WorkspacesWorkspaceUuidApplicationsApplicationInformationUuidRoute
     }
-    '/workspaces/$workspaceUuid/applications/$applicationInformationUuid/internal-review': {
-      id: '/workspaces/$workspaceUuid/applications/$applicationInformationUuid/internal-review'
-      path: '/internal-review'
-      fullPath: '/workspaces/$workspaceUuid/applications/$applicationInformationUuid/internal-review'
-      preLoaderRoute: typeof WorkspacesWorkspaceUuidApplicationsApplicationInformationUuidInternalReviewRouteImport
-      parentRoute: typeof WorkspacesWorkspaceUuidApplicationsApplicationInformationUuidRoute
-    }
     '/workspaces/$workspaceUuid/applications/$applicationInformationUuid/edit': {
       id: '/workspaces/$workspaceUuid/applications/$applicationInformationUuid/edit'
       path: '/edit'
@@ -1922,6 +1780,13 @@ declare module '@tanstack/react-router' {
       path: '/contacts'
       fullPath: '/workspaces/$workspaceUuid/applications/$applicationInformationUuid/contacts'
       preLoaderRoute: typeof WorkspacesWorkspaceUuidApplicationsApplicationInformationUuidContactsRouteImport
+      parentRoute: typeof WorkspacesWorkspaceUuidApplicationsApplicationInformationUuidRoute
+    }
+    '/workspaces/$workspaceUuid/applications/$applicationInformationUuid/checklist-and-evidence': {
+      id: '/workspaces/$workspaceUuid/applications/$applicationInformationUuid/checklist-and-evidence'
+      path: '/checklist-and-evidence'
+      fullPath: '/workspaces/$workspaceUuid/applications/$applicationInformationUuid/checklist-and-evidence'
+      preLoaderRoute: typeof WorkspacesWorkspaceUuidApplicationsApplicationInformationUuidChecklistAndEvidenceRouteImport
       parentRoute: typeof WorkspacesWorkspaceUuidApplicationsApplicationInformationUuidRoute
     }
     '/workspaces/$workspaceUuid/applications/$applicationInformationUuid/$': {
@@ -2057,13 +1922,6 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof WorkspacesWorkspaceUuidApplicationsApplicationInformationUuidRpConfigurationsRpConfigurationUuidConfigurationRouteImport
       parentRoute: typeof WorkspacesWorkspaceUuidApplicationsApplicationInformationUuidRpConfigurationsRpConfigurationUuidRoute
     }
-    '/workspaces/$workspaceUuid/applications/$applicationInformationUuid/rp-configurations/$rpConfigurationUuid/audit': {
-      id: '/workspaces/$workspaceUuid/applications/$applicationInformationUuid/rp-configurations/$rpConfigurationUuid/audit'
-      path: '/audit'
-      fullPath: '/workspaces/$workspaceUuid/applications/$applicationInformationUuid/rp-configurations/$rpConfigurationUuid/audit'
-      preLoaderRoute: typeof WorkspacesWorkspaceUuidApplicationsApplicationInformationUuidRpConfigurationsRpConfigurationUuidAuditRouteImport
-      parentRoute: typeof WorkspacesWorkspaceUuidApplicationsApplicationInformationUuidRpConfigurationsRpConfigurationUuidRoute
-    }
     '/workspaces/$workspaceUuid/applications/$applicationInformationUuid/contacts/$contactUuid/edit': {
       id: '/workspaces/$workspaceUuid/applications/$applicationInformationUuid/contacts/$contactUuid/edit'
       path: '/$contactUuid/edit'
@@ -2096,13 +1954,16 @@ declare module '@tanstack/react-router' {
 }
 
 interface InvitationsRpApplicationsRouteChildren {
-  InvitationsRpApplicationsTokenRoute: typeof InvitationsRpApplicationsTokenRoute
+  InvitationsRpApplicationsAcceptRoute: typeof InvitationsRpApplicationsAcceptRoute
+  InvitationsRpApplicationsPrepareRoute: typeof InvitationsRpApplicationsPrepareRoute
   InvitationsRpApplicationsIndexRoute: typeof InvitationsRpApplicationsIndexRoute
 }
 
 const InvitationsRpApplicationsRouteChildren: InvitationsRpApplicationsRouteChildren =
   {
-    InvitationsRpApplicationsTokenRoute: InvitationsRpApplicationsTokenRoute,
+    InvitationsRpApplicationsAcceptRoute: InvitationsRpApplicationsAcceptRoute,
+    InvitationsRpApplicationsPrepareRoute:
+      InvitationsRpApplicationsPrepareRoute,
     InvitationsRpApplicationsIndexRoute: InvitationsRpApplicationsIndexRoute,
   }
 
@@ -2125,13 +1986,11 @@ const InvitationsRouteWithChildren = InvitationsRoute._addFileChildren(
 
 interface OnboardingOversightRouteChildren {
   OnboardingOversightQueueRoute: typeof OnboardingOversightQueueRoute
-  OnboardingOversightReportsRoute: typeof OnboardingOversightReportsRoute
   OnboardingOversightIndexRoute: typeof OnboardingOversightIndexRoute
 }
 
 const OnboardingOversightRouteChildren: OnboardingOversightRouteChildren = {
   OnboardingOversightQueueRoute: OnboardingOversightQueueRoute,
-  OnboardingOversightReportsRoute: OnboardingOversightReportsRoute,
   OnboardingOversightIndexRoute: OnboardingOversightIndexRoute,
 }
 
@@ -2140,13 +1999,11 @@ const OnboardingOversightRouteWithChildren =
 
 interface ReportsRouteChildren {
   ReportsApplicationsRoute: typeof ReportsApplicationsRoute
-  ReportsWorkspacesRoute: typeof ReportsWorkspacesRoute
   ReportsIndexRoute: typeof ReportsIndexRoute
 }
 
 const ReportsRouteChildren: ReportsRouteChildren = {
   ReportsApplicationsRoute: ReportsApplicationsRoute,
-  ReportsWorkspacesRoute: ReportsWorkspacesRoute,
   ReportsIndexRoute: ReportsIndexRoute,
 }
 
@@ -2318,7 +2175,6 @@ const WorkspacesWorkspaceUuidApplicationsApplicationInformationUuidDetailsRouteW
   )
 
 interface WorkspacesWorkspaceUuidApplicationsApplicationInformationUuidRpConfigurationsRpConfigurationUuidRouteChildren {
-  WorkspacesWorkspaceUuidApplicationsApplicationInformationUuidRpConfigurationsRpConfigurationUuidAuditRoute: typeof WorkspacesWorkspaceUuidApplicationsApplicationInformationUuidRpConfigurationsRpConfigurationUuidAuditRoute
   WorkspacesWorkspaceUuidApplicationsApplicationInformationUuidRpConfigurationsRpConfigurationUuidConfigurationRoute: typeof WorkspacesWorkspaceUuidApplicationsApplicationInformationUuidRpConfigurationsRpConfigurationUuidConfigurationRoute
   WorkspacesWorkspaceUuidApplicationsApplicationInformationUuidRpConfigurationsRpConfigurationUuidCopyRoute: typeof WorkspacesWorkspaceUuidApplicationsApplicationInformationUuidRpConfigurationsRpConfigurationUuidCopyRoute
   WorkspacesWorkspaceUuidApplicationsApplicationInformationUuidRpConfigurationsRpConfigurationUuidManageCredentialsRoute: typeof WorkspacesWorkspaceUuidApplicationsApplicationInformationUuidRpConfigurationsRpConfigurationUuidManageCredentialsRoute
@@ -2334,8 +2190,6 @@ interface WorkspacesWorkspaceUuidApplicationsApplicationInformationUuidRpConfigu
 
 const WorkspacesWorkspaceUuidApplicationsApplicationInformationUuidRpConfigurationsRpConfigurationUuidRouteChildren: WorkspacesWorkspaceUuidApplicationsApplicationInformationUuidRpConfigurationsRpConfigurationUuidRouteChildren =
   {
-    WorkspacesWorkspaceUuidApplicationsApplicationInformationUuidRpConfigurationsRpConfigurationUuidAuditRoute:
-      WorkspacesWorkspaceUuidApplicationsApplicationInformationUuidRpConfigurationsRpConfigurationUuidAuditRoute,
     WorkspacesWorkspaceUuidApplicationsApplicationInformationUuidRpConfigurationsRpConfigurationUuidConfigurationRoute:
       WorkspacesWorkspaceUuidApplicationsApplicationInformationUuidRpConfigurationsRpConfigurationUuidConfigurationRoute,
     WorkspacesWorkspaceUuidApplicationsApplicationInformationUuidRpConfigurationsRpConfigurationUuidCopyRoute:
@@ -2388,11 +2242,11 @@ const WorkspacesWorkspaceUuidApplicationsApplicationInformationUuidRpConfigurati
 
 interface WorkspacesWorkspaceUuidApplicationsApplicationInformationUuidRouteChildren {
   WorkspacesWorkspaceUuidApplicationsApplicationInformationUuidSplatRoute: typeof WorkspacesWorkspaceUuidApplicationsApplicationInformationUuidSplatRoute
+  WorkspacesWorkspaceUuidApplicationsApplicationInformationUuidChecklistAndEvidenceRoute: typeof WorkspacesWorkspaceUuidApplicationsApplicationInformationUuidChecklistAndEvidenceRoute
   WorkspacesWorkspaceUuidApplicationsApplicationInformationUuidContactsRoute: typeof WorkspacesWorkspaceUuidApplicationsApplicationInformationUuidContactsRouteWithChildren
   WorkspacesWorkspaceUuidApplicationsApplicationInformationUuidDeleteRoute: typeof WorkspacesWorkspaceUuidApplicationsApplicationInformationUuidDeleteRoute
   WorkspacesWorkspaceUuidApplicationsApplicationInformationUuidDetailsRoute: typeof WorkspacesWorkspaceUuidApplicationsApplicationInformationUuidDetailsRouteWithChildren
   WorkspacesWorkspaceUuidApplicationsApplicationInformationUuidEditRoute: typeof WorkspacesWorkspaceUuidApplicationsApplicationInformationUuidEditRoute
-  WorkspacesWorkspaceUuidApplicationsApplicationInformationUuidInternalReviewRoute: typeof WorkspacesWorkspaceUuidApplicationsApplicationInformationUuidInternalReviewRoute
   WorkspacesWorkspaceUuidApplicationsApplicationInformationUuidReadinessRoute: typeof WorkspacesWorkspaceUuidApplicationsApplicationInformationUuidReadinessRoute
   WorkspacesWorkspaceUuidApplicationsApplicationInformationUuidRpConfigurationsRoute: typeof WorkspacesWorkspaceUuidApplicationsApplicationInformationUuidRpConfigurationsRouteWithChildren
   WorkspacesWorkspaceUuidApplicationsApplicationInformationUuidSettingsRoute: typeof WorkspacesWorkspaceUuidApplicationsApplicationInformationUuidSettingsRoute
@@ -2403,6 +2257,8 @@ const WorkspacesWorkspaceUuidApplicationsApplicationInformationUuidRouteChildren
   {
     WorkspacesWorkspaceUuidApplicationsApplicationInformationUuidSplatRoute:
       WorkspacesWorkspaceUuidApplicationsApplicationInformationUuidSplatRoute,
+    WorkspacesWorkspaceUuidApplicationsApplicationInformationUuidChecklistAndEvidenceRoute:
+      WorkspacesWorkspaceUuidApplicationsApplicationInformationUuidChecklistAndEvidenceRoute,
     WorkspacesWorkspaceUuidApplicationsApplicationInformationUuidContactsRoute:
       WorkspacesWorkspaceUuidApplicationsApplicationInformationUuidContactsRouteWithChildren,
     WorkspacesWorkspaceUuidApplicationsApplicationInformationUuidDeleteRoute:
@@ -2411,8 +2267,6 @@ const WorkspacesWorkspaceUuidApplicationsApplicationInformationUuidRouteChildren
       WorkspacesWorkspaceUuidApplicationsApplicationInformationUuidDetailsRouteWithChildren,
     WorkspacesWorkspaceUuidApplicationsApplicationInformationUuidEditRoute:
       WorkspacesWorkspaceUuidApplicationsApplicationInformationUuidEditRoute,
-    WorkspacesWorkspaceUuidApplicationsApplicationInformationUuidInternalReviewRoute:
-      WorkspacesWorkspaceUuidApplicationsApplicationInformationUuidInternalReviewRoute,
     WorkspacesWorkspaceUuidApplicationsApplicationInformationUuidReadinessRoute:
       WorkspacesWorkspaceUuidApplicationsApplicationInformationUuidReadinessRoute,
     WorkspacesWorkspaceUuidApplicationsApplicationInformationUuidRpConfigurationsRoute:
@@ -2454,7 +2308,6 @@ interface WorkspacesWorkspaceUuidRouteChildren {
   WorkspacesWorkspaceUuidApplicationInformationRoute: typeof WorkspacesWorkspaceUuidApplicationInformationRouteWithChildren
   WorkspacesWorkspaceUuidApplicationsRoute: typeof WorkspacesWorkspaceUuidApplicationsRouteWithChildren
   WorkspacesWorkspaceUuidMembersRoute: typeof WorkspacesWorkspaceUuidMembersRoute
-  WorkspacesWorkspaceUuidReportsRoute: typeof WorkspacesWorkspaceUuidReportsRoute
   WorkspacesWorkspaceUuidSettingsRoute: typeof WorkspacesWorkspaceUuidSettingsRoute
   WorkspacesWorkspaceUuidIndexRoute: typeof WorkspacesWorkspaceUuidIndexRoute
 }
@@ -2468,7 +2321,6 @@ const WorkspacesWorkspaceUuidRouteChildren: WorkspacesWorkspaceUuidRouteChildren
     WorkspacesWorkspaceUuidApplicationsRoute:
       WorkspacesWorkspaceUuidApplicationsRouteWithChildren,
     WorkspacesWorkspaceUuidMembersRoute: WorkspacesWorkspaceUuidMembersRoute,
-    WorkspacesWorkspaceUuidReportsRoute: WorkspacesWorkspaceUuidReportsRoute,
     WorkspacesWorkspaceUuidSettingsRoute: WorkspacesWorkspaceUuidSettingsRoute,
     WorkspacesWorkspaceUuidIndexRoute: WorkspacesWorkspaceUuidIndexRoute,
   }
@@ -2559,19 +2411,15 @@ const rootRouteChildren: RootRouteChildren = {
   AccessDeniedRoute: AccessDeniedRoute,
   AccountRoute: AccountRoute,
   AdministrationRoute: AdministrationRoute,
-  AuditLogsRoute: AuditLogsRoute,
   AuthCompleteRoute: AuthCompleteRoute,
-  DepartmentsRoute: DepartmentsRoute,
   ErrorRoute: ErrorRoute,
   InvitationsRoute: InvitationsRouteWithChildren,
   LogoutRoute: LogoutRoute,
   OnboardingOversightRoute: OnboardingOversightRouteWithChildren,
-  PoliciesRoute: PoliciesRoute,
   ReportsRoute: ReportsRouteWithChildren,
   RolesRoute: RolesRoute,
   SupportRoute: SupportRoute,
   TermsAndConditionsRoute: TermsAndConditionsRoute,
-  TiersRoute: TiersRoute,
   UsersRoute: UsersRouteWithChildren,
   WorkspacesRoute: WorkspacesRouteWithChildren,
   YourApplicationsRoute: YourApplicationsRouteWithChildren,

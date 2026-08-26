@@ -5,7 +5,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import {
 	createWorkspaceRPApplicationRegistrationDraft,
 	getWorkspaceRPApplicationRegistrationDraft,
-	submitWorkspaceRPApplicationRegistration,
+	completeWorkspaceRPApplicationRegistration,
 	type WorkspaceRPApplicationRegistrationDraftRead,
 	updateWorkspaceRPApplicationRegistrationDraft,
 } from "@/fetch/rp-applications";
@@ -22,7 +22,7 @@ import {
 vi.mock("@/fetch/rp-applications", () => ({
 	createWorkspaceRPApplicationRegistrationDraft: vi.fn(),
 	getWorkspaceRPApplicationRegistrationDraft: vi.fn(),
-	submitWorkspaceRPApplicationRegistration: vi.fn(),
+	completeWorkspaceRPApplicationRegistration: vi.fn(),
 	updateWorkspaceRPApplicationRegistrationDraft: vi.fn(),
 }));
 
@@ -31,7 +31,7 @@ const rpApplicationUuid = "rp-1";
 const draft = {
 	applicationInformationUuid: "application-information-uuid-1",
 	configurationName: "Test integration A",
-	onboardingState: "draft" as const,
+	registrationCompletedAt: null,
 	registrationAnswers: {
 		canadaLoginEnvironment: "test" as const,
 		serviceNameEn: "Benefits Portal",
@@ -54,8 +54,9 @@ describe("useWorkspaceRPRegistrationActions", () => {
 			registrationDraftVersion: 2,
 			registrationLastCompletedStep: "endpoints",
 		});
-		vi.mocked(submitWorkspaceRPApplicationRegistration).mockResolvedValue({
-			onboardingState: "submitted",
+		vi.mocked(completeWorkspaceRPApplicationRegistration).mockResolvedValue({
+			applicationInformationUuid: "application-information-uuid-1",
+			registrationCompletedAt: "2026-08-25T12:00:00Z",
 			registrationDraftVersion: 3,
 			rpApplicationUuid,
 			serviceNameEn: "Benefits Portal",
@@ -118,7 +119,7 @@ describe("useWorkspaceRPRegistrationActions", () => {
 		).toEqual(expect.objectContaining({ registrationDraftVersion: 2 }));
 
 		await act(async () => {
-			await result.current.submit(workspaceUuid, rpApplicationUuid, 2);
+			await result.current.complete(workspaceUuid, rpApplicationUuid, 2);
 		});
 		expect(invalidateQueries).toHaveBeenCalledWith({
 			exact: true,

@@ -5,7 +5,6 @@ from fastapi import APIRouter, Depends, Header, Request
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from ...api.dependencies import (
-    get_current_cl_admin,
     get_current_user,
     get_ibm_sv_admin_service,
     get_rp_application_developer_invitation_service,
@@ -15,21 +14,13 @@ from ...core.access_control import casbin_guard
 from ...core.db.database import async_get_db
 from ...core.exceptions.openapi import error_responses
 from ...schemas.application_information import (
+    ApplicationInformationChecklistRead,
     ApplicationInformationContactCreate,
     ApplicationInformationContactRead,
     ApplicationInformationContactUpdate,
     ApplicationInformationCreate,
     ApplicationInformationRead,
-    ApplicationInformationReviewChecklistSummaryRead,
-    ApplicationInformationReviewChecklistSummaryWrite,
-    ApplicationInformationReviewContextRead,
-    ApplicationInformationReviewNoteCreate,
-    ApplicationInformationReviewNoteRead,
     ApplicationInformationUpdate,
-)
-from ...schemas.onboarding import (
-    OnboardingLifecycleTransitionRequest,
-    WorkspaceRPApplicationOnboardingLifecycleTransitionRequest,
 )
 from ...schemas.rp_application import (
     ApplicationRPConfigurationCopyCreate,
@@ -41,16 +32,14 @@ from ...schemas.rp_application import (
     ApplicationRPConfigurationRead,
     ApplicationRPConfigurationRegistrationDraftCreate,
     ApplicationRPConfigurationSummaryRead,
-    RPApplicationRead,
     RPApplicationSummaryRead,
-    RPApplicationUsageAuditTrailRead,
     RPApplicationUsageSummaryRead,
     WorkspaceRPApplicationConfigurationRead,
+    WorkspaceRPApplicationRegistrationCompletionRead,
+    WorkspaceRPApplicationRegistrationCompletionRequest,
     WorkspaceRPApplicationRegistrationDraftCreate,
     WorkspaceRPApplicationRegistrationDraftPatch,
     WorkspaceRPApplicationRegistrationDraftRead,
-    WorkspaceRPApplicationRegistrationSubmissionRead,
-    WorkspaceRPApplicationRegistrationUpdate,
 )
 from ...schemas.rp_application_developer_invitation import (
     RPApplicationDeveloperInvitationCreate,
@@ -59,10 +48,10 @@ from ...schemas.rp_application_developer_invitation import (
     RPApplicationDeveloperInvitationWriteResponse,
 )
 from ...schemas.rp_application_promotion_request import (
-    ApplicationRPConfigurationPromotionRequestRead,
-    PromotionRequestUpsert,
-    PromotionReviewUpdate,
-    RPApplicationPromotionRequestRead,
+    ApplicationRPConfigurationProductionReviewRead,
+    ProductionReviewDecision,
+    ProductionReviewRequest,
+    RPApplicationProductionReviewRead,
 )
 from ...schemas.workspace import WorkspaceCreate, WorkspaceRead, WorkspaceUpdate
 from ...services.rp_application_developer_invitation_service import RPApplicationDeveloperInvitationService
@@ -143,27 +132,6 @@ async def read_workspace(
     )
 
 
-@router.post(
-    "/workspaces/{workspace_uuid}/onboarding-state",
-    response_model=WorkspaceRead,
-    responses=error_responses(400, 401, 403, 404, 422, 500),
-)
-async def write_workspace_onboarding_state(
-    request: Request,
-    workspace_uuid: uuid_pkg.UUID,
-    payload: OnboardingLifecycleTransitionRequest,
-    db: Annotated[AsyncSession, Depends(async_get_db)],
-    service: Annotated[WorkspaceService, Depends(get_workspace_service)],
-    current_user: Annotated[dict[str, Any], Depends(get_current_user)],
-) -> dict[str, Any]:
-    return await service.transition_workspace_onboarding_state(
-        db=db,
-        workspace_uuid=workspace_uuid,
-        payload=payload,
-        current_user=current_user,
-    )
-
-
 @router.get(
     "/workspaces/{workspace_uuid}/application-information",
     response_model=list[ApplicationInformationRead],
@@ -226,29 +194,6 @@ async def read_workspace_application_information_detail(
     )
 
 
-@router.post(
-    "/workspaces/{workspace_uuid}/application-information/{application_information_uuid}/onboarding-state",
-    response_model=ApplicationInformationRead,
-    responses=error_responses(400, 401, 403, 404, 422, 500),
-)
-async def write_workspace_application_information_onboarding_state(
-    request: Request,
-    workspace_uuid: uuid_pkg.UUID,
-    application_information_uuid: uuid_pkg.UUID,
-    payload: OnboardingLifecycleTransitionRequest,
-    db: Annotated[AsyncSession, Depends(async_get_db)],
-    service: Annotated[WorkspaceService, Depends(get_workspace_service)],
-    current_user: Annotated[dict[str, Any], Depends(get_current_user)],
-) -> dict[str, Any]:
-    return await service.transition_workspace_application_information_onboarding_state(
-        db=db,
-        workspace_uuid=workspace_uuid,
-        application_information_uuid=application_information_uuid,
-        payload=payload,
-        current_user=current_user,
-    )
-
-
 @router.patch(
     "/workspaces/{workspace_uuid}/application-information/{application_information_uuid}",
     response_model=ApplicationInformationRead,
@@ -285,6 +230,28 @@ async def erase_workspace_application_information(
     current_user: Annotated[dict[str, Any], Depends(get_current_user)],
 ) -> dict[str, str]:
     return await service.delete_workspace_application_information(
+        db=db,
+        workspace_uuid=workspace_uuid,
+        application_information_uuid=application_information_uuid,
+        current_user=current_user,
+    )
+
+
+@router.get(
+    "/workspaces/{workspace_uuid}/application-information/{application_information_uuid}/checklist",
+    response_model=ApplicationInformationChecklistRead,
+    responses=error_responses(401, 403, 404, 422, 500),
+)
+async def read_application_information_checklist(
+    request: Request,
+    workspace_uuid: uuid_pkg.UUID,
+    application_information_uuid: uuid_pkg.UUID,
+    db: Annotated[AsyncSession, Depends(async_get_db)],
+    service: Annotated[WorkspaceService, Depends(get_workspace_service)],
+    current_user: Annotated[dict[str, Any], Depends(get_current_user)],
+) -> dict[str, Any]:
+    del request
+    return await service.get_application_information_checklist(
         db=db,
         workspace_uuid=workspace_uuid,
         application_information_uuid=application_information_uuid,
@@ -380,74 +347,6 @@ async def erase_application_information_contact(
         workspace_uuid=workspace_uuid,
         application_information_uuid=application_information_uuid,
         contact_uuid=contact_uuid,
-        current_user=current_user,
-    )
-
-
-@router.get(
-    "/workspaces/{workspace_uuid}/application-information/{application_information_uuid}/review",
-    response_model=ApplicationInformationReviewContextRead,
-    responses=error_responses(401, 403, 404, 422, 500),
-)
-async def read_application_information_review_context(
-    request: Request,
-    workspace_uuid: uuid_pkg.UUID,
-    application_information_uuid: uuid_pkg.UUID,
-    db: Annotated[AsyncSession, Depends(async_get_db)],
-    service: Annotated[WorkspaceService, Depends(get_workspace_service)],
-    current_user: Annotated[dict[str, Any], Depends(get_current_cl_admin)],
-) -> dict[str, Any]:
-    return await service.get_workspace_application_information_review_context(
-        db=db,
-        workspace_uuid=workspace_uuid,
-        application_information_uuid=application_information_uuid,
-        current_user=current_user,
-    )
-
-
-@router.post(
-    "/workspaces/{workspace_uuid}/application-information/{application_information_uuid}/review/notes",
-    response_model=ApplicationInformationReviewNoteRead,
-    status_code=201,
-    responses=error_responses(400, 401, 403, 404, 422, 500),
-)
-async def write_application_information_review_note(
-    request: Request,
-    workspace_uuid: uuid_pkg.UUID,
-    application_information_uuid: uuid_pkg.UUID,
-    payload: ApplicationInformationReviewNoteCreate,
-    db: Annotated[AsyncSession, Depends(async_get_db)],
-    service: Annotated[WorkspaceService, Depends(get_workspace_service)],
-    current_user: Annotated[dict[str, Any], Depends(get_current_cl_admin)],
-) -> dict[str, Any]:
-    return await service.add_workspace_application_information_review_note(
-        db=db,
-        workspace_uuid=workspace_uuid,
-        application_information_uuid=application_information_uuid,
-        payload=payload,
-        current_user=current_user,
-    )
-
-
-@router.put(
-    "/workspaces/{workspace_uuid}/application-information/{application_information_uuid}/review/checklist",
-    response_model=ApplicationInformationReviewChecklistSummaryRead,
-    responses=error_responses(400, 401, 403, 404, 422, 500),
-)
-async def put_application_information_review_checklist(
-    request: Request,
-    workspace_uuid: uuid_pkg.UUID,
-    application_information_uuid: uuid_pkg.UUID,
-    payload: ApplicationInformationReviewChecklistSummaryWrite,
-    db: Annotated[AsyncSession, Depends(async_get_db)],
-    service: Annotated[WorkspaceService, Depends(get_workspace_service)],
-    current_user: Annotated[dict[str, Any], Depends(get_current_cl_admin)],
-) -> dict[str, Any]:
-    return await service.upsert_workspace_application_information_review_checklist(
-        db=db,
-        workspace_uuid=workspace_uuid,
-        application_information_uuid=application_information_uuid,
-        payload=payload,
         current_user=current_user,
     )
 
@@ -582,6 +481,7 @@ async def copy_application_rp_configuration(
     response_model=ApplicationRPConfigurationProgressionRead,
     status_code=201,
     responses=error_responses(400, 401, 403, 404, 409, 422, 500),
+    deprecated=True,
 )
 async def write_application_rp_configuration_progression(
     request: Request,
@@ -607,11 +507,11 @@ async def write_application_rp_configuration_progression(
 
 
 @router.get(
-    "/workspaces/{workspace_uuid}/application-information/{application_information_uuid}/rp-configurations/{rp_configuration_uuid}/promotion-request",
-    response_model=ApplicationRPConfigurationPromotionRequestRead,
+    "/workspaces/{workspace_uuid}/application-information/{application_information_uuid}/rp-configurations/{rp_configuration_uuid}/production-review",
+    response_model=ApplicationRPConfigurationProductionReviewRead,
     responses=error_responses(400, 401, 403, 404, 409, 422, 500),
 )
-async def read_application_rp_configuration_promotion_request(
+async def read_application_rp_configuration_production_review(
     request: Request,
     workspace_uuid: uuid_pkg.UUID,
     application_information_uuid: uuid_pkg.UUID,
@@ -630,16 +530,16 @@ async def read_application_rp_configuration_promotion_request(
 
 
 @router.post(
-    "/workspaces/{workspace_uuid}/application-information/{application_information_uuid}/rp-configurations/{rp_configuration_uuid}/promotion-request",
-    response_model=ApplicationRPConfigurationPromotionRequestRead,
+    "/workspaces/{workspace_uuid}/application-information/{application_information_uuid}/rp-configurations/{rp_configuration_uuid}/production-review",
+    response_model=ApplicationRPConfigurationProductionReviewRead,
     responses=error_responses(400, 401, 403, 404, 409, 422, 500),
 )
-async def write_application_rp_configuration_promotion_request(
+async def write_application_rp_configuration_production_review(
     request: Request,
     workspace_uuid: uuid_pkg.UUID,
     application_information_uuid: uuid_pkg.UUID,
     rp_configuration_uuid: uuid_pkg.UUID,
-    payload: PromotionRequestUpsert,
+    payload: ProductionReviewRequest,
     db: Annotated[AsyncSession, Depends(async_get_db)],
     service: Annotated[WorkspaceService, Depends(get_workspace_service)],
     current_user: Annotated[dict[str, Any], Depends(get_current_user)],
@@ -655,16 +555,16 @@ async def write_application_rp_configuration_promotion_request(
 
 
 @router.patch(
-    "/workspaces/{workspace_uuid}/application-information/{application_information_uuid}/rp-configurations/{rp_configuration_uuid}/promotion-request",
-    response_model=ApplicationRPConfigurationPromotionRequestRead,
+    "/workspaces/{workspace_uuid}/application-information/{application_information_uuid}/rp-configurations/{rp_configuration_uuid}/production-review",
+    response_model=ApplicationRPConfigurationProductionReviewRead,
     responses=error_responses(400, 401, 403, 404, 409, 422, 500),
 )
-async def patch_application_rp_configuration_promotion_request(
+async def patch_application_rp_configuration_production_review(
     request: Request,
     workspace_uuid: uuid_pkg.UUID,
     application_information_uuid: uuid_pkg.UUID,
     rp_configuration_uuid: uuid_pkg.UUID,
-    payload: PromotionReviewUpdate,
+    payload: ProductionReviewDecision,
     db: Annotated[AsyncSession, Depends(async_get_db)],
     service: Annotated[WorkspaceService, Depends(get_workspace_service)],
     current_user: Annotated[dict[str, Any], Depends(get_current_user)],
@@ -752,21 +652,21 @@ async def patch_application_rp_configuration_registration_draft(
 
 
 @router.post(
-    "/workspaces/{workspace_uuid}/application-information/{application_information_uuid}/rp-configurations/{rp_configuration_uuid}/onboarding-state",
-    response_model=WorkspaceRPApplicationRegistrationSubmissionRead | RPApplicationRead,
+    "/workspaces/{workspace_uuid}/application-information/{application_information_uuid}/rp-configurations/{rp_configuration_uuid}/registration/complete",
+    response_model=WorkspaceRPApplicationRegistrationCompletionRead,
     responses=error_responses(400, 401, 403, 404, 409, 422, 500),
 )
-async def write_application_rp_configuration_onboarding_state(
+async def write_application_rp_configuration_registration_completion(
     request: Request,
     workspace_uuid: uuid_pkg.UUID,
     application_information_uuid: uuid_pkg.UUID,
     rp_configuration_uuid: uuid_pkg.UUID,
-    payload: WorkspaceRPApplicationOnboardingLifecycleTransitionRequest,
+    payload: WorkspaceRPApplicationRegistrationCompletionRequest,
     db: Annotated[AsyncSession, Depends(async_get_db)],
     service: Annotated[WorkspaceService, Depends(get_workspace_service)],
     current_user: Annotated[dict[str, Any], Depends(get_current_user)],
 ) -> dict[str, Any]:
-    return await service.transition_application_rp_configuration_onboarding_state(
+    return await service.complete_application_rp_configuration_registration(
         db=db,
         workspace_uuid=workspace_uuid,
         application_information_uuid=application_information_uuid,
@@ -823,66 +723,6 @@ async def read_application_rp_configuration_usage_summary(
         current_user=current_user,
         ibm_sv_admin_service=ibm_sv_admin_service,
         selected_date=selected_date,
-    )
-
-
-@router.get(
-    "/workspaces/{workspace_uuid}/application-information/{application_information_uuid}/rp-configurations/{rp_configuration_uuid}/audit-events",
-    response_model=RPApplicationUsageAuditTrailRead,
-    responses=error_responses(400, 401, 403, 404, 409, 422, 500),
-)
-async def read_application_rp_configuration_audit_events(
-    request: Request,
-    workspace_uuid: uuid_pkg.UUID,
-    application_information_uuid: uuid_pkg.UUID,
-    rp_configuration_uuid: uuid_pkg.UUID,
-    db: Annotated[AsyncSession, Depends(async_get_db)],
-    service: Annotated[WorkspaceService, Depends(get_workspace_service)],
-    current_user: Annotated[dict[str, Any], Depends(get_current_user)],
-    ibm_sv_admin_service: Annotated[Any, Depends(get_ibm_sv_admin_service)],
-    selected_date: str | None = None,
-    size: int = 25,
-) -> dict[str, Any]:
-    return await service.get_application_rp_configuration_audit_events(
-        db=db,
-        workspace_uuid=workspace_uuid,
-        application_information_uuid=application_information_uuid,
-        rp_configuration_uuid=rp_configuration_uuid,
-        current_user=current_user,
-        ibm_sv_admin_service=ibm_sv_admin_service,
-        selected_date=selected_date,
-        size=size,
-    )
-
-
-@router.get(
-    "/workspaces/{workspace_uuid}/application-information/{application_information_uuid}/rp-configurations/{rp_configuration_uuid}/audit-events/search-after",
-    response_model=RPApplicationUsageAuditTrailRead,
-    responses=error_responses(400, 401, 403, 404, 409, 422, 500),
-)
-async def read_application_rp_configuration_audit_events_search_after(
-    request: Request,
-    workspace_uuid: uuid_pkg.UUID,
-    application_information_uuid: uuid_pkg.UUID,
-    rp_configuration_uuid: uuid_pkg.UUID,
-    search_after: str,
-    db: Annotated[AsyncSession, Depends(async_get_db)],
-    service: Annotated[WorkspaceService, Depends(get_workspace_service)],
-    current_user: Annotated[dict[str, Any], Depends(get_current_user)],
-    ibm_sv_admin_service: Annotated[Any, Depends(get_ibm_sv_admin_service)],
-    selected_date: str | None = None,
-    size: int = 25,
-) -> dict[str, Any]:
-    return await service.get_application_rp_configuration_audit_events_search_after(
-        db=db,
-        workspace_uuid=workspace_uuid,
-        application_information_uuid=application_information_uuid,
-        rp_configuration_uuid=rp_configuration_uuid,
-        current_user=current_user,
-        ibm_sv_admin_service=ibm_sv_admin_service,
-        selected_date=selected_date,
-        size=size,
-        search_after=search_after,
     )
 
 
@@ -955,28 +795,6 @@ async def write_workspace_rp_application(
 
 
 @router.get(
-    "/workspaces/{workspace_uuid}/applications/{rp_application_uuid}",
-    response_model=RPApplicationRead,
-    responses=error_responses(401, 403, 404, 422, 500),
-    deprecated=True,
-)
-async def read_workspace_rp_application_detail(
-    request: Request,
-    workspace_uuid: uuid_pkg.UUID,
-    rp_application_uuid: uuid_pkg.UUID,
-    db: Annotated[AsyncSession, Depends(async_get_db)],
-    service: Annotated[WorkspaceService, Depends(get_workspace_service)],
-    current_user: Annotated[dict[str, Any], Depends(get_current_user)],
-) -> dict[str, Any]:
-    return await service.get_workspace_rp_application(
-        db=db,
-        workspace_uuid=workspace_uuid,
-        rp_application_uuid=rp_application_uuid,
-        current_user=current_user,
-    )
-
-
-@router.get(
     "/workspaces/{workspace_uuid}/applications/{rp_application_uuid}/registration-draft",
     response_model=WorkspaceRPApplicationRegistrationDraftRead,
     responses=error_responses(400, 401, 403, 404, 409, 422, 500),
@@ -1024,21 +842,21 @@ async def patch_workspace_rp_application_registration_draft(
 
 
 @router.post(
-    "/workspaces/{workspace_uuid}/applications/{rp_application_uuid}/onboarding-state",
-    response_model=WorkspaceRPApplicationRegistrationSubmissionRead | RPApplicationRead,
+    "/workspaces/{workspace_uuid}/applications/{rp_application_uuid}/registration/complete",
+    response_model=WorkspaceRPApplicationRegistrationCompletionRead,
     responses=error_responses(400, 401, 403, 404, 409, 422, 500),
     deprecated=True,
 )
-async def write_workspace_rp_application_onboarding_state(
+async def write_workspace_rp_application_registration_completion(
     request: Request,
     workspace_uuid: uuid_pkg.UUID,
     rp_application_uuid: uuid_pkg.UUID,
-    payload: WorkspaceRPApplicationOnboardingLifecycleTransitionRequest,
+    payload: WorkspaceRPApplicationRegistrationCompletionRequest,
     db: Annotated[AsyncSession, Depends(async_get_db)],
     service: Annotated[WorkspaceService, Depends(get_workspace_service)],
     current_user: Annotated[dict[str, Any], Depends(get_current_user)],
 ) -> dict[str, Any]:
-    return await service.transition_workspace_rp_application_onboarding_state(
+    return await service.complete_workspace_rp_application_registration(
         db=db,
         workspace_uuid=workspace_uuid,
         rp_application_uuid=rp_application_uuid,
@@ -1049,12 +867,12 @@ async def write_workspace_rp_application_onboarding_state(
 
 
 @router.get(
-    "/workspaces/{workspace_uuid}/applications/{rp_application_uuid}/promotion-request",
-    response_model=RPApplicationPromotionRequestRead,
+    "/workspaces/{workspace_uuid}/applications/{rp_application_uuid}/production-review",
+    response_model=RPApplicationProductionReviewRead,
     responses=error_responses(400, 401, 403, 404, 409, 422, 500),
     deprecated=True,
 )
-async def read_workspace_rp_application_promotion_request(
+async def read_workspace_rp_application_production_review(
     request: Request,
     workspace_uuid: uuid_pkg.UUID,
     rp_application_uuid: uuid_pkg.UUID,
@@ -1071,16 +889,16 @@ async def read_workspace_rp_application_promotion_request(
 
 
 @router.post(
-    "/workspaces/{workspace_uuid}/applications/{rp_application_uuid}/promotion-request",
-    response_model=RPApplicationRead,
+    "/workspaces/{workspace_uuid}/applications/{rp_application_uuid}/production-review",
+    response_model=RPApplicationProductionReviewRead,
     responses=error_responses(400, 401, 403, 404, 422, 500),
     deprecated=True,
 )
-async def write_workspace_rp_application_promotion_request(
+async def write_workspace_rp_application_production_review(
     request: Request,
     workspace_uuid: uuid_pkg.UUID,
     rp_application_uuid: uuid_pkg.UUID,
-    payload: PromotionRequestUpsert,
+    payload: ProductionReviewRequest,
     db: Annotated[AsyncSession, Depends(async_get_db)],
     service: Annotated[WorkspaceService, Depends(get_workspace_service)],
     current_user: Annotated[dict[str, Any], Depends(get_current_user)],
@@ -1095,45 +913,21 @@ async def write_workspace_rp_application_promotion_request(
 
 
 @router.patch(
-    "/workspaces/{workspace_uuid}/applications/{rp_application_uuid}/promotion-request",
-    response_model=RPApplicationRead,
+    "/workspaces/{workspace_uuid}/applications/{rp_application_uuid}/production-review",
+    response_model=RPApplicationProductionReviewRead,
     responses=error_responses(400, 401, 403, 404, 422, 500),
     deprecated=True,
 )
-async def patch_workspace_rp_application_promotion_request(
+async def patch_workspace_rp_application_production_review(
     request: Request,
     workspace_uuid: uuid_pkg.UUID,
     rp_application_uuid: uuid_pkg.UUID,
-    payload: PromotionReviewUpdate,
+    payload: ProductionReviewDecision,
     db: Annotated[AsyncSession, Depends(async_get_db)],
     service: Annotated[WorkspaceService, Depends(get_workspace_service)],
     current_user: Annotated[dict[str, Any], Depends(get_current_user)],
 ) -> dict[str, Any]:
     return await service.review_workspace_rp_application_promotion_request(
-        db=db,
-        workspace_uuid=workspace_uuid,
-        rp_application_uuid=rp_application_uuid,
-        payload=payload,
-        current_user=current_user,
-    )
-
-
-@router.patch(
-    "/workspaces/{workspace_uuid}/applications/{rp_application_uuid}",
-    response_model=RPApplicationRead,
-    responses=error_responses(400, 401, 403, 404, 422, 500),
-    deprecated=True,
-)
-async def patch_workspace_rp_application(
-    request: Request,
-    workspace_uuid: uuid_pkg.UUID,
-    rp_application_uuid: uuid_pkg.UUID,
-    payload: WorkspaceRPApplicationRegistrationUpdate,
-    db: Annotated[AsyncSession, Depends(async_get_db)],
-    service: Annotated[WorkspaceService, Depends(get_workspace_service)],
-    current_user: Annotated[dict[str, Any], Depends(get_current_user)],
-) -> dict[str, Any]:
-    return await service.update_workspace_rp_application(
         db=db,
         workspace_uuid=workspace_uuid,
         rp_application_uuid=rp_application_uuid,
@@ -1211,6 +1005,7 @@ async def write_workspace_developer_invitation(
         invited_email=payload.invited_email,
         role=payload.role,
         invite_expires_at=payload.invite_expires_at,
+        correlation_id=str(getattr(request.state, "request_id", "")) or None,
     )
 
 
@@ -1260,6 +1055,7 @@ async def revoke_workspace_developer_invitation(
         rp_application_uuid=None,
         invitation_uuid=invitation_uuid,
         current_user=current_user,
+        correlation_id=str(getattr(request.state, "request_id", "")) or None,
     )
 
 
@@ -1287,6 +1083,7 @@ async def reissue_workspace_developer_invitation(
         invitation_uuid=invitation_uuid,
         current_user=current_user,
         invite_expires_at=payload.invite_expires_at,
+        correlation_id=str(getattr(request.state, "request_id", "")) or None,
     )
 
 
@@ -1342,6 +1139,7 @@ async def write_workspace_rp_application_developer_invitation(
         invited_email=payload.invited_email,
         role=payload.role,
         invite_expires_at=payload.invite_expires_at,
+        correlation_id=str(getattr(request.state, "request_id", "")) or None,
     )
 
 
@@ -1369,6 +1167,7 @@ async def revoke_workspace_rp_application_developer_invitation(
         rp_application_uuid=rp_application_uuid,
         invitation_uuid=invitation_uuid,
         current_user=current_user,
+        correlation_id=str(getattr(request.state, "request_id", "")) or None,
     )
 
 
@@ -1398,6 +1197,7 @@ async def reissue_workspace_rp_application_developer_invitation(
         invitation_uuid=invitation_uuid,
         current_user=current_user,
         invite_expires_at=payload.invite_expires_at,
+        correlation_id=str(getattr(request.state, "request_id", "")) or None,
     )
 
 
@@ -1424,64 +1224,6 @@ async def read_workspace_rp_application_usage_summary(
         current_user=current_user,
         ibm_sv_admin_service=ibm_sv_admin_service,
         selected_date=selected_date,
-    )
-
-
-@router.get(
-    "/workspaces/{workspace_uuid}/applications/{rp_application_uuid}/audit-events",
-    response_model=RPApplicationUsageAuditTrailRead,
-    responses=error_responses(400, 401, 403, 404, 409, 422, 500),
-    deprecated=True,
-)
-async def read_workspace_rp_application_audit_events(
-    request: Request,
-    workspace_uuid: uuid_pkg.UUID,
-    rp_application_uuid: uuid_pkg.UUID,
-    db: Annotated[AsyncSession, Depends(async_get_db)],
-    service: Annotated[WorkspaceService, Depends(get_workspace_service)],
-    current_user: Annotated[dict[str, Any], Depends(get_current_user)],
-    ibm_sv_admin_service: Annotated[Any, Depends(get_ibm_sv_admin_service)],
-    selected_date: str | None = None,
-    size: int = 25,
-) -> dict[str, Any]:
-    return await service.get_workspace_rp_application_audit_events(
-        db=db,
-        workspace_uuid=workspace_uuid,
-        rp_application_uuid=rp_application_uuid,
-        current_user=current_user,
-        ibm_sv_admin_service=ibm_sv_admin_service,
-        selected_date=selected_date,
-        size=size,
-    )
-
-
-@router.get(
-    "/workspaces/{workspace_uuid}/applications/{rp_application_uuid}/audit-events/search-after",
-    response_model=RPApplicationUsageAuditTrailRead,
-    responses=error_responses(400, 401, 403, 404, 409, 422, 500),
-    deprecated=True,
-)
-async def read_workspace_rp_application_audit_events_search_after(
-    request: Request,
-    workspace_uuid: uuid_pkg.UUID,
-    rp_application_uuid: uuid_pkg.UUID,
-    search_after: str,
-    db: Annotated[AsyncSession, Depends(async_get_db)],
-    service: Annotated[WorkspaceService, Depends(get_workspace_service)],
-    current_user: Annotated[dict[str, Any], Depends(get_current_user)],
-    ibm_sv_admin_service: Annotated[Any, Depends(get_ibm_sv_admin_service)],
-    selected_date: str | None = None,
-    size: int = 25,
-) -> dict[str, Any]:
-    return await service.get_workspace_rp_application_audit_events_search_after(
-        db=db,
-        workspace_uuid=workspace_uuid,
-        rp_application_uuid=rp_application_uuid,
-        current_user=current_user,
-        ibm_sv_admin_service=ibm_sv_admin_service,
-        selected_date=selected_date,
-        size=size,
-        search_after=search_after,
     )
 
 

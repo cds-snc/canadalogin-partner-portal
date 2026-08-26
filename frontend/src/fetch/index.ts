@@ -13,7 +13,10 @@ export type {
 	DevSessionRead,
 } from "./dev-session";
 export { getRequestErrorNotice } from "./error-notice";
-export { acceptRPApplicationDeveloperInvitation } from "./rp-application-developer-invitations";
+export {
+	acceptPreparedRPApplicationDeveloperInvitation,
+	prepareRPApplicationDeveloperInvitation,
+} from "./rp-application-developer-invitations";
 export type {
 	RPApplicationAccessGrantRead,
 	RPApplicationDeveloperInvitationAcceptResponse,
@@ -33,4 +36,4 @@ export {
 	ServerRequestError,
 	UnauthorizedRequestError,
 } from "./errors";
-export { requestJson } from "./request-json";
+export { requestBlob, requestJson } from "./request-json";

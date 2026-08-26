@@ -71,11 +71,10 @@ Check if the database tables were created:
 # For Docker Compose
 docker compose exec db psql -U postgres -d myapp -c "\dt"
 
-# You should see tables like:
-# public | users        | table | postgres
-# public | posts        | table | postgres
-# public | tiers        | table | postgres
-# public | rate_limits  | table | postgres
+# You should see migrated portal tables such as:
+# public | user       | table | postgres
+# public | workspace  | table | postgres
+# public | role       | table | postgres
 ```
 
 ### 4. Redis Connection
@@ -91,8 +90,7 @@ docker compose exec redis redis-cli ping
 
 ## Initial Setup
 
-Before testing administrative features, create the initial CL Admin assignment
-and the first tier.
+Before testing administrative features, create the initial CL Admin assignment.
 
 ### Creating the Initial CL Admin
 
@@ -139,26 +137,6 @@ If running manually, use:
 ```bash
 # Make sure you're in the root folder
 INITIAL_CL_ADMIN_EMAIL=admin@example.test uv run python -m src.scripts.create_initial_cl_admin
-```
-
-### Creating the First Tier
-
-!!! warning "Prerequisites"
-    Make sure the database and tables are created before running create_tier.
-
-#### Using Docker Compose
-
-Uncomment the `create_tier` service in `docker-compose.yml` and run:
-
-```bash
-docker compose run --rm create_tier
-```
-
-#### From Scratch
-
-```bash
-# Make sure you're in the root folder
-uv run python -m src.scripts.create_first_tier
 ```
 
 ## Testing Core Features
@@ -476,9 +454,7 @@ from fastapi import APIRouter
 from app.api.v1.login import router as login_router
 from app.api.v1.logout import router as logout_router
 from app.api.v1.posts import router as posts_router
-from app.api.v1.rate_limits import router as rate_limits_router
 from app.api.v1.tasks import router as tasks_router
-from app.api.v1.tiers import router as tiers_router
 from app.api.v1.users import router as users_router
 from app.api.v1.items import router as items_router  # Add this line
 
@@ -488,8 +464,6 @@ router.include_router(logout_router, prefix="/logout")
 router.include_router(users_router, prefix="/users")
 router.include_router(posts_router, prefix="/posts")
 router.include_router(tasks_router, prefix="/tasks")
-router.include_router(tiers_router, prefix="/tiers")
-router.include_router(rate_limits_router, prefix="/rate_limits")
 router.include_router(items_router, prefix="/items")  # Add this line
 ```
 
@@ -500,8 +474,6 @@ Import your new model in `src/app/models/__init__.py`:
 ```python
 from .user import User
 from .post import Post
-from .tier import Tier
-from .rate_limit import RateLimit
 from .item import Item  # Add this line
 ```
 

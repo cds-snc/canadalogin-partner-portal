@@ -32,7 +32,6 @@ services:
   # pgadmin:    # Database administration
   # nginx:      # Reverse proxy
   # create_initial_cl_admin: # One-time canonical CL Admin assignment
-  # create_tier:      # One-time tier creation
 ```
 
 ## Basic Docker Compose
@@ -290,28 +289,11 @@ create_initial_cl_admin:
     - ./src:/code/src
 ```
 
-#### Create First Tier
-
-```yaml
-create_tier:
-  build:
-    context: .
-    dockerfile: Dockerfile
-  env_file:
-    - ./src/.env
-  depends_on:
-    - db
-    - web
-  command: python -m src.scripts.create_first_tier
-  volumes:
-    - ./src:/code/src
-```
-
 **Usage:**
 
-- These are one-time setup services
-- Uncomment when you need to initialize data
-- Run once, then comment out again
+- The initial CL Admin bootstrap is a one-time setup service.
+- Set `INITIAL_CL_ADMIN_EMAIL` only for the explicit invocation.
+- Run it once, then disable the service again.
 
 ## Dockerfile Details
 

@@ -2,6 +2,8 @@ import { useParams } from "@tanstack/react-router";
 import { useTranslation } from "react-i18next";
 import type { FunctionComponent } from "@/common/types";
 import { Button, Heading, Notice, Text } from "@/components/ui";
+import { hasCapability } from "@/features/auth/authorization";
+import { useSession } from "@/hooks";
 import { useApplicationRPConfiguration } from "../hooks/use-application-rp-configurations";
 
 export const WorkspaceRPRegistrationConfirmationPage =
@@ -12,6 +14,7 @@ export const WorkspaceRPRegistrationConfirmationPage =
 				options?: Record<string, unknown>
 			) => string;
 		};
+		const { currentUser } = useSession();
 		const params = useParams({ strict: false });
 		const applicationInformationUuid =
 			params["applicationInformationUuid"] ?? "";
@@ -25,8 +28,15 @@ export const WorkspaceRPRegistrationConfirmationPage =
 		);
 		const applicationName =
 			configurationState.configuration?.configurationName?.trim();
-		const onboardingState = configurationState.configuration?.onboardingState;
 		const parentPath = `/workspaces/${workspaceUuid}/applications/${applicationInformationUuid}/rp-configurations/${rpApplicationUuid}`;
+		const canRequestProductionReview =
+			configurationState.configuration?.canadaLoginEnvironment ===
+				"production" &&
+			hasCapability(
+				currentUser?.authorizationContext,
+				"production_review_request_write",
+				workspaceUuid
+			);
 
 		return (
 			<>
@@ -57,7 +67,6 @@ export const WorkspaceRPRegistrationConfirmationPage =
 							<Text>
 								{t("workspaces.registration.confirmationSuccessBody", {
 									name: applicationName,
-									status: onboardingState ?? "submitted",
 								})}
 							</Text>
 						</Notice>
@@ -66,6 +75,15 @@ export const WorkspaceRPRegistrationConfirmationPage =
 							<Button href={parentPath} type="link">
 								{t("workspaces.registration.applicationDetailAction")}
 							</Button>
+							{canRequestProductionReview ? (
+								<Button
+									buttonRole="secondary"
+									href={`${parentPath}/production-review`}
+									type="link"
+								>
+									{t("workspaces.registration.productionReviewAction")}
+								</Button>
+							) : null}
 							<Button
 								buttonRole="secondary"
 								href={`/workspaces/${workspaceUuid}`}

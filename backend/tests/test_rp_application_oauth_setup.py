@@ -60,8 +60,8 @@ class TestAccessibleRPOAuthSetupAPI:
                 "rpApplicationName": "Benefits Portal",
                 "status": "active",
                 "canadaLoginEnvironment": "production",
-                "onboardingState": "under_review",
-                "promotionStatus": "review_tracked",
+                "registrationCompletedAt": "2026-08-11T12:00:00Z",
+                "productionReviewStatus": "pending",
                 "applicationUrl": "https://benefits.example.gc.ca",
                 "discoveryEndpoint": "https://cds-gcsignin-dev.verify.ibm.com/oauth2/.well-known/openid-configuration",
                 "departmentName": "Benefits",
@@ -93,8 +93,10 @@ class TestAccessibleRPOAuthSetupAPI:
 
         assert response.status_code == 200
         assert response.json()["rpApplicationName"] == "Benefits Portal"
-        assert response.json()["onboardingState"] == "under_review"
-        assert response.json()["promotionStatus"] == "review_tracked"
+        assert response.json()["registrationCompletedAt"] == "2026-08-11T12:00:00Z"
+        assert response.json()["productionReviewStatus"] == "pending"
+        assert "onboardingState" not in response.json()
+        assert "promotionStatus" not in response.json()
         service.get_accessible_rp_application_oauth_setup.assert_awaited_once()
 
     def test_oauth_setup_granted_partner_success_response_contract(self) -> None:
@@ -104,8 +106,8 @@ class TestAccessibleRPOAuthSetupAPI:
                 "rpApplicationName": "Benefits Portal",
                 "status": "active",
                 "canadaLoginEnvironment": "staging",
-                "onboardingState": "submitted",
-                "promotionStatus": None,
+                "registrationCompletedAt": "2026-08-11T12:00:00Z",
+                "productionReviewStatus": None,
                 "applicationUrl": "https://benefits.example.gc.ca",
                 "discoveryEndpoint": "https://cds-gcsignin-dev.verify.ibm.com/oauth2/.well-known/openid-configuration",
                 "departmentName": None,
@@ -144,8 +146,9 @@ class TestAccessibleRPOAuthSetupAPI:
             "rpApplicationName": "Benefits Portal",
             "status": "active",
             "canadaLoginEnvironment": "staging",
-            "onboardingState": "submitted",
-            "promotionStatus": None,
+            "registrationCompletedAt": "2026-08-11T12:00:00Z",
+            "productionReviewStatus": None,
+            "productionReviewReconciliationRequired": False,
             "applicationUrl": "https://benefits.example.gc.ca",
             "discoveryEndpoint": "https://cds-gcsignin-dev.verify.ibm.com/oauth2/.well-known/openid-configuration",
             "departmentName": None,
@@ -470,22 +473,33 @@ class TestAccessibleRPOAuthSetupService:
 
         original_get = rp_application_module.crud_rp_applications.get
         original_department_get = rp_application_module.crud_departments.get
+        original_review_get_multi = rp_application_module.crud_rp_application_promotion_requests.get_multi
         rp_application_module.crud_rp_applications.get = AsyncMock(
             return_value={
+                "id": 336,
                 "uuid": "018f6f83-0000-0000-0000-000000000336",
                 "workspace_id": 23,
                 "department_id": 7,
                 "dnr_app_name": "Benefits Portal",
                 "ibm_sv_application_id": "ibm-app-336",
                 "canada_login_environment": "production",
-                "onboarding_state": "under_review",
-                "promotion_status": "review_tracked",
+                "registration_completed_at": "2026-08-11T12:00:00Z",
                 "application_owner": {
                     "owners": [{"email": "owner@example.gc.ca"}],
                 },
             }
         )
         rp_application_module.crud_departments.get = AsyncMock(return_value={"id": 7, "name": "Benefits", "name_fr": "Prestations"})
+        rp_application_module.crud_rp_application_promotion_requests.get_multi = AsyncMock(
+            return_value={
+                "data": [
+                    {
+                        "rp_application_id": 336,
+                        "review_status": "pending",
+                    }
+                ]
+            }
+        )
         service._get_effective_workspace_department = AsyncMock(  # type: ignore[method-assign]
             return_value=(7, UUID("018f6f83-0000-0000-0000-000000000777"))
         )
@@ -500,12 +514,15 @@ class TestAccessibleRPOAuthSetupService:
         finally:
             rp_application_module.crud_rp_applications.get = original_get
             rp_application_module.crud_departments.get = original_department_get
+            rp_application_module.crud_rp_application_promotion_requests.get_multi = original_review_get_multi
 
         assert result["rpApplicationName"] == "Benefits Portal"
         assert result["departmentName"] == "Benefits"
         assert result["canadaLoginEnvironment"] == "production"
-        assert result["onboardingState"] == "under_review"
-        assert result["promotionStatus"] == "review_tracked"
+        assert result["registrationCompletedAt"].isoformat() == "2026-08-11T12:00:00+00:00"
+        assert result["productionReviewStatus"] == "pending"
+        assert "onboardingState" not in result
+        assert "promotionStatus" not in result
 
     @pytest.mark.asyncio
     async def test_client_credentials_rejects_read_only_grant_user(self) -> None:

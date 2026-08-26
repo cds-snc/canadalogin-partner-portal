@@ -79,7 +79,6 @@ const createSessionState = (
 		name: "Partner Admin",
 		profileImageUrl: "",
 		termsVersion: "2026-01",
-		tierUuid: null,
 		uuid: "user-uuid",
 		username: "partner@example.com",
 	},

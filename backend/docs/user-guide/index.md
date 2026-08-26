@@ -71,7 +71,7 @@ Ready to dive in? Here are recommended learning paths:
 
 ### For Production Deployment
 1. Understand [Cache Strategies](caching/cache-strategies.md) patterns
-2. Configure [Rate Limiting](rate-limiting/index.md) with user tiers
+2. Configure the Redis-backed default [Rate Limiting](rate-limiting/index.md)
 3. Set up [Background Task Processing](background-tasks/index.md)
 4. Review the [Production Guide](production.md) for deployment considerations
 

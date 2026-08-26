@@ -59,7 +59,7 @@ const saveDraftMock = vi.fn(
 		Promise.resolve({
 			applicationInformationUuid: "application-information-1",
 			configurationName: "Test integration A",
-			onboardingState: "draft" as const,
+			registrationCompletedAt: null,
 			registrationAnswers: {},
 			registrationDraftVersion: 3,
 			registrationLastCompletedStep: "endpoints" as const,
@@ -67,9 +67,10 @@ const saveDraftMock = vi.fn(
 			workspaceUuid: "workspace-1",
 		})
 );
-const submitMock = vi.fn(() =>
+const completeMock = vi.fn(() =>
 	Promise.resolve({
-		onboardingState: "submitted" as const,
+		applicationInformationUuid: "application-information-1",
+		registrationCompletedAt: "2026-08-25T12:00:00Z",
 		registrationDraftVersion: 7,
 		rpApplicationUuid: "rp-1",
 		serviceNameEn: "Benefits Portal",
@@ -128,7 +129,7 @@ vi.mock("react-i18next", () => ({
 						"Your answers remain on this page.",
 					"workspaces.registration.saveErrorTitle":
 						"Unable to save registration",
-					"workspaces.registration.submitAction": "Submit registration",
+					"workspaces.registration.completeAction": "Complete registration",
 					"workspaces.registration.steps.endpoints": "Endpoints",
 					"workspaces.registration.steps.basics": "Basics",
 					"workspaces.registration.steps.clientAndAccess": "Client and access",
@@ -364,7 +365,7 @@ const completeAnswers = {
 const endpointsDraft = {
 	applicationInformationUuid: "application-information-1",
 	configurationName: "Test integration A",
-	onboardingState: "draft" as const,
+	registrationCompletedAt: null,
 	partnerEnvironment: "Partner test",
 	registrationAnswers: {
 		canadaLoginEnvironment: "test" as const,
@@ -397,9 +398,9 @@ describe("WorkspaceRPRegistrationStepPage", () => {
 			createDraft: vi.fn(),
 			isCreating: false,
 			isSaving: false,
-			isSubmitting: false,
+			isCompleting: false,
 			saveDraft: saveDraftMock,
-			submit: submitMock,
+			complete: completeMock,
 		});
 		vi.mocked(useWorkspaceRPRegistrationDraft).mockReturnValue({
 			draft: endpointsDraft,
@@ -548,9 +549,9 @@ describe("WorkspaceRPRegistrationStepPage", () => {
 
 		fireEvent.click(screen.getByRole("button", { name: "Fill Endpoints" }));
 
-		expect(
-			(blockerState.options?.enableBeforeUnload as () => boolean)()
-		).toBe(true);
+		expect((blockerState.options?.enableBeforeUnload as () => boolean)()).toBe(
+			true
+		);
 	});
 
 	it("clears only client errors resolved by the edited answer", () => {
@@ -755,7 +756,7 @@ describe("WorkspaceRPRegistrationStepPage", () => {
 			.mockResolvedValueOnce({
 				applicationInformationUuid: "application-information-1",
 				configurationName: "Test integration A",
-				onboardingState: "draft",
+				registrationCompletedAt: null,
 				registrationAnswers: {},
 				registrationDraftVersion: 3,
 				registrationLastCompletedStep: "endpoints",
@@ -787,7 +788,7 @@ describe("WorkspaceRPRegistrationStepPage", () => {
 			.mockResolvedValueOnce({
 				applicationInformationUuid: "application-information-1",
 				configurationName: "Test integration A",
-				onboardingState: "draft",
+				registrationCompletedAt: null,
 				registrationAnswers: {},
 				registrationDraftVersion: 5,
 				registrationLastCompletedStep: "endpoints",
@@ -797,7 +798,7 @@ describe("WorkspaceRPRegistrationStepPage", () => {
 		const refreshedDraft = {
 			applicationInformationUuid: "application-information-1",
 			configurationName: "Test integration A",
-			onboardingState: "draft" as const,
+			registrationCompletedAt: null,
 			registrationAnswers: {
 				canadaLoginEnvironment: "test" as const,
 				serviceNameEn: "Benefits Portal",
@@ -847,7 +848,7 @@ describe("WorkspaceRPRegistrationStepPage", () => {
 			draft: {
 				applicationInformationUuid: "application-information-1",
 				configurationName: "Test integration A",
-				onboardingState: "draft",
+				registrationCompletedAt: null,
 				partnerEnvironment: "Partner test",
 				registrationAnswers: completeAnswers,
 				registrationDraftVersion: 6,
@@ -862,10 +863,10 @@ describe("WorkspaceRPRegistrationStepPage", () => {
 
 		render(<WorkspaceRPRegistrationStepPage />);
 		fireEvent.click(
-			screen.getByRole("button", { name: "Submit registration" })
+			screen.getByRole("button", { name: "Complete registration" })
 		);
 		await waitFor(() =>
-			expect(submitMock).toHaveBeenCalledWith(
+			expect(completeMock).toHaveBeenCalledWith(
 				"workspace-1",
 				"rp-1",
 				6,
@@ -885,7 +886,7 @@ describe("WorkspaceRPRegistrationStepPage", () => {
 		const invalidReviewDraft = {
 			applicationInformationUuid: "application-information-1",
 			configurationName: "Test integration A",
-			onboardingState: "draft" as const,
+			registrationCompletedAt: null,
 			partnerEnvironment: "Partner test",
 			registrationAnswers: {
 				...completeAnswers,
@@ -909,7 +910,7 @@ describe("WorkspaceRPRegistrationStepPage", () => {
 
 		const firstRender = render(<WorkspaceRPRegistrationStepPage />);
 		fireEvent.click(
-			screen.getByRole("button", { name: "Submit registration" })
+			screen.getByRole("button", { name: "Complete registration" })
 		);
 		await waitFor(() =>
 			expect(navigateMock).toHaveBeenCalledWith({
@@ -917,7 +918,7 @@ describe("WorkspaceRPRegistrationStepPage", () => {
 				replace: true,
 			})
 		);
-		expect(submitMock).not.toHaveBeenCalled();
+		expect(completeMock).not.toHaveBeenCalled();
 
 		firstRender.unmount();
 		route.step = "signing";

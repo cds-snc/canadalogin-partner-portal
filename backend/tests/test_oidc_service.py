@@ -2,8 +2,13 @@ from json import JSONDecodeError
 from unittest.mock import AsyncMock, Mock, patch
 
 import pytest
-
 from src.app.core.exceptions.http_exceptions import CustomException, ForbiddenException, UnauthorizedException
+from src.app.core.identity import (
+    SESSION_AUTHENTICATED_EMAIL_KEY,
+    SESSION_AUTHENTICATED_EMAIL_VERIFIED_KEY,
+    SESSION_AUTHENTICATION_PROVIDER_KEY,
+    SESSION_PREPARED_INVITATION_UUID_KEY,
+)
 from src.app.services.oidc_service import OidcService
 
 
@@ -29,7 +34,11 @@ class TestOidcService:
     async def test_callback_stores_user_uuid_in_session_and_redirects(self, mock_db, monkeypatch):
         service = OidcService()
         request = Mock(session={})
-        claims = {"sub": "subject-123", "email": "oidc.user@example.com"}
+        claims = {
+            "sub": "subject-123",
+            "email": " OIDC.User@Example.com ",
+            "email_verified": True,
+        }
         oidc_user = {
             "uuid": "019cfc22-bff2-7168-ae43-387a301d8fcb",
             "username": "oidcuser",
@@ -49,13 +58,15 @@ class TestOidcService:
 
         mock_handler.assert_called_once_with(request)
         assert request.session["user_uuid"] == oidc_user["uuid"]
+        assert request.session[SESSION_AUTHENTICATED_EMAIL_KEY] == "oidc.user@example.com"
+        assert request.session[SESSION_AUTHENTICATED_EMAIL_VERIFIED_KEY] is True
+        assert request.session[SESSION_AUTHENTICATION_PROVIDER_KEY] == "oidc"
+        assert "userinfo" not in request.session["tokens"]
         assert response.status_code == 307
         assert response.headers["location"] == "/app"
 
     @pytest.mark.asyncio
-    async def test_callback_redirects_to_access_denied_without_session_for_blocked_user(
-        self, mock_db, monkeypatch
-    ):
+    async def test_callback_redirects_to_access_denied_without_session_for_blocked_user(self, mock_db, monkeypatch):
         service = OidcService()
         request = Mock(session={})
         claims = {"sub": "subject-123", "email": "blocked.user@example.com"}
@@ -77,12 +88,49 @@ class TestOidcService:
         assert response.headers["location"] == "/access-denied"
 
     @pytest.mark.asyncio
+    async def test_callback_preserves_prepared_invitation_with_tokenless_redirect(self, mock_db, monkeypatch):
+        service = OidcService()
+        invitation_uuid = "018f6f83-0000-0000-0000-000000000801"
+        request = Mock(
+            session={
+                SESSION_PREPARED_INVITATION_UUID_KEY: invitation_uuid,
+                "post_login_redirect": "/invitations/rp-applications/accept",
+            }
+        )
+        claims = {
+            "sub": "subject-123",
+            "email": "invitee@example.gc.ca",
+            "email_verified": True,
+        }
+        client = Mock()
+        client.authorize_access_token = AsyncMock(return_value={"userinfo": claims})
+        oidc_user = {
+            "uuid": "019cfc22-bff2-7168-ae43-387a301d8fcb",
+            "username": "invitee",
+            "email": "invitee@example.gc.ca",
+        }
+        monkeypatch.setattr("src.app.services.oidc_service.settings.OIDC_POST_LOGIN_REDIRECT", "/app")
+
+        with (
+            patch("src.app.services.oidc_service.get_oidc_client", return_value=client),
+            patch("src.app.services.oidc_service.sync_oidc_user", new_callable=AsyncMock) as mock_sync,
+            patch("src.app.services.oidc_service.get_session_handler"),
+        ):
+            mock_sync.return_value = oidc_user
+            response = await service.callback(request=request, db=mock_db)
+
+        assert request.session[SESSION_PREPARED_INVITATION_UUID_KEY] == invitation_uuid
+        assert response.headers["location"] == ("/app?redirect=%2Finvitations%2Frp-applications%2Faccept")
+        assert "token" not in response.headers["location"]
+
+    @pytest.mark.asyncio
     async def test_callback_stores_logout_context_in_session(self, mock_db):
         service = OidcService()
         request = Mock(session={})
         claims = {
             "sub": "subject-123",
             "email": "oidc.user@example.com",
+            "email_verified": True,
             "sid": "sid-123",
         }
         oidc_user = {

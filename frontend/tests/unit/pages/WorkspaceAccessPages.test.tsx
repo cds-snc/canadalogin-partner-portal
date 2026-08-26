@@ -6,6 +6,7 @@ import { WorkspaceAccessAssignmentNewPage } from "@/features/workspaces/pages/Wo
 import { WorkspaceAccessAssignmentPage } from "@/features/workspaces/pages/WorkspaceAccessAssignmentPage";
 import { WorkspaceAccessAssignmentsPage } from "@/features/workspaces/pages/WorkspaceAccessAssignmentsPage";
 import { WorkspaceAccessInvitationPage } from "@/features/workspaces/pages/WorkspaceAccessInvitationPage";
+import { WorkspaceAccessInvitationNewPage } from "@/features/workspaces/pages/WorkspaceAccessInvitationNewPage";
 import { WorkspaceAccessInvitationsPage } from "@/features/workspaces/pages/WorkspaceAccessInvitationsPage";
 import { useWorkspace } from "@/features/workspaces/hooks/use-workspace";
 import { useWorkspaceAccessInvitation } from "@/features/workspaces/hooks/use-workspace-access-invitation";
@@ -13,6 +14,8 @@ import { useWorkspaceAccessInvitations } from "@/features/workspaces/hooks/use-w
 import { useWorkspaceRoleAssignment } from "@/features/workspaces/hooks/use-workspace-role-assignment";
 import { useWorkspaceRoleAssignments } from "@/features/workspaces/hooks/use-workspace-role-assignments";
 import { useSession } from "@/hooks";
+
+const writeText = vi.hoisted(() => vi.fn());
 
 vi.mock("@tanstack/react-router", () => ({
 	Link: ({ children, to }: PropsWithChildren<{ to: string }>): ReactElement => (
@@ -287,6 +290,11 @@ const setRpAdmin = (): void => {
 describe("focused workspace Access pages", () => {
 	beforeEach(() => {
 		vi.clearAllMocks();
+		writeText.mockResolvedValue(undefined);
+		Object.defineProperty(globalThis.navigator, "clipboard", {
+			configurable: true,
+			value: { writeText },
+		});
 		setClAdmin();
 		vi.mocked(useWorkspace).mockReturnValue({
 			workspace: { name: "Benefits", uuid: "workspace-1" },
@@ -430,6 +438,77 @@ describe("focused workspace Access pages", () => {
 		);
 		await waitFor(() =>
 			expect(invitationActions.revokeInvitation).toHaveBeenCalledWith()
+		);
+	});
+
+	it("creates and copies a manually delivered workspace invitation link", async () => {
+		render(<WorkspaceAccessInvitationNewPage />);
+		fireEvent.input(
+			screen.getByLabelText("workspaces.applicationsInvitationEmailLabel"),
+			{ target: { value: "person@example.test" } }
+		);
+		fireEvent.submit(
+			screen
+				.getByRole("button", {
+					name: "workspaces.accessInvitationCreateAction",
+				})
+				.closest("form")!
+		);
+
+		expect(
+			await screen.findByRole("heading", {
+				name: "workspaces.accessInvitationLinkTitle",
+			})
+		).toBeTruthy();
+		expect(
+			screen.getByText("invitations.manualDelivery.deliveryBody")
+		).toBeTruthy();
+		fireEvent.click(
+			screen.getByRole("button", {
+				name: "invitations.manualDelivery.copyAction",
+			})
+		);
+		await waitFor(() =>
+			expect(writeText).toHaveBeenCalledWith("https://local.test/invite")
+		);
+		expect(
+			await screen.findByText("invitations.manualDelivery.copiedConfirmation")
+		).toBeTruthy();
+	});
+
+	it("explains recovery on normal reads and copies the replacement after reissue", async () => {
+		render(<WorkspaceAccessInvitationPage />);
+		expect(
+			screen.getByRole("heading", {
+				name: "invitations.manualDelivery.unavailableTitle",
+			})
+		).toBeTruthy();
+		expect(
+			screen.getByText("invitations.manualDelivery.unavailableBody")
+		).toBeTruthy();
+		expect(screen.queryByText("https://local.test/reissued")).toBeNull();
+
+		fireEvent.click(
+			screen.getByRole("button", {
+				name: "workspaces.accessInvitationReissueAction",
+			})
+		);
+		fireEvent.click(
+			screen
+				.getByRole("dialog", {
+					name: "workspaces.accessInvitationReissueConfirmTitle",
+				})
+				.querySelector("button")!
+		);
+
+		expect(await screen.findByText("https://local.test/reissued")).toBeTruthy();
+		fireEvent.click(
+			screen.getByRole("button", {
+				name: "invitations.manualDelivery.copyAction",
+			})
+		);
+		await waitFor(() =>
+			expect(writeText).toHaveBeenCalledWith("https://local.test/reissued")
 		);
 	});
 });

@@ -14,17 +14,12 @@ from ...schemas.user import (
     AuthenticatedUserRead,
     UserAccessAdministrationRead,
     UserAccessDirectoryRead,
-    UserCreate,
     UserDepartmentRead,
     UserDepartmentUpdate,
     UserInvitationTargetResolutionRead,
     UserInvitationTargetResolutionRequest,
     UserPendingInvitationDirectoryRead,
-    UserRateLimitsRead,
     UserRead,
-    UserTierRead,
-    UserTierUpdate,
-    UserUpdate,
 )
 from ...services.authorization_service import is_current_user_cl_admin
 from ...services.user_service import UserService
@@ -49,17 +44,6 @@ async def search_users(
         db=db,
         query=q,
     )
-
-
-@router.post("/user", response_model=UserRead, status_code=201)
-@casbin_guard.require_permission("users_admin", "write")
-async def write_user(
-    request: Request,
-    user: UserCreate,
-    db: Annotated[AsyncSession, Depends(async_get_db)],
-    service: Annotated[UserService, Depends(get_user_service)],
-) -> dict[str, Any]:
-    return await service.create_user(db=db, user=user)
 
 
 @router.get("/users", response_model=PaginatedListResponse[UserAccessDirectoryRead])
@@ -158,19 +142,6 @@ async def read_user(
     return await service.get_user_by_uuid(db=db, user_uuid=user_uuid)
 
 
-@router.patch("/user/{user_uuid}")
-@casbin_guard.require_permission("users_admin", "write")
-async def patch_user(
-    request: Request,
-    values: UserUpdate,
-    user_uuid: uuid_pkg.UUID,
-    current_user: Annotated[dict, Depends(get_current_user)],
-    db: Annotated[AsyncSession, Depends(async_get_db)],
-    service: Annotated[UserService, Depends(get_user_service)],
-) -> dict[str, str]:
-    return await service.update_user(db=db, user_uuid=user_uuid, current_user=current_user, values=values)
-
-
 @router.patch("/user/me/accept-terms")
 async def accept_terms_me(
     request: Request,
@@ -205,48 +176,6 @@ async def patch_my_department(
     return await service.set_department_for_user(db=db, user_uuid=current_user["uuid"], department_uuid=department_uuid)
 
 
-@router.delete("/user/{user_uuid}")
-@casbin_guard.require_permission("users_admin", "write")
-async def erase_user(
-    request: Request,
-    user_uuid: uuid_pkg.UUID,
-    current_user: Annotated[dict, Depends(get_current_user)],
-    db: Annotated[AsyncSession, Depends(async_get_db)],
-    service: Annotated[UserService, Depends(get_user_service)],
-) -> dict[str, str]:
-    result = await service.delete_user(
-        db=db,
-        user_uuid=user_uuid,
-        current_user=current_user,
-        token=None,
-    )
-    if str(current_user.get("uuid") or "") == str(user_uuid):
-        request.session.clear()
-    return result
-
-
-@router.get("/user/{user_uuid}/rate_limits", response_model=UserRateLimitsRead)
-@casbin_guard.require_permission("users_admin", "read")
-async def read_user_rate_limits(
-    request: Request,
-    user_uuid: uuid_pkg.UUID,
-    db: Annotated[AsyncSession, Depends(async_get_db)],
-    service: Annotated[UserService, Depends(get_user_service)],
-) -> dict[str, Any]:
-    return await service.get_user_rate_limits(db=db, user_uuid=user_uuid)
-
-
-@router.get("/user/{user_uuid}/tier", response_model=UserTierRead | None)
-@casbin_guard.require_permission("users_admin", "read")
-async def read_user_tier(
-    request: Request,
-    user_uuid: uuid_pkg.UUID,
-    db: Annotated[AsyncSession, Depends(async_get_db)],
-    service: Annotated[UserService, Depends(get_user_service)],
-) -> dict | None:
-    return await service.get_user_tier(db=db, user_uuid=user_uuid)
-
-
 @router.get("/user/{user_uuid}/department", response_model=UserDepartmentRead | None)
 @casbin_guard.require_permission("users_admin", "read")
 async def read_user_department(
@@ -256,18 +185,6 @@ async def read_user_department(
     service: Annotated[UserService, Depends(get_user_service)],
 ) -> dict | None:
     return await service.get_user_department(db=db, user_uuid=user_uuid)
-
-
-@router.patch("/user/{user_uuid}/tier")
-@casbin_guard.require_permission("users_admin", "write")
-async def patch_user_tier(
-    request: Request,
-    user_uuid: uuid_pkg.UUID,
-    values: UserTierUpdate,
-    db: Annotated[AsyncSession, Depends(async_get_db)],
-    service: Annotated[UserService, Depends(get_user_service)],
-) -> dict[str, str]:
-    return await service.update_user_tier(db=db, user_uuid=user_uuid, values=values)
 
 
 @router.patch("/user/{user_uuid}/department")

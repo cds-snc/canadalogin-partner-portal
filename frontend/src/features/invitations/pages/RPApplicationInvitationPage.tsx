@@ -3,36 +3,24 @@ import { useNavigate } from "@tanstack/react-router";
 import { useTranslation } from "react-i18next";
 import type { FunctionComponent } from "@/common/types";
 import { Button, Heading, Notice, Text } from "@/components/ui";
-import { acceptRPApplicationDeveloperInvitation } from "@/fetch/rp-application-developer-invitations";
+import { acceptPreparedRPApplicationDeveloperInvitation } from "@/fetch/rp-application-developer-invitations";
 
-type InvitationPageStatus = "error" | "loading" | "missing-token" | "success";
+type InvitationPageStatus = "error" | "loading" | "success";
 type InvitationRequestStatus = "error" | "success" | null;
 
-type RPApplicationInvitationPageProps = {
-	token?: string;
-};
-
-export const RPApplicationInvitationPage = ({
-	token,
-}: RPApplicationInvitationPageProps): FunctionComponent => {
+export const RPApplicationInvitationPage = (): FunctionComponent => {
 	const { t } = useTranslation();
 	const navigate = useNavigate();
 	const [requestStatus, setRequestStatus] =
 		useState<InvitationRequestStatus>(null);
 	const [workspaceUuid, setWorkspaceUuid] = useState<string | null>(null);
-	const status: InvitationPageStatus = !token
-		? "missing-token"
-		: (requestStatus ?? "loading");
+	const status: InvitationPageStatus = requestStatus ?? "loading";
 
-	useEffect((): (() => void) | void => {
-		if (!token) {
-			return;
-		}
-
+	useEffect((): (() => void) => {
 		let isActive = true;
 		let redirectTimeout: number | undefined;
 
-		void acceptRPApplicationDeveloperInvitation(token)
+		void acceptPreparedRPApplicationDeveloperInvitation()
 			.then((response): void => {
 				if (!isActive) {
 					return;
@@ -70,21 +58,9 @@ export const RPApplicationInvitationPage = ({
 				globalThis.clearTimeout(redirectTimeout);
 			}
 		};
-	}, [navigate, token]);
+	}, [navigate]);
 
 	const renderNotice = (): FunctionComponent => {
-		if (status === "missing-token") {
-			return (
-				<Notice
-					noticeRole="warning"
-					noticeTitle={t("invitations.rpApplication.missingTokenTitle")}
-					noticeTitleTag="h2"
-				>
-					<Text>{t("invitations.rpApplication.missingTokenBody")}</Text>
-				</Notice>
-			);
-		}
-
 		if (status === "success") {
 			return (
 				<Notice

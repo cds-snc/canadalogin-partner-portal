@@ -18,14 +18,12 @@ vi.mock("react-i18next", () => ({
 				"workspaces.chooseAnother": "Choose another workspace",
 				"workspaces.descriptionLabel": "Description",
 				"workspaces.detailSummary": "Choose a task for this workspace.",
+				"workspaces.detailsTitle": "Workspace details",
 				"workspaces.navigation.access": "Access",
 				"workspaces.navigation.applications": "Applications",
 				"workspaces.navigation.reports": "Reports",
 				"workspaces.navigation.settings": "Settings",
 				"workspaces.noDescriptionText": "Not provided",
-				"workspaces.onboardingStateLabel": "Onboarding status",
-				"workspaces.onboardingStateSubmitted": "Submitted",
-				"workspaces.statusTitle": "Workspace status",
 				"workspaces.taskGroups.access": "Access",
 				"workspaces.taskGroups.insights": "Insights",
 				"workspaces.taskGroups.setupAndApplications": "Setup and applications",
@@ -35,7 +33,7 @@ vi.mock("react-i18next", () => ({
 				"workspaces.taskDescriptions.applications":
 					"Manage Applications and their RP configurations.",
 				"workspaces.taskDescriptions.reports":
-					"Review aggregate workspace reports.",
+					"Find accessible RP-configuration monthly active user reports.",
 				"workspaces.taskDescriptions.settings": "Update workspace settings.",
 				"workspaces.tasksTitle": "Workspace tasks",
 				"workspaces.workspaceLabel": "Workspace",
@@ -134,12 +132,7 @@ describe("WorkspaceDetailPage", () => {
 				id: 9,
 				isDeleted: false,
 				name: "Benefits Workspace",
-				onboardingState: "submitted",
-				submittedAt: "2026-08-11T12:00:00Z",
 				slug: "benefits-workspace",
-				approvedAt: null,
-				launchedAt: null,
-				underReviewAt: null,
 				updatedAt: null,
 				uuid: "workspace-uuid-1",
 			},
@@ -156,7 +149,7 @@ describe("WorkspaceDetailPage", () => {
 		expect(
 			screen.queryByText(/active role: rp admin for benefits workspace/i)
 		).toBeNull();
-		expect(screen.getByText(/onboarding status: submitted/i)).toBeTruthy();
+		expect(screen.getByText(/description: primary workspace/i)).toBeTruthy();
 		for (const groupName of [
 			"Setup and applications",
 			"Access",
@@ -170,7 +163,6 @@ describe("WorkspaceDetailPage", () => {
 		const expectedTasks = [
 			["Applications", "applications"],
 			["Access", "access"],
-			["Reports", "reports"],
 			["Settings", "settings"],
 		];
 		for (const [name, suffix] of expectedTasks) {
@@ -178,6 +170,9 @@ describe("WorkspaceDetailPage", () => {
 				`/workspaces/workspace-uuid-1/${suffix}`
 			);
 		}
+		expect(
+			screen.getByRole("link", { name: "Reports" }).getAttribute("href")
+		).toBe("/reports/applications");
 		expect(
 			screen
 				.getByRole("link", { name: "Choose another workspace" })

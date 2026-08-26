@@ -1,6 +1,5 @@
 import { describe, expect, it } from "vitest";
 import {
-	useDepartmentManagement,
 	useDepartments,
 	useSession,
 	useSystemStatus,
@@ -11,7 +10,6 @@ import {
 
 describe("hooks index", () => {
 	it("re-exports the feature hooks from src/hooks", () => {
-		expect(useDepartmentManagement).toBeTypeOf("function");
 		expect(useDepartments).toBeTypeOf("function");
 		expect(useSession).toBeTypeOf("function");
 		expect(useUsers).toBeTypeOf("function");

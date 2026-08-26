@@ -1,15 +1,15 @@
 import { Outlet, createFileRoute } from "@tanstack/react-router";
 import i18n from "@/common/i18n";
 import type { RouteBackLinkContext } from "@/types/route-breadcrumbs";
-import { requireCapability } from "../../../../../../features/auth/auth-routing";
+import { requireAnyCapability } from "../../../../../../features/auth/auth-routing";
 
 export const Route = createFileRoute(
 	"/workspaces/$workspaceUuid/applications/$applicationInformationUuid/rp-configurations/$rpConfigurationUuid"
 )({
 	beforeLoad: async ({ params }) => {
-		await requireCapability(
+		await requireAnyCapability(
 			`/workspaces/${params.workspaceUuid}/applications/${params.applicationInformationUuid}/rp-configurations/${params.rpConfigurationUuid}`,
-			"rp_configuration_read",
+			["rp_configuration_read", "cross_workspace_metadata_read"],
 			params.workspaceUuid
 		);
 

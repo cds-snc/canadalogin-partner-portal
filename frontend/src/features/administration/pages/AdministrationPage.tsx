@@ -8,10 +8,8 @@ import {
 } from "@/features/navigation/route-catalog";
 
 const ADMINISTRATION_ROUTE_DESCRIPTION_KEYS = {
-	auditLogs: "administration.tasks.auditLogs",
-	departments: "administration.tasks.departments",
+	invitations: "administration.tasks.invitations",
 	roleReference: "administration.tasks.roleReference",
-	tiers: "administration.tasks.tiers",
 	usersAndAccess: "administration.tasks.usersAndAccess",
 } as const;
 
@@ -27,17 +25,12 @@ const isAdministrationTaskRoute = (
 const ADMINISTRATION_GROUPS = [
 	{
 		id: "accessManagement",
-		routeIds: ["usersAndAccess"],
+		routeIds: ["usersAndAccess", "invitations"],
 		titleKey: "administration.groups.accessManagement",
 	},
 	{
-		id: "partnerConfiguration",
-		routeIds: ["departments", "tiers"],
-		titleKey: "administration.groups.partnerConfiguration",
-	},
-	{
 		id: "monitoringAndReference",
-		routeIds: ["auditLogs", "roleReference"],
+		routeIds: ["roleReference"],
 		titleKey: "administration.groups.monitoringAndReference",
 	},
 ] as const;

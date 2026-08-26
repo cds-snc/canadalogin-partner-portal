@@ -12,7 +12,7 @@ from ..core.authorization import CanonicalRoleCode
 from ..core.rp_configuration import normalize_configuration_name, normalize_partner_environment
 from ..core.schemas import PersistentDeletion, UUIDSchema
 from .authorization import AccessibleRPApplicationAuthorizationRead
-from .onboarding import OnboardingLifecycleRead, OnboardingState
+from .rp_application_promotion_request import ProductionReviewStatus
 
 CanadaLoginEnvironment = Literal["test", "staging", "production"]
 LogoutMode = Literal["back_channel", "front_channel"]
@@ -79,7 +79,7 @@ class RPApplicationBase(BaseModel):
     dnr_app_name: str = Field(..., min_length=1, max_length=128)
 
 
-class RPApplicationRead(RPApplicationBase, OnboardingLifecycleRead, UUIDSchema, PersistentDeletion):
+class RPApplicationRead(RPApplicationBase, UUIDSchema, PersistentDeletion):
     id: int
     workspace_id: int | None = None
     department_id: int | None
@@ -94,14 +94,9 @@ class RPApplicationRead(RPApplicationBase, OnboardingLifecycleRead, UUIDSchema, 
     oidc_registration_payload: dict[str, object] | None = None
     registration_draft_version: int = Field(default=0, ge=0)
     registration_last_completed_step: RegistrationDataStep | None = None
-    promotion_target_environment: str | None = None
-    promotion_status: str | None = None
-    promotion_external_reference: str | None = None
-    promotion_reviewed_by_user_uuid: uuid_pkg.UUID | None = None
-    promotion_reviewed_by_team: str | None = None
-    promotion_requested_at: datetime | None = None
-    promotion_reviewed_at: datetime | None = None
-    promotion_decided_at: datetime | None = None
+    registration_completed_at: datetime | None = None
+    production_review_status: ProductionReviewStatus | None = None
+    production_review_reconciliation_required: bool = False
 
 
 class AccessibleRPApplicationRead(AccessibleRPApplicationAuthorizationRead):
@@ -112,11 +107,11 @@ class AccessibleRPApplicationRead(AccessibleRPApplicationAuthorizationRead):
     dnr_app_name: str
     configuration_name: str | None = Field(default=None, max_length=128)
     partner_environment: str | None = Field(default=None, min_length=1, max_length=128)
-    ibm_sv_application_id: str | None = None
     department_uuid: uuid_pkg.UUID | None = None
     canada_login_environment: str | None = None
-    onboarding_state: OnboardingState | None = None
-    promotion_status: str | None = None
+    registration_completed_at: datetime | None = None
+    production_review_status: ProductionReviewStatus | None = None
+    production_review_reconciliation_required: bool = False
 
 
 class RPApplicationSummaryRead(BaseModel):
@@ -140,8 +135,9 @@ class RPApplicationSummaryRead(BaseModel):
     configuration_name: str | None = Field(default=None, max_length=128)
     partner_environment: str | None = Field(default=None, min_length=1, max_length=128)
     canada_login_environment: str | None = None
-    onboarding_state: OnboardingState | None = None
-    promotion_status: str | None = None
+    registration_completed_at: datetime | None = None
+    production_review_status: ProductionReviewStatus | None = None
+    production_review_reconciliation_required: bool = False
     registration_last_completed_step: RegistrationDataStep | None = None
     resume_task_path: str | None = None
     role: CanonicalRoleCode | None = None
@@ -208,8 +204,9 @@ class AccessibleRPApplicationOAuthSetupRead(BaseModel):
     rp_application_name: str
     status: str
     canada_login_environment: str | None = None
-    onboarding_state: OnboardingState | None = None
-    promotion_status: str | None = None
+    registration_completed_at: datetime | None = None
+    production_review_status: ProductionReviewStatus | None = None
+    production_review_reconciliation_required: bool = False
     application_url: str | None = None
     discovery_endpoint: str | None = None
     department_name: Optional[str] = None
@@ -474,10 +471,6 @@ class WorkspaceRPApplicationRegistrationCreate(WorkspaceRPApplicationRegistratio
         return normalized
 
 
-class WorkspaceRPApplicationRegistrationUpdate(WorkspaceRPApplicationRegistrationBase):
-    pass
-
-
 class WorkspaceRPApplicationRegistrationAnswers(WorkspaceRPApplicationRegistrationBase):
     """Typed partial questionnaire values without step-completeness validation."""
 
@@ -669,7 +662,6 @@ class ApplicationRPConfigurationProgressionRead(BaseModel):
     target_registration_draft_version: int = Field(..., ge=0)
     target_registration_last_completed_step: RegistrationDataStep | None = None
     self_serve: bool
-    promotion_status: str | None = None
 
 
 class WorkspaceRPApplicationRegistrationDraftPatch(BaseModel):
@@ -719,11 +711,11 @@ class WorkspaceRPApplicationRegistrationDraftRead(BaseModel):
     workspace_uuid: uuid_pkg.UUID
     rp_application_uuid: uuid_pkg.UUID
     application_information_uuid: uuid_pkg.UUID
-    onboarding_state: Literal["draft"]
     configuration_name: str = Field(..., min_length=1, max_length=128)
     partner_environment: str | None = Field(default=None, min_length=1, max_length=128)
     registration_draft_version: int = Field(..., ge=0)
     registration_last_completed_step: RegistrationDataStep | None = None
+    registration_completed_at: Literal[None] = None
     registration_answers: WorkspaceRPApplicationRegistrationAnswers
 
 
@@ -747,10 +739,11 @@ class WorkspaceRPApplicationConfigurationRead(BaseModel):
     configuration_name: str | None = Field(default=None, max_length=128)
     partner_environment: str | None = Field(default=None, min_length=1, max_length=128)
     canada_login_environment: CanadaLoginEnvironment | None = None
-    onboarding_state: OnboardingState | None = None
-    promotion_status: str | None = None
+    production_review_status: ProductionReviewStatus | None = None
+    production_review_reconciliation_required: bool = False
     registration_draft_version: int = Field(..., ge=0)
     registration_last_completed_step: RegistrationDataStep | None = None
+    registration_completed_at: datetime | None = None
     registration_answers: WorkspaceRPApplicationRegistrationAnswers
     offline_public_key_provided: bool = False
 
@@ -763,7 +756,19 @@ class ApplicationRPConfigurationRead(WorkspaceRPApplicationConfigurationRead):
     partner_environment: str | None = Field(default=None, min_length=1, max_length=128)
 
 
-class WorkspaceRPApplicationRegistrationSubmissionRead(BaseModel):
+class WorkspaceRPApplicationRegistrationCompletionRequest(BaseModel):
+    model_config = ConfigDict(
+        extra="forbid",
+        validate_by_name=True,
+        validate_by_alias=True,
+        alias_generator=to_camel,
+        populate_by_name=True,
+    )
+
+    expected_draft_version: int = Field(..., ge=0)
+
+
+class WorkspaceRPApplicationRegistrationCompletionRead(BaseModel):
     model_config = ConfigDict(
         extra="ignore",
         frozen=True,
@@ -775,11 +780,17 @@ class WorkspaceRPApplicationRegistrationSubmissionRead(BaseModel):
     )
 
     workspace_uuid: uuid_pkg.UUID
+    application_information_uuid: uuid_pkg.UUID
     rp_application_uuid: uuid_pkg.UUID
-    onboarding_state: Literal["submitted"]
+    registration_completed_at: datetime
     registration_draft_version: int = Field(..., ge=0)
     service_name_en: str
     service_name_fr: str
+
+
+# Internal source compatibility while callers move from generic submission
+# vocabulary to the explicit technical-completion contract.
+WorkspaceRPApplicationRegistrationSubmissionRead = WorkspaceRPApplicationRegistrationCompletionRead
 
 
 class RPApplicationCreate(BaseModel):
@@ -827,6 +838,7 @@ class RPApplicationCreateInternal(BaseModel):
     registration_creation_key: uuid_pkg.UUID | None = None
     registration_draft_version: int = Field(default=0, ge=0)
     registration_last_completed_step: RegistrationDataStep | None = None
+    registration_completed_at: datetime | None = None
     created_by: int | None = None
 
     @field_validator("configuration_name", mode="before")
@@ -858,6 +870,7 @@ class RPApplicationUpdateInternal(BaseModel):
     oidc_registration_payload: dict[str, object] | None = None
     registration_draft_version: int | None = Field(default=None, ge=0)
     registration_last_completed_step: RegistrationDataStep | None = None
+    registration_completed_at: datetime | None = None
     updated_at: datetime
 
     @field_validator("configuration_name", mode="before")
@@ -957,62 +970,3 @@ class RPApplicationUsageSummaryRead(BaseModel):
     total: int
     succeeded: int
     failed: int
-
-
-class AccessibleRPApplicationSummaryRead(BaseModel):
-    model_config = ConfigDict(
-        validate_by_name=True,
-        validate_by_alias=True,
-        alias_generator=to_camel,
-        populate_by_name=True,
-    )
-
-    id: int
-    uuid: uuid_pkg.UUID
-    dnr_app_name: str
-    department_id: Optional[int] = None
-    partner_environment: str | None = Field(default=None, min_length=1, max_length=128)
-
-
-class AccessibleRPApplicationDepartmentAssignRequest(BaseModel):
-    model_config = ConfigDict(
-        extra="forbid",
-        validate_by_name=True,
-        validate_by_alias=True,
-        alias_generator=to_camel,
-        populate_by_name=True,
-    )
-
-    department_uuid: uuid_pkg.UUID
-
-
-class RPApplicationUsageAuditEventRead(BaseModel):
-    model_config = ConfigDict(
-        validate_by_name=True,
-        validate_by_alias=True,
-        alias_generator=to_camel,
-        populate_by_name=True,
-    )
-
-    username: str
-    username_display: str
-    username_known: bool
-    origin: str
-    origin_display: str
-    ip_version: int | None = None
-    result: str
-    time_seconds: int | None = None
-    country: str
-
-
-class RPApplicationUsageAuditTrailRead(BaseModel):
-    model_config = ConfigDict(
-        validate_by_name=True,
-        validate_by_alias=True,
-        alias_generator=to_camel,
-        populate_by_name=True,
-    )
-
-    events: list[RPApplicationUsageAuditEventRead] = Field(default_factory=list)
-    next: str | None = None
-    total: int | None = None

@@ -19,8 +19,6 @@ src/app/schemas/
 ├── __init__.py       # Imports for easy access
 ├── user.py          # User-related schemas
 ├── post.py          # Post-related schemas
-├── tier.py          # Tier schemas
-├── rate_limit.py    # Rate limit schemas
 └── job.py           # Background job schemas
 ```
 
@@ -67,7 +65,6 @@ class User(TimestampSchema, UserBase, UUIDSchema, PersistentDeletion):
     ]
     hashed_password: str
     is_superuser: bool = False
-    tier_id: int | None = None
 
 
 # Schema for reading user data (API output)
@@ -93,7 +90,6 @@ class UserRead(BaseModel):
     ]
     email: Annotated[EmailStr, Field(examples=["user.userson@example.com"])]
     profile_image_url: str
-    tier_id: int | None
 
 
 # Schema for creating new users (API input)
@@ -157,11 +153,6 @@ class UserUpdate(BaseModel):
 # Internal update schema
 class UserUpdateInternal(UserUpdate):
     updated_at: datetime
-
-
-# Schema to update tier id
-class UserTierUpdate(BaseModel):
-    tier_id: int
 
 
 # Schema for user deletion (soft delete timestamps)
@@ -425,8 +416,7 @@ async def get_user(user_id: int):
     #   "name": "User Userson", 
     #   "username": "userson",
     #   "email": "user.userson@example.com",
-    #   "profile_image_url": "https://...",
-    #   "tier_id": null
+    #   "profile_image_url": "https://..."
     # }
 ```
 
@@ -593,7 +583,6 @@ def test_user_read_from_model():
         profile_image_url="https://example.com/image.jpg",
         hashed_password="hashed123",
         is_superuser=False,
-        tier_id=None,
         created_at=datetime.utcnow()
     )
     
@@ -621,7 +610,6 @@ class UserRead(BaseModel):
     username: str
     email: str
     profile_image_url: str
-    tier_id: int | None
 ```
 
 ### Validation Performance

@@ -18,7 +18,7 @@ test("exposes real GCDS progress, available-step navigation, and focused errors"
 	await expect(navigation.locator("[aria-current='step']")).toContainText(
 		"Signature"
 	);
-	await expect(navigation).toContainText("À corriger avant la soumission");
+	await expect(navigation).toContainText("À corriger avant la finalisation");
 
 	const summary = page.locator("gcds-error-summary");
 	await expect(summary).toHaveAttribute("heading", summaryHeading);

@@ -17,12 +17,15 @@ vi.mock("react-i18next", () => ({
 				"workspaces.rpConfigurationOpenAction": "View RP configuration",
 				"workspaces.rpConfigurationPartnerEnvironmentColumn":
 					"Partner environment",
-				"workspaces.rpConfigurationStatusColumn": "Status",
+				"workspaces.productionReviewLabel": "Production review",
+				"workspaces.productionReviewNotApplicable": "Not applicable",
+				"workspaces.productionReviewReconciliationRequired":
+					"Historical review requires reconciliation",
+				"workspaces.rpConfigurationRegistrationColumn": "Registration",
+				"workspaces.registrationStatusIncomplete": "Incomplete",
 				"workspaces.rpConfigurationsItemLabel":
 					options?.["count"] === 1 ? "RP configuration" : "RP configurations",
 				"yourApplications.environmentTest": "Test",
-				"yourApplications.onboardingStateDraft": "Draft",
-				"yourApplications.onboardingStateLaunched": "Launched",
 				"yourApplications.publicReferenceLabel": "Reference",
 				"yourApplications.unknownApplication": "Unknown application",
 			};
@@ -118,9 +121,9 @@ const application: RPApplicationSummaryRead = {
 	applicationInformationUuid: "application-information-uuid-1",
 	canadaLoginEnvironment: "test",
 	configurationName: "Partner test",
-	onboardingState: "draft",
 	partnerEnvironment: null,
-	promotionStatus: null,
+	productionReviewStatus: null,
+	registrationCompletedAt: null,
 	registrationLastCompletedStep: "client-and-access",
 	resumeTaskPath:
 		"/workspaces/workspace-uuid-1/applications/application-information-uuid-1/rp-configurations/rp-application-uuid-1/registration/signing",
@@ -133,7 +136,7 @@ const application: RPApplicationSummaryRead = {
 };
 
 describe("RPApplicationSummaryTable", () => {
-	it("renders the approved five-column shared table treatment", () => {
+	it("renders registration and Production review as separate columns", () => {
 		render(
 			<RPApplicationSummaryTable
 				applications={[application]}
@@ -152,7 +155,8 @@ describe("RPApplicationSummaryTable", () => {
 			"Name",
 			"Partner environment",
 			"CanadaLogin environment",
-			"Status",
+			"Registration",
+			"Production review",
 			"Action",
 		]);
 		expect(
@@ -184,6 +188,25 @@ describe("RPApplicationSummaryTable", () => {
 		expect(links[0]?.getAttribute("href")).toBe(
 			"/workspaces/workspace-uuid-1/applications/application-information-uuid-1/rp-configurations/rp-application-uuid-1"
 		);
+	});
+
+	it("distinguishes an ambiguous historical review from no request", () => {
+		render(
+			<RPApplicationSummaryTable
+				applications={[
+					{
+						...application,
+						canadaLoginEnvironment: "production",
+						productionReviewReconciliationRequired: true,
+					},
+				]}
+				label="RP configurations"
+			/>
+		);
+
+		expect(
+			screen.getByText("Historical review requires reconciliation")
+		).toBeTruthy();
 	});
 
 	it("gives a read-only draft the same permitted task-hub destination", () => {

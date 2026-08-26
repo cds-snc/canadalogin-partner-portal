@@ -7,6 +7,7 @@ import { useWorkspaces } from "@/features/workspaces/hooks/use-workspaces";
 
 const invite = vi.hoisted(() => vi.fn());
 const navigate = vi.hoisted(() => vi.fn());
+const writeText = vi.hoisted(() => vi.fn());
 
 vi.mock("@tanstack/react-router", () => ({
 	useNavigate: () => navigate,
@@ -19,6 +20,16 @@ vi.mock("react-i18next", () => ({
 				"authorization.roles.readOnly": "Read Only",
 				"authorization.roles.rpAdmin": "RP Admin",
 				"authorization.roles.rpUserEdit": "RP User (Edit)",
+				"invitations.manualDelivery.copiedConfirmation":
+					"Invitation link copied.",
+				"invitations.manualDelivery.copyAction": "Copy invitation link",
+				"invitations.manualDelivery.copyError":
+					"The link could not be copied automatically.",
+				"invitations.manualDelivery.deliveryBody":
+					"The portal does not send invitation email.",
+				"invitations.manualDelivery.linkLabel": "Invitation link",
+				"invitations.manualDelivery.singleViewBody":
+					"This link is shown only in this result and cannot be retrieved after you leave.",
 				"users.cancelAction": "Cancel",
 				"users.emailLabel": "Email",
 				"users.inviteAction": "Invite user",
@@ -148,6 +159,11 @@ const completeForm = (): void => {
 describe("InviteUserPage", () => {
 	beforeEach(() => {
 		vi.clearAllMocks();
+		writeText.mockResolvedValue(undefined);
+		Object.defineProperty(globalThis.navigator, "clipboard", {
+			configurable: true,
+			value: { writeText },
+		});
 	});
 
 	it("creates a workspace invitation with the selected role", async () => {
@@ -173,6 +189,46 @@ describe("InviteUserPage", () => {
 		);
 		expect(
 			await screen.findByRole("heading", { name: "Invitation created" })
+		).toBeTruthy();
+		expect(
+			screen.getByText("https://portal.example.test/invitations/token")
+		).toBeTruthy();
+		expect(
+			screen.getByText("The portal does not send invitation email.")
+		).toBeTruthy();
+		expect(
+			screen.getByText(
+				"This link is shown only in this result and cannot be retrieved after you leave."
+			)
+		).toBeTruthy();
+
+		fireEvent.click(
+			screen.getByRole("button", { name: "Copy invitation link" })
+		);
+		await waitFor(() =>
+			expect(writeText).toHaveBeenCalledWith(
+				"https://portal.example.test/invitations/token"
+			)
+		);
+		expect(await screen.findByText("Invitation link copied.")).toBeTruthy();
+	});
+
+	it("keeps the one-time link visible for manual copy when clipboard access fails", async () => {
+		writeText.mockRejectedValueOnce(new Error("Clipboard unavailable"));
+		invite.mockResolvedValue({
+			acceptanceUrl: "https://portal.example.test/invitations/token",
+			kind: "invitation_created",
+		});
+		renderPage();
+		completeForm();
+
+		fireEvent.click(screen.getByRole("button", { name: "Invite user" }));
+		fireEvent.click(
+			await screen.findByRole("button", { name: "Copy invitation link" })
+		);
+
+		expect(
+			await screen.findByText("The link could not be copied automatically.")
 		).toBeTruthy();
 		expect(
 			screen.getByText("https://portal.example.test/invitations/token")

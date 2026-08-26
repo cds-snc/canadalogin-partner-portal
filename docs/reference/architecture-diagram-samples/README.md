@@ -15,6 +15,10 @@ The C4 partner portal samples use the local
 `../gc-signin-partner-portal` repository as source material. They are still
 local-only documentation examples: they do not assert production deployment
 shape, real secrets, account IDs, or approved target-state architecture.
+They follow the approved onboarding/MVP scope correction: fixed four-role
+authorization, manually shared one-time invitation links, scoped MAU, separate
+registration completion and Production review, and no GC Notify, product
+catalog, aggregate-report, or generic audit-explorer dependency.
 
 ## Work Context
 
@@ -29,10 +33,10 @@ AWS account IDs, and no production identifiers.
 
 | File | Purpose |
 |---|---|
-| [01-partner-portal-system-context.c4.puml](plantuml/01-partner-portal-system-context.c4.puml) | C4 Level 1 system context for the partner portal. It shows platform superusers, workspace administrators, workspace members, invited external developers, OIDC, IBM Security Verify, GC Notify, and partner RP applications. |
-| [02-partner-portal-containers.c4.puml](plantuml/02-partner-portal-containers.c4.puml) | C4 Level 2 container view for the React/Vite web UI, FastAPI backend API, ARQ worker, PostgreSQL database, Redis, and external OIDC, IBM Security Verify, and GC Notify systems. |
-| [03-partner-portal-backend-components.c4.puml](plantuml/03-partner-portal-backend-components.c4.puml) | C4 Level 3 backend component view for the FastAPI backend. It groups application setup, routers, dependencies, auth/OIDC, Casbin, workspace service, supporting services, repositories, models/schemas, exception handling, and worker settings. |
-| [04-partner-portal-workspace-code.puml](plantuml/04-partner-portal-workspace-code.puml) | C4 Level 4 code-focused class/module view for the workspace and RP application invitation slice. It shows the FastAPI router, `WorkspaceService`, IBM Verify and GC Notify services, repository adapters, key SQLAlchemy models, and Pydantic schemas. |
+| [01-partner-portal-system-context.c4.puml](plantuml/01-partner-portal-system-context.c4.puml) | C4 Level 1 system context showing CL Admin, RP Admin, RP User (Edit), Read Only, the Partner Portal, CanadaLogin/OIDC, bounded IBM Security Verify, the approved MAU source, and partner RP applications. The manual invitation communication channel is intentionally omitted as a portal dependency. |
+| [02-partner-portal-containers.c4.puml](plantuml/02-partner-portal-containers.c4.puml) | C4 Level 2 container view for the React/Vite web UI, FastAPI backend API, ARQ worker, PostgreSQL, Redis sessions/cache/runtime rate counters/queue, and external identity/MAU systems. |
+| [03-partner-portal-backend-components.c4.puml](plantuml/03-partner-portal-backend-components.c4.puml) | C4 Level 3 backend view grouping the application edge, focused routers, session identity, immutable authorization, workspace/registration, invitations, accessible RP/credentials, Production-review oversight, scoped MAU, bounded provider/data adapters, persistence, contracts, and worker settings. |
+| [04-partner-portal-workspace-code.puml](plantuml/04-partner-portal-workspace-code.puml) | C4 Level 4 code-focused class/module view for workspace-scoped invitations, recoverable RP registration and separate Production review, secret-change history, and accessible RP MAU. |
 | [gc-sign-in-pilot-aws-topology.puml](plantuml/gc-sign-in-pilot-aws-topology.puml) | Structure-only AWS topology based on the uploaded pilot sketch. It preserves source boundaries, omits runtime/OAuth/data-flow lines, uses embedded PlantUML AWS icons, keeps IBM Verify and participants as free-standing external boxes, and keeps hidden links small and layout-only. |
 | [gc-sign-in-pilot-aws-topology-dependency-overlay.puml](plantuml/gc-sign-in-pilot-aws-topology-dependency-overlay.puml) | Same topology model with a basic dependency overlay. It draws only short local "who talks to who" arrows, lists long cross-boundary dependencies in the legend, keeps IBM Verify and participants as free-standing external boxes, and omits detailed OAuth redirects, callbacks, logout, profile-update, and data-flow sequences. |
 | [canadalogin-aws-traffic-flow.puml](plantuml/canadalogin-aws-traffic-flow.puml) | Prompt-test traffic-flow topology source. It shows the requested app path, static website path, two ECS services, a 3-AZ deployment note without triplicating resources, visible ECS dependencies without extra arrows, and a dashed optional Verify webhook path. |

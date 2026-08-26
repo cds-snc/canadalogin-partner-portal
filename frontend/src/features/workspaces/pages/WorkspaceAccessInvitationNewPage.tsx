@@ -11,6 +11,7 @@ import {
 } from "@/features/auth/authorization";
 import { getRequestErrorNotice } from "@/fetch";
 import { useSession } from "@/hooks";
+import { InvitationLinkNotice } from "@/features/invitations/components/InvitationLinkNotice";
 import { useWorkspaceAccessInvitations } from "../hooks/use-workspace-access-invitations";
 
 const lowerPartnerRoles: ReadonlyArray<PartnerRole> = [
@@ -79,14 +80,10 @@ export const WorkspaceAccessInvitationNewPage = (): FunctionComponent => {
 				</Notice>
 			) : null}
 			{createdInvitationUrl ? (
-				<Notice
-					noticeRole="success"
-					noticeTitle={t("workspaces.accessInvitationLinkTitle")}
-					noticeTitleTag="h2"
-				>
-					<Text>{t("workspaces.accessInvitationLinkBody")}</Text>
-					<Text>{createdInvitationUrl}</Text>
-				</Notice>
+				<InvitationLinkNotice
+					acceptanceUrl={createdInvitationUrl}
+					title={t("workspaces.accessInvitationLinkTitle")}
+				/>
 			) : null}
 			<form
 				className="grid gap-300"

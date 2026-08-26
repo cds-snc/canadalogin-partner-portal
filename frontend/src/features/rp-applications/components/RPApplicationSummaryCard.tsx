@@ -5,6 +5,10 @@ import { DataTable } from "@/components/ui";
 import type { DataTableColumn } from "@/components/ui/DataTable";
 import type { RPApplicationSummaryRead } from "@/fetch/rp-applications";
 import {
+	getProductionReviewSummaryLabel,
+	getRegistrationStatusLabel,
+} from "@/features/workspaces/onboarding-display";
+import {
 	buildRPConfigurationPublicReferences,
 	getRPConfigurationDisplayName,
 } from "../rp-application-summary";
@@ -25,30 +29,14 @@ const environmentLabelKey = (value: string): string | null => {
 	}
 };
 
-const onboardingLabelKey = (value: string): string | null => {
-	switch (value.trim().toLowerCase()) {
-		case "draft":
-			return "yourApplications.onboardingStateDraft";
-		case "submitted":
-			return "yourApplications.onboardingStateSubmitted";
-		case "under_review":
-			return "yourApplications.onboardingStateUnderReview";
-		case "approved":
-			return "yourApplications.onboardingStateApproved";
-		case "launched":
-			return "yourApplications.onboardingStateLaunched";
-		default:
-			return null;
-	}
-};
-
 type RPConfigurationTableRow = Record<string, unknown> & {
 	actionHref: string;
 	canadaLoginEnvironment: string;
 	name: string;
 	partnerEnvironment: string;
+	productionReviewStatus: string;
 	publicReference: string | null;
-	status: string;
+	registrationStatus: string;
 	uuid: string;
 };
 
@@ -79,8 +67,6 @@ export const RPApplicationSummaryTable = ({
 			const canadaLoginEnvironment =
 				application.canadaLoginEnvironment?.trim() ?? "";
 			const environmentKey = environmentLabelKey(canadaLoginEnvironment);
-			const onboardingState = application.onboardingState?.trim() ?? "";
-			const onboardingKey = onboardingLabelKey(onboardingState);
 
 			return {
 				actionHref: detailsHref,
@@ -96,12 +82,19 @@ export const RPApplicationSummaryTable = ({
 				),
 				partnerEnvironment:
 					application.partnerEnvironment?.trim() || t("common.notProvided"),
+				productionReviewStatus:
+					canadaLoginEnvironment.toLowerCase() === "production"
+						? getProductionReviewSummaryLabel(
+								t as never,
+								application.productionReviewStatus,
+								application.productionReviewReconciliationRequired
+							)
+						: t("workspaces.productionReviewNotApplicable"),
 				publicReference: publicReferences.get(application.uuid) ?? null,
-				status: onboardingState
-					? onboardingKey
-						? t(onboardingKey as never)
-						: formatTokenLabel(onboardingState)
-					: t("common.notProvided"),
+				registrationStatus: getRegistrationStatusLabel(
+					t as never,
+					application.registrationCompletedAt
+				),
 				uuid: application.uuid,
 			};
 		}
@@ -134,8 +127,13 @@ export const RPApplicationSummaryTable = ({
 			sortable: true,
 		},
 		{
-			field: "status",
-			headerName: t("workspaces.rpConfigurationStatusColumn"),
+			field: "registrationStatus",
+			headerName: t("workspaces.rpConfigurationRegistrationColumn"),
+			sortable: true,
+		},
+		{
+			field: "productionReviewStatus",
+			headerName: t("workspaces.productionReviewLabel"),
 			sortable: true,
 		},
 	];

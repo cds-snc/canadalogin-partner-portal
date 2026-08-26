@@ -7,6 +7,7 @@ import { Button, ConfirmDialog, Heading, Notice, Text } from "@/components/ui";
 import { ROLE_LABEL_KEYS } from "@/features/auth/authorization";
 import { getRequestErrorNotice } from "@/fetch";
 import { formatLocalizedDate } from "@/common/format-localized-date";
+import { InvitationLinkNotice } from "@/features/invitations/components/InvitationLinkNotice";
 import { useWorkspaceAccessInvitation } from "../hooks/use-workspace-access-invitation";
 
 const invitationStatusLabelKeys = {
@@ -94,7 +95,7 @@ export const WorkspaceAccessInvitationPage = (): FunctionComponent => {
 					<Text>{errorNotice.bodyText ?? t(errorNotice.bodyKey as never)}</Text>
 				</Notice>
 			) : null}
-			{successMessage ? (
+			{successMessage && !createdInvitationUrl ? (
 				<Notice
 					noticeRole="success"
 					noticeTitle={successMessage}
@@ -104,14 +105,10 @@ export const WorkspaceAccessInvitationPage = (): FunctionComponent => {
 				</Notice>
 			) : null}
 			{createdInvitationUrl ? (
-				<Notice
-					noticeRole="success"
-					noticeTitle={t("workspaces.accessInvitationLinkTitle")}
-					noticeTitleTag="h2"
-				>
-					<Text>{t("workspaces.accessInvitationLinkBody")}</Text>
-					<Text>{createdInvitationUrl}</Text>
-				</Notice>
+				<InvitationLinkNotice
+					acceptanceUrl={createdInvitationUrl}
+					title={t("workspaces.accessInvitationLinkTitle")}
+				/>
 			) : null}
 			{!isLoading && !error && !invitation ? (
 				<Notice
@@ -125,6 +122,15 @@ export const WorkspaceAccessInvitationPage = (): FunctionComponent => {
 			{invitation ? (
 				<section className="grid gap-200">
 					<Heading tag="h2">{t("workspaces.invitationDetailsTitle")}</Heading>
+					{invitation.status !== "accepted" && !createdInvitationUrl ? (
+						<Notice
+							noticeRole="info"
+							noticeTitle={t("invitations.manualDelivery.unavailableTitle")}
+							noticeTitleTag="h3"
+						>
+							<Text>{t("invitations.manualDelivery.unavailableBody")}</Text>
+						</Notice>
+					) : null}
 					<Text>{invitation.invitedEmail}</Text>
 					<Text>
 						{`${t("workspaces.applicationsInvitationRoleLabel")}: ${String(t(ROLE_LABEL_KEYS[invitation.role] as never))}`}

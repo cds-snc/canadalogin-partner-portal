@@ -6,6 +6,7 @@ import {
 	ForbiddenRequestError,
 	ServerRequestError,
 	UnauthorizedRequestError,
+	requestBlob,
 	requestJson,
 } from "@/fetch";
 
@@ -136,7 +137,7 @@ describe("requestJson", () => {
 
 		await expect(
 			requestJson(
-				"/api/v1/rp-application-developer-invitations/accept",
+				"/api/v1/rp-application-developer-invitations/accept-prepared",
 				{ method: "POST" },
 				{ redirectOnForbidden: false }
 			)
@@ -267,5 +268,59 @@ describe("requestJson", () => {
 		).resolves.toBeNull();
 
 		expect(markBackendActivity).toHaveBeenCalledTimes(1);
+	});
+
+	it("returns a private file response without trying to parse it as JSON", async () => {
+		const expectedBlob = new Blob(["TimeGenerated,Actor,Action"], {
+			type: "text/csv",
+		});
+		globalThis.fetch = vi.fn().mockResolvedValue({
+			blob: () => Promise.resolve(expectedBlob),
+			headers: new Headers({ "content-type": "text/csv" }),
+			ok: true,
+			status: 200,
+		} as Response);
+
+		await expect(
+			requestBlob(
+				"/api/v1/rp-applications/accessible/rp-1/client/secret-change-log",
+				{
+					headers: { Accept: "text/csv" },
+					method: "GET",
+				}
+			)
+		).resolves.toBe(expectedBlob);
+
+		expect(globalThis.fetch).toHaveBeenCalledWith(
+			"http://localhost:8000/api/v1/rp-applications/accessible/rp-1/client/secret-change-log",
+			expect.objectContaining({
+				credentials: "include",
+				headers: { Accept: "text/csv" },
+				method: "GET",
+			})
+		);
+		expect(markBackendActivity).toHaveBeenCalledTimes(1);
+	});
+
+	it("uses the shared safe error contract for file requests", async () => {
+		globalThis.fetch = vi.fn().mockResolvedValue({
+			headers: new Headers({ "content-type": "application/json" }),
+			json: () =>
+				Promise.resolve({
+					error: {
+						code: "forbidden",
+						message: "You do not have enough privileges.",
+						requestId: "request-file-403",
+					},
+				}),
+			ok: false,
+			status: 403,
+		} as Response);
+
+		await expect(
+			requestBlob("/api/v1/private.csv", { method: "GET" })
+		).rejects.toBeInstanceOf(ForbiddenRequestError);
+		expect(window.location.replace).toHaveBeenCalledWith("/access-denied");
+		expect(markBackendActivity).not.toHaveBeenCalled();
 	});
 });

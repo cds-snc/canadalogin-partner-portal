@@ -1,28 +1,25 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import {
-	assignAccessibleRPApplicationDepartment,
 	createAccessibleRPApplicationRotatedClientSecret,
 	createApplicationRPConfigurationCopy,
-	createApplicationRPConfigurationProgression,
 	createApplicationRPConfigurationRegistrationDraft,
 	deleteAccessibleRPApplicationRotatedClientSecret,
 	deleteRPApplication,
 	getAccessibleRPApplication,
 	getAccessibleRPApplicationClientCredentials,
-	getAccessibleRPApplicationDepartment,
 	getAccessibleRPApplicationRotatedClientSecrets,
+	getAccessibleRPApplicationSecretChangeLog,
 	getAccessibleRPApplications,
 	getApplicationRPConfigurationRegistrationDraft,
+	getApplicationRPConfigurationProductionReview,
 	getApplicationRPConfigurations,
 	getRPApplicationAdoptionCandidatePreview,
 	getRPApplicationAdoptionCandidates,
-	getRPApplication,
-	getRPApplicationUsageAuditTrail,
-	getRPApplicationUsageAuditTrailSearchAfter,
 	getRPApplicationUsageSummary,
 	linkRPApplicationToWorkspace,
 	rotateAccessibleRPApplicationClientSecret,
-	updateRPApplication,
+	requestApplicationRPConfigurationProductionReview,
+	reviewApplicationRPConfigurationProductionRequest,
 	updateApplicationRPConfigurationPartnerEnvironment,
 } from "@/fetch/rp-applications";
 
@@ -146,54 +143,6 @@ describe("rp_application-api", () => {
 		expect(response.workspaceUuid).toBe(workspaceUuid);
 	});
 
-	it("updates an RP application through the backend API", async () => {
-		const workspaceUuid = "workspace-uuid-1";
-		const applicationUuid = "application-uuid-1";
-		const fetchMock = vi.spyOn(globalThis, "fetch").mockResolvedValue({
-			headers: new Headers({ "content-type": "application/json" }),
-			json: () =>
-				Promise.resolve({
-					applicationInformationId: 14,
-					canadaLoginEnvironment: "staging",
-					createdAt: "2026-04-02T00:00:00Z",
-					createdBy: 1,
-					dnrAppName: "[DEPT] - Portal",
-					ibmSvApplicationId: "ibm-app-1",
-					id: 1,
-					isDeleted: false,
-					status: "active",
-					uuid: applicationUuid,
-					workspaceId: 10,
-				}),
-			ok: true,
-			status: 200,
-		} as Response);
-
-		const response = await updateRPApplication(workspaceUuid, applicationUuid, {
-			requestedScopes: ["openid", "profile", "email"],
-			serviceNameEn: "Portal Updated",
-		});
-
-		expect(fetchMock).toHaveBeenCalledWith(
-			`http://localhost:8000/api/v1/workspaces/${workspaceUuid}/applications/${applicationUuid}`,
-			expect.objectContaining({
-				body: JSON.stringify({
-					requestedScopes: ["openid", "profile", "email"],
-					serviceNameEn: "Portal Updated",
-				}),
-				credentials: "include",
-				method: "PATCH",
-			})
-		);
-		expect(response).toMatchObject({
-			applicationInformationId: 14,
-			canadaLoginEnvironment: "staging",
-			ibmSvApplicationId: "ibm-app-1",
-			dnrAppName: "[DEPT] - Portal",
-			uuid: applicationUuid,
-		});
-	});
-
 	it("gets an accessible RP application through the backend API", async () => {
 		const applicationUuid = "application-uuid-1";
 		const fetchMock = vi.spyOn(globalThis, "fetch").mockResolvedValue({
@@ -251,44 +200,6 @@ describe("rp_application-api", () => {
 		expect(response).toHaveLength(1);
 	});
 
-	it("gets a workspace-scoped RP application through the backend API", async () => {
-		const workspaceUuid = "workspace-uuid-1";
-		const applicationUuid = "application-uuid-1";
-		const fetchMock = vi.spyOn(globalThis, "fetch").mockResolvedValue({
-			headers: new Headers({ "content-type": "application/json" }),
-			json: () =>
-				Promise.resolve({
-					createdAt: "2026-04-02T00:00:00Z",
-					createdBy: 1,
-					dnrAppName: "Benefits Portal",
-					ibmSvApplicationId: "ibm-app-1",
-					id: 1,
-					isDeleted: false,
-					status: "active",
-					uuid: applicationUuid,
-					workspaceId: 10,
-				}),
-			ok: true,
-			status: 200,
-		} as Response);
-
-		const response = await getRPApplication(workspaceUuid, applicationUuid);
-
-		expect(fetchMock).toHaveBeenCalledWith(
-			`http://localhost:8000/api/v1/workspaces/${workspaceUuid}/applications/${applicationUuid}`,
-			expect.objectContaining({
-				cache: "no-store",
-				credentials: "include",
-				method: "GET",
-			})
-		);
-		expect(response).toMatchObject({
-			dnrAppName: "Benefits Portal",
-			ibmSvApplicationId: "ibm-app-1",
-			uuid: applicationUuid,
-		});
-	});
-
 	it("lists RP configurations through the Application-scoped backend API", async () => {
 		const workspaceUuid = "workspace-uuid-1";
 		const applicationInformationUuid = "application-information-uuid-1";
@@ -333,7 +244,7 @@ describe("rp_application-api", () => {
 				Promise.resolve({
 					applicationInformationUuid,
 					configurationName: "Partner staging A",
-					onboardingState: "draft",
+					registrationCompletedAt: null,
 					registrationAnswers: {},
 					registrationDraftVersion: 1,
 					registrationLastCompletedStep: "basics",
@@ -370,60 +281,71 @@ describe("rp_application-api", () => {
 		);
 	});
 
-	it("creates progression from one explicit source to one named target", async () => {
+	it("uses the explicit Production-review subresource and constrained outcomes", async () => {
 		const workspaceUuid = "workspace-uuid-1";
 		const applicationInformationUuid = "application-information-uuid-1";
-		const sourceUuid = "rp-configuration-source-1";
-		const creationKey = "018f6f83-0000-0000-0000-000000000902";
+		const rpConfigurationUuid = "rp-configuration-uuid-1";
+		const reviewResponse = {
+			applicationInformationUuid,
+			createdAt: "2026-08-25T12:00:00Z",
+			decidedAt: null,
+			externalReference: "CAB-123",
+			requestedAt: "2026-08-25T12:00:00Z",
+			reviewedAt: null,
+			reviewedByTeam: null,
+			reviewedByUserUuid: null,
+			sourceRpConfigurationUuid: null,
+			status: "pending",
+			targetConfigurationName: "Production A",
+			targetEnvironment: "production",
+			targetRpConfigurationUuid: rpConfigurationUuid,
+			updatedAt: null,
+		};
 		const fetchMock = vi.spyOn(globalThis, "fetch").mockResolvedValue({
 			headers: new Headers({ "content-type": "application/json" }),
-			json: () =>
-				Promise.resolve({
-					applicationInformationUuid,
-					promotionStatus: null,
-					selfServe: true,
-					sourceConfigurationName: "Partner staging A",
-					sourceEnvironment: "staging",
-					sourceRpConfigurationUuid: sourceUuid,
-					targetConfigurationName: "Partner production A",
-					targetEnvironment: "production",
-					targetRegistrationDraftVersion: 1,
-					targetRegistrationLastCompletedStep: "basics",
-					targetRpConfigurationUuid: "rp-configuration-target-1",
-					workspaceUuid,
-				}),
+			json: () => Promise.resolve(reviewResponse),
 			ok: true,
-			status: 201,
+			status: 200,
 		} as Response);
 
-		const response = await createApplicationRPConfigurationProgression(
+		await getApplicationRPConfigurationProductionReview(
 			workspaceUuid,
 			applicationInformationUuid,
-			sourceUuid,
-			{
-				targetConfigurationName: "Partner production A",
-				targetPartnerEnvironment: "Partner production",
-				targetEnvironment: "production",
-			},
-			creationKey
+			rpConfigurationUuid
+		);
+		await requestApplicationRPConfigurationProductionReview(
+			workspaceUuid,
+			applicationInformationUuid,
+			rpConfigurationUuid,
+			{ externalReference: "CAB-123" }
+		);
+		await reviewApplicationRPConfigurationProductionRequest(
+			workspaceUuid,
+			applicationInformationUuid,
+			rpConfigurationUuid,
+			{ externalReference: "CAB-123", status: "approved" }
 		);
 
-		expect(fetchMock).toHaveBeenCalledWith(
-			`http://localhost:8000/api/v1/workspaces/${workspaceUuid}/application-information/${applicationInformationUuid}/rp-configurations/${sourceUuid}/progression`,
+		const expectedUrl = `http://localhost:8000/api/v1/workspaces/${workspaceUuid}/application-information/${applicationInformationUuid}/rp-configurations/${rpConfigurationUuid}/production-review`;
+		expect(fetchMock.mock.calls.map(([url]) => url)).toEqual([
+			expectedUrl,
+			expectedUrl,
+			expectedUrl,
+		]);
+		expect(fetchMock.mock.calls[1]?.[1]).toEqual(
 			expect.objectContaining({
-				body: JSON.stringify({
-					targetConfigurationName: "Partner production A",
-					targetPartnerEnvironment: "Partner production",
-					targetEnvironment: "production",
-				}),
-				credentials: "include",
-				headers: expect.objectContaining({ "Idempotency-Key": creationKey }),
+				body: JSON.stringify({ externalReference: "CAB-123" }),
 				method: "POST",
 			})
 		);
-		expect(response.sourceRpConfigurationUuid).toBe(sourceUuid);
-		expect(response.targetRpConfigurationUuid).toBe(
-			"rp-configuration-target-1"
+		expect(fetchMock.mock.calls[2]?.[1]).toEqual(
+			expect.objectContaining({
+				body: JSON.stringify({
+					externalReference: "CAB-123",
+					status: "approved",
+				}),
+				method: "PATCH",
+			})
 		);
 	});
 
@@ -519,63 +441,6 @@ describe("rp_application-api", () => {
 		expect(response.partnerEnvironment).toBe("Partner QA 2");
 	});
 
-	it("gets an accessible RP application department through the backend API", async () => {
-		const applicationUuid = "application-uuid-1";
-		const fetchMock = vi.spyOn(globalThis, "fetch").mockResolvedValue({
-			headers: new Headers({ "content-type": "application/json" }),
-			json: () =>
-				Promise.resolve({
-					departmentId: null,
-					dnrAppName: "Benefits Portal",
-					id: 9,
-					uuid: applicationUuid,
-				}),
-			ok: true,
-			status: 200,
-		} as Response);
-
-		await getAccessibleRPApplicationDepartment(applicationUuid);
-
-		expect(fetchMock).toHaveBeenCalledWith(
-			`http://localhost:8000/api/v1/rp-applications/accessible/${applicationUuid}/department`,
-			expect.objectContaining({
-				cache: "no-store",
-				credentials: "include",
-				method: "GET",
-			})
-		);
-	});
-
-	it("assigns an accessible RP application department through the backend API", async () => {
-		const applicationUuid = "application-uuid-1";
-		const departmentUuid = "department-uuid-1";
-		const fetchMock = vi.spyOn(globalThis, "fetch").mockResolvedValue({
-			headers: new Headers({ "content-type": "application/json" }),
-			json: () =>
-				Promise.resolve({
-					departmentId: 3,
-					dnrAppName: "Benefits Portal",
-					id: 9,
-					uuid: applicationUuid,
-				}),
-			ok: true,
-			status: 200,
-		} as Response);
-
-		await assignAccessibleRPApplicationDepartment(applicationUuid, {
-			departmentUuid,
-		});
-
-		expect(fetchMock).toHaveBeenCalledWith(
-			`http://localhost:8000/api/v1/rp-applications/accessible/${applicationUuid}/department`,
-			expect.objectContaining({
-				body: JSON.stringify({ departmentUuid }),
-				credentials: "include",
-				method: "PATCH",
-			})
-		);
-	});
-
 	it("deletes an RP application through the backend API", async () => {
 		const workspaceUuid = "workspace-uuid-1";
 		const applicationUuid = "application-uuid-1";
@@ -638,6 +503,38 @@ describe("rp_application-api", () => {
 			expect.objectContaining({
 				cache: "no-store",
 				credentials: "include",
+				method: "GET",
+			})
+		);
+	});
+
+	it("downloads the secret-change log through complete Application ancestry", async () => {
+		const applicationUuid = "application-uuid-1";
+		const expectedBlob = new Blob(
+			["TimeGenerated,Actor,Action,RPConfigurationId"],
+			{ type: "text/csv" }
+		);
+		const fetchMock = vi.spyOn(globalThis, "fetch").mockResolvedValue({
+			blob: () => Promise.resolve(expectedBlob),
+			headers: new Headers({ "content-type": "text/csv" }),
+			ok: true,
+			status: 200,
+		} as Response);
+
+		await expect(
+			getAccessibleRPApplicationSecretChangeLog(
+				applicationUuid,
+				"workspace-uuid-1",
+				"application-information-uuid-1"
+			)
+		).resolves.toBe(expectedBlob);
+
+		expect(fetchMock).toHaveBeenCalledWith(
+			`http://localhost:8000/api/v1/rp-applications/accessible/${applicationUuid}/client/secret-change-log?workspaceUuid=workspace-uuid-1&applicationInformationUuid=application-information-uuid-1`,
+			expect.objectContaining({
+				cache: "no-store",
+				credentials: "include",
+				headers: { Accept: "text/csv" },
 				method: "GET",
 			})
 		);
@@ -856,63 +753,5 @@ describe("rp_application-api", () => {
 			})
 		);
 		expect(response.total).toBe(11);
-	});
-
-	it("gets RP application usage audit trail through the backend API", async () => {
-		const workspaceUuid = "workspace-uuid-1";
-		const applicationUuid = "application-uuid-1";
-		const fetchMock = vi.spyOn(globalThis, "fetch").mockResolvedValue({
-			headers: new Headers({ "content-type": "application/json" }),
-			json: () =>
-				Promise.resolve({
-					events: [],
-					next: '1744200000000, "event-2"',
-					total: 20,
-				}),
-			ok: true,
-			status: 200,
-		} as Response);
-
-		await getRPApplicationUsageAuditTrail(workspaceUuid, applicationUuid, {
-			selectedDate: "2026-04-09",
-			size: 25,
-		});
-
-		expect(fetchMock).toHaveBeenCalledWith(
-			`http://localhost:8000/api/v1/workspaces/${workspaceUuid}/applications/${applicationUuid}/audit-events?selected_date=1775692800000&size=25`,
-			expect.objectContaining({
-				credentials: "include",
-				method: "GET",
-			})
-		);
-	});
-
-	it("gets RP application usage audit trail search-after page through the backend API", async () => {
-		const workspaceUuid = "workspace-uuid-1";
-		const applicationUuid = "application-uuid-1";
-		const fetchMock = vi.spyOn(globalThis, "fetch").mockResolvedValue({
-			headers: new Headers({ "content-type": "application/json" }),
-			json: () => Promise.resolve({ events: [], next: null, total: 20 }),
-			ok: true,
-			status: 200,
-		} as Response);
-
-		await getRPApplicationUsageAuditTrailSearchAfter(
-			workspaceUuid,
-			applicationUuid,
-			{
-				searchAfter: '"1744200000000", "event-2"',
-				selectedDate: "2026-04-09",
-				size: 25,
-			}
-		);
-
-		expect(fetchMock).toHaveBeenCalledWith(
-			`http://localhost:8000/api/v1/workspaces/${workspaceUuid}/applications/${applicationUuid}/audit-events/search-after?selected_date=1775692800000&search_after=%221744200000000%22%2C+%22event-2%22&size=25`,
-			expect.objectContaining({
-				credentials: "include",
-				method: "GET",
-			})
-		);
 	});
 });

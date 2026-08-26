@@ -1,7 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
 	createApplicationRPConfigurationCopy,
-	createApplicationRPConfigurationProgression,
 	getApplicationRPConfiguration,
 	getApplicationRPConfigurationConfiguration,
 	getApplicationRPConfigurations,
@@ -11,8 +10,6 @@ import {
 	type ApplicationRPConfigurationPartnerEnvironmentRead,
 	type ApplicationRPConfigurationPartnerEnvironmentUpdate,
 	type ApplicationRPConfigurationRead,
-	type ApplicationRPConfigurationProgressionCreate,
-	type ApplicationRPConfigurationProgressionRead,
 	type ApplicationRPConfigurationSummaryRead,
 } from "@/fetch/rp-applications";
 
@@ -47,17 +44,6 @@ export type ApplicationRPConfigurationConfigurationState = {
 	refetch: () => Promise<unknown>;
 };
 
-export type ApplicationRPConfigurationProgressionActions = {
-	createProgression: (
-		workspaceUuid: string,
-		applicationInformationUuid: string,
-		sourceRpConfigurationUuid: string,
-		payload: ApplicationRPConfigurationProgressionCreate,
-		progressionCreationKey: string
-	) => Promise<ApplicationRPConfigurationProgressionRead>;
-	isCreating: boolean;
-};
-
 export type ApplicationRPConfigurationCopyActions = {
 	copyConfiguration: (
 		workspaceUuid: string,
@@ -81,10 +67,14 @@ export type ApplicationRPConfigurationPartnerEnvironmentActions = {
 
 export const useApplicationRPConfigurations = (
 	workspaceUuid: string,
-	applicationInformationUuid: string
+	applicationInformationUuid: string,
+	enabled = true
 ): ApplicationRPConfigurationsState => {
 	const query = useQuery<Array<ApplicationRPConfigurationSummaryRead>, Error>({
-		enabled: workspaceUuid.length > 0 && applicationInformationUuid.length > 0,
+		enabled:
+			enabled &&
+			workspaceUuid.length > 0 &&
+			applicationInformationUuid.length > 0,
 		queryFn: () =>
 			getApplicationRPConfigurations(workspaceUuid, applicationInformationUuid),
 		queryKey: applicationRPConfigurationsQueryKey(
@@ -167,60 +157,6 @@ export const useApplicationRPConfigurationConfiguration = (
 		refetch: () => query.refetch(),
 	};
 };
-
-export const useApplicationRPConfigurationProgressionActions =
-	(): ApplicationRPConfigurationProgressionActions => {
-		const queryClient = useQueryClient();
-		const mutation = useMutation({
-			mutationFn: ({
-				applicationInformationUuid,
-				payload,
-				progressionCreationKey,
-				sourceRpConfigurationUuid,
-				workspaceUuid,
-			}: {
-				applicationInformationUuid: string;
-				payload: ApplicationRPConfigurationProgressionCreate;
-				progressionCreationKey: string;
-				sourceRpConfigurationUuid: string;
-				workspaceUuid: string;
-			}) =>
-				createApplicationRPConfigurationProgression(
-					workspaceUuid,
-					applicationInformationUuid,
-					sourceRpConfigurationUuid,
-					payload,
-					progressionCreationKey
-				),
-			onSuccess: async (progression) => {
-				await queryClient.invalidateQueries({
-					exact: true,
-					queryKey: applicationRPConfigurationsQueryKey(
-						progression.workspaceUuid,
-						progression.applicationInformationUuid
-					),
-				});
-			},
-		});
-
-		return {
-			createProgression: (
-				workspaceUuid,
-				applicationInformationUuid,
-				sourceRpConfigurationUuid,
-				payload,
-				progressionCreationKey
-			) =>
-				mutation.mutateAsync({
-					applicationInformationUuid,
-					payload,
-					progressionCreationKey,
-					sourceRpConfigurationUuid,
-					workspaceUuid,
-				}),
-			isCreating: mutation.isPending,
-		};
-	};
 
 export const useApplicationRPConfigurationCopyActions =
 	(): ApplicationRPConfigurationCopyActions => {

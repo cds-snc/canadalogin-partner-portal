@@ -20,8 +20,7 @@ def test_shared_summary_is_secret_free_and_points_drafts_to_the_next_task() -> N
             "configuration_name": "Staging integration A",
             "partner_environment": "Partner QA 2",
             "canada_login_environment": "staging",
-            "onboarding_state": "draft",
-            "promotion_status": "review_tracked",
+            "registration_completed_at": None,
             "registration_last_completed_step": "endpoints",
             "oidc_registration_payload": {
                 "service_name_en": "Benefits Portal",
@@ -53,7 +52,7 @@ def test_shared_summary_uses_a_bilingual_safe_fallback_and_hides_resume_from_rea
         application={
             "uuid": APPLICATION_UUID,
             "dnr_app_name": "Benefits Portal",
-            "onboarding_state": "draft",
+            "registration_completed_at": None,
             "oidc_registration_payload": {},
         },
         workspace_uuid=WORKSPACE_UUID,
@@ -117,8 +116,8 @@ async def test_configuration_read_uses_local_answers_and_redacts_offline_key_mat
             "dnr_app_name": "Benefits Portal",
             "partner_environment": "Partner staging",
             "canada_login_environment": "staging",
-            "onboarding_state": "draft",
-            "promotion_status": None,
+            "registration_completed_at": None,
+            "production_review_status": None,
             "registration_draft_version": 4,
             "registration_last_completed_step": "endpoints",
             "oidc_registration_payload": {

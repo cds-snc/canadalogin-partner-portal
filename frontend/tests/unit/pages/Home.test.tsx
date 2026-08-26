@@ -173,7 +173,6 @@ describe("Home", () => {
 					name: "Partner Admin",
 					profileImageUrl: "",
 					termsVersion: "2026-01",
-					tierUuid: null,
 					uuid: "user-uuid-1",
 					username: "partner@local.example",
 				},
@@ -208,7 +207,6 @@ describe("Home", () => {
 					name: "CL Admin",
 					profileImageUrl: "",
 					termsVersion: "2026-01",
-					tierUuid: null,
 					uuid: "user-uuid-2",
 					username: "admin@local.example",
 				},
@@ -225,11 +223,9 @@ describe("Home", () => {
 			})
 		).toBeTruthy();
 		expect(
-			screen.getByRole("heading", { name: "Reports", level: 2 })
-		).toBeTruthy();
-		expect(
-			screen.getByRole("link", { name: "Reports" }).getAttribute("href")
-		).toBe("/reports");
+			screen.queryByRole("heading", { name: "Reports", level: 2 })
+		).toBeNull();
+		expect(screen.queryByRole("link", { name: "Reports" })).toBeNull();
 		expect(
 			screen.getByRole("heading", { level: 2, name: "Administration" })
 		).toBeTruthy();

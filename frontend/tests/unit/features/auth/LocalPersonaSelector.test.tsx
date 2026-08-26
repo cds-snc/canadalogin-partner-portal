@@ -224,7 +224,6 @@ const user: UserRead = {
 	name: "Local RP Admin",
 	profileImageUrl: "",
 	termsVersion: "2026-01",
-	tierUuid: null,
 	uuid: "user-uuid",
 	username: "local-rp-admin@local.example",
 };

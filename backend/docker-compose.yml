@@ -33,6 +33,7 @@ x-backend-build-args: &backend-build-args
   OIDC_CLIENT_ID: ${OIDC_CLIENT_ID:-}
   OIDC_CLIENT_SECRET: ${OIDC_CLIENT_SECRET:-}
   OIDC_SCOPES: ${OIDC_SCOPES:-openid profile email}
+  PARTNER_ACCESS_ALLOWED_EMAIL_DOMAINS: ${PARTNER_ACCESS_ALLOWED_EMAIL_DOMAINS:-[]}
   OIDC_REDIRECT_URI: ${OIDC_REDIRECT_URI:-}
   OIDC_REDIRECT_PATH: ${OIDC_REDIRECT_PATH:-/api/v1/auth/oidc/callback}
   OIDC_POST_LOGIN_REDIRECT: ${OIDC_POST_LOGIN_REDIRECT:-/auth-complete}
@@ -177,21 +178,6 @@ services:
   #   command: python -m pytest ./tests
   #   volumes:
   #     - .:/code
-
-  #-------- uncomment to create first tier --------
-  # create_tier:
-  #   build:
-  #     context: .
-  #     dockerfile: Dockerfile
-  #   env_file:
-  #     - ./.env
-  #   depends_on:
-  #     - create_initial_cl_admin
-  #     - db
-  #     - web
-  #   command: python -m src.scripts.create_first_tier
-  #   volumes:
-  #     - ./src:/code/src
 
 volumes:
   postgres-data:

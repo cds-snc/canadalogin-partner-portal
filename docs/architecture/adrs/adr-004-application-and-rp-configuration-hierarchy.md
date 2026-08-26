@@ -7,6 +7,8 @@ Status: Accepted
 
 2026-08-12
 
+Scope-alignment amendment: 2026-08-25
+
 ## Context
 
 The portal currently exposes workspace-owned `application_information` and
@@ -76,8 +78,10 @@ Department
 └── Partner workspace
     └── Application
         ├── Application contacts
-        ├── Readiness and internal review context
+        ├── Checklist items and CATS evidence context
         └── RP configurations
+            ├── Registration completion metadata
+            └── Production-review records
 ```
 
 The Partner workspace is the collaboration, tenancy, and authorization
@@ -85,8 +89,12 @@ boundary and remains associated with exactly one Department. Its canonical
 role applies to every Application and RP configuration in that workspace.
 
 The current `application_information` record is the Application parent. It
-owns bilingual public service names, onboarding narrative, readiness, internal
-review context, and contacts.
+owns bilingual public service names, onboarding narrative, contacts, and the
+item-level checklist/CATS context required to make missing artifacts visible.
+It does not own an overall readiness score, completion count, submit-ready
+state, or internal review notes/outcomes. The CATS evidence mechanism remains
+an explicit product TBD: this ADR does not choose upload, external reference,
+or both.
 
 The current `rp_application` record is presented as one RP configuration. A
 partner-visible RP configuration belongs to exactly one Application, targets
@@ -99,6 +107,14 @@ environment URLs. An Application may have any number of configurations in the
 same CanadaLogin environment, and several Partner environments may connect to
 that target. A configuration's stable UUID remains its identity; this decision
 does not impose name or Partner-environment uniqueness.
+
+An RP configuration has an editable incomplete registration draft and separate
+technical completion metadata. Technical completion does not submit, review,
+approve, deploy, or launch the configuration. Production review is a separate
+explicit record for a selected Production configuration: absent until a
+partner request creates `pending`, then `approved` or `rejected` only when a CL
+Admin records the out-of-band outcome. Copying any source into Production
+creates an independent draft and does not create or advance review state.
 
 The portal stores Partner environment as top-level RP metadata and does not
 infer it from configuration names, URLs, provider metadata, source records, or
@@ -116,12 +132,14 @@ French person-name fields remain available through non-lossy dual reads until
 shared-target data and caller evidence permits a separate contraction; English
 and French responsibility values remain supported.
 
-The Application overview is a concise task hub. Details, Readiness, Contacts,
-RP configurations, and authorized Internal review use focused child routes.
+The Application overview is a concise task hub. Details, Checklist and
+evidence, Contacts, and RP configurations use focused child routes. Production
+review is a focused action for one selected Production RP configuration, not an
+Application-wide internal review destination.
 RP configurations use a compact GCDS comparison table with contextual create
 paths. Application deletion remains a secondary focused confirmation rather
-than a user-facing Settings task, and Readiness uses a compact actionable
-breakdown rather than repeated large status cards.
+than a user-facing Settings task. Checklist and evidence uses a compact
+itemized breakdown without an aggregate score.
 The duplicate `/your-applications` root is retired in favour of `/workspaces`,
 with bounded authorized redirects for saved RP links.
 
@@ -161,6 +179,10 @@ details during staged migration. They do not define the user-facing domain.
 - RP configuration becomes the technical child and can repeat Partner and
   CanadaLogin environments; exact duplicate displayed identity triples use a
   short public reference while the stable UUID remains record identity.
+- Registration completion and Production review are independent state domains;
+  neither defines a generic Workspace/Application lifecycle.
+- Item-level checklist/CATS visibility remains part of the Application, while
+  aggregate readiness and internal review surfaces are retired.
 - Workspace authorization remains broad across all child resources; this ADR
   does not create Application-specific grants.
 - Public Application names are not recollected in each registration.
@@ -194,7 +216,10 @@ and rollback evidence expected by the release process.
 
 ## Links
 
-- `openspec/changes/archive/2026-08-13-organize-applications-and-rp-configurations/`
+- [Application hierarchy change](../../../openspec/changes/archive/2026-08-13-organize-applications-and-rp-configurations/)
+- [Approved-scope alignment change](../../../openspec/changes/align-partner-portal-to-approved-product-scope/)
+- [Partner Portal Onboarding PRD](../../plans/partner-portal-onboarding-prd.md)
+- [Partner Portal MVP PRD](../../plans/partner-portal-mvp.md)
 - `ADR-003: Casbin Authorization Model`
 - `BAS-001: Government of Canada Web Application Baseline`
 - `PAT-001: UI Page Patterns`

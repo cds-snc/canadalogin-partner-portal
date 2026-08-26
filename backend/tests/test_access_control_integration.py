@@ -2,7 +2,6 @@ from unittest.mock import AsyncMock, Mock, patch
 
 import casbin
 from fastapi.testclient import TestClient
-
 from src.app.core.access_control import (
     CASBIN_MODEL_PATH,
     MultiSubjectEnforcer,
@@ -69,18 +68,30 @@ class TestAccessControlIntegration:
                         "/api/v1/policy/018f6f83-0000-0000-0000-000000000001",
                         json={"subject": "cl_admin"},
                     ),
-                    client.delete(
-                        "/api/v1/policy/018f6f83-0000-0000-0000-000000000001"
-                    ),
+                    client.delete("/api/v1/policy/018f6f83-0000-0000-0000-000000000001"),
                 )
         finally:
             app.dependency_overrides.clear()
 
         assert {response.status_code for response in responses} == {404}
 
-    def test_tiers_route_allows_user_with_policy(self) -> None:
-        from src.app.api.dependencies import get_tier_service
+    def test_department_reference_reads_remain_without_catalog_mutations(self) -> None:
+        paths = app.openapi()["paths"]
 
+        assert set(paths["/api/v1/departments"]) == {"get"}
+        assert set(paths["/api/v1/department/{department_uuid}"]) == {"get"}
+        assert set(paths["/api/v1/departments/by-id/{department_id}"]) == {"get"}
+        assert "/api/v1/department" not in paths
+
+    def test_user_directory_is_read_only_outside_invitation_and_access_routes(self) -> None:
+        paths = app.openapi()["paths"]
+
+        assert "/api/v1/user" not in paths
+        assert set(paths["/api/v1/user/{user_uuid}"]) == {"get"}
+        assert set(paths["/api/v1/users/{user_uuid}/access"]) == {"get"}
+        assert set(paths["/api/v1/users/invitation-target-resolution"]) == {"post"}
+
+    def test_tier_catalog_routes_are_retired(self) -> None:
         override_dependencies(
             {
                 "authorization_context": {
@@ -88,38 +99,26 @@ class TestAccessControlIntegration:
                     "partnerAccess": [],
                 }
             },
-            make_enforcer(("cl_admin", "tiers", "read")),
+            make_enforcer(),
         )
-        mock_service = Mock()
-        mock_service.list_tiers = AsyncMock(
-            return_value={
-                "data": [],
-                "total_count": 0,
-                "has_more": False,
-                "page": 1,
-                "items_per_page": 10,
-            }
-        )
-        app.dependency_overrides[get_tier_service] = lambda: mock_service
 
         try:
             with build_test_client() as client:
-                response = client.get("/api/v1/tiers")
+                responses = (
+                    client.get("/api/v1/tiers"),
+                    client.post("/api/v1/tier", json={"name": "retired"}),
+                    client.patch(
+                        "/api/v1/tier/018f6f4b-2c8a-7bd2-8dc5-29f8d51fda11",
+                        json={"name": "retired"},
+                    ),
+                    client.delete("/api/v1/tier/018f6f4b-2c8a-7bd2-8dc5-29f8d51fda11"),
+                )
         finally:
             app.dependency_overrides.clear()
 
-        assert response.status_code == 200
-        assert response.json() == {
-            "data": [],
-            "total_count": 0,
-            "has_more": False,
-            "page": 1,
-            "items_per_page": 10,
-        }
+        assert {response.status_code for response in responses} == {404}
 
-    def test_rate_limits_route_denies_user_without_policy(self) -> None:
-        from src.app.api.dependencies import get_rate_limit_service
-
+    def test_rate_limit_catalog_routes_are_retired(self) -> None:
         override_dependencies(
             {
                 "authorization_context": {
@@ -134,18 +133,25 @@ class TestAccessControlIntegration:
             },
             make_enforcer(),
         )
-        mock_service = Mock()
-        mock_service.list_rate_limits = AsyncMock()
-        app.dependency_overrides[get_rate_limit_service] = lambda: mock_service
-
         try:
             with build_test_client() as client:
-                response = client.get("/api/v1/tier/018f6f4b-2c8a-7bd2-8dc5-29f8d51fda11/rate_limits")
+                responses = (
+                    client.get("/api/v1/tier/018f6f4b-2c8a-7bd2-8dc5-29f8d51fda11/rate_limits"),
+                    client.post(
+                        "/api/v1/tier/018f6f4b-2c8a-7bd2-8dc5-29f8d51fda11/rate_limit",
+                        json={},
+                    ),
+                    client.get("/api/v1/user/018f6f4b-2c8a-7bd2-8dc5-29f8d51fda11/rate_limits"),
+                    client.get("/api/v1/user/018f6f4b-2c8a-7bd2-8dc5-29f8d51fda11/tier"),
+                    client.patch(
+                        "/api/v1/user/018f6f4b-2c8a-7bd2-8dc5-29f8d51fda11/tier",
+                        json={},
+                    ),
+                )
         finally:
             app.dependency_overrides.clear()
 
-        assert response.status_code == 403
-        mock_service.list_rate_limits.assert_not_called()
+        assert {response.status_code for response in responses} == {404}
 
     def test_roles_route_returns_only_immutable_canonical_reference(self) -> None:
         override_dependencies(

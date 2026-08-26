@@ -41,20 +41,20 @@ export const getAuthorizationLandingPath = (
 	hasPartnerAccess(authorizationContext) ||
 	canReadWorkspace(authorizationContext) ||
 	hasCapability(authorizationContext, "onboarding_oversight_read") ||
-	hasCapability(authorizationContext, "platform_governance")
+	hasCapability(authorizationContext, "access_administration")
 		? "/"
 		: "/access-denied";
 
 const AUTHENTICATED_ONBOARDING_PATHS = [
 	"/accept-terms",
-	"/invitations/rp-applications",
+	"/invitations/rp-applications/accept",
 	"/profile/setup",
 ] as const;
 
 const AUTHENTICATED_COMPATIBILITY_PATHS = ["/your-applications"] as const;
 
-const isTokenizedInvitationPath = (path: string): boolean =>
-	path.startsWith("/invitations/rp-applications/");
+const isInvitationAcceptancePath = (path: string): boolean =>
+	path === "/invitations/rp-applications/accept";
 
 export const getAuthorizedPostLoginPath = (
 	currentUser: UserRead,
@@ -65,7 +65,7 @@ export const getAuthorizedPostLoginPath = (
 	);
 	const sanitizedPath = sanitizeAppPath(intendedDestination, landingPath);
 
-	if (isTokenizedInvitationPath(sanitizedPath)) {
+	if (isInvitationAcceptancePath(sanitizedPath)) {
 		return sanitizedPath;
 	}
 
@@ -177,7 +177,9 @@ export const loadHomeAdmission = async (
 	const admittedUser = enforceAuthenticatedPrerequisites(
 		currentUser,
 		sanitizedDestination,
-		{ skipDepartmentSelection: isTokenizedInvitationPath(sanitizedDestination) }
+		{
+			skipDepartmentSelection: isInvitationAcceptancePath(sanitizedDestination),
+		}
 	);
 	const destination = getAuthorizedPostLoginPath(
 		admittedUser,
@@ -231,11 +233,12 @@ export const requireCapability = async (
 
 export const requireAnyCapability = async (
 	redirectTo: string,
-	capabilities: ReadonlyArray<Capability>
+	capabilities: ReadonlyArray<Capability>,
+	workspaceUuid?: string
 ): Promise<UserRead> =>
 	requireAuthorization(redirectTo, (currentUser) =>
 		capabilities.some((capability) =>
-			hasCapability(currentUser.authorizationContext, capability)
+			hasCapability(currentUser.authorizationContext, capability, workspaceUuid)
 		)
 	);
 
@@ -315,7 +318,9 @@ export const completeLoginRedirect = async (
 	const admittedUser = enforceAuthenticatedPrerequisites(
 		currentUser,
 		sanitizedDestination,
-		{ skipDepartmentSelection: isTokenizedInvitationPath(sanitizedDestination) }
+		{
+			skipDepartmentSelection: isInvitationAcceptancePath(sanitizedDestination),
+		}
 	);
 	const targetPath = getAuthorizedPostLoginPath(
 		admittedUser,

@@ -11,10 +11,15 @@ const ApplicationRPConfigurationProductionReviewPage = lazy(async () => ({
 export const Route = createFileRoute(
 	"/workspaces/$workspaceUuid/applications/$applicationInformationUuid/rp-configurations/$rpConfigurationUuid/production-review"
 )({
-	beforeLoad: async ({ location }) =>
-		requireAnyCapability(location.pathname, [
-			"promotion_request_write",
-			"production_review",
-		]),
+	beforeLoad: async ({ location, params }) =>
+		requireAnyCapability(
+			location.pathname,
+			[
+				"production_review_request_write",
+				"production_review",
+				"rp_configuration_read",
+			],
+			params.workspaceUuid
+		),
 	component: ApplicationRPConfigurationProductionReviewPage,
 });

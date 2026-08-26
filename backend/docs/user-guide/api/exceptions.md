@@ -230,25 +230,20 @@ If you need custom exceptions, follow the boilerplate's pattern:
 # In app/core/exceptions/http_exceptions.py (add to existing file)
 from fastapi import HTTPException
 
-class PaymentRequiredException(HTTPException):
-    """402 Payment Required"""
-    def __init__(self, detail: str = "Payment required"):
-        super().__init__(status_code=402, detail=detail)
-
 class TooManyRequestsException(HTTPException):
     """429 Too Many Requests"""
     def __init__(self, detail: str = "Too many requests"):
         super().__init__(status_code=429, detail=detail)
 
-# Use them in your endpoints
-from app.core.exceptions.http_exceptions import PaymentRequiredException
+# Use it in an endpoint or dependency
+from app.core.exceptions.http_exceptions import TooManyRequestsException
 
-@router.get("/premium-feature")
-async def premium_feature(current_user: dict):
-    if current_user["tier"] == "free":
-        raise PaymentRequiredException("Upgrade to access this feature")
-    
-    return {"data": "premium content"}
+@router.get("/rate-limited-operation")
+async def rate_limited_operation():
+    if request_limit_exceeded:
+        raise TooManyRequestsException()
+
+    return {"status": "accepted"}
 ```
 
 ## Error Response Format
@@ -466,4 +461,4 @@ Now that you understand error handling:
 - **[Database CRUD](../database/crud.md)** - Understand the database operations<br>
 - **[Authentication](../authentication/index.md)** - Add user authentication to your APIs
 
-Proper error handling makes your API much more user-friendly and easier to debug! 
+Proper error handling makes your API much more user-friendly and easier to debug!

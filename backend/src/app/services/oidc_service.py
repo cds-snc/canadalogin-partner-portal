@@ -8,6 +8,12 @@ from starsessions.session import generate_session_id, get_session_handler
 
 from ..core.config import LOCAL_DEV_SESSION_FIXTURE_KEY, settings
 from ..core.exceptions.http_exceptions import ForbiddenException, UnauthorizedException
+from ..core.identity import (
+    SESSION_AUTHENTICATED_EMAIL_KEY,
+    SESSION_AUTHENTICATED_EMAIL_VERIFIED_KEY,
+    SESSION_AUTHENTICATION_PROVIDER_KEY,
+    resolve_verified_email_claim,
+)
 from ..core.oidc import build_oidc_redirect_uri, get_oidc_client, load_oidc_server_metadata, sync_oidc_user
 from .oidc_logout_service import OidcLogoutService
 
@@ -43,7 +49,16 @@ class OidcService:
             pass
         request.session.pop(LOCAL_DEV_SESSION_FIXTURE_KEY, None)
         request.session["user_uuid"] = str(oidc_user["uuid"])
-        request.session["tokens"] = token
+        request.session["tokens"] = {key: value for key, value in token.items() if key != "userinfo"}
+        verified_email = resolve_verified_email_claim(claims)
+        if verified_email is None:
+            request.session.pop(SESSION_AUTHENTICATED_EMAIL_KEY, None)
+            request.session.pop(SESSION_AUTHENTICATED_EMAIL_VERIFIED_KEY, None)
+            request.session.pop(SESSION_AUTHENTICATION_PROVIDER_KEY, None)
+        else:
+            request.session[SESSION_AUTHENTICATED_EMAIL_KEY] = verified_email
+            request.session[SESSION_AUTHENTICATED_EMAIL_VERIFIED_KEY] = True
+            request.session[SESSION_AUTHENTICATION_PROVIDER_KEY] = settings.OIDC_PROVIDER_NAME
         request.session["oidc_logout"] = {
             "sid": claims.get("sid"),
             "sub": claims.get("sub"),

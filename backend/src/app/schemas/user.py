@@ -8,7 +8,6 @@ from pydantic.alias_generators import to_camel
 from ..core.authorization import GlobalRoleCode, InvitationStatus, PartnerRoleCode
 from ..core.schemas import PersistentDeletion, TimestampSchema, UUIDSchema
 from .authorization import AuthorizationContextRead, AuthorizationContractModel
-from .rate_limit import RateLimitRead
 
 
 class UserBase(BaseModel):
@@ -44,7 +43,6 @@ class UserRead(UserBase):
     username: EmailStr
     department_abbreviation: str | None = None
     department_uuid: uuid_pkg.UUID | None = None
-    tier_uuid: uuid_pkg.UUID | None = None
     profile_image_url: str = "https://www.profileimageurl.com"
     auth_provider: str | None = None
     enabled: bool = False
@@ -61,7 +59,6 @@ class AuthenticatedUserRead(AuthorizationContractModel):
     username: EmailStr
     department_abbreviation: str | None = None
     department_uuid: uuid_pkg.UUID | None = None
-    tier_uuid: uuid_pkg.UUID | None = None
     profile_image_url: str = "https://www.profileimageurl.com"
     accepted_terms_at: datetime | None = None
     terms_version: str | None = None
@@ -162,25 +159,12 @@ class UserReadInternal(UserRead):
     tier_id: int | None = None
 
 
-class UserTierRead(UserRead):
-    model_config = ConfigDict(validate_by_name=True, validate_by_alias=True, alias_generator=to_camel, populate_by_name=True)
-
-    tier_name: str
-    tier_created_at: datetime
-
-
 class UserDepartmentRead(UserRead):
     model_config = ConfigDict(validate_by_name=True, validate_by_alias=True, alias_generator=to_camel, populate_by_name=True)
 
     department_abbreviation_fr: str | None = None
     department_name: str
     department_created_at: datetime
-
-
-class UserRateLimitsRead(UserRead):
-    model_config = ConfigDict(validate_by_name=True, validate_by_alias=True, alias_generator=to_camel, populate_by_name=True)
-
-    tier_rate_limits: list[RateLimitRead]
 
 
 class UserCreate(UserBase):
@@ -207,12 +191,6 @@ class UserUpdateInternal(UserUpdate):
     auth_provider: str | None = Field(None, max_length=50)
     auth_subject: str | None = Field(None, max_length=255)
     updated_at: datetime
-
-
-class UserTierUpdate(BaseModel):
-    model_config = ConfigDict(extra="forbid", validate_by_name=True, validate_by_alias=True, alias_generator=to_camel, populate_by_name=True)
-
-    tier_uuid: uuid_pkg.UUID
 
 
 class UserDepartmentUpdate(BaseModel):

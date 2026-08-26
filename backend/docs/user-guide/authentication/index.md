@@ -58,9 +58,9 @@ role codes. Backend services enforce workspace and object scope. Mutable legacy
 policy rows and user-specific subjects do not grant runtime authority.
 
 ```python
-@router.get("/tiers")
-@casbin_guard.require_permission("tiers", "read")
-async def read_tiers(...):
+@router.get("/roles")
+@casbin_guard.require_permission("roles", "read")
+async def read_role_reference(...):
     ...
 ```
 
@@ -80,8 +80,7 @@ async def read_tiers(...):
 - Canonical subjects: Only the four fixed role codes enter policy evaluation
 - Current assignments: Role and workspace scope are resolved on each request
 - Resource ownership: User-specific data access
-- User tiers: Subscription-based feature access
-- Rate limiting: Per-user and per-tier API limits
+- Rate limiting: Redis-backed per-actor, per-path default limits
 
 ## Authentication Patterns
 
@@ -157,7 +156,7 @@ Understand how OIDC login, session-backed authentication, and browser request au
 Implement profile management and portal-owned metadata.
 
 ### 3. **[Permissions](permissions.md)** - Access Control
-Set up role-based access control, resource ownership checking, and tier-based permissions.
+Set up fixed-role access control and workspace/object scope checks.
 
 ## What's Next
 

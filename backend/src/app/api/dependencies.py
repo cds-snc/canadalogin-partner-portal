@@ -7,15 +7,20 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from ..core.config import settings
 from ..core.db.database import async_get_db
 from ..core.exceptions.http_exceptions import ForbiddenException, RateLimitException, UnauthorizedException
+from ..core.identity import (
+    AUTHENTICATED_EMAIL_KEY,
+    AUTHENTICATED_EMAIL_VERIFIED_KEY,
+    AUTHENTICATION_PROVIDER_KEY,
+    SESSION_AUTHENTICATED_EMAIL_KEY,
+    SESSION_AUTHENTICATED_EMAIL_VERIFIED_KEY,
+    SESSION_AUTHENTICATION_PROVIDER_KEY,
+)
 from ..core.logger import logging
 from ..core.logging_privacy import hash_log_value
-from ..core.utils.rate_limit import rate_limiter
-from ..repositories.crud_rate_limit import crud_rate_limits
-from ..repositories.crud_tier import crud_tiers
+from ..core.utils.rate_limit import rate_limiter, sanitize_path
 from ..repositories.crud_users import crud_users
 from ..repositories.dependencies import get_ibm_sv_admin_client, get_ibm_sv_user_client
 from ..repositories.ibm_sv_admin import IBMVerifyAdminClient
-from ..schemas.rate_limit import sanitize_path
 from ..services import (
     AuditService,
     AuthorizationService,
@@ -27,11 +32,9 @@ from ..services import (
     OidcLogoutService,
     OidcService,
     OnboardingOversightService,
-    RateLimitService,
     RPApplicationDeveloperInvitationService,
     RPApplicationService,
     TaskService,
-    TierService,
     UserService,
     WorkspaceService,
 )
@@ -86,14 +89,6 @@ async def get_ibm_sv_admin_service(
     from ..services.ibm_sv_admin_service import IBMVerifyAdminService
 
     return IBMVerifyAdminService(client=client)
-
-
-def get_tier_service() -> TierService:
-    return TierService()
-
-
-def get_rate_limit_service() -> RateLimitService:
-    return RateLimitService()
 
 
 def get_ibm_sv_user_service(request: Request) -> IBMVerifyUserService:
@@ -184,6 +179,14 @@ async def get_current_user(
         resolved_user = dict(user)
         resolved_user[AUTHORIZATION_STATE_KEY] = authorization_state
         resolved_user[AUTHORIZATION_CONTEXT_KEY] = authorization_state.to_api_context()
+        try:
+            session = request.session
+        except AssertionError:
+            session = {}
+        if session.get(SESSION_AUTHENTICATED_EMAIL_VERIFIED_KEY) is True:
+            resolved_user[AUTHENTICATED_EMAIL_KEY] = session.get(SESSION_AUTHENTICATED_EMAIL_KEY)
+            resolved_user[AUTHENTICATED_EMAIL_VERIFIED_KEY] = True
+            resolved_user[AUTHENTICATION_PROVIDER_KEY] = session.get(SESSION_AUTHENTICATION_PROVIDER_KEY)
         return resolved_user
 
     raise UnauthorizedException("User not authenticated.")
@@ -221,21 +224,7 @@ async def rate_limiter_dependency(
     path = sanitize_path(request.url.path)
     if user:
         user_id = user["id"]
-        logged_user_id = hash_log_value(user_id)
-        tier = await crud_tiers.get(db, id=user["tier_id"])
-        if tier:
-            rate_limit = await crud_rate_limits.get(db=db, tier_id=tier["id"], path=path)
-            if rate_limit:
-                limit, period = rate_limit["limit"], rate_limit["period"]
-            else:
-                logger.warning(
-                    f"User {logged_user_id} with tier '{tier['name']}' has no specific rate limit for path '{path}'. \
-                        Applying default rate limit."
-                )
-                limit, period = DEFAULT_LIMIT, DEFAULT_PERIOD
-        else:
-            logger.warning(f"User {logged_user_id} has no assigned tier. Applying default rate limit.")
-            limit, period = DEFAULT_LIMIT, DEFAULT_PERIOD
+        limit, period = DEFAULT_LIMIT, DEFAULT_PERIOD
     else:
         user_id = request.client.host if request.client else "unknown"
         limit, period = DEFAULT_LIMIT, DEFAULT_PERIOD

@@ -24,8 +24,6 @@ vi.mock("react-i18next", () => ({
 					"Loading workspaces available to your account.",
 				"workspaces.loadingTitle": "Loading workspaces",
 				"workspaces.nameLabel": "Name",
-				"workspaces.onboardingStateColumn": "Onboarding status",
-				"workspaces.onboardingStateUnderReview": "Under review",
 				"workspaces.rpAdoptionTaskAction": "Adopt existing RP registrations",
 				"workspaces.rpAdoptionTaskDescription": "Link retained registrations.",
 				"workspaces.slugLabel": "Slug",
@@ -83,21 +81,16 @@ vi.mock("@/components/ui", () => ({
 	}: {
 		action?: {
 			buttonLabel: string;
-			onAction: (row: {
-				name: string;
-				onboardingState: string;
-				uuid: string;
-			}) => void;
+			onAction: (row: { name: string; uuid: string }) => void;
 		};
 		columns: Array<{
-			field: "name" | "onboardingState";
+			field: "name";
 			headerName: string;
 			rowHeader?: boolean;
 		}>;
 		primaryAction?: { buttonLabel: string; onAction: () => void };
 		rows: Array<{
 			name: string;
-			onboardingState: string;
 			uuid: string;
 		}>;
 		title: string;
@@ -244,7 +237,6 @@ describe("WorkspacesPage", () => {
 					id: 9,
 					isDeleted: false,
 					name: "Benefits Workspace",
-					onboardingState: "under_review",
 					slug: "benefits-workspace",
 					updatedAt: null,
 					uuid: "workspace-uuid-1",
@@ -253,7 +245,7 @@ describe("WorkspacesPage", () => {
 		});
 
 		render(<WorkspacesPage />);
-		expect(screen.getByText(/under review/i)).toBeTruthy();
+		expect(screen.getByRole("columnheader", { name: "Name" })).toBeTruthy();
 		expect(screen.queryAllByRole("rowheader")).toHaveLength(0);
 		expect(screen.queryByText("Slug")).toBeNull();
 		expect(screen.queryByText("benefits-workspace")).toBeNull();

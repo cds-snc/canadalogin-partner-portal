@@ -2,13 +2,7 @@ import { useStore } from "zustand";
 import { createJSONStorage, persist } from "zustand/middleware";
 import { createStore } from "zustand/vanilla";
 
-type AdminListKey =
-	| "audit-logs"
-	| "departments"
-	| "policies"
-	| "roles"
-	| "tiers"
-	| "users";
+type AdminListKey = "users";
 
 type AdminListViewState = {
 	page: number;
@@ -29,11 +23,6 @@ const createDefaultListState = (): AdminListViewState => ({
 });
 
 const createInitialLists = (): Record<AdminListKey, AdminListViewState> => ({
-	"audit-logs": createDefaultListState(),
-	departments: createDefaultListState(),
-	policies: createDefaultListState(),
-	roles: createDefaultListState(),
-	tiers: createDefaultListState(),
 	users: createDefaultListState(),
 });
 

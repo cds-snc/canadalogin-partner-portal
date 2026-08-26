@@ -6,11 +6,8 @@ import { getUsers, searchUsers } from "@/fetch/users";
 import { useUserManagement } from "@/features/users/hooks/use-user-management";
 
 vi.mock("@/fetch/users", () => ({
-	createUser: vi.fn(),
-	deleteUser: vi.fn(),
 	getUsers: vi.fn(),
 	searchUsers: vi.fn(),
-	updateUser: vi.fn(),
 }));
 
 const createWrapper = (): ((properties: PropsWithChildren) => ReactElement) => {
@@ -34,7 +31,6 @@ const searchedUser = {
 	name: "Outside Page",
 	profileImageUrl: "",
 	termsVersion: null,
-	tierUuid: null,
 	uuid: "user-outside-page",
 	username: "outside.page@example.test",
 	workspaceAssignments: [],

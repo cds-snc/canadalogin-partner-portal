@@ -21,7 +21,7 @@ export type AuthorizationContext = {
 };
 
 export const CAPABILITIES = [
-	"platform_governance",
+	"access_administration",
 	"partner_bootstrap",
 	"cl_admin_assignment",
 	"rp_admin_assignment",
@@ -37,12 +37,8 @@ export const CAPABILITIES = [
 	"rp_configuration_write",
 	"partner_secret_read",
 	"partner_secret_lifecycle",
-	"promotion_request_write",
-	"cats_fields_write",
+	"production_review_request_write",
 	"mau_report_read",
-	"aggregate_report_read",
-	"partner_audit_read",
-	"partner_audit_sensitive_fields_read",
 	"partner_invitation_manage",
 ] as const;
 
@@ -52,7 +48,7 @@ const ROLE_CAPABILITIES: Readonly<
 	Record<CanonicalRole, ReadonlySet<Capability>>
 > = {
 	cl_admin: new Set<Capability>([
-		"platform_governance",
+		"access_administration",
 		"partner_bootstrap",
 		"cl_admin_assignment",
 		"rp_admin_assignment",
@@ -60,15 +56,12 @@ const ROLE_CAPABILITIES: Readonly<
 		"cross_workspace_metadata_read",
 		"onboarding_oversight_read",
 		"production_review",
-		"aggregate_report_read",
 	]),
 	read_only: new Set<Capability>([
 		"workspace_metadata_read",
 		"application_information_read",
 		"rp_configuration_read",
 		"mau_report_read",
-		"aggregate_report_read",
-		"partner_audit_read",
 	]),
 	rp_admin: new Set<Capability>([
 		"workspace_metadata_read",
@@ -79,12 +72,8 @@ const ROLE_CAPABILITIES: Readonly<
 		"rp_configuration_write",
 		"partner_secret_read",
 		"partner_secret_lifecycle",
-		"promotion_request_write",
-		"cats_fields_write",
+		"production_review_request_write",
 		"mau_report_read",
-		"aggregate_report_read",
-		"partner_audit_read",
-		"partner_audit_sensitive_fields_read",
 		"partner_invitation_manage",
 		"partner_staff_assignment",
 	]),
@@ -96,12 +85,8 @@ const ROLE_CAPABILITIES: Readonly<
 		"rp_configuration_write",
 		"partner_secret_read",
 		"partner_secret_lifecycle",
-		"promotion_request_write",
-		"cats_fields_write",
+		"production_review_request_write",
 		"mau_report_read",
-		"aggregate_report_read",
-		"partner_audit_read",
-		"partner_audit_sensitive_fields_read",
 	]),
 };
 

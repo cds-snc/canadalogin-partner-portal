@@ -7,8 +7,6 @@ import type {
 	MessageDecryptionTarget,
 	PKCEAlgorithm,
 	PrivateKeyDistributionMethod,
-	RPApplicationRead,
-	RPApplicationUpdate,
 	RequestedScope,
 	RequestEncryptionTarget,
 	RegistrationDataStep,
@@ -93,17 +91,6 @@ export type WorkspaceRPApplicationFormState = {
 	signatureValidationSupported: BooleanField;
 	signatureValidationTargets: Array<string>;
 	supportsAuthorizationCodeFlow: BooleanField;
-};
-
-const readPayload = (
-	application: RPApplicationRead
-): Record<string, unknown> | null => {
-	const payload = application.oidcRegistrationPayload;
-	if (!payload || typeof payload !== "object") {
-		return null;
-	}
-
-	return payload;
 };
 
 const readString = (
@@ -739,8 +726,8 @@ export const getWorkspaceRPApplicationStepFieldErrorKeys = (
 
 const buildBasePayload = (
 	form: WorkspaceRPApplicationFormState
-): RPApplicationUpdate => {
-	const payload: RPApplicationUpdate = {};
+): WorkspaceRPApplicationRegistrationAnswers => {
+	const payload: WorkspaceRPApplicationRegistrationAnswers = {};
 	const applicationInformationUuid = trimOrUndefined(
 		form.applicationInformationUuid
 	);
@@ -1083,12 +1070,16 @@ export const createEmptyWorkspaceRPApplicationForm =
 		supportsAuthorizationCodeFlow: "yes",
 	});
 
-export const toWorkspaceRPApplicationFormState = (
-	application: RPApplicationRead,
-	applicationInformationUuid: string | null
+const toWorkspaceRPApplicationFormState = (
+	payload: Record<string, unknown> | null,
+	applicationInformationUuid: string | null,
+	metadata: {
+		canadaLoginEnvironment: string | null;
+		configurationName: string | null;
+		partnerEnvironment: string | null;
+		serviceNameEn: string | null;
+	}
 ): WorkspaceRPApplicationFormState => {
-	const payload = readPayload(application);
-
 	return {
 		applicationEnvironmentUrlEn: readString(
 			payload,
@@ -1099,9 +1090,9 @@ export const toWorkspaceRPApplicationFormState = (
 			"application_environment_url_fr"
 		),
 		applicationInformationUuid: applicationInformationUuid ?? "",
-		canadaLoginEnvironment: application.canadaLoginEnvironment ?? "",
-		configurationName: application.configurationName ?? "",
-		partnerEnvironment: application.partnerEnvironment ?? "",
+		canadaLoginEnvironment: metadata.canadaLoginEnvironment ?? "",
+		configurationName: metadata.configurationName ?? "",
+		partnerEnvironment: metadata.partnerEnvironment ?? "",
 		clientAuthMethod: readString(payload, "client_auth_method"),
 		clientType: readString(payload, "client_type"),
 		jwksUri: readString(payload, "jwks_uri"),
@@ -1206,7 +1197,7 @@ export const toWorkspaceRPApplicationFormState = (
 		requestedScopes: readStringArray(payload, "requested_scopes"),
 		sectorIdentifier: readString(payload, "sector_identifier"),
 		serviceNameEn:
-			readString(payload, "service_name_en") || application.dnrAppName || "",
+			readString(payload, "service_name_en") || metadata.serviceNameEn || "",
 		serviceNameFr: readString(payload, "service_name_fr"),
 		sharesPairwiseIdentifiers: readBooleanField(
 			payload,
@@ -1242,10 +1233,6 @@ export const toWorkspaceRPApplicationFormState = (
 		),
 	};
 };
-
-export const toRPApplicationUpdatePayload = (
-	form: WorkspaceRPApplicationFormState
-): RPApplicationUpdate => buildBasePayload(form);
 
 const camelToSnake = (key: string): string =>
 	key.replace(/[A-Z]/gu, (letter) => `_${letter.toLowerCase()}`);
@@ -1324,21 +1311,14 @@ export const toWorkspaceRPApplicationDraftFormState = (
 		])
 	);
 	return toWorkspaceRPApplicationFormState(
+		snakeAnswers,
+		draft.applicationInformationUuid,
 		{
 			canadaLoginEnvironment:
 				draft.registrationAnswers.canadaLoginEnvironment ?? null,
 			configurationName: draft.configurationName ?? "",
 			partnerEnvironment: draft.partnerEnvironment ?? null,
-			createdAt: "",
-			createdBy: null,
-			dnrAppName: draft.registrationAnswers.serviceNameEn ?? "",
-			id: 0,
-			isDeleted: false,
-			oidcRegistrationPayload: snakeAnswers,
-			status: null,
-			uuid: draft.rpApplicationUuid,
-			workspaceId: null,
-		},
-		draft.applicationInformationUuid
+			serviceNameEn: draft.registrationAnswers.serviceNameEn ?? null,
+		}
 	);
 };

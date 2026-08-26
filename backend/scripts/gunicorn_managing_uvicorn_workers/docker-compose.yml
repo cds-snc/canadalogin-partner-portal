@@ -91,21 +91,6 @@ services:
   #   volumes:
   #     - .:/code
 
-  #-------- uncomment to create first tier --------
-  # create_tier:
-  #   build: 
-  #     context: .
-  #     dockerfile: Dockerfile
-  #   env_file:
-  #     - ./src/.env
-  #   depends_on:
-  #     - create_initial_cl_admin
-  #     - db
-  #     - web
-  #   command: python -m src.scripts.create_first_tier
-  #   volumes:
-  #     - ./src:/code/src
-
 volumes:
   postgres-data:
   redis-data:

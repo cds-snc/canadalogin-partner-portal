@@ -59,23 +59,17 @@ describe("workspace route catalog", () => {
 			getWorkspaceRoutesForSurface("hub", rpAdminContext, workspaceUuid).map(
 				({ id }) => id
 			)
-		).toEqual([
-			"overview",
-			"applicationInformation",
-			"access",
-			"reports",
-			"settings",
-		]);
+		).toEqual(["overview", "applicationInformation", "access", "settings"]);
 		expect(
 			getWorkspaceRoutesForSurface("hub", readOnlyContext, workspaceUuid).map(
 				({ id }) => id
 			)
-		).toEqual(["overview", "applicationInformation", "reports"]);
+		).toEqual(["overview", "applicationInformation"]);
 		expect(
 			getWorkspaceRoutesForSurface("hub", clAdminContext, workspaceUuid).map(
 				({ id }) => id
 			)
-		).toEqual(["overview", "applicationInformation", "access", "reports"]);
+		).toEqual(["overview", "applicationInformation", "access"]);
 		expect(
 			getWorkspaceRoutesForSurface("hub", otherWorkspaceContext, workspaceUuid)
 		).toEqual([]);
@@ -101,7 +95,7 @@ describe("workspace route catalog", () => {
 		).toBe("applicationInformation");
 		expect(
 			findWorkspaceRouteByPath(
-				`/workspaces/${workspaceUuid}/applications/rp-uuid/audit`,
+				`/workspaces/${workspaceUuid}/applications/application-uuid/rp-configurations/rp-uuid/usage`,
 				workspaceUuid
 			)?.id
 		).toBe("applicationInformation");
@@ -120,7 +114,7 @@ describe("workspace route catalog", () => {
 		).toBe(false);
 		expect(
 			getWorkspaceUuidFromPath(
-				`/workspaces/${encodeURIComponent("workspace uuid")}/reports`
+				`/workspaces/${encodeURIComponent("workspace uuid")}/applications`
 			)
 		).toBe("workspace uuid");
 		expect(getWorkspaceUuidFromPath("/workspaces")).toBeNull();
@@ -132,10 +126,10 @@ describe("workspace route catalog", () => {
 	});
 
 	it("provides breadcrumb ancestry and stable return paths", () => {
-		expect(getWorkspaceBreadcrumbRoutes("reports").map(({ id }) => id)).toEqual(
-			["overview"]
-		);
-		expect(getWorkspaceReturnPath("reports", workspaceUuid)).toBe(
+		expect(
+			getWorkspaceBreadcrumbRoutes("settings").map(({ id }) => id)
+		).toEqual(["overview"]);
+		expect(getWorkspaceReturnPath("settings", workspaceUuid)).toBe(
 			`/workspaces/${workspaceUuid}`
 		);
 		expect(getWorkspaceReturnPath("overview", workspaceUuid)).toBe(

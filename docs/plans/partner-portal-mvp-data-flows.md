@@ -84,6 +84,7 @@ sequenceDiagram
 ```
 
 Edge cases:
+
 - Missing `sub` claim → 401; missing `email` claim → 401 ForbiddenException.
 - No active canonical assignment/grant and no eligible pending invitation →
   user is denied access before an authenticated session is created; group
@@ -154,10 +155,12 @@ sequenceDiagram
     BE->>DB: Resolve active canonical workspace grants and RPApplication rows
     BE-->>FE: Grant-accessible RP applications with workspace UUID and role
 
-    U->>FE: Assign department to an RP application
-    FE->>BE: PATCH /api/v1/rp-applications/accessible/{uuid}/department {departmentUuid}
-    BE->>DB: Resolve the public department UUID and update department_id
-    BE-->>FE: 200 OK
+    U->>FE: Open an accessible RP configuration
+    FE->>BE: GET /api/v1/rp-applications/accessible/{uuid}
+    BE->>DB: Resolve the RP configuration's Workspace and inherited Department
+    BE-->>FE: Scoped RP configuration context
+
+    Note over FE,BE: RP-configuration Department cannot be assigned directly.<br/>Profile setup and Workspace creation own supported Department selection.
 ```
 
 ## DFD-4: View Client Credentials
@@ -312,6 +315,7 @@ sequenceDiagram
 ```
 
 Edge cases:
+
 - Redis miss for a date (load job has not run yet, or S3 key absent) → that date returns null; UI renders empty slot.
 - Invalid date range → `BadRequestException`.
 

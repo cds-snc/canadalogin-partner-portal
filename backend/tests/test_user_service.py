@@ -4,14 +4,12 @@ from unittest.mock import AsyncMock, Mock, patch
 from uuid import uuid4
 
 import pytest
-
 from src.app.core.authorization import CanonicalRoleCode
 from src.app.core.exceptions.http_exceptions import DuplicateValueException, ForbiddenException, NotFoundException
 from src.app.schemas.user import (
     UserCreate,
     UserDepartmentUpdate,
     UserReadInternal,
-    UserTierUpdate,
     UserUpdate,
 )
 from src.app.services.authorization_service import (
@@ -415,20 +413,16 @@ class TestUserService:
         }
         expected_user = {
             **sample_user_read.model_dump(),
-            "tier_uuid": "tier-uuid-2",
         }
 
         with patch("src.app.services.user_service.crud_users") as mock_users:
             mock_users.get = AsyncMock(return_value=db_user)
-
-            with patch("src.app.services.user_service.crud_tiers") as mock_tiers:
-                mock_tiers.get = AsyncMock(return_value={"uuid": "tier-uuid-2"})
-
-                result = await service.get_user_by_uuid(db=mock_db, user_uuid=user_uuid)
+            result = await service.get_user_by_uuid(db=mock_db, user_uuid=user_uuid)
 
         assert result == expected_user
         assert "role_ids" not in result
         assert "tier_id" not in result
+        assert "tier_uuid" not in result
         assert "role_uuids" not in result
         assert "is_superuser" not in result
         assert "has_partner_access_grant" not in result
@@ -659,25 +653,6 @@ class TestUserService:
 
         authorization_service.revoke_cl_admin.assert_awaited_once()
         mock_users.delete.assert_not_awaited()
-
-    @pytest.mark.asyncio
-    async def test_update_user_tier_rejects_missing_tier(self, mock_db, sample_user_read) -> None:
-        service = UserService()
-        user_uuid = str(sample_user_read.uuid)
-        tier_uuid = "018f6f83-0f2b-7b0f-b2fb-96c4d8a4b401"
-
-        with patch("src.app.services.user_service.crud_users") as mock_users:
-            mock_users.get = AsyncMock(return_value=sample_user_read.model_dump())
-
-            with patch("src.app.services.user_service.crud_tiers") as mock_tiers:
-                mock_tiers.get = AsyncMock(return_value=None)
-
-                with pytest.raises(NotFoundException, match="Tier not found"):
-                    await service.update_user_tier(
-                        db=mock_db,
-                        user_uuid=user_uuid,
-                        values=UserTierUpdate(tier_uuid=tier_uuid),
-                    )
 
     @pytest.mark.asyncio
     async def test_get_user_department_returns_none_when_department_missing(self, mock_db, sample_user_read) -> None:

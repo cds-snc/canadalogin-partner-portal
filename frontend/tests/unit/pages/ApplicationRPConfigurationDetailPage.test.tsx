@@ -88,8 +88,8 @@ describe("ApplicationRPConfigurationDetailPage", () => {
 				canadaLoginEnvironment: "staging",
 				configurationName: "Partner staging A",
 				partnerEnvironment: null,
-				onboardingState: "draft",
-				promotionStatus: null,
+				productionReviewStatus: null,
+				registrationCompletedAt: null,
 				registrationLastCompletedStep: "basics",
 				resumeTaskPath: `${basePath}/registration/endpoints`,
 				role: "rp_admin",
@@ -125,10 +125,10 @@ describe("ApplicationRPConfigurationDetailPage", () => {
 				.getAttribute("href")
 		).toBe(`${basePath}/manage-credentials`);
 		expect(
-			screen
-				.getByRole("link", { name: "workspaces.applicationsAuditAction" })
-				.getAttribute("href")
-		).toBe(`${basePath}/audit`);
+			screen.queryByRole("link", {
+				name: "workspaces.applicationsAuditAction",
+			})
+		).toBeNull();
 		expect(
 			screen.queryByText("workspaces.rpOverviewRegistrationTitle")
 		).toBeNull();
@@ -173,11 +173,12 @@ describe("ApplicationRPConfigurationDetailPage", () => {
 		vi.mocked(useApplicationRPConfiguration).mockReturnValue({
 			configuration: {
 				applicationInformationUuid: "application-information-uuid-1",
-				canadaLoginEnvironment: "staging",
+				canadaLoginEnvironment: "production",
 				configurationName: "Partner staging A",
 				partnerEnvironment: "Partner staging",
-				onboardingState: "draft",
-				promotionStatus: null,
+				productionReviewStatus: null,
+				productionReviewReconciliationRequired: true,
+				registrationCompletedAt: null,
 				registrationLastCompletedStep: "basics",
 				resumeTaskPath:
 					"/workspaces/workspace-uuid-1/applications/application-information-uuid-1/rp-configurations/rp-configuration-uuid-1/registration/endpoints",
@@ -194,6 +195,9 @@ describe("ApplicationRPConfigurationDetailPage", () => {
 		});
 
 		render(<ApplicationRPConfigurationDetailPage />);
+		expect(
+			screen.getByText("workspaces.productionReviewReconciliationRequired")
+		).toBeTruthy();
 
 		expect(
 			screen.getByRole("link", {
@@ -203,6 +207,13 @@ describe("ApplicationRPConfigurationDetailPage", () => {
 		expect(
 			screen.queryByText("workspaces.rpOverviewRegistrationTitle")
 		).toBeNull();
+		expect(
+			screen
+				.getByRole("link", { name: "workspaces.rpProductionReviewTaskTitle" })
+				.getAttribute("href")
+		).toBe(
+			"/workspaces/workspace-uuid-1/applications/application-information-uuid-1/rp-configurations/rp-configuration-uuid-1/production-review"
+		);
 		expect(
 			screen.queryByRole("link", {
 				name: "workspaces.rpOverviewSettingsTitle",
@@ -218,5 +229,55 @@ describe("ApplicationRPConfigurationDetailPage", () => {
 				name: "workspaces.rpConfigurationResumeSetupAction",
 			})
 		).toBeNull();
+	});
+
+	it("gives CL Admin safe metadata and an honest no-partner-actions state", () => {
+		vi.mocked(useSession).mockReturnValue({
+			currentUser: {
+				authorizationContext: {
+					globalRole: "cl_admin",
+					partnerAccess: [],
+				},
+			},
+		} as unknown as ReturnType<typeof useSession>);
+		vi.mocked(useApplicationRPConfiguration).mockReturnValue({
+			configuration: {
+				applicationInformationUuid: "application-information-uuid-1",
+				canadaLoginEnvironment: "staging",
+				configurationName: "Partner staging A",
+				partnerEnvironment: "Partner staging",
+				productionReviewStatus: null,
+				registrationCompletedAt: "2026-08-20T10:00:00Z",
+				registrationLastCompletedStep: "encryption",
+				resumeTaskPath: null,
+				role: "cl_admin",
+				serviceNameEn: "Benefits Portal",
+				serviceNameFr: "Portail des prestations",
+				uuid: "rp-configuration-uuid-1",
+				workspaceName: "Benefits Workspace",
+				workspaceUuid: "workspace-uuid-1",
+			},
+			error: null,
+			isLoading: false,
+			refetch: vi.fn(async () => null),
+		});
+
+		render(<ApplicationRPConfigurationDetailPage />);
+
+		expect(
+			screen.getByText("workspaces.rpOverviewNoPartnerActions")
+		).toBeTruthy();
+		expect(
+			screen.queryByRole("link", {
+				name: "workspaces.rpOverviewConfigurationTitle",
+			})
+		).toBeNull();
+		expect(
+			screen
+				.getByRole("link", { name: "workspaces.appInfoBackToApplication" })
+				.getAttribute("href")
+		).toBe(
+			"/workspaces/workspace-uuid-1/applications/application-information-uuid-1"
+		);
 	});
 });

@@ -8,6 +8,8 @@ from urllib.parse import urlsplit
 from pydantic import Field, SecretStr, computed_field, field_validator, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
+from .identity import normalize_partner_access_domain
+
 
 class EnvironmentOption(str, Enum):
     LOCAL = "local"
@@ -97,6 +99,7 @@ class OIDCSettings(BaseSettings):
     OIDC_POST_LOGIN_REDIRECT: str = "/auth-complete"
     OIDC_POST_LOGOUT_REDIRECT_URI: str = "/"
     OIDC_ACCESS_DENIED_REDIRECT: str = "/access-denied"
+    PARTNER_ACCESS_ALLOWED_EMAIL_DOMAINS: list[str] = Field(default_factory=list)
 
     @field_validator("ENABLE_DEV_ROLE_SELECTOR", mode="before")
     @classmethod
@@ -116,12 +119,13 @@ class OIDCSettings(BaseSettings):
             raise ValueError("DEV_SESSION_ALLOWED_ORIGINS must not be empty")
         return [normalize_local_origin(value) for value in values]
 
+    @field_validator("PARTNER_ACCESS_ALLOWED_EMAIL_DOMAINS")
+    @classmethod
+    def _validate_partner_access_allowed_email_domains(cls, values: list[str]) -> list[str]:
+        return list(dict.fromkeys(normalize_partner_access_domain(value) for value in values))
 
-class GCNotifySettings(BaseSettings):
-    GC_NOTIFY_BASE_URL: str = "https://api.notification.canada.ca"
-    GC_NOTIFY_API_KEY: SecretStr | None = None
-    GC_NOTIFY_RP_APPLICATION_INVITE_TEMPLATE_ID: str | None = None
-    GC_NOTIFY_EMAIL_REPLY_TO_ID: str | None = None
+
+class InvitationSettings(BaseSettings):
     RP_APPLICATION_INVITE_URL_BASE: str = "http://localhost:3000/invitations/rp-applications"
     RP_APPLICATION_INVITATION_EXPIRE_DAYS: int = 7
 
@@ -452,7 +456,7 @@ class Settings(
     SessionSettings,
     RedisSessionSettings,
     OIDCSettings,
-    GCNotifySettings,
+    InvitationSettings,
     IBMVerifySettings,
     FirstUserSettings,
     TestSettings,
@@ -570,6 +574,11 @@ class Settings(
             EnvironmentOption.LOCAL,
             EnvironmentOption.TESTING,
         }
+        if self.ENVIRONMENT in local_environments and not self.PARTNER_ACCESS_ALLOWED_EMAIL_DOMAINS:
+            self.PARTNER_ACCESS_ALLOWED_EMAIL_DOMAINS = [
+                "example.gc.ca",
+                "local.example",
+            ]
         if self.ENVIRONMENT not in local_environments:
             if secret_key == LOCAL_TEST_SECRET_KEY:
                 raise ValueError("SECRET_KEY must be explicitly configured outside local and test")
@@ -578,6 +587,8 @@ class Settings(
             if self.SESSION_COOKIE_DOMAIN is None:
                 raise ValueError("SESSION_COOKIE_DOMAIN must be explicitly configured outside local and test")
             self.SESSION_COOKIE_DOMAIN = normalize_cookie_domain(self.SESSION_COOKIE_DOMAIN)
+            if not self.PARTNER_ACCESS_ALLOWED_EMAIL_DOMAINS:
+                raise ValueError("PARTNER_ACCESS_ALLOWED_EMAIL_DOMAINS must be explicitly configured outside local and test")
 
         return self
 

@@ -14,8 +14,8 @@ test("uses the real GCDS caption, normal identity cell, and action semantics", a
 }) => {
 	const table = page.getByRole("table", { name: tableName });
 	await expect(table).toBeVisible();
-	await expect(table.getByRole("columnheader")).toHaveCount(5);
-	await expect(table.getByRole("button")).toHaveCount(4);
+	await expect(table.getByRole("columnheader")).toHaveCount(6);
+	await expect(table.getByRole("button")).toHaveCount(5);
 	await expect(
 		page.getByText("Affichage de 1 configuration de partie de confiance.")
 	).toBeVisible();

@@ -6,18 +6,6 @@ import { hasCapability } from "@/features/auth/authorization";
 import { getRequestErrorNotice } from "@/fetch";
 import { useSession } from "@/hooks";
 import { useWorkspaceApplicationInformation } from "../hooks/use-workspace-application-information";
-import { getWorkspaceOnboardingStateLabel } from "../onboarding-display";
-
-const formatLifecycleDate = (
-	value: string | null | undefined,
-	locale: string
-): string =>
-	value
-		? new Intl.DateTimeFormat(locale, {
-				dateStyle: "long",
-				timeStyle: "short",
-			}).format(new Date(value))
-		: "";
 
 export const ApplicationInformationDetailsPage = (): FunctionComponent => {
 	const { i18n, t } = useTranslation() as unknown as {
@@ -50,8 +38,6 @@ export const ApplicationInformationDetailsPage = (): FunctionComponent => {
 		bodyKey: "workspaces.appInfoErrorBody",
 		titleKey: "workspaces.appInfoErrorTitle",
 	});
-	const locale = i18n.resolvedLanguage?.startsWith("fr") ? "fr-CA" : "en-CA";
-
 	return (
 		<>
 			<Heading tag="h1">
@@ -93,17 +79,6 @@ export const ApplicationInformationDetailsPage = (): FunctionComponent => {
 						</dt>
 						<dd lang="fr">{applicationInformation.serviceNameFr}</dd>
 						<dt>
-							<strong>{t("workspaces.onboardingStateLabel")}</strong>
-						</dt>
-						<dd>
-							{applicationInformation.onboardingState?.trim()
-								? getWorkspaceOnboardingStateLabel(
-										t,
-										applicationInformation.onboardingState
-									)
-								: t("common.notAvailable")}
-						</dd>
-						<dt>
 							<strong>{t("workspaces.appInfoOverviewLabel")}</strong>
 						</dt>
 						<dd>{applicationInformation.overview}</dd>
@@ -127,38 +102,6 @@ export const ApplicationInformationDetailsPage = (): FunctionComponent => {
 							</strong>
 						</dt>
 						<dd>{applicationInformation.migrationOrTransitionPlan}</dd>
-						<dt>
-							<strong>{t("workspaces.submittedAtLabel")}</strong>
-						</dt>
-						<dd>
-							{formatLifecycleDate(
-								applicationInformation.submittedAt,
-								locale
-							) || t("common.notAvailable")}
-						</dd>
-						<dt>
-							<strong>{t("workspaces.underReviewAtLabel")}</strong>
-						</dt>
-						<dd>
-							{formatLifecycleDate(
-								applicationInformation.underReviewAt,
-								locale
-							) || t("common.notAvailable")}
-						</dd>
-						<dt>
-							<strong>{t("workspaces.approvedAtLabel")}</strong>
-						</dt>
-						<dd>
-							{formatLifecycleDate(applicationInformation.approvedAt, locale) ||
-								t("common.notAvailable")}
-						</dd>
-						<dt>
-							<strong>{t("workspaces.launchedAtLabel")}</strong>
-						</dt>
-						<dd>
-							{formatLifecycleDate(applicationInformation.launchedAt, locale) ||
-								t("common.notAvailable")}
-						</dd>
 					</Grid>
 
 					{canEdit ? (

@@ -6,7 +6,6 @@ from pydantic import BaseModel, ConfigDict, EmailStr, Field, field_validator
 from pydantic.alias_generators import to_camel
 
 from ..core.schemas import PersistentDeletion, TimestampSchema
-from .onboarding import OnboardingLifecycleRead
 
 
 class ApplicationInformationBase(BaseModel):
@@ -28,7 +27,6 @@ class ApplicationInformationBase(BaseModel):
 
 class ApplicationInformationRead(
     ApplicationInformationBase,
-    OnboardingLifecycleRead,
     TimestampSchema,
     PersistentDeletion,
 ):
@@ -43,6 +41,56 @@ class ApplicationInformationRead(
     uuid: uuid_pkg.UUID
     workspace_id: int
     created_by: int | None = None
+
+
+ApplicationChecklistKey = Literal[
+    "business_context",
+    "contacts",
+    "migration_planning",
+    "security_posture",
+    "service_identity",
+    "technical_integration",
+]
+ApplicationChecklistStatus = Literal[
+    "attention_required",
+    "missing",
+    "provided",
+]
+
+
+class ApplicationInformationChecklistItemRead(BaseModel):
+    model_config = ConfigDict(
+        extra="forbid",
+        frozen=True,
+        validate_by_name=True,
+        validate_by_alias=True,
+        alias_generator=to_camel,
+        populate_by_name=True,
+        serialize_by_alias=True,
+    )
+
+    key: ApplicationChecklistKey
+    status: ApplicationChecklistStatus
+
+
+class ApplicationInformationChecklistRead(BaseModel):
+    """Status-only checklist projection that excludes contact PII."""
+
+    model_config = ConfigDict(
+        extra="forbid",
+        frozen=True,
+        validate_by_name=True,
+        validate_by_alias=True,
+        alias_generator=to_camel,
+        populate_by_name=True,
+        serialize_by_alias=True,
+    )
+
+    application_information_uuid: uuid_pkg.UUID
+    application_name_en: str
+    application_name_fr: str
+    items: list[ApplicationInformationChecklistItemRead]
+    cats_evidence_status: Literal["not_configured"] = "not_configured"
 
 
 class ApplicationInformationCreate(ApplicationInformationBase):
@@ -249,201 +297,3 @@ class ApplicationInformationContactUpdateInternal(BaseModel):
 
 class ApplicationInformationContactDelete(BaseModel):
     pass
-
-
-ApplicationInformationReviewChecklistStatus = Literal[
-    "not_started",
-    "incomplete",
-    "complete",
-]
-ApplicationInformationReviewDisposition = Literal[
-    "pending",
-    "changes_requested",
-    "ready_for_next_step",
-]
-
-
-class ApplicationInformationReviewNoteRecordRead(TimestampSchema, PersistentDeletion):
-    model_config = ConfigDict(
-        validate_by_name=True,
-        validate_by_alias=True,
-        alias_generator=to_camel,
-        populate_by_name=True,
-    )
-
-    id: int
-    uuid: uuid_pkg.UUID
-    application_information_id: int
-    author_id: int | None = None
-    body: str
-
-
-class ApplicationInformationReviewNoteRead(TimestampSchema):
-    model_config = ConfigDict(
-        validate_by_name=True,
-        validate_by_alias=True,
-        alias_generator=to_camel,
-        populate_by_name=True,
-    )
-
-    id: int
-    uuid: uuid_pkg.UUID
-    application_information_id: int
-    body: str
-    author_name: str | None = None
-    author_email: str | None = None
-    author_user_uuid: uuid_pkg.UUID | None = None
-
-
-class ApplicationInformationReviewNoteCreate(BaseModel):
-    model_config = ConfigDict(
-        extra="forbid",
-        validate_by_name=True,
-        validate_by_alias=True,
-        alias_generator=to_camel,
-        populate_by_name=True,
-    )
-
-    body: str = Field(..., min_length=1, max_length=4000)
-
-
-class ApplicationInformationReviewNoteCreateInternal(BaseModel):
-    model_config = ConfigDict(arbitrary_types_allowed=True)
-
-    application_information_id: int
-    author_id: int | None = None
-    body: str
-
-
-class ApplicationInformationReviewNoteUpdate(BaseModel):
-    model_config = ConfigDict(
-        extra="forbid",
-        validate_by_name=True,
-        validate_by_alias=True,
-        alias_generator=to_camel,
-        populate_by_name=True,
-    )
-
-    body: str | None = Field(default=None, min_length=1, max_length=4000)
-
-
-class ApplicationInformationReviewNoteUpdateInternal(ApplicationInformationReviewNoteUpdate):
-    model_config = ConfigDict(arbitrary_types_allowed=True)
-
-    updated_at: datetime | None = None
-
-
-class ApplicationInformationReviewNoteDelete(BaseModel):
-    pass
-
-
-class ApplicationInformationReviewChecklistSummaryBase(BaseModel):
-    model_config = ConfigDict(
-        validate_by_name=True,
-        validate_by_alias=True,
-        alias_generator=to_camel,
-        populate_by_name=True,
-    )
-
-    review_disposition: ApplicationInformationReviewDisposition
-    application_information_status: ApplicationInformationReviewChecklistStatus
-    contacts_status: ApplicationInformationReviewChecklistStatus
-    environment_registration_status: ApplicationInformationReviewChecklistStatus
-    promotion_metadata_status: ApplicationInformationReviewChecklistStatus
-    evidence_reference_status: ApplicationInformationReviewChecklistStatus
-    process_links_status: ApplicationInformationReviewChecklistStatus
-    rationale: str | None = Field(default=None, min_length=1, max_length=4000)
-
-
-class ApplicationInformationReviewChecklistSummaryRecordRead(
-    ApplicationInformationReviewChecklistSummaryBase,
-    TimestampSchema,
-    PersistentDeletion,
-):
-    model_config = ConfigDict(
-        validate_by_name=True,
-        validate_by_alias=True,
-        alias_generator=to_camel,
-        populate_by_name=True,
-    )
-
-    id: int
-    uuid: uuid_pkg.UUID
-    application_information_id: int
-    reviewed_by_user_id: int | None = None
-
-
-class ApplicationInformationReviewChecklistSummaryRead(
-    ApplicationInformationReviewChecklistSummaryBase,
-    TimestampSchema,
-):
-    model_config = ConfigDict(
-        validate_by_name=True,
-        validate_by_alias=True,
-        alias_generator=to_camel,
-        populate_by_name=True,
-    )
-
-    id: int
-    uuid: uuid_pkg.UUID
-    application_information_id: int
-    reviewed_by_name: str | None = None
-    reviewed_by_user_uuid: uuid_pkg.UUID | None = None
-
-
-class ApplicationInformationReviewChecklistSummaryWrite(ApplicationInformationReviewChecklistSummaryBase):
-    model_config = ConfigDict(
-        extra="forbid",
-        validate_by_name=True,
-        validate_by_alias=True,
-        alias_generator=to_camel,
-        populate_by_name=True,
-    )
-
-
-class ApplicationInformationReviewChecklistSummaryCreateInternal(BaseModel):
-    model_config = ConfigDict(arbitrary_types_allowed=True)
-
-    application_information_id: int
-    reviewed_by_user_id: int | None = None
-    review_disposition: ApplicationInformationReviewDisposition
-    application_information_status: ApplicationInformationReviewChecklistStatus
-    contacts_status: ApplicationInformationReviewChecklistStatus
-    environment_registration_status: ApplicationInformationReviewChecklistStatus
-    promotion_metadata_status: ApplicationInformationReviewChecklistStatus
-    evidence_reference_status: ApplicationInformationReviewChecklistStatus
-    process_links_status: ApplicationInformationReviewChecklistStatus
-    rationale: str | None = Field(default=None, min_length=1, max_length=4000)
-
-
-class ApplicationInformationReviewChecklistSummaryUpdate(ApplicationInformationReviewChecklistSummaryBase):
-    model_config = ConfigDict(
-        extra="forbid",
-        validate_by_name=True,
-        validate_by_alias=True,
-        alias_generator=to_camel,
-        populate_by_name=True,
-    )
-
-
-class ApplicationInformationReviewChecklistSummaryUpdateInternal(ApplicationInformationReviewChecklistSummaryUpdate):
-    model_config = ConfigDict(arbitrary_types_allowed=True)
-
-    reviewed_by_user_id: int | None = None
-    updated_at: datetime | None = None
-
-
-class ApplicationInformationReviewChecklistSummaryDelete(BaseModel):
-    pass
-
-
-class ApplicationInformationReviewContextRead(BaseModel):
-    model_config = ConfigDict(
-        validate_by_name=True,
-        validate_by_alias=True,
-        alias_generator=to_camel,
-        populate_by_name=True,
-    )
-
-    notes: list[ApplicationInformationReviewNoteRead] = Field(default_factory=list)
-    checklist_summary: ApplicationInformationReviewChecklistSummaryRead | None = None

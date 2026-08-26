@@ -4,8 +4,6 @@ from uuid import UUID
 
 import pytest
 from fastcrud.exceptions.http_exceptions import CustomException
-from starlette.requests import Request
-
 from src.app.api.v1.oidc import oidc_callback, oidc_login
 from src.app.core.authorization import CanonicalRoleCode
 from src.app.core.config import settings
@@ -15,6 +13,7 @@ from src.app.services.authorization_service import (
     ResolvedAuthorizationState,
     ResolvedPartnerAccess,
 )
+from starlette.requests import Request
 
 WORKSPACE_UUID = UUID("018f6f83-0000-0000-0000-000000000201")
 
@@ -296,6 +295,47 @@ class TestSyncOidcUser:
         mock_crud.create.assert_awaited_once()
         assert mock_crud.create.await_args.kwargs["object"].enabled is True
         mock_crud.update.assert_awaited_once()
+
+    @pytest.mark.asyncio
+    async def test_pending_invitation_cannot_bypass_partner_email_domain_policy(self, mock_db) -> None:
+        claims = {
+            "sub": "subject-outside-domain",
+            "email": "invitee@outside.example",
+            "email_verified": True,
+        }
+
+        with (
+            patch.object(settings, "PARTNER_ACCESS_ALLOWED_EMAIL_DOMAINS", ["example.gc.ca"]),
+            patch("src.app.core.oidc.crud_users") as mock_crud,
+            patch("src.app.core.oidc.crud_rp_application_developer_invitations") as mock_invitations,
+        ):
+            mock_crud.get = AsyncMock(return_value=None)
+            mock_crud.create = AsyncMock()
+            mock_invitations.get_multi = AsyncMock()
+
+            with pytest.raises(ForbiddenException, match="not allowed"):
+                await sync_oidc_user(mock_db, claims)
+
+        mock_invitations.get_multi.assert_not_awaited()
+        mock_crud.create.assert_not_awaited()
+
+    @pytest.mark.asyncio
+    async def test_conflicting_verified_email_claims_fail_closed(self, mock_db) -> None:
+        claims = {
+            "sub": "subject-conflicting-email",
+            "email": "invitee@example.gc.ca",
+            "mail": "other@example.gc.ca",
+            "email_verified": True,
+        }
+
+        with patch("src.app.core.oidc.crud_users") as mock_crud:
+            mock_crud.get = AsyncMock(return_value=None)
+            mock_crud.create = AsyncMock()
+
+            with pytest.raises(ForbiddenException, match="not allowed"):
+                await sync_oidc_user(mock_db, claims)
+
+        mock_crud.create.assert_not_awaited()
 
     @pytest.mark.asyncio
     async def test_unverified_email_cannot_link_an_unbound_local_identity(

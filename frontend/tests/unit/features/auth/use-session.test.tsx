@@ -79,7 +79,6 @@ describe("useSession", () => {
 			name: "Jane Doe",
 			profileImageUrl: "https://example.com/jane.png",
 			termsVersion: "2026-01",
-			tierUuid: "tier-uuid-3",
 			uuid: "user-uuid-7",
 			username: "jane@example.com",
 		});

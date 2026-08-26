@@ -25,7 +25,7 @@ describe("canonical authorization matrix", () => {
 			partnerAccess: [],
 		};
 
-		expect(hasCapability(context, "platform_governance")).toBe(true);
+		expect(hasCapability(context, "access_administration")).toBe(true);
 		expect(canReadWorkspace(context, OTHER_WORKSPACE_UUID)).toBe(true);
 		expect(canReadApplicationInformation(context, OTHER_WORKSPACE_UUID)).toBe(
 			true
@@ -70,16 +70,13 @@ describe("canonical authorization matrix", () => {
 		).toBe(false);
 	});
 
-	it("keeps Read Only non-mutating while allowing bounded reports and audit", () => {
+	it("keeps Read Only non-mutating while allowing bounded MAU reporting", () => {
 		const context = partnerContext("read_only");
 
 		expect(
 			hasCapability(context, "rp_configuration_read", WORKSPACE_UUID)
 		).toBe(true);
 		expect(hasCapability(context, "mau_report_read", WORKSPACE_UUID)).toBe(
-			true
-		);
-		expect(hasCapability(context, "partner_audit_read", WORKSPACE_UUID)).toBe(
 			true
 		);
 		expect(

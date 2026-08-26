@@ -1,74 +1,10 @@
 # partner-portal-platform-administration-and-supportability
 
 ## Purpose
-Define canonical CL Admin platform governance, immutable authorization administration boundaries, and the portal's service-supportability baseline.
+Define focused CL Admin identity and access administration, immutable
+authorization boundaries, and the portal's service-supportability baseline
+without mutable Department, tier, policy, or provider-administration catalogs.
 ## Requirements
-### Requirement: Platform administrators manage portal governance records
-
-Canonical CL Admin users SHALL be able to search and manage supported user
-profile records; invite a prospective partner user into one existing workspace
-and canonical partner role; manage an existing user's permitted global and
-cross-workspace assignments; and perform CRUD management for departments and
-tiers through the administration modules. The product SHALL NOT create an
-immediately enabled unbound user as the normal partner-onboarding workflow.
-
-Canonical authorization role definitions, capability mappings, scope rules,
-and policy subjects SHALL be immutable system-owned configuration. The legacy
-authorization-policy CRUD surface SHALL NOT allow CL Admin to add permissions
-to a role, create direct-user subjects, or bypass the four-role matrix. Any
-separate governance record described as a policy SHALL be explicitly
-non-authorization metadata.
-
-#### Scenario: Platform admin maintains user governance data
-
-- **WHEN** a CL Admin uses the administration modules
-- **THEN** the portal supports user search, safe profile maintenance, invitation, existing-identity assignment, replacement, and revocation flows and CRUD management flows for departments and tiers
-- **AND** role administration permits only supported canonical assignment and revocation operations
-- **AND** a new partner identity is not created as an enabled unbound user before invitation acceptance
-
-#### Scenario: Canonical authorization policy cannot be mutated
-
-- **WHEN** a CL Admin requests creation, mutation, or deletion of a canonical role definition, capability mapping, scope rule, or direct-user policy subject
-- **THEN** the portal rejects the operation
-- **AND** the fixed role matrix remains unchanged
-
-#### Scenario: Partner role cannot use platform governance
-
-- **WHEN** an RP Admin, RP User (Edit), or Read Only user requests a platform governance route or API
-- **THEN** the portal denies the request
-- **AND** the partner role and workspace scope do not expand into global authority
-
-### Requirement: Platform administration exposes IBM Security Verify management operations
-
-The backend SHALL expose the required IBM Security Verify administration
-capabilities across users, applications, groups, entitlements, logins, and
-audit queries only to canonical CL Admin. Each operation SHALL appear on an
-explicit allowlist. Client-credential retrieval, RP secret reads, and secret
-lifecycle operations SHALL be excluded from that allowlist regardless of the
-CL Admin's upstream Verify privileges.
-
-The backend SHALL reject an excluded operation before calling Verify and SHALL
-redact secret-bearing fields from allowed administration responses. Upstream
-Verify group claims SHALL NOT create CL Admin or partner authorization.
-
-#### Scenario: Platform admin performs Verify-backed administration
-
-- **WHEN** a CL Admin uses an allowlisted Verify-backed user, application, group, entitlement, login, or audit-query operation
-- **THEN** the backend executes that operation through the IBM Security Verify integration surface
-- **AND** it returns the standard portal API contract without treating upstream groups as portal roles
-
-#### Scenario: CL Admin cannot use Verify to cross the RP secret boundary
-
-- **WHEN** a CL Admin requests client credentials, an RP secret value, or an RP secret lifecycle operation through a platform or Verify-backed route
-- **THEN** the backend denies the request before making a Verify call
-- **AND** no allowed response contains a secret-bearing field
-
-#### Scenario: Partner role cannot perform Verify-backed administration
-
-- **WHEN** an RP Admin, RP User (Edit), or Read Only user requests a Verify-backed platform administration operation
-- **THEN** the backend denies the operation
-- **AND** no partner workspace assignment is treated as platform authority
-
 ### Requirement: Service health and error supportability are available
 The system SHALL expose health and readiness endpoints and SHALL return a consistent error envelope for handled API failures.
 
@@ -199,3 +135,50 @@ for ordinary route navigation.
 - **THEN** the control uses button semantics and the applicable confirmation, focus, feedback, authorization, and concurrency behavior
 - **AND** it is not disguised as a navigation link
 
+### Requirement: CL Admin manages canonical identity and access without mutable catalogs
+
+CL Admin SHALL be able to search safe portal identity records, invite a
+prospective partner user into one existing workspace and canonical partner
+role, and add, replace, or revoke an existing user's permitted global and
+workspace assignments through the focused Users and access surfaces.
+
+Canonical role definitions, capability mappings, scope rules, and policy
+subjects SHALL remain immutable system-owned configuration. Department
+reference/association data needed for profile setup and workspace context MAY
+be read or selected through its owning workflow, but the portal SHALL NOT
+provide Department catalog CRUD, tier catalog CRUD, policy CRUD, or generic
+identity-provider administration.
+
+#### Scenario: CL Admin manages canonical user access
+
+- **WHEN** a CL Admin uses Users and access or a focused invitation/assignment route
+- **THEN** the portal supports safe user search, prospective-user invitation, existing-identity assignment, atomic role replacement, and revocation under the canonical delegation and integrity rules
+- **AND** a new partner identity is not created as an enabled unbound user before invitation acceptance
+- **AND** the workflow does not require a Department, tier, policy, or provider-administration record to be created
+
+#### Scenario: Canonical authorization configuration cannot be mutated
+
+- **WHEN** a CL Admin requests creation, mutation, or deletion of a canonical role definition, capability mapping, scope rule, direct-user policy subject, or reusable role
+- **THEN** the portal rejects the operation
+- **AND** the fixed four-role matrix remains unchanged
+- **AND** `/roles` remains an immutable reference and not a CRUD module
+
+#### Scenario: Department context remains available without catalog administration
+
+- **WHEN** profile setup, workspace creation, or inherited partner context requires a Department reference
+- **THEN** the owning workflow may read or select the supported Department reference
+- **AND** the portal does not expose general create, edit, delete, tier, or policy-management actions from that reference
+
+#### Scenario: Identity resolution stays behind a portal-owned contract
+
+- **WHEN** a CL Admin searches for an existing identity while inviting or assigning access
+- **THEN** the backend returns only the minimum safe portal identity and account-match fields required by that workflow
+- **AND** it does not expose raw provider claims, provider subjects, groups, entitlements, login history, applications, audit queries, or secret-bearing fields
+- **AND** provider metadata cannot grant a portal role
+
+#### Scenario: Partner role cannot use central identity and access administration
+
+- **WHEN** an RP Admin, RP User (Edit), or Read Only user requests a central CL Admin identity, assignment, catalog, or provider-administration route
+- **THEN** the portal denies the request
+- **AND** the partner role and workspace scope do not expand into global authority
+- **AND** RP Admin retains only the lower-role invitation and assignment actions explicitly allowed inside the assigned workspace

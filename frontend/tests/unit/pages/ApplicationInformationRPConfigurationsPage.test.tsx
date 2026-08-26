@@ -47,8 +47,6 @@ vi.mock("react-i18next", () => ({
 				"workspaces.rpConfigurationsTitle": "RP configurations",
 				"yourApplications.environmentLabel": "CanadaLogin environment",
 				"yourApplications.environmentStaging": "Staging",
-				"yourApplications.onboardingStateDraft": "Draft",
-				"yourApplications.onboardingStateLabel": "Onboarding status",
 			};
 			if (key === "workspaces.rpConfigurationsPageTitle") {
 				return `RP configurations - ${String(options?.["name"] ?? "")}`;
@@ -145,7 +143,8 @@ describe("ApplicationInformationRPConfigurationsPage", () => {
 					applicationInformationUuid: "application-information-uuid-1",
 					canadaLoginEnvironment: "staging",
 					configurationName: "Partner staging A",
-					onboardingState: "draft",
+					productionReviewStatus: null,
+					registrationCompletedAt: null,
 					role: "rp_admin",
 					serviceNameEn: "Benefits Portal",
 					serviceNameFr: "Portail des prestations",
