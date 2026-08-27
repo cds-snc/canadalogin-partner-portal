@@ -124,7 +124,7 @@ run_frontend_script() {
 }
 
 # Passed to run_command, which invokes it through its "$@" command arguments.
-# shellcheck disable=SC2329
+# shellcheck disable=SC2317,SC2329
 fix_generic_format() {
   local tmp_file
   tmp_file="$(mktemp "${TMPDIR:-/tmp}/delorean-autofix-files.XXXXXX")"
