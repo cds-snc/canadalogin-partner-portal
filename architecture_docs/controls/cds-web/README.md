@@ -14,4 +14,3 @@ clear.
 New controls should follow
 [TPL-012: Control Template](../../templates/controls/tpl-012-control-template.md)
 and be added to [the control catalog](../catalog.yml).
-

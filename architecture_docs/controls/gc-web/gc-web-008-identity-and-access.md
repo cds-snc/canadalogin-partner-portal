@@ -39,4 +39,3 @@ Confirm the application:
 ## Related Standards
 
 - [STD-013: Security and Privacy Basics](../../standards/std-013-security-and-privacy-basics.md)
-

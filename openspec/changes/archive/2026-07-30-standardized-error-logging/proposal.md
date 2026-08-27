@@ -1,3 +1,5 @@
+# Proposal
+
 ## Why
 
 The application had no structured error logging. All HTTP errors returned a consistent JSON envelope to clients but left no audit trail in the log pipeline — making it impossible to correlate errors, detect abuse patterns, or observe error rates by status code. A `StandardizedLogger` class was copied from a sibling application but was wired to a non-existent auth helper and had never been activated.

@@ -54,8 +54,7 @@ export const useWorkspaceApplicationInformation = (
 	applicationInformationUuid: string
 ): WorkspaceApplicationInformationState => {
 	const query = useQuery<ApplicationInformationRead, Error>({
-		enabled:
-			workspaceUuid.length > 0 && applicationInformationUuid.length > 0,
+		enabled: workspaceUuid.length > 0 && applicationInformationUuid.length > 0,
 		queryFn: () =>
 			getApplicationInformation(workspaceUuid, applicationInformationUuid),
 		queryKey: workspaceApplicationInformationQueryKey(

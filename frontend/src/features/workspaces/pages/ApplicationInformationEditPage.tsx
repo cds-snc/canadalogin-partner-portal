@@ -40,15 +40,15 @@ export const ApplicationInformationEditPage = (): FunctionComponent => {
 	);
 	const { isUpdating, updateApplicationInformation } =
 		useApplicationInformationManagement();
-	const [formDraft, setFormDraft] = useState<ApplicationInformationFormDraft | null>(
-		null
-	);
+	const [formDraft, setFormDraft] =
+		useState<ApplicationInformationFormDraft | null>(null);
 	const [submitError, setSubmitError] = useState<Error | null>(null);
 	const errorNotice = getRequestErrorNotice(submitError ?? loadError, {
 		bodyKey: "workspaces.appInfoErrorBody",
 		titleKey: "workspaces.appInfoErrorTitle",
 	});
-	const formSourceUuid = applicationInformation?.uuid ?? applicationInformationUuid;
+	const formSourceUuid =
+		applicationInformation?.uuid ?? applicationInformationUuid;
 	const formOverrides =
 		formDraft?.sourceUuid === formSourceUuid ? formDraft.values : {};
 	const form: ApplicationInformationFormState = {

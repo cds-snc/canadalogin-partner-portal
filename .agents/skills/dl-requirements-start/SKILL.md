@@ -99,4 +99,3 @@ Start OpenSpec result:
 - Do not treat OpenSpec as a replacement for tests, evidence, approvals, waivers, or release readiness.
 - Do not create custom OpenSpec folder shapes for slices.
 - Keep local wrappers thin and link to source-of-truth guidance by ID and title.
-

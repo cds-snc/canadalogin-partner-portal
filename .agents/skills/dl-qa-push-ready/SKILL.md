@@ -67,4 +67,3 @@ real secrets, or widening the permission boundary.
 - Do not use `git push --no-verify` unless a human explicitly accepts the bypass and the reason is recorded.
 - Do not deploy, use production, read real secrets, or touch unrelated external systems.
 - Do not report push readiness if the pre-push checks were not run or directly assessed.
-

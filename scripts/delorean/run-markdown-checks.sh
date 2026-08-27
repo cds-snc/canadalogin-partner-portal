@@ -125,6 +125,14 @@ while IFS= read -r -d '' file; do
     ' "${file}")"
   fi
 
+  case "${rel_path}" in
+    openspec/changes/*/specs/*/spec.md)
+      if [[ "${first_line}" =~ ^##\ (ADDED|MODIFIED|REMOVED)\ Requirements$ ]]; then
+        continue
+      fi
+      ;;
+  esac
+
   if [[ ! "${first_line}" =~ ^#\  ]]; then
     echo "Markdown file should start with a level-one heading: ${rel_path}"
     status=1

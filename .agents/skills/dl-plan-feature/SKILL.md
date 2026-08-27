@@ -158,4 +158,3 @@ Use the visible `Build It` handoff as the fallback when the user should explicit
 ## Missing Details And Safe Defaults
 
 When details are missing, do not stop at broad questions. Recommend the safe local path first, list one or two alternatives when useful, and continue under local developer / localhost assumptions when safe. Ask only for details needed before shared-environment work, production work, real secrets, approval, waivers, deployment, destructive changes, or wider tool/API/MCP/file access.
-

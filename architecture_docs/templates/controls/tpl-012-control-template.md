@@ -45,4 +45,3 @@ Describe the outcome that an assessment should confirm.
 - [ ] The control is reusable across more than one project or app type.
 - [ ] The control is added to `docs/controls/catalog.yml`.
 - [ ] At least one baseline references the control.
-

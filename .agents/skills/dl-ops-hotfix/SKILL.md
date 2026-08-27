@@ -60,4 +60,3 @@ Route urgent repair work while preserving evidence, approval boundaries, and fol
 ## Missing Details And Safe Defaults
 
 When details are missing, do not stop at broad questions. Recommend a safe local reproduction, stub, or analysis path first when that can help without touching protected systems. Ask before shared-environment work, production work, real secrets, approval, waivers, deployment, rollback, destructive changes, or wider tool/API/MCP/file access.
-

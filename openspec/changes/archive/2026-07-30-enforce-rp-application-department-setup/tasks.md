@@ -1,3 +1,5 @@
+# Tasks
+
 ## 1. Backend Contracts and Error Signaling
 
 - [x] 1.1 Add DTO `CurrentUserRPApplicationSummaryRead` in `backend/src/app/schemas/rp_application.py` with fields `id`, `uuid`, `dnrAppName`, and `departmentId`.

@@ -44,4 +44,3 @@ dashboard or embed report results.
 - **THEN** authenticated Home and the shared menu omit Reports
 - **AND** a direct request to `/reports` fails through the standard safe authorization behavior
 - **AND** the response does not reveal report types, workspaces, applications, or scope identifiers
-

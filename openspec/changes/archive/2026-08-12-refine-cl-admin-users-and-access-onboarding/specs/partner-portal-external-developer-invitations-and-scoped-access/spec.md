@@ -182,4 +182,3 @@ state SHALL fail safely without mutating access.
 - **WHEN** identity resolution is ambiguous or finds disabled, deleted, mixed-access, or otherwise ineligible state
 - **THEN** the portal returns a safe recoverable failure
 - **AND** it creates no user, invitation, or assignment
-

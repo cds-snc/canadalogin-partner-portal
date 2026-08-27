@@ -6,7 +6,7 @@ import re
 import uuid as uuid_pkg
 from collections.abc import Mapping
 from datetime import UTC, datetime
-from typing import Any, Literal, Optional, cast
+from typing import Any, Literal, cast
 
 from fastcrud import compute_offset, paginated_response
 from ibm_verify_community_sdk.applications.models import ListApplicationsResponse
@@ -1810,8 +1810,8 @@ class RPApplicationService:
         )
         pkce_enabled = self._extract_bool(oidc_provider.get("requirePkceVerification"))
 
-        department_name: Optional[str] = None
-        department_name_fr: Optional[str] = None
+        department_name: str | None = None
+        department_name_fr: str | None = None
         raw_department_id = rp_application_data.get("department_id")
         if isinstance(raw_department_id, int):
             department = await crud_departments.get(db=db, id=raw_department_id)

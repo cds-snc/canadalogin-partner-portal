@@ -1,3 +1,5 @@
+# Design
+
 ## Context
 
 The frontend currently routes RP application owner links from dashboard to `/rp-applications/mine/$rpApplicationUuid` and loads OAuth setup details from `/api/v1/rp-applications/mine/{rpApplicationUuid}/oauth-setup`. The parent owner route currently checks only authenticated user status and does not preflight whether the RP application itself has a department.

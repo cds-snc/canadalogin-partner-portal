@@ -47,4 +47,3 @@ Link to the baseline controls profile YAML.
 - [ ] App-type applicability is clear for each referenced control.
 - [ ] The baseline is added to `docs/baselines/catalog.yml`.
 - [ ] Referenced controls are listed in `docs/controls/catalog.yml`.
-

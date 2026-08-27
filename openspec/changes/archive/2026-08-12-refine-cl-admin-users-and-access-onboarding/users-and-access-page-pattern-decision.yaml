@@ -148,4 +148,3 @@ ui_page_pattern_decision:
     required: false
     approval_status: not needed
     notes: No custom page shell, navigation, control, or second authorization model is planned.
-

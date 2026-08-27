@@ -5,6 +5,7 @@ Revises: 0015_rp_application_developer_invitation_schema
 Create Date: 2026-08-11
 
 """
+
 from __future__ import annotations
 
 from typing import Sequence, Union

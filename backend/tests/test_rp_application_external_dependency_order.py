@@ -4,11 +4,12 @@ from unittest.mock import AsyncMock, Mock
 from uuid import UUID
 
 import pytest
+from fastapi.dependencies.models import Dependant
+from fastapi.routing import APIRoute, RouteContext, iter_route_contexts
+from fastapi.testclient import TestClient
+
 import src.app.repositories.dependencies as ibm_dependencies_module
 import src.app.services.rp_application_service as rp_application_module
-from fastapi.dependencies.models import Dependant
-from fastapi.routing import APIRoute
-from fastapi.testclient import TestClient
 from src.app.api.dependencies import get_current_user
 from src.app.core.authorization import CanonicalRoleCode
 from src.app.core.db.database import async_get_db
@@ -87,9 +88,16 @@ def _dependency_calls(dependant: Dependant) -> Iterator[Any]:
         yield from _dependency_calls(dependency)
 
 
-def _route(method: str, path: str) -> APIRoute:
+def _route(method: str, path: str) -> RouteContext:
     route = next(
-        (route for route in app.routes if isinstance(route, APIRoute) and route.path == path and method in route.methods),
+        (
+            route_context
+            for route_context in iter_route_contexts(app.routes)
+            if isinstance(route_context.original_route, APIRoute)
+            and route_context.path == path
+            and route_context.methods is not None
+            and method in route_context.methods
+        ),
         None,
     )
     assert route is not None

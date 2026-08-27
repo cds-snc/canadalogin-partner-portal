@@ -5,6 +5,7 @@ Revises: 0012_rp_application_application_information_link
 Create Date: 2026-07-30
 
 """
+
 from __future__ import annotations
 
 from typing import Sequence, Union

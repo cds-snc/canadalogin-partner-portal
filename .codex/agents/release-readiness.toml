@@ -101,4 +101,3 @@ expectations.
 - `gate_gap`: a required gate/check status is missing, stale, failed, or not
   linked to evidence when gate tracking is in scope.
 """
-

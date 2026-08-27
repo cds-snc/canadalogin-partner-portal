@@ -5,6 +5,7 @@ Revises: 0010_workspace_member_schema
 Create Date: 2026-07-30
 
 """
+
 from __future__ import annotations
 
 from typing import Sequence, Union

@@ -39,4 +39,3 @@ Use these terms in control coverage maps:
 ## Reference Architecture Index
 
 No reference architectures have been published yet.
-

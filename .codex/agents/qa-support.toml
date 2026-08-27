@@ -109,4 +109,3 @@ readiness is enabled by `delorean/config.yaml` or explicitly requested.
 - A required gate/check status is missing, stale, failed, or not linked to
   evidence when gate tracking is in scope.
 """
-

@@ -14,15 +14,16 @@ export type ApplicationInformationFormState = {
 	usage: string;
 };
 
-export const createEmptyApplicationInformationForm = (): ApplicationInformationFormState => ({
-	migrationOrTransitionPlan: "",
-	overview: "",
-	securityAndPrivacy: "",
-	serviceNameEn: "",
-	serviceNameFr: "",
-	technologyAndProtocol: "",
-	usage: "",
-});
+export const createEmptyApplicationInformationForm =
+	(): ApplicationInformationFormState => ({
+		migrationOrTransitionPlan: "",
+		overview: "",
+		securityAndPrivacy: "",
+		serviceNameEn: "",
+		serviceNameFr: "",
+		technologyAndProtocol: "",
+		usage: "",
+	});
 
 const toRequiredString = (value: string): string => value.trim();
 

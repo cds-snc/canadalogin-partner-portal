@@ -192,4 +192,3 @@ Dev autopilot result:
 - Re-entry needed when in scope:
 - Next ready change/task when one remains:
 ```
-

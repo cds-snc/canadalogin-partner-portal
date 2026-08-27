@@ -97,4 +97,3 @@ Question <number>:
 - Do not rewrite broad requirements unless the answer directly changes scope, acceptance criteria, a scenario, or an implementation task.
 - Do not move active OpenSpec deltas into `openspec/specs/` before implementation and verification are complete.
 - Stop or ask before production, real secrets, real data, deployment, external system changes, approval, waivers, destructive changes, or wider permission boundaries.
-

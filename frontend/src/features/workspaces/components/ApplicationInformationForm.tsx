@@ -48,10 +48,7 @@ export const ApplicationInformationForm = ({
 				name="serviceNameEn"
 				value={form.serviceNameEn}
 				onInput={(event): void => {
-					onChange(
-						"serviceNameEn",
-						(event.target as HTMLInputElement).value
-					);
+					onChange("serviceNameEn", (event.target as HTMLInputElement).value);
 				}}
 			/>
 			<Input
@@ -61,10 +58,7 @@ export const ApplicationInformationForm = ({
 				name="serviceNameFr"
 				value={form.serviceNameFr}
 				onInput={(event): void => {
-					onChange(
-						"serviceNameFr",
-						(event.target as HTMLInputElement).value
-					);
+					onChange("serviceNameFr", (event.target as HTMLInputElement).value);
 				}}
 			/>
 			<Textarea
@@ -74,10 +68,7 @@ export const ApplicationInformationForm = ({
 				textareaId="application-information-overview"
 				value={form.overview}
 				onInput={(event): void => {
-					onChange(
-						"overview",
-						(event.target as HTMLTextAreaElement).value
-					);
+					onChange("overview", (event.target as HTMLTextAreaElement).value);
 				}}
 			/>
 			<Textarea
@@ -113,10 +104,7 @@ export const ApplicationInformationForm = ({
 				textareaId="application-information-usage"
 				value={form.usage}
 				onInput={(event): void => {
-					onChange(
-						"usage",
-						(event.target as HTMLTextAreaElement).value
-					);
+					onChange("usage", (event.target as HTMLTextAreaElement).value);
 				}}
 			/>
 			<Textarea

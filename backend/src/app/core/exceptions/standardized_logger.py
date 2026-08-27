@@ -12,13 +12,11 @@ logger.setLevel(logging.WARNING)
 
 PROJECT_NAME = "CanadaLogin"
 APPLICATION_NAME = "PartnerPortal"
+
+
 class StandardizedLogger:
     def _hash_query_params(self, query_params) -> str:
-        items = (
-            query_params.multi_items()
-            if hasattr(query_params, "multi_items")
-            else query_params.items()
-        )
+        items = query_params.multi_items() if hasattr(query_params, "multi_items") else query_params.items()
         return hash_query_values(items)
 
     def _build_context(self, request, response):

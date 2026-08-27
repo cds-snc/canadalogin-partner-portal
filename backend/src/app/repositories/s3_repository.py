@@ -1,7 +1,7 @@
 import asyncio
 import csv
 import io
-from typing import Any, Optional
+from typing import Any
 
 import boto3
 from botocore.exceptions import ClientError
@@ -23,7 +23,7 @@ class S3Repository:
         self.bucket = settings.S3_MAU_BUCKET_NAME
         self.folder = settings.S3_MAU_FOLDER
 
-    async def get_csv_file(self, key: str) -> Optional[list[MAUCsvRow]]:
+    async def get_csv_file(self, key: str) -> list[MAUCsvRow] | None:
         full_key = f"{self.folder}{key}"
         client = await self._get_client()
         try:

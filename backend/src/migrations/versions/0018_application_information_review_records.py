@@ -5,6 +5,7 @@ Revises: 0017_rp_application_promotion_request_and_lifecycle_backfill
 Create Date: 2026-08-11
 
 """
+
 from __future__ import annotations
 
 from typing import Sequence, Union

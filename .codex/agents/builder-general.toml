@@ -120,4 +120,3 @@ source-of-truth decisions, or a broader control boundary.
 - Required change-state says blocked, approval needed, production, sensitive
   data, or a wider permission boundary is in scope.
 """
-

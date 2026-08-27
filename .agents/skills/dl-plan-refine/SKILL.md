@@ -67,4 +67,3 @@ Refine the design for a change so implementation and verification have a clear p
 - Do not leave human-only decisions only in chat; record them as open questions in `design.md` or `tasks.md` when an OpenSpec change is in scope.
 - Do not create ADRs for temporary or minor choices.
 - Do not approve waivers, risk acceptance, production actions, or release readiness.
-

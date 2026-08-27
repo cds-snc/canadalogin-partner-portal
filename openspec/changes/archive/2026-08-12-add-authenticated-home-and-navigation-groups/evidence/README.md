@@ -142,4 +142,3 @@ production release approval. No control exception or waiver is requested.
 Formal assistive-technology, supported-browser, human translation, and release
 owner review remain appropriate before a real release. These are recorded
 release-review activities rather than Level 2 local implementation blockers.
-

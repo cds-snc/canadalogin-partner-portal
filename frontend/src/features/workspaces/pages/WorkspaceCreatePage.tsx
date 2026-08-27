@@ -24,7 +24,9 @@ export const WorkspaceCreatePage = (): FunctionComponent => {
 	const { currentUser } = useSession();
 	const { createWorkspace, isCreating } = useWorkspaceManagement();
 	const [error, setError] = useState<Error | null>(null);
-	const [form, setForm] = useState<WorkspaceFormState>(createEmptyWorkspaceForm);
+	const [form, setForm] = useState<WorkspaceFormState>(
+		createEmptyWorkspaceForm
+	);
 	const errorNotice = getRequestErrorNotice(error, {
 		bodyKey: "workspaces.errorBody",
 		titleKey: "workspaces.errorTitle",

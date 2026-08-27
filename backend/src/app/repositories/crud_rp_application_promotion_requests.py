@@ -17,6 +17,4 @@ CRUDRPApplicationPromotionRequest = FastCRUD[
     RPApplicationPromotionRequestDelete,
     RPApplicationPromotionRequestRead,
 ]
-crud_rp_application_promotion_requests = CRUDRPApplicationPromotionRequest(
-    RPApplicationPromotionRequest
-)
+crud_rp_application_promotion_requests = CRUDRPApplicationPromotionRequest(RPApplicationPromotionRequest)

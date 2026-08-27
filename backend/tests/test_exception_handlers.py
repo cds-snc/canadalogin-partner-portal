@@ -87,9 +87,7 @@ def build_router() -> APIRouter:
     return router
 
 
-def assert_unified_error_response(
-    payload: dict[str, Any], *, expected_code: str, expected_message: str, expected_request_id: str
-) -> dict[str, Any]:
+def assert_unified_error_response(payload: dict[str, Any], *, expected_code: str, expected_message: str, expected_request_id: str) -> dict[str, Any]:
     assert payload["error"]["code"] == expected_code
     assert payload["error"]["message"] == expected_message
     assert payload["error"]["requestId"] == expected_request_id

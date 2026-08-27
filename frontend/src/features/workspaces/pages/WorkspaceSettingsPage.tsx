@@ -30,7 +30,11 @@ export const WorkspaceSettingsPage = (): FunctionComponent => {
 	const { workspaceUuid } = useParams({
 		from: "/workspaces/$workspaceUuid/settings",
 	});
-	const { error: loadError, isLoading, workspace } = useWorkspace(workspaceUuid);
+	const {
+		error: loadError,
+		isLoading,
+		workspace,
+	} = useWorkspace(workspaceUuid);
 	const { deleteWorkspace, isDeleting, isUpdating, updateWorkspace } =
 		useWorkspaceManagement();
 	const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);

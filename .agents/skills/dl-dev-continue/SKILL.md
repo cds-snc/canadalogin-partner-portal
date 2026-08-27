@@ -98,4 +98,3 @@ Stop or ask for human input when:
 - the design is too unclear to implement safely
 - the UI needs a page pattern decision before implementation
 - the next unchecked task is not safe to infer
-

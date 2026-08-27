@@ -83,4 +83,3 @@ If no mode is provided, infer the safest mode from the request and state it.
 - Do not replace fitting GC Design System components with raw HTML unless an exception is recorded.
 - Do not rely on breadcrumbs, direct URLs, or browser history as the main task path.
 - Do not invent approval for custom UI exceptions.
-

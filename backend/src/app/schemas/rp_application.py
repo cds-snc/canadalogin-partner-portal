@@ -2,7 +2,7 @@ import json
 import uuid as uuid_pkg
 from collections.abc import Sequence
 from datetime import datetime
-from typing import Literal, Optional
+from typing import Literal
 
 from pydantic import AnyHttpUrl, BaseModel, ConfigDict, Field, field_validator, model_validator
 from pydantic.alias_generators import to_camel
@@ -209,8 +209,8 @@ class AccessibleRPApplicationOAuthSetupRead(BaseModel):
     production_review_reconciliation_required: bool = False
     application_url: str | None = None
     discovery_endpoint: str | None = None
-    department_name: Optional[str] = None
-    department_name_fr: Optional[str] = None
+    department_name: str | None = None
+    department_name_fr: str | None = None
     pkce_enabled: bool | None = None
     redirect_uris: list[str] = Field(default_factory=list)
     logout_uri: str | None = None

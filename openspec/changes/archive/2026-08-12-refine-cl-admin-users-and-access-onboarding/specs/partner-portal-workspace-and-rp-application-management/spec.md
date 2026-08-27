@@ -51,4 +51,3 @@ lower partner roles SHALL NOT mutate assignments or invitations.
 - **WHEN** an RP Admin opens Access in the assigned workspace
 - **THEN** the portal permits assignment and invitation actions only for RP User (Edit) and Read Only
 - **AND** RP Admin and cross-workspace actions remain unavailable and denied
-

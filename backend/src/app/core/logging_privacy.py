@@ -28,6 +28,16 @@ def hash_log_value(value: Any) -> str:
 def safe_request_path(request: Any) -> str:
     """Prefer a route template and redact UUIDs from unresolved paths."""
 
+    # FastAPI 0.141 keeps included routers nested. The original route stored in
+    # the ASGI scope therefore has only its leaf path, while the effective
+    # route context preserves the complete path including router prefixes.
+    fastapi_scope = request.scope.get("fastapi")
+    if isinstance(fastapi_scope, dict):
+        route_context = fastapi_scope.get("effective_route_context")
+        route_path = getattr(route_context, "path", None)
+        if isinstance(route_path, str) and route_path:
+            return route_path
+
     route = request.scope.get("route")
     route_path = getattr(route, "path", None)
     if isinstance(route_path, str) and route_path:

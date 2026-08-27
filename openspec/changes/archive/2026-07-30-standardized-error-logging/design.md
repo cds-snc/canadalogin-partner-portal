@@ -1,3 +1,5 @@
+# Design
+
 ## Context
 
 The backend already had a complete, consistent error response envelope (`ErrorResponse` / `ErrorDetail`) returned by six exception handlers registered in `handlers.py`. However, no structured log entry was emitted when those handlers fired — the only logging in place was `logger.exception(...)` inside the catch-all handler for unhandled 500s (stdlib logging with no structured context).

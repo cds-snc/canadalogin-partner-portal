@@ -5,6 +5,7 @@ Revises: 0013_workspace_scoped_rp_application_fields
 Create Date: 2026-08-10
 
 """
+
 from __future__ import annotations
 
 from typing import Sequence, Union

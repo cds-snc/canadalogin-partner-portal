@@ -68,4 +68,3 @@ real secrets, destructive actions, pushing, or widening the permission boundary.
 - Do not use `git commit --no-verify` unless a human explicitly accepts the bypass and the reason is recorded.
 - Do not push, deploy, use production, read real secrets, or touch shared environments.
 - Do not report hook readiness if the hook or equivalent checks were not run or directly assessed.
-

@@ -164,4 +164,3 @@ Expected output:
 - Do not treat best practice as a requirement unless it is backed by a standard, existing repo convention, OpenSpec artifact, or explicit human decision.
 - Do not leave human-only decisions only in chat; record them as open questions in the relevant OpenSpec or design artifacts.
 - Use local-safe assumptions when possible, but stop before production, real secrets, real data, external systems, destructive changes, approval, waivers, or wider permission boundaries.
-

@@ -38,4 +38,3 @@ Record:
 ## Related Standards
 
 - [STD-017: Government of Canada Standards Review](../../standards/std-017-gc-standards-review.md)
-

@@ -26,11 +26,7 @@ class TestSessionMiddlewareSetup:
         ):
             app = create_application(APIRouter(), settings, create_tables_on_start=False)
 
-        session_middleware = next(
-            middleware
-            for middleware in app.user_middleware
-            if middleware.cls is SessionMiddleware
-        )
+        session_middleware = next(middleware for middleware in app.user_middleware if middleware.cls is SessionMiddleware)
 
         assert session_middleware.kwargs["cookie_domain"] is None
 

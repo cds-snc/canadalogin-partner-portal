@@ -1,3 +1,5 @@
+# Proposal
+
 ## Why
 
 Owners can navigate from dashboard to RP application owner routes even when the selected RP application has no associated department. This creates inconsistent behavior and prevents the product from enforcing a required application state before showing details and MAU data.

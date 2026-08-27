@@ -37,4 +37,3 @@ Confirm the application:
 - [STD-006: GC UI Page Layout Rules](../../standards/std-006-gc-ui-page-layout-rules.md)
 - [STD-007: UI Accessibility Basics](../../standards/std-007-ui-accessibility-basics.md)
 - [STD-018: Frontend CSS and Design-System Boundary](../../standards/std-018-frontend-css-and-design-system-boundary.md)
-

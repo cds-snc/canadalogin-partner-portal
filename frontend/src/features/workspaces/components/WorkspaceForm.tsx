@@ -35,8 +35,8 @@ export const WorkspaceForm = ({
 			<Text>
 				{departmentAbbreviation
 					? t("workspaces.departmentContext", {
-						department: departmentAbbreviation,
-					})
+							department: departmentAbbreviation,
+						})
 					: t("workspaces.departmentContextFallback")}
 			</Text>
 			<Input
@@ -46,10 +46,7 @@ export const WorkspaceForm = ({
 				name="name"
 				value={form.name}
 				onInput={(event): void => {
-					onChange(
-						"name",
-						(event.target as HTMLInputElement).value
-					);
+					onChange("name", (event.target as HTMLInputElement).value);
 				}}
 			/>
 			<Input
@@ -59,10 +56,7 @@ export const WorkspaceForm = ({
 				name="slug"
 				value={form.slug}
 				onInput={(event): void => {
-					onChange(
-						"slug",
-						(event.target as HTMLInputElement).value
-					);
+					onChange("slug", (event.target as HTMLInputElement).value);
 				}}
 			/>
 			<Textarea
@@ -71,10 +65,7 @@ export const WorkspaceForm = ({
 				textareaId="workspace-description"
 				value={form.description}
 				onInput={(event): void => {
-					onChange(
-						"description",
-						(event.target as HTMLTextAreaElement).value
-					);
+					onChange("description", (event.target as HTMLTextAreaElement).value);
 				}}
 			/>
 			<div className="flex flex-wrap gap-200">

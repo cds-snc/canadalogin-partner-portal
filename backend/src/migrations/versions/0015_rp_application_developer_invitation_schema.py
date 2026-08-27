@@ -5,6 +5,7 @@ Revises: 0014_rp_application_access_grant_schema
 Create Date: 2026-08-10
 
 """
+
 from __future__ import annotations
 
 from typing import Sequence, Union

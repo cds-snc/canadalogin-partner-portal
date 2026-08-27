@@ -5,6 +5,7 @@ Revises: 0016_onboarding_lifecycle_state_columns
 Create Date: 2026-08-11
 
 """
+
 from __future__ import annotations
 
 from typing import Sequence, Union

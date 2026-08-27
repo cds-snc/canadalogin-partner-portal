@@ -40,4 +40,3 @@ Confirm the application:
 
 - [STD-005: Frontend GC Design System](../../standards/std-005-frontend-gc-design-system.md)
 - [STD-006: GC UI Page Layout Rules](../../standards/std-006-gc-ui-page-layout-rules.md)
-

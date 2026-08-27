@@ -1,8 +1,8 @@
 import os
 import re
-from enum import Enum
+from enum import StrEnum
 from ipaddress import ip_address
-from typing import Any, Optional
+from typing import Any
 from urllib.parse import urlsplit
 
 from pydantic import Field, SecretStr, computed_field, field_validator, model_validator
@@ -11,7 +11,7 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 from .identity import normalize_partner_access_domain
 
 
-class EnvironmentOption(str, Enum):
+class EnvironmentOption(StrEnum):
     LOCAL = "local"
     DEVELOPMENT = "dev"
     TESTING = "test"
@@ -19,7 +19,7 @@ class EnvironmentOption(str, Enum):
     PRODUCTION = "production"
 
 
-class AuthModeOption(str, Enum):
+class AuthModeOption(StrEnum):
     OIDC = "oidc"
     LOCAL_DEV = "local_dev"
 
@@ -211,11 +211,11 @@ class TestSettings(BaseSettings): ...
 
 
 class RedisCacheSettings(BaseSettings):
-    REDIS_CACHE_HOST: Optional[str] = None
-    REDIS_CACHE_PORT: Optional[int] = None
-    REDIS_CACHE_DB: Optional[int] = None
-    REDIS_CACHE_PASSWORD: Optional[SecretStr] = None
-    REDIS_CACHE_SSL: Optional[bool] = None
+    REDIS_CACHE_HOST: str | None = None
+    REDIS_CACHE_PORT: int | None = None
+    REDIS_CACHE_DB: int | None = None
+    REDIS_CACHE_PASSWORD: SecretStr | None = None
+    REDIS_CACHE_SSL: bool | None = None
 
     @computed_field  # type: ignore[prop-decorator]
     @property
@@ -235,11 +235,11 @@ class ClientSideCacheSettings(BaseSettings):
 
 
 class RedisQueueSettings(BaseSettings):
-    REDIS_QUEUE_HOST: Optional[str] = None
-    REDIS_QUEUE_PORT: Optional[int] = None
-    REDIS_QUEUE_DB: Optional[int] = None
-    REDIS_QUEUE_PASSWORD: Optional[SecretStr] = None
-    REDIS_QUEUE_SSL: Optional[bool] = None
+    REDIS_QUEUE_HOST: str | None = None
+    REDIS_QUEUE_PORT: int | None = None
+    REDIS_QUEUE_DB: int | None = None
+    REDIS_QUEUE_PASSWORD: SecretStr | None = None
+    REDIS_QUEUE_SSL: bool | None = None
 
     @computed_field  # type: ignore[prop-decorator]
     @property
@@ -255,11 +255,11 @@ class RedisQueueSettings(BaseSettings):
 
 
 class RedisRateLimiterSettings(BaseSettings):
-    REDIS_RATE_LIMIT_HOST: Optional[str] = None
-    REDIS_RATE_LIMIT_PORT: Optional[int] = None
-    REDIS_RATE_LIMIT_DB: Optional[int] = None
-    REDIS_RATE_LIMIT_PASSWORD: Optional[SecretStr] = None
-    REDIS_RATE_LIMIT_SSL: Optional[bool] = None
+    REDIS_RATE_LIMIT_HOST: str | None = None
+    REDIS_RATE_LIMIT_PORT: int | None = None
+    REDIS_RATE_LIMIT_DB: int | None = None
+    REDIS_RATE_LIMIT_PASSWORD: SecretStr | None = None
+    REDIS_RATE_LIMIT_SSL: bool | None = None
 
     @computed_field  # type: ignore[prop-decorator]
     @property

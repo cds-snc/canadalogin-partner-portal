@@ -40,4 +40,3 @@ Confirm the application:
 
 - [STD-011: Logging and Observability](../../standards/std-011-logging-and-observability.md)
 - [STD-013: Security and Privacy Basics](../../standards/std-013-security-and-privacy-basics.md)
-

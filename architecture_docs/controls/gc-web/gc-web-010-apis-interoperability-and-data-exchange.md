@@ -40,4 +40,3 @@ Confirm the application:
 - [STD-009: REST API](../../standards/std-009-api-rest.md)
 - [STD-010: API Response and Error Models](../../standards/std-010-api-response-and-error-models.md)
 - [STD-013: Security and Privacy Basics](../../standards/std-013-security-and-privacy-basics.md)
-
