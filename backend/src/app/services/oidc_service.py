@@ -1,4 +1,3 @@
-from typing import Optional
 from urllib.parse import urlencode
 
 from fastapi.responses import RedirectResponse
@@ -14,15 +13,18 @@ from ..core.identity import (
     SESSION_AUTHENTICATION_PROVIDER_KEY,
     resolve_verified_email_claim,
 )
+from ..core.logger import logging
 from ..core.oidc import build_oidc_redirect_uri, get_oidc_client, load_oidc_server_metadata, sync_oidc_user
 from .oidc_logout_service import OidcLogoutService
+
+logger = logging.getLogger(__name__)
 
 
 class OidcService:
     def __init__(self, logout_service: OidcLogoutService | None = None) -> None:
         self.logout_service = logout_service or OidcLogoutService()
 
-    async def login(self, request: Request, ui_locales: Optional[str] = None, redirect: Optional[str] = None):
+    async def login(self, request: Request, ui_locales: str | None = None, redirect: str | None = None):
         client = get_oidc_client()
         await load_oidc_server_metadata(client)
         redirect_uri = build_oidc_redirect_uri(request)
@@ -75,6 +77,7 @@ class OidcService:
             query_params["redirect"] = redirect
         if query_params:
             post_login_url = f"{post_login_url}?{urlencode(query_params)}"
+        logger.info("user login: %s", oidc_user["uuid"])
         return RedirectResponse(url=post_login_url)
 
     async def backchannel_logout(self, logout_token: str) -> dict[str, str]:

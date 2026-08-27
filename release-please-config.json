@@ -3,6 +3,7 @@
   "packages": {
     ".": {
       "initial-version": "1.0.0",
+      "extra-files": [".deployed_versions/test.json"],
       "changelog-sections": [
         {"type": "feat", "section": "Features"},
         {"type": "fix", "section": "Bug Fixes"},

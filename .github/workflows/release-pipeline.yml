@@ -8,26 +8,109 @@ on:
 
 permissions:
   contents: write
+  issues: write
+  pull-requests: write
   id-token: write
 
 env:
   AWS_REGION: ca-central-1
   GITHUB_SHA: ${{ github.sha }}
+  SLACK_NOTIFICATION_APPLICATION_NAME: "GC Sign-In Partner Portal"
 
 concurrency:
   group: release-pipeline
   cancel-in-progress: false
 
 jobs:
+  # Runs the release-please action. This manages the open release PR and
+  # creates the release when the PR is merged.
+  release-please:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/create-github-app-token@d72941d797fd3113feb6b93fd0dec494b13a2547 # v1.12.0
+        id: sre_app_token
+        with:
+          app-id: ${{ secrets.CDS_RELEASE_BOT_APP_ID }}
+          private-key: ${{ secrets.CDS_RELEASE_BOT_PRIVATE_KEY }}
+
+      - uses: googleapis/release-please-action@5c625bfb5d1ff62eadeeb3772007f7f66fdcf071 # v4.4.1
+        id: release
+        with:
+          token: ${{ steps.sre_app_token.outputs.token }}
+
+  # Checks which environments are being deployed to by diffing .deployed_versions/*.json
+  # changes between the previous and current commit. Posts a Slack notification if any
+  # environments are being promoted.
+  notify-slack-about-deploy:
+    runs-on: ubuntu-latest
+    outputs:
+      envs: ${{ steps.check-envs.outputs.envs }}
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          fetch-depth: 0
+
+      - name: Check what environments are being deployed to
+        id: check-envs
+        if: github.event_name != 'workflow_dispatch'
+        run: |
+          ENVS_TO_DEPLOY=""
+          for file in $(git diff --name-only ${{ github.event.before }} ${{ github.sha }}); do
+            if [[ "$file" == .deployed_versions/*.json ]]; then
+              ENV_NAME=$(basename "$file" .json)
+              if [ -z "$ENVS_TO_DEPLOY" ]; then
+                ENVS_TO_DEPLOY="$ENV_NAME"
+              else
+                ENVS_TO_DEPLOY="$ENVS_TO_DEPLOY,$ENV_NAME"
+              fi
+            fi
+          done
+          echo "Found environments to deploy: $ENVS_TO_DEPLOY"
+          echo "envs=$ENVS_TO_DEPLOY" >> "$GITHUB_OUTPUT"
+
+      - name: Notify slack
+        if: steps.check-envs.outputs.envs != ''
+        run: |
+          workflow_url="${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+          json='{"text":":hourglass: '"${{ env.SLACK_NOTIFICATION_APPLICATION_NAME }}"' is being deployed to the following environments: `'"${{ steps.check-envs.outputs.envs }}"'`\n\n<'"$workflow_url"'|Click for more details>"}'
+          curl -X POST -H 'Content-type: application/json' --data "$json" ${{ secrets.GC_SIGNIN_OPS_SLACK_INFO_WEBHOOK }}
+
+  # Detect the release tag on the current commit and expose it as a job output.
+  detect-release-tag:
+    runs-on: ubuntu-latest
+    needs: [release-please]
+    outputs:
+      release_tag: ${{ steps.detect-release-tag.outputs.release_tag }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+
+      - name: Fetch tags
+        run: git fetch --prune --unshallow --tags
+
+      - name: Detect release tag on current commit
+        id: detect-release-tag
+        run: |
+          RELEASE_TAG=$(git tag --points-at "$GITHUB_SHA" | grep -E '^v[0-9]+\.[0-9]+\.[0-9]+$' | head -n 1 || true)
+
+          if [ -z "$RELEASE_TAG" ]; then
+            echo "No release tag (vX.Y.Z) found on this commit."
+          else
+            echo "Found release tag: '$RELEASE_TAG'"
+          fi
+
+          echo "release_tag=$RELEASE_TAG" >> "$GITHUB_OUTPUT"
+
   build-backend:
     name: Build Backend Image
     runs-on: ubuntu-latest
     environment: dev
+    needs: [notify-slack-about-deploy, detect-release-tag]
     outputs:
       image_uri: ${{ steps.image.outputs.image_uri }}
     steps:
       - name: Checkout
-        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
 
       - name: Audit DNS requests
         uses: cds-snc/dns-proxy-action@9ad793100229573be3f5ba78cc69ec523f2c8b7e # main
@@ -43,31 +126,49 @@ jobs:
           role-session-name: DevBackendDeploy
           aws-region: ${{ env.AWS_REGION }}
 
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@988b5a0280414f521da01fcc63a27aeeb4b104db # v3.11.1
-
       - name: Login to Amazon ECR
         uses: aws-actions/amazon-ecr-login@d539f0932e70871a027e9d5a9d8fc38589180a64 # v2.1.6
 
       - name: Compute image tags
         id: image
         run: |
+          RELEASE_TAG_OUTPUT="${{ needs.detect-release-tag.outputs.release_tag }}"
+          if [ -n "$RELEASE_TAG_OUTPUT" ]; then
+            RELEASE_VERSION="$RELEASE_TAG_OUTPUT"
+          else
+            RELEASE_VERSION="$(date +%Y%m%d)-${GITHUB_SHA}"
+          fi
+          echo "release_version=$RELEASE_VERSION" >> "$GITHUB_OUTPUT"
           echo "image_uri=${{ vars.ARTIFACT_ECR_REPOSITORY }}:${GITHUB_SHA}" >> "$GITHUB_OUTPUT"
 
       - name: Build and push backend image
         env:
           IMAGE_URI: ${{ steps.image.outputs.image_uri }}
+          RELEASE_VERSION: ${{ steps.image.outputs.release_version }}
         run: |
-          docker buildx build \
-            --platform linux/amd64 \
-            --build-arg APP_VERSION="$GITHUB_SHA" \
+          docker build \
+            --build-arg APP_VERSION="$RELEASE_VERSION" \
             --tag "$IMAGE_URI" \
-            --tag "${{ vars.ARTIFACT_ECR_REPOSITORY }}:latest" \
-            --push \
             backend
 
+          docker push "$IMAGE_URI"
+
+          docker tag "$IMAGE_URI" "${{ vars.ARTIFACT_ECR_REPOSITORY }}:latest"
+          docker push "${{ vars.ARTIFACT_ECR_REPOSITORY }}:latest"
+
+      - name: Tag and push semver image
+        if: needs.detect-release-tag.outputs.release_tag != ''
+        run: |
+          RELEASE_TAG="${{ needs.detect-release-tag.outputs.release_tag }}"
+
+          docker tag \
+            "${{ steps.image.outputs.image_uri }}" \
+            "${{ vars.ARTIFACT_ECR_REPOSITORY }}:$RELEASE_TAG"
+
+          docker push "${{ vars.ARTIFACT_ECR_REPOSITORY }}:$RELEASE_TAG"
+
       - name: Docker generate SBOM
-        uses: cds-snc/security-tools/.github/actions/generate-sbom@837a88b6337d4842543184c8eac97a8adac8f302 # v4.0.3
+        uses: cds-snc/security-tools/.github/actions/generate-sbom@d123fa2b895f7ef5b400fad333d2101b103b2e64 # v4.0.4
         env:
           TRIVY_DB_REPOSITORY: ${{ vars.TRIVY_DB_REPOSITORY }}
         with:
@@ -79,10 +180,14 @@ jobs:
   build-frontend:
     name: Build Frontend
     runs-on: ubuntu-latest
-    environment: dev
+    strategy:
+      matrix:
+        environment: [dev]
+    environment: ${{ matrix.environment }}
+    needs: [notify-slack-about-deploy, detect-release-tag]
     steps:
       - name: Checkout
-        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
 
       - name: Set up Node.js
         uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
@@ -101,11 +206,17 @@ jobs:
         env:
           VITE_API_BASE_URL: ${{ secrets.VITE_API_BASE_URL }}
           VITE_APP_ENVIRONMENT: ${{ vars.VITE_APP_ENVIRONMENT }}
-          VITE_APP_VERSION: ${{ github.sha }}
           VITE_AUTH_POST_LOGIN_PATH: ${{ vars.VITE_AUTH_POST_LOGIN_PATH }}
           VITE_SESSION_WARNING_AFTER_MINUTES: ${{ vars.VITE_SESSION_WARNING_AFTER_MINUTES }}
           VITE_SESSION_COUNTDOWN_MINUTES: ${{ vars.VITE_SESSION_COUNTDOWN_MINUTES }}
         run: |
+          RELEASE_TAG_OUTPUT="${{ needs.detect-release-tag.outputs.release_tag }}"
+          if [ -n "$RELEASE_TAG_OUTPUT" ]; then
+            RELEASE_VERSION="$RELEASE_TAG_OUTPUT"
+          else
+            RELEASE_VERSION="$(date +%Y%m%d)-${GITHUB_SHA}"
+          fi
+          export VITE_RELEASE_TAG="$RELEASE_VERSION"
           export VITE_AUTH_POST_LOGIN_PATH="${VITE_AUTH_POST_LOGIN_PATH:-/your-applications}"
           export VITE_SESSION_WARNING_AFTER_MINUTES="${VITE_SESSION_WARNING_AFTER_MINUTES:-25}"
           export VITE_SESSION_COUNTDOWN_MINUTES="${VITE_SESSION_COUNTDOWN_MINUTES:-5}"
@@ -128,28 +239,57 @@ jobs:
   deploy-frontend:
     name: Deploy Frontend
     runs-on: ubuntu-latest
-    environment: dev
+    strategy:
+      matrix:
+        environment: [dev]
+    environment: ${{ matrix.environment }}
     needs:
+      - release-please
       - build-frontend
     steps:
+      - name: Checkout repository
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+
+      - name: Fetch tags
+        run: git fetch --prune --unshallow --tags
+
+      # In dev we always deploy the current GITHUB_SHA.
+      # In all other environments we resolve the pinned version from .deployed_versions/{env}.json.
+      - name: Set deployment SHA
+        run: |
+          if [ "${{ matrix.environment }}" = "dev" ]; then
+            echo "DEPLOYMENT_SHA=${GITHUB_SHA}" >> "$GITHUB_ENV"
+          else
+            DEPLOYMENT_TAG=$(cat .deployed_versions/${{ matrix.environment }}.json | jq -r '.version')
+            DEPLOYMENT_SHA=$(git rev-list -n 1 "v${DEPLOYMENT_TAG}")
+            echo "DEPLOYMENT_SHA=${DEPLOYMENT_SHA}" >> "$GITHUB_ENV"
+          fi
+
+      - name: Ensure deployment SHA is set
+        run: |
+          if [ -z "${DEPLOYMENT_SHA}" ]; then
+            echo "DEPLOYMENT_SHA is not set. Exiting."
+            exit 1
+          fi
+
       - name: Configure AWS credentials using OIDC
         uses: aws-actions/configure-aws-credentials@7474bc4690e29a8392af63c5b98e7449536d5c3a # v4.3.1
         with:
           role-to-assume: arn:aws:iam::${{ vars.AWS_ACCOUNT_ID }}:role/github_action_push_S3-partner-portal
-          role-session-name: DevFrontendDeploy
+          role-session-name: FrontendDeploy
           aws-region: ${{ env.AWS_REGION }}
 
       - name: Ensure frontend build artifact exists
         run: |
-          if ! aws s3 ls "s3://${{ secrets.FRONTEND_APP_BUILD_ARTIFACTS_S3_BUCKET }}/${GITHUB_SHA}/"; then
-            echo "No frontend build artifacts found for ${GITHUB_SHA}"
+          if ! aws s3 ls "s3://${{ secrets.FRONTEND_APP_BUILD_ARTIFACTS_S3_BUCKET }}/${DEPLOYMENT_SHA}/"; then
+            echo "No frontend build artifacts found for ${DEPLOYMENT_SHA}"
             exit 1
           fi
 
       - name: Deploy frontend to S3
         run: |
           aws s3 sync \
-            "s3://${{ secrets.FRONTEND_APP_BUILD_ARTIFACTS_S3_BUCKET }}/${GITHUB_SHA}" \
+            "s3://${{ secrets.FRONTEND_APP_BUILD_ARTIFACTS_S3_BUCKET }}/${DEPLOYMENT_SHA}" \
             "s3://${{ secrets.FRONTEND_APP_S3_BUCKET }}" \
             --delete
 
@@ -159,18 +299,44 @@ jobs:
   deploy-backend:
     name: Deploy Backend Services
     runs-on: ubuntu-latest
-    environment: dev
+    strategy:
+      matrix:
+        environment: [dev]
+    environment: ${{ matrix.environment }}
     needs:
+      - release-please
       - build-backend
     steps:
       - name: Checkout
-        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+
+      - name: Fetch tags
+        run: git fetch --prune --unshallow --tags
+
+      # In dev we always deploy the current GITHUB_SHA.
+      # In all other environments we resolve the pinned version from .deployed_versions/{env}.json.
+      - name: Set deployment SHA
+        run: |
+          if [ "${{ matrix.environment }}" = "dev" ]; then
+            echo "DEPLOYMENT_SHA=${GITHUB_SHA}" >> "$GITHUB_ENV"
+          else
+            DEPLOYMENT_TAG=$(cat .deployed_versions/${{ matrix.environment }}.json | jq -r '.version')
+            DEPLOYMENT_SHA=$(git rev-list -n 1 "v${DEPLOYMENT_TAG}")
+            echo "DEPLOYMENT_SHA=${DEPLOYMENT_SHA}" >> "$GITHUB_ENV"
+          fi
+
+      - name: Ensure deployment SHA is set
+        run: |
+          if [ -z "${DEPLOYMENT_SHA}" ]; then
+            echo "DEPLOYMENT_SHA is not set. Exiting."
+            exit 1
+          fi
 
       - name: Configure AWS credentials using OIDC
         uses: aws-actions/configure-aws-credentials@7474bc4690e29a8392af63c5b98e7449536d5c3a # v4.3.1
         with:
           role-to-assume: arn:aws:iam::${{ vars.AWS_ACCOUNT_ID }}:role/github_action_manage_push_ecr_ecs-partner-portal
-          role-session-name: DevEcsDeploy
+          role-session-name: EcsDeploy
           aws-region: ${{ env.AWS_REGION }}
 
       - name: Download current web task definition
@@ -193,7 +359,7 @@ jobs:
             --query "taskDefinition.containerDefinitions[?name=='${{ vars.ECS_WEB_CONTAINER }}'].image" \
             --output text)
 
-          if [ "$CURRENT_WEB_IMAGE" = "${{ needs.build-backend.outputs.image_uri }}" ]; then
+          if [ "$CURRENT_WEB_IMAGE" = "${{ vars.ARTIFACT_ECR_REPOSITORY }}:${DEPLOYMENT_SHA}" ]; then
             echo "deployment_needed=false" >> "$GITHUB_OUTPUT"
           else
             echo "deployment_needed=true" >> "$GITHUB_OUTPUT"
@@ -202,15 +368,15 @@ jobs:
       - name: Render web task definition
         if: steps.current-web-image.outputs.deployment_needed == 'true'
         id: web-task-def
-        uses: aws-actions/amazon-ecs-render-task-definition@6853cfae8c3a7d978fbf68b5a55453395541dfbb # v1.8.5
+        uses: aws-actions/amazon-ecs-render-task-definition@138c24f321fdbdf7edee4a685519d253cae2cdea # v1.9.0
         with:
           task-definition: web-task-definition.json
           container-name: ${{ vars.ECS_WEB_CONTAINER }}
-          image: ${{ needs.build-backend.outputs.image_uri }}
+          image: ${{ vars.ARTIFACT_ECR_REPOSITORY }}:${{ env.DEPLOYMENT_SHA }}
 
       - name: Deploy web task definition
         if: steps.current-web-image.outputs.deployment_needed == 'true'
-        uses: aws-actions/amazon-ecs-deploy-task-definition@a310a830f5c14e583e35d84e4e1ec7dd177c3c9c # v2.6.2
+        uses: aws-actions/amazon-ecs-deploy-task-definition@c465972ecbd160473f22e683363b422a5412a3de # v2.6.3
         with:
           task-definition: ${{ steps.web-task-def.outputs.task-definition }}
           service: ${{ vars.ECS_WEB_SERVICE }}
@@ -223,7 +389,7 @@ jobs:
         run: |
           aws ssm put-parameter \
             --name "/ecs/${{ vars.ECS_WEB_CLUSTER }}/${{ vars.ECS_WEB_SERVICE }}/container-image" \
-            --value "${{ needs.build-backend.outputs.image_uri }}" \
+            --value "${{ vars.ARTIFACT_ECR_REPOSITORY }}:${DEPLOYMENT_SHA}" \
             --type "String" \
             --overwrite
 
@@ -247,7 +413,7 @@ jobs:
             --query "taskDefinition.containerDefinitions[?name=='${{ vars.ECS_WORKER_CONTAINER }}'].image" \
             --output text)
 
-          if [ "$CURRENT_WORKER_IMAGE" = "${{ needs.build-backend.outputs.image_uri }}" ]; then
+          if [ "$CURRENT_WORKER_IMAGE" = "${{ vars.ARTIFACT_ECR_REPOSITORY }}:${DEPLOYMENT_SHA}" ]; then
             echo "deployment_needed=false" >> "$GITHUB_OUTPUT"
           else
             echo "deployment_needed=true" >> "$GITHUB_OUTPUT"
@@ -256,15 +422,15 @@ jobs:
       - name: Render worker task definition
         if: steps.current-worker-image.outputs.deployment_needed == 'true'
         id: worker-task-def
-        uses: aws-actions/amazon-ecs-render-task-definition@6853cfae8c3a7d978fbf68b5a55453395541dfbb # v1.8.5
+        uses: aws-actions/amazon-ecs-render-task-definition@138c24f321fdbdf7edee4a685519d253cae2cdea # v1.9.0
         with:
           task-definition: worker-task-definition.json
           container-name: ${{ vars.ECS_WORKER_CONTAINER }}
-          image: ${{ needs.build-backend.outputs.image_uri }}
+          image: ${{ vars.ARTIFACT_ECR_REPOSITORY }}:${{ env.DEPLOYMENT_SHA }}
 
       - name: Deploy worker task definition
         if: steps.current-worker-image.outputs.deployment_needed == 'true'
-        uses: aws-actions/amazon-ecs-deploy-task-definition@a310a830f5c14e583e35d84e4e1ec7dd177c3c9c # v2.6.2
+        uses: aws-actions/amazon-ecs-deploy-task-definition@c465972ecbd160473f22e683363b422a5412a3de # v2.6.3
         with:
           task-definition: ${{ steps.worker-task-def.outputs.task-definition }}
           service: ${{ vars.ECS_WORKER_SERVICE }}
@@ -277,6 +443,29 @@ jobs:
         run: |
           aws ssm put-parameter \
             --name "/ecs/${{ vars.ECS_WORKER_CLUSTER }}/${{ vars.ECS_WORKER_SERVICE }}/container-image" \
-            --value "${{ needs.build-backend.outputs.image_uri }}" \
+            --value "${{ vars.ARTIFACT_ECR_REPOSITORY }}:${DEPLOYMENT_SHA}" \
             --type "String" \
             --overwrite
+
+  notify-slack-about-deploy-success:
+    runs-on: ubuntu-latest
+    needs: [notify-slack-about-deploy, deploy-frontend, deploy-backend]
+    if: success() && needs.notify-slack-about-deploy.outputs.envs != ''
+    steps:
+      - name: Notify slack about successful deployments
+        run: |
+          workflow_url="${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+          json='{"text":":white_check_mark: '"${{ env.SLACK_NOTIFICATION_APPLICATION_NAME }}"' has been successfully deployed to the following environments: `'"${{ needs.notify-slack-about-deploy.outputs.envs }}"'`!\n\n<'"$workflow_url"'|Click for more details>"}'
+          curl -X POST -H 'Content-type: application/json' --data "$json" ${{ secrets.GC_SIGNIN_OPS_SLACK_INFO_WEBHOOK }}
+
+  notify-slack-about-deploy-failure:
+    runs-on: ubuntu-latest
+    needs: [notify-slack-about-deploy, deploy-frontend, deploy-backend]
+    if: failure() && needs.notify-slack-about-deploy.outputs.envs != ''
+    steps:
+      - name: Notify slack about failed deployments
+        run: |
+          workflow_url="${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+          json='{"text":":x: '"${{ env.SLACK_NOTIFICATION_APPLICATION_NAME }}"' FAILED to deploy to the following environments: `'"${{ needs.notify-slack-about-deploy.outputs.envs }}"'`!\n\n<'"$workflow_url"'|Click for more details>"}'
+          curl -X POST -H 'Content-type: application/json' --data "$json" ${{ secrets.GC_SIGNIN_OPS_SLACK_ALERT_WEBHOOK }}
+          curl -X POST -H 'Content-type: application/json' --data "$json" ${{ secrets.CL_DEV_SLACK_ALERT_WEBHOOK }}
