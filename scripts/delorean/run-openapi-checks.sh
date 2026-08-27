@@ -103,10 +103,10 @@ is_backend_api_change() {
   local file="$1"
 
   case "${file}" in
-    backend/src/app/*.py | backend/src/app/*/*.py | backend/src/app/*/*/*.py | backend/scripts/export_openapi.py)
+    backend/src/app/*.py | backend/scripts/export_openapi.py)
       return 0
       ;;
-    backend/pyproject.toml | backend/uv.lock | openapi/* | openapi/*/* | openapi/*/*/*)
+    backend/pyproject.toml | backend/uv.lock | openapi/*)
       return 0
       ;;
   esac

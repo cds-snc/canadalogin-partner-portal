@@ -164,11 +164,11 @@ write_file() {
   local path="$1"
   local content="$2"
   if [ -e "${path}" ] && [ "${force}" -ne 1 ]; then
-    echo "Keeping existing file: ${path#${repo_root}/}"
+    echo "Keeping existing file: ${path#"${repo_root}"/}"
     return 0
   fi
   printf '%s\n' "${content}" > "${path}"
-  echo "Wrote ${path#${repo_root}/}"
+  echo "Wrote ${path#"${repo_root}"/}"
 }
 
 write_file "${change_dir}/proposal.md" "# Proposal: ${title}

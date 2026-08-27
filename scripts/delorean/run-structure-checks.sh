@@ -462,14 +462,14 @@ fi
 if [ -n "${vscode_agent_dir}" ]; then
   for agent_file in "${vscode_agent_dir}"/*.agent.md; do
     if ! grep -q '^tools: .*agent/runSubagent' "${agent_file}"; then
-      echo "Agent is missing subagent invocation tool: ${agent_file#${repo_root}/}" >&2
+      echo "Agent is missing subagent invocation tool: ${agent_file#"${repo_root}"/}" >&2
       status=1
     fi
   done
 
   for prompt_file in "${vscode_prompt_dir}"/*.prompt.md; do
     if grep -q '^agent: .*\.github/agents/' "${prompt_file}"; then
-      echo "Prompt uses a file path in frontmatter agent instead of a VS Code agent name: ${prompt_file#${repo_root}/}" >&2
+      echo "Prompt uses a file path in frontmatter agent instead of a VS Code agent name: ${prompt_file#"${repo_root}"/}" >&2
       status=1
     fi
   done
@@ -506,11 +506,11 @@ fi
 
 if [ -n "${codex_instructions_file}" ]; then
   if [ "${codex_instructions_requires_marker}" -eq 1 ] && ! grep -q 'delorean-template:codex-agents' "${codex_instructions_file}"; then
-    echo "Codex instructions are missing the generated-template marker: ${codex_instructions_file#${repo_root}/}" >&2
+    echo "Codex instructions are missing the generated-template marker: ${codex_instructions_file#"${repo_root}"/}" >&2
     status=1
   fi
   if grep -q 'Delorean Template Maintainer Agent Instructions' "${codex_instructions_file}"; then
-    echo "Generated Codex instructions must not use template-maintainer root AGENTS.md content: ${codex_instructions_file#${repo_root}/}" >&2
+    echo "Generated Codex instructions must not use template-maintainer root AGENTS.md content: ${codex_instructions_file#"${repo_root}"/}" >&2
     status=1
   fi
 fi
@@ -520,7 +520,7 @@ for legacy_prompt_dir in \
   "${repo_root}/.codex/prompts"; do
   if [ -d "${legacy_prompt_dir}" ] &&
     [ -n "$(find "${legacy_prompt_dir}" -mindepth 1 -maxdepth 1 -print -quit)" ]; then
-    echo "Codex repository prompts are deprecated; use discoverable skills instead: ${legacy_prompt_dir#${repo_root}/}" >&2
+    echo "Codex repository prompts are deprecated; use discoverable skills instead: ${legacy_prompt_dir#"${repo_root}"/}" >&2
     status=1
   fi
 done
@@ -532,7 +532,7 @@ for codex_agent_dir in \
   for legacy_agent_file in "${codex_agent_dir}"/*.md; do
     [ -e "${legacy_agent_file}" ] || continue
     [ "$(basename -- "${legacy_agent_file}")" = "README.md" ] && continue
-    echo "Codex custom agents must be standalone TOML: ${legacy_agent_file#${repo_root}/}" >&2
+    echo "Codex custom agents must be standalone TOML: ${legacy_agent_file#"${repo_root}"/}" >&2
     status=1
   done
 done
@@ -553,7 +553,7 @@ if [ -n "${vscode_extensions_file}" ] && [ -f "${vscode_extensions_file}" ]; the
     "prettier.prettier-vscode" \
     "ms-azuretools.vscode-containers"; do
     if ! grep -q "\"${extension_id}\"" "${vscode_extensions_file}"; then
-      echo "VS Code extension recommendations are missing ${extension_id}: ${vscode_extensions_file#${repo_root}/}" >&2
+      echo "VS Code extension recommendations are missing ${extension_id}: ${vscode_extensions_file#"${repo_root}"/}" >&2
       status=1
     fi
   done
@@ -575,7 +575,7 @@ if [ -n "${vscode_launch_file}" ] && [ -f "${vscode_launch_file}" ]; then
     '"name": "Frontend: Browser Attach"' \
     '"name": "App: Frontend + Backend"'; do
     if ! grep -q "${launch_marker}" "${vscode_launch_file}"; then
-      echo "VS Code launch config is missing ${launch_marker}: ${vscode_launch_file#${repo_root}/}" >&2
+      echo "VS Code launch config is missing ${launch_marker}: ${vscode_launch_file#"${repo_root}"/}" >&2
       status=1
     fi
   done
@@ -583,62 +583,64 @@ fi
 
 if [ -n "${vscode_settings_file}" ] && [ -f "${vscode_settings_file}" ]; then
   if ! grep -q '"chat.tools.terminal.autoApprove"' "${vscode_settings_file}"; then
-    echo "VS Code settings are missing terminal auto-approval config: ${vscode_settings_file#${repo_root}/}" >&2
+    echo "VS Code settings are missing terminal auto-approval config: ${vscode_settings_file#"${repo_root}"/}" >&2
     status=1
   fi
   if ! grep -q 'local-verification' "${vscode_settings_file}"; then
-    echo "VS Code settings are missing local verification auto-approval: ${vscode_settings_file#${repo_root}/}" >&2
+    echo "VS Code settings are missing local verification auto-approval: ${vscode_settings_file#"${repo_root}"/}" >&2
     status=1
   fi
   if ! grep -q 'doctor' "${vscode_settings_file}"; then
-    echo "VS Code settings are missing doctor auto-approval: ${vscode_settings_file#${repo_root}/}" >&2
+    echo "VS Code settings are missing doctor auto-approval: ${vscode_settings_file#"${repo_root}"/}" >&2
     status=1
   fi
   if ! grep -q 'select-openspec-change' "${vscode_settings_file}"; then
-    echo "VS Code settings are missing OpenSpec picker auto-approval: ${vscode_settings_file#${repo_root}/}" >&2
+    echo "VS Code settings are missing OpenSpec picker auto-approval: ${vscode_settings_file#"${repo_root}"/}" >&2
     status=1
   fi
   if ! grep -q 'make\\\\s+validate-openspec-change\\\\s+CHANGE_ID=' "${vscode_settings_file}"; then
-    echo "VS Code settings are missing flexible OpenSpec validation auto-approval: ${vscode_settings_file#${repo_root}/}" >&2
+    echo "VS Code settings are missing flexible OpenSpec validation auto-approval: ${vscode_settings_file#"${repo_root}"/}" >&2
     status=1
   fi
   if ! grep -q 'make\\\\s+-C\\\\s+' "${vscode_settings_file}"; then
-    echo "VS Code settings are missing make -C OpenSpec validation auto-approval: ${vscode_settings_file#${repo_root}/}" >&2
+    echo "VS Code settings are missing make -C OpenSpec validation auto-approval: ${vscode_settings_file#"${repo_root}"/}" >&2
     status=1
   fi
   if ! grep -q 'source\\\\s+\\\\.venv\\\\/bin\\\\/activate' "${vscode_settings_file}"; then
-    echo "VS Code settings are missing venv activation auto-approval: ${vscode_settings_file#${repo_root}/}" >&2
+    echo "VS Code settings are missing venv activation auto-approval: ${vscode_settings_file#"${repo_root}"/}" >&2
     status=1
   fi
   if ! grep -q 'setup-python-venv' "${vscode_settings_file}"; then
-    echo "VS Code settings are missing setup-python-venv approval gate: ${vscode_settings_file#${repo_root}/}" >&2
+    echo "VS Code settings are missing setup-python-venv approval gate: ${vscode_settings_file#"${repo_root}"/}" >&2
     status=1
   fi
   if ! grep -q 'pytest\\\\b' "${vscode_settings_file}"; then
-    echo "VS Code settings are missing direct pytest auto-approval: ${vscode_settings_file#${repo_root}/}" >&2
+    echo "VS Code settings are missing direct pytest auto-approval: ${vscode_settings_file#"${repo_root}"/}" >&2
     status=1
   fi
   if ! grep -q '"docker": false' "${vscode_settings_file}"; then
-    echo "VS Code settings are missing default Docker approval gate: ${vscode_settings_file#${repo_root}/}" >&2
+    echo "VS Code settings are missing default Docker approval gate: ${vscode_settings_file#"${repo_root}"/}" >&2
     status=1
   fi
 fi
 
 if [ -n "${vscode_tasks_file}" ] && [ -f "${vscode_tasks_file}" ]; then
   if ! grep -q '"label": "Delorean: Doctor"' "${vscode_tasks_file}"; then
-    echo "VS Code tasks are missing Delorean doctor task: ${vscode_tasks_file#${repo_root}/}" >&2
+    echo "VS Code tasks are missing Delorean doctor task: ${vscode_tasks_file#"${repo_root}"/}" >&2
     status=1
   fi
+  # The VS Code input variable is matched literally, not expanded by this script.
+  # shellcheck disable=SC2016
   if ! grep -q 'make validate-openspec-change CHANGE_ID=${input:changeId}' "${vscode_tasks_file}"; then
-    echo "VS Code tasks are missing OpenSpec validation input task: ${vscode_tasks_file#${repo_root}/}" >&2
+    echo "VS Code tasks are missing OpenSpec validation input task: ${vscode_tasks_file#"${repo_root}"/}" >&2
     status=1
   fi
   if ! grep -q '"label": "OpenSpec: Pick Active Change"' "${vscode_tasks_file}"; then
-    echo "VS Code tasks are missing OpenSpec active change picker task: ${vscode_tasks_file#${repo_root}/}" >&2
+    echo "VS Code tasks are missing OpenSpec active change picker task: ${vscode_tasks_file#"${repo_root}"/}" >&2
     status=1
   fi
   if ! grep -q '"label": "OpenSpec: Pick + Validate Active Change"' "${vscode_tasks_file}"; then
-    echo "VS Code tasks are missing OpenSpec active change validation picker task: ${vscode_tasks_file#${repo_root}/}" >&2
+    echo "VS Code tasks are missing OpenSpec active change validation picker task: ${vscode_tasks_file#"${repo_root}"/}" >&2
     status=1
   fi
 fi
@@ -717,15 +719,15 @@ for openspec_skill_file in \
   "${repo_root}/.claude/skills/delorean-openspec/SKILL.md"; do
   if [ -f "${openspec_skill_file}" ]; then
     if ! grep -q 'Archive follow-through' "${openspec_skill_file}" || ! grep -q 'Current spec update checked' "${openspec_skill_file}"; then
-      echo "delorean-openspec skill is missing archive follow-through guidance: ${openspec_skill_file#${repo_root}/}" >&2
+      echo "delorean-openspec skill is missing archive follow-through guidance: ${openspec_skill_file#"${repo_root}"/}" >&2
       status=1
     fi
     if ! grep -q 'Level 2 current spec discipline' "${openspec_skill_file}"; then
-      echo "delorean-openspec skill is missing Level 2 current-spec discipline guidance: ${openspec_skill_file#${repo_root}/}" >&2
+      echo "delorean-openspec skill is missing Level 2 current-spec discipline guidance: ${openspec_skill_file#"${repo_root}"/}" >&2
       status=1
     fi
     if ! grep -q 'Modified requirement merge discipline' "${openspec_skill_file}"; then
-      echo "delorean-openspec skill is missing modified-requirement scenario preservation guidance: ${openspec_skill_file#${repo_root}/}" >&2
+      echo "delorean-openspec skill is missing modified-requirement scenario preservation guidance: ${openspec_skill_file#"${repo_root}"/}" >&2
       status=1
     fi
   fi
@@ -738,7 +740,7 @@ for requirements_archive_prompt in \
   "${repo_root}/.agents/skills/dl-requirements-archive/SKILL.md"; do
   if [ -f "${requirements_archive_prompt}" ]; then
     if ! grep -q 'existing scenarios to preserve' "${requirements_archive_prompt}"; then
-      echo "dl-requirements-archive prompt is missing modified-requirement scenario preservation guidance: ${requirements_archive_prompt#${repo_root}/}" >&2
+      echo "dl-requirements-archive prompt is missing modified-requirement scenario preservation guidance: ${requirements_archive_prompt#"${repo_root}"/}" >&2
       status=1
     fi
   fi
@@ -774,6 +776,8 @@ fi
 
 update_from_template_script="${repo_root}/scripts/delorean/update-from-template.sh"
 if [ -f "${update_from_template_script}" ]; then
+  # Template shell variable references are matched literally, not expanded here.
+  # shellcheck disable=SC2016
   for update_marker in \
     '--target)' \
     '--include-architecture-docs)' \

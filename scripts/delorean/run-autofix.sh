@@ -123,6 +123,8 @@ run_frontend_script() {
   run_command "frontend npm run ${script_name}" npm run "${script_name}" --prefix "${repo_root}/frontend"
 }
 
+# Passed to run_command, which invokes it through its "$@" command arguments.
+# shellcheck disable=SC2329
 fix_generic_format() {
   local tmp_file
   tmp_file="$(mktemp "${TMPDIR:-/tmp}/delorean-autofix-files.XXXXXX")"

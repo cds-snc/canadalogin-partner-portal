@@ -165,7 +165,7 @@ copy_path_contents() {
 
   if [ -d "${source_path}" ]; then
     while IFS= read -r -d '' file_path; do
-      local relative_path="${file_path#${source_path}/}"
+      local relative_path="${file_path#"${source_path}"/}"
       copy_redacted_file "${file_path}" "${dest_path}/${relative_path}"
     done < <(find "${source_path}" -type f -print0)
   elif [ -f "${source_path}" ]; then
@@ -205,7 +205,7 @@ copy_changed_worktree_files() {
 
   case "${bundle_dir}" in
     "${repo_root}/"*)
-      bundle_relative_path="${bundle_dir#${repo_root}/}"
+      bundle_relative_path="${bundle_dir#"${repo_root}"/}"
       ;;
   esac
 

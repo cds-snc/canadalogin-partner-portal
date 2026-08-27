@@ -4,7 +4,7 @@ set -euo pipefail
 
 script_dir="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
 repo_root="$(git -C "${script_dir}" rev-parse --show-toplevel)"
-hooks_path="${script_dir#${repo_root}/}"
+hooks_path="${script_dir#"${repo_root}"/}"
 
 if ! git -C "${repo_root}" rev-parse --is-inside-work-tree >/dev/null 2>&1; then
   echo "This script must be run inside a Git repository." >&2

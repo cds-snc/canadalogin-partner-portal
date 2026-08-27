@@ -36,7 +36,7 @@ required_keys=(
 status=0
 
 for file in "${state_files[@]}"; do
-  rel_path="${file#${repo_root}/}"
+  rel_path="${file#"${repo_root}"/}"
   change_id="$(basename "$(dirname "${file}")")"
 
   for key in "${required_keys[@]}"; do
