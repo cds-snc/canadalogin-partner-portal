@@ -15,7 +15,7 @@
 	},
 	"license": "MIT",
 	"version": "1.0.0",
-	"packageManager": "pnpm@10.17.1",
+	"packageManager": "pnpm@10.34.4",
 	"type": "module",
 	"scripts": {
 		"setup": "git init && npx husky init && npx playwright install && shx rm .husky/pre-commit",
