@@ -2,7 +2,7 @@
 
 Type: Architecture Note
 Status: Active
-Last verified: 2026-08-25
+Last verified: 2026-08-28
 
 ## Context
 
@@ -207,6 +207,9 @@ the queue pool; it does not spawn a daemon worker thread.
 
 - Backend permission checks remain authoritative even when the frontend hides
   or redirects UI.
+- [Trust boundaries and permitted information flows](trust-boundaries-and-information-flows.md)
+  defines the permitted browser, BFF, worker, data-service, identity-provider,
+  and MAU-source flows and the explicitly denied direct-access paths.
 - Secrets and real `.env` files are not committed.
 - External systems are accessed through backend services or repositories, not
   directly from the browser.
@@ -253,6 +256,7 @@ the queue pool; it does not spawn a daemon worker thread.
 ## Links
 
 - [Development conventions](../repo-guidance/development-conventions.md)
+- [Trust boundaries and permitted information flows](trust-boundaries-and-information-flows.md)
 - [MVP architecture planning document](../plans/partner-portal-mvp-architecture.md)
 - [Infrastructure architecture planning document](../plans/partner-portal-system-architecture.md)
 - [MVP data flows](../plans/partner-portal-mvp-data-flows.md)

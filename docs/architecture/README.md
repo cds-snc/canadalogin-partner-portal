@@ -12,6 +12,9 @@ CanadaLogin Partner Portal.
 - [Codebase architecture](codebase.md) describes the implemented system
   boundary, component responsibilities, dependency direction, runtime services,
   and known design drift.
+- [Trust boundaries and permitted information flows](trust-boundaries-and-information-flows.md)
+  identifies the security boundaries and allowed runtime flows between portal
+  components, data services, and external providers.
 
 ## Architecture Decisions
 
