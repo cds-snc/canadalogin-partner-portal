@@ -1,0 +1,272 @@
+ui_page_pattern_decision:
+  page_role: workspace RP application registration transaction
+  page_type: route-per-step form flow with review and confirmation
+  selected_pattern:
+    - "PAT-019: Multi-Step Task Flow"
+    - "PAT-024: Full-Stack Feature Slice"
+    - "PAT-002: API Query and Mutation"
+    - "PAT-004: Protected Route"
+    - "PAT-005: Router, Service, Schema"
+    - "PAT-009: OIDC Backend Session"
+    - "PAT-010: RBAC Policy Check"
+    - "PAT-012: Alembic PostgreSQL Change"
+    - "PAT-013: GC Design System React App Shell"
+    - "PAT-003: Form Page"
+    - "PAT-017: Itemized Data Display"
+    - "PAT-020: Status and Feedback"
+    - "PAT-022: Page Length and Splitting"
+  source_reference:
+    - "ADR-001: BFF and Server Session Authority"
+    - "ADR-002: API Wire and Error Contract"
+    - "ADR-003: Casbin Authorization Model"
+    - "STD-003: Full-Stack Application Stack"
+    - "STD-004: Frontend React and TypeScript"
+    - "STD-005: Frontend GC Design System"
+    - "STD-006: GC UI Page Layout Rules"
+    - "STD-007: UI Accessibility Basics"
+    - "STD-008: Backend FastAPI"
+    - "STD-009: REST API"
+    - "STD-010: API Response and Error Models"
+    - "STD-013: Security and Privacy Basics"
+    - "STD-020: Database Persistence"
+    - openspec/changes/refine-workspace-task-hub-and-registration-flow/design.md
+  supersedes:
+    decision: openspec/changes/archive/2026-07-31-restore-workspace-and-application-info-management/workspaces-page-pattern-decision.yaml
+    scope: "workspace-scoped RP application create and edit form pattern"
+    reason: the conditional registration questionnaire now requires a recoverable PAT-019 route-per-step flow rather than one long single-page form.
+  target_stack: Vite React with TanStack Router and GC Design System React components
+  task_structure:
+    multiple_user_goals: false
+    goal: create or resume and submit one draft workspace-scoped OIDC RP application registration
+    entry_page: /workspaces/$workspaceUuid/applications/new
+    compatibility_entry_routes:
+      - route: /workspaces/$workspaceUuid/applications/$rpApplicationUuid/edit
+        draft_behavior: resume the existing RP application draft
+        submitted_behavior: return to RP application detail with a localized locked-for-review explanation and no mutation
+        under_review_behavior: return to RP application detail with a localized locked-for-review explanation and no mutation
+        approved_behavior: return to RP application detail with a localized non-editable explanation and no mutation
+        launched_behavior: return to RP application detail with a localized non-editable explanation and no mutation
+        unknown_or_stale_behavior: fail closed through safe detail, not-found, conflict, or denied behavior with no mutation
+    canonical_flow_base: /workspaces/$workspaceUuid/applications/$rpApplicationUuid/registration
+    destination_routes:
+      - /workspaces/$workspaceUuid/applications/$rpApplicationUuid/registration/basics
+      - /workspaces/$workspaceUuid/applications/$rpApplicationUuid/registration/endpoints
+      - /workspaces/$workspaceUuid/applications/$rpApplicationUuid/registration/client-and-access
+      - /workspaces/$workspaceUuid/applications/$rpApplicationUuid/registration/signing
+      - /workspaces/$workspaceUuid/applications/$rpApplicationUuid/registration/encryption
+      - /workspaces/$workspaceUuid/applications/$rpApplicationUuid/registration/review
+      - /workspaces/$workspaceUuid/applications/$rpApplicationUuid/registration/confirmation
+    home_page_or_service_home: /
+    single_page_rationale: null
+  flow_model:
+    source_of_truth: one typed flow model plus an authorized server-backed RP application in draft state
+    new_entry: /workspaces/$workspaceUuid/applications/new renders Basics before a resource exists; valid Basics creates the draft and redirects to the returned UUID's registration/endpoints route
+    invalid_new_entry: invalid minimum Basics stays on /workspaces/$workspaceUuid/applications/new and creates no UUID, placeholder row, or onboarding transition
+    create_idempotency: one opaque Idempotency-Key per new-flow attempt; same actor/workspace/key/payload retry returns the same draft and changed use fails safely
+    editability: draft only; submitted, under_review, approved, launched, missing, unknown, stale, and out-of-scope states are non-editable
+    state_recheck: backend rechecks authorization and draft state on entry, each write, and final submission
+    concurrency: stale draft writes fail with recoverable 409 code registration_draft_version_conflict
+    final_business_state_change: explicit valid final submit on Review transitions draft to submitted once
+    steps:
+      - id: basics
+        number: 1
+        title: Basics
+        purpose: select environment and provide English/French application names
+      - id: endpoints
+        number: 2
+        title: Endpoints
+        purpose: provide environment, redirect, logout redirect, and logout request URLs and delivery mode
+      - id: client-and-access
+        number: 3
+        title: Client and access
+        purpose: record client type, authentication, key sharing, scopes, sector identifier, pairwise identifier choices, and PKCE
+      - id: signing
+        number: 4
+        title: Signing
+        purpose: record RP signing and CanadaLogin signature-validation capability, algorithms, and dependent roadmap answers
+      - id: encryption
+        number: 5
+        title: Encryption
+        purpose: record request encryption and CanadaLogin decryption capability, algorithms, and dependent roadmap answers
+      - id: review
+        number: 6
+        title: Review
+        purpose: review the complete pending submission, consequences, and Change links
+    confirmation:
+      stepper_number: null
+      purpose: confirm submission status, next steps, and return destinations
+  draft_and_recovery:
+    persistence: server-backed workspace RP application in draft state
+    create: valid minimum Basics posts the workspace RP application resource and initializes draft version and completion metadata
+    save_and_exit_before_create: validate minimum Basics and create before leaving, or remain with errors; otherwise warn that unsaved input is not durable
+    continue: after draft creation, validate and save current step with the expected draft version, then move forward without final submission
+    back: move to previous permitted step without losing saved data
+    save_and_exit: persist safe partial current-step answers, mark an invalid active step incomplete, and return without enabling Review or submission
+    cancel: warn about unsaved current-step input, discard only that unsaved input, preserve the last server save, and return without deleting or submitting the draft
+    change_earlier_answer: invalidate or clear dependent later answers and identify steps requiring review
+    direct_future_step: return to earliest incomplete permitted step with explanation
+    refresh: recover last server-saved draft and safely recoverable current input
+    network_failure: retain safe input and provide retry, save, or return behavior without claiming success
+    session_expiry: run normal admission, then resume same draft/step only if authorization remains
+    language_switch: open equivalent step for the same draft and preserve saved input; preserve or warn about unsaved input
+    final_submit: recheck authorization, draft state, version, and the complete active questionnaire; transition draft to submitted once from valid Review, and return the current submitted representation on an ambiguous same-resource retry without another side effect
+    stale_version: return a safe recoverable 409 without overwriting or submitting newer work
+  full_stack_contract:
+    create_endpoint: POST /api/v1/workspaces/{workspace_uuid}/applications after valid minimum Basics with opaque UUID Idempotency-Key
+    read_endpoint: GET /api/v1/workspaces/{workspace_uuid}/applications/{rp_application_uuid}/registration-draft returning WorkspaceRPApplicationRegistrationDraftRead
+    write_endpoint: PATCH /api/v1/workspaces/{workspace_uuid}/applications/{rp_application_uuid}/registration-draft with stepId, saveMode, expectedDraftVersion, and typed partial fields
+    submit_endpoint: POST /api/v1/workspaces/{workspace_uuid}/applications/{rp_application_uuid}/onboarding-state with targetState submitted, expectedDraftVersion, and complete server validation
+    persistence_aggregate: existing rp_application plus oidc_registration_payload
+    persistence_metadata:
+      - unique nullable registration_creation_key for new create retries; existing rows receive no fabricated key
+      - non-negative monotonic registration_draft_version
+      - nullable registration_last_completed_step
+    new_draft_initial_metadata: version 1 and last completed step basics; idempotent create retry does not increment or reset either value
+    database_constraints: version is at least zero; non-null creation key is unique; completed step is null or one of basics, endpoints, client-and-access, signing, encryption
+    separate_draft_store: false
+    optimistic_concurrency: conditional update by workspace, application, draft state, and expected version
+    legacy_draft_resume: derive only the last contiguous completed step from server validation when a migrated draft has no marker
+    read_dto: public workspace and RP application UUIDs, onboarding state, version, last completed step, and typed authorized registrationAnswers only; no internal integer IDs, repository model, raw JSONB, authorization internals, or secret key material
+    validation_layers:
+      partial: supplied field shape, size, and safety without uncompleted-branch completeness
+      complete_step: merged active step and prerequisites
+      final_submit: complete merged active questionnaire and cross-step rules
+    wire_contract: generated OpenAPI is the browser contract and uses camelCase for the aliased RP application schemas; reconcile legacy snake_case frontend helpers rather than treating both shapes as preferred; keep explicit success models and the nested safe error object
+    frontend_state: TanStack Query owns server state; browser store/history is not draft or authorization authority
+    generated_artifacts: regenerate OpenAPI and TanStack Router output through supported commands; never edit generated artifacts manually
+  required_shell:
+    header: shared GcdsHeader through AppShell
+    footer: shared GcdsFooter through AppShell
+    main_content: stable AppShell main landmark and skip target
+    skip_link: existing header skip link targeting main content
+    h1: one step-specific localized H1 with GcdsStepper immediately before or in the heading context
+    date_modified: not normally shown inside the transaction unless required by the final page type
+  navigation:
+    primary_task_paths:
+      - task: start or resume registration
+        entry_route: /workspaces/$workspaceUuid/applications
+        navigation_elements:
+          - Create RP application or Resume registration action
+        destination_routes:
+          - /workspaces/$workspaceUuid/applications/new
+          - /workspaces/$workspaceUuid/applications/$rpApplicationUuid/registration/basics
+        return_path: Save and exit or Cancel to the RP application detail or workspace applications list
+      - task: edit an existing registration
+        entry_route: /workspaces/$workspaceUuid/applications/$rpApplicationUuid/edit
+        navigation_elements:
+          - authorized Edit registration action
+        destination_routes:
+          - last safely completed or earliest incomplete canonical registration step
+        return_path: Save and exit or Cancel to the RP application detail
+      - task: change a reviewed answer
+        entry_route: /workspaces/$workspaceUuid/applications/$rpApplicationUuid/registration/review
+        navigation_elements:
+          - localized Change link for the corresponding step
+        destination_routes:
+          - one completed registration step
+        return_path: Continue through affected steps or return to Review when valid
+      - task: leave after submission
+        entry_route: /workspaces/$workspaceUuid/applications/$rpApplicationUuid/registration/confirmation
+        navigation_elements:
+          - RP application detail link
+          - workspace hub link
+        destination_routes:
+          - /workspaces/$workspaceUuid/applications/$rpApplicationUuid
+          - /workspaces/$workspaceUuid
+        return_path: not applicable after confirmation
+    shared_menu:
+      provided: true
+      component: Workspaces child inside the global Partner work GcdsNavGroup
+      home_link: /
+      new_page_or_parent_task_link: /workspaces
+      exclusion_reason: individual registration steps are intentionally nested transaction routes
+    breadcrumbs:
+      steps: Home then Workspaces then workspace name then RP applications then localized registration context
+      component: GcdsBreadcrumbs and GcdsBreadcrumbsItem
+      note: breadcrumbs support location; Back, Save and exit, Cancel, and step actions own flow navigation
+    language_toggle:
+      provided_by_header: true
+      equivalent_language_route: same authorized draft and step in the other official language
+      standalone_toggle_in_body: false
+      unsaved_input_mitigation: preserve safely or warn explicitly before loss
+    top_navigation: Partner work remains active; top navigation does not replace flow actions
+    side_navigation: workspace side navigation may be visually reduced during the transaction but the parent/exit path remains explicit
+  forms:
+    required: true
+    pattern: PAT-019 route-per-step flow with PAT-003 validation on each step
+    review_required: true
+    confirmation_required: true
+    save_and_return: true
+  component_plan:
+    page_shell:
+      - need: transaction shell and step heading
+        gc_component: shared AppShell, GcdsContainer, GcdsStepper, GcdsHeading, and GcdsText
+        custom_exception: none
+    navigation:
+      - need: location and change/return links
+        gc_component: GcdsBreadcrumbs, GcdsBreadcrumbsItem, and GcdsLink
+        custom_exception: none
+    actions_and_forms:
+      - need: primary and secondary flow actions
+        gc_component: GcdsButton
+        custom_exception: none
+      - need: text, URL, date, select, radio, checkbox, and grouped inputs
+        gc_component: GcdsInput, GcdsTextarea, GcdsDateInput, GcdsSelect, GcdsRadios, GcdsCheckboxes, GcdsFieldset, GcdsLabel, and GcdsHint as applicable
+        custom_exception: none
+      - need: validation summary and field errors
+        gc_component: GcdsErrorSummary and GcdsErrorMessage
+        custom_exception: none
+    status_and_content:
+      - need: draft save, recovery, warnings, and submission feedback
+        gc_component: PAT-020 content or GcdsNotice at the affected scope
+        custom_exception: none
+      - need: Review summary
+        gc_component: PAT-017 itemized data with semantic description lists, lists, or tables selected by content
+        custom_exception: none
+  accessibility_behavior:
+    keyboard: step fields, errors, actions, Change links, and exit paths follow task order
+    validation_focus: blocked Continue or submit moves focus to the error summary; field links move to the corresponding control
+    navigation_focus: successful route transition announces or focuses the new H1/step context through normal page behavior
+    active_step: communicated textually and not by colour alone
+    responsive: no horizontal page scroll at narrow widths or 200 percent zoom; first field or useful action remains understandable
+    screen_reader: step number/title, field grouping, conditional changes, errors, Review groups, and Confirmation are announced in context
+  data_handling:
+    sensitive_values_in_url: false
+    sensitive_values_in_analytics_or_logs: false
+    unstructured_local_storage_as_draft_source: false
+    backend_authorization_per_read_write: true
+    offline_key_material: public certificate or public JWK only; reject private JWK members, symmetric keys, credentials, and other secret key material before persistence
+    audit_values: actor/resource references, step ID, save mode, changed field names, result, timestamp, and correlation ID only
+    audit_prohibited: questionnaire values, certificate/JWK content, credentials, tokens, and unnecessary personal information
+  evidence_required:
+    desktop_screenshot:
+      - Basics
+      - a middle conditional step
+      - validation errors
+      - Review
+      - Confirmation
+    mobile_screenshot:
+      - first step
+      - conditional middle step
+      - error summary and actions
+      - Review
+    accessibility_result: keyboard, focus, screen-reader, field grouping, error-summary, stepper, Change-link, and confirmation review
+    bilingual_result: English and French steps, fields, hints, errors, Review, Change links, Confirmation, and recovery copy
+    design_system_checklist: required
+    flow_tests:
+      - start and resume
+      - step validation
+      - Back
+      - Save and exit
+      - dependent-answer invalidation
+      - direct future-step recovery
+      - refresh and network failure
+      - session expiry and revoked scope
+      - equivalent-route language switch
+      - review Change links
+      - idempotent final submit
+      - confirmation next steps
+  exceptions:
+    required: false
+    approval_status: not needed
+    notes: No custom wizard, custom progress graphic, raw form controls, hidden required steps, or browser-only draft source is planned.

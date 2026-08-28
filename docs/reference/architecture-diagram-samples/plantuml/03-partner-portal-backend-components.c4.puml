@@ -1,0 +1,73 @@
+@startuml
+' CanadaLogin Partner Portal - C4 level 3 backend component view.
+'
+' Work context: local illustrative sample only.
+' Source codebase: gc-signin-partner-portal, read as source material only.
+' View question: how is the FastAPI backend decomposed for the approved portal
+' scope?
+' Excluded: frontend internals, table-by-table detail, legacy catalog services,
+' route-level sequences, invitation communication channels, and deployment.
+
+!include <C4/C4_Component>
+
+LAYOUT_LEFT_RIGHT()
+skinparam wrapWidth 175
+skinparam maxMessageSize 130
+
+title CanadaLogin Partner Portal - C4 Level 3 Backend Components
+
+Container(webUi, "Portal web UI", "React SPA", "Calls the backend API through server-scoped contracts.")
+ContainerDb_Ext(postgres, "PostgreSQL database", "PostgreSQL", "Persistent portal records and retained history.")
+ContainerDb_Ext(redis, "Redis", "Redis", "Sessions, caches, rate counters, and queue state.")
+System_Ext(oidcProvider, "CanadaLogin / OIDC identity provider", "External authentication service.")
+System_Ext(ibmVerify, "IBM Security Verify", "External RP registration and credential service.")
+System_Ext(mauSource, "Approved MAU data source", "External usage-data source.")
+
+Container_Boundary(api, "Backend API container") {
+  Component(edge, "Application edge", "core/setup.py, core/exceptions", "Creates FastAPI, installs session/CORS/cache/logging/rate-limit middleware, manages runtime clients, and produces safe errors.")
+  Component(apiRouters, "Focused API routers", "api/v1/*.py", "OIDC/logout, users/access, fixed roles, workspaces, invitations, RP applications, scoped MAU, Production-review oversight, tasks, and health routes.")
+  Component(sessionIdentity, "Session and identity", "services/oidc_service.py, core/oidc.py, core/identity.py", "Handles OIDC, stores minimal verified identity context, and enforces exact partner email/domain admission.")
+  Component(authorization, "Canonical authorization", "core/authorization.py, core/access_control.py, services/authorization_service.py", "Resolves fixed global/workspace roles, immutable capabilities, delegation, and complete resource scope.")
+  Component(workspaceService, "Workspace and registration service", "services/workspace_service.py", "Owns workspaces, Applications, contacts, RP-configuration drafts/copy/completion, and separate Production-review records.")
+  Component(invitationService, "Invitation service", "services/rp_application_developer_invitation_service.py", "Creates one-time links, stores token hashes, validates verified exact-email acceptance, and manages revoke/reissue/delegation.")
+  Component(rpApplicationService, "RP application service", "services/rp_application_service.py", "Owns retained-RP adoption, scoped RP access, credentials, secret-change CSV, and provider orchestration.")
+  Component(oversightAndMau, "Production-review oversight and MAU", "services/onboarding_oversight_service.py, services/mau_service.py", "Lists explicit Production-review work and reads usage for one authorized RP configuration.")
+  Component(providerAdapters, "Provider and data adapters", "services/ibm_sv_admin_service.py, repositories/ibm_sv_admin.py, repositories/s3_repository.py", "Performs bounded IBM Verify calls and reads approved MAU objects.")
+  Component(persistenceAdapters, "Persistence adapters", "repositories/crud_*.py", "Reads and writes portal-owned records through focused repository adapters.")
+  Component(modelsSchemas, "Models and schemas", "models/*.py, schemas/*.py", "Defines persistence records and explicit request/response contracts.")
+  Component(workerSettings, "ARQ worker settings", "core/worker/*.py", "Runs approved queued functions and scheduled MAU ingestion.")
+}
+
+Rel(webUi, apiRouters, "Calls", "JSON / HTTPS")
+Rel(edge, redis, "Uses sessions, cache, rate counters, and queue clients")
+Rel(apiRouters, sessionIdentity, "Delegate authentication and identity checks")
+Rel(apiRouters, authorization, "Enforce capability and scope")
+Rel(apiRouters, workspaceService, "Delegate workspace and registration work")
+Rel(apiRouters, invitationService, "Delegate invitation work")
+Rel(apiRouters, rpApplicationService, "Delegate accessible RP, secret, and adoption work")
+Rel(apiRouters, oversightAndMau, "Delegate Production-review queue and scoped MAU")
+
+Rel(sessionIdentity, oidcProvider, "Authorize redirect and callback", "OIDC")
+Rel(sessionIdentity, redis, "Stores minimal server session")
+Rel(sessionIdentity, persistenceAdapters, "Synchronizes trusted user identity")
+Rel(authorization, persistenceAdapters, "Reads assignments and writes access history")
+Rel(workspaceService, authorization, "Checks workspace and object scope")
+Rel(invitationService, authorization, "Checks delegation and assignment state")
+Rel(rpApplicationService, authorization, "Checks accessible RP and secret boundary")
+
+Rel(workspaceService, persistenceAdapters, "Reads and writes hierarchy/review records")
+Rel(invitationService, persistenceAdapters, "Reads and writes invitations/grants")
+Rel(rpApplicationService, persistenceAdapters, "Reads and writes RP/audit records")
+Rel(oversightAndMau, persistenceAdapters, "Reads explicit review context")
+Rel(persistenceAdapters, modelsSchemas, "Maps records and DTOs")
+Rel(persistenceAdapters, postgres, "Persists and queries", "SQLAlchemy")
+
+Rel(workspaceService, providerAdapters, "Creates or updates authorized RP registrations")
+Rel(rpApplicationService, providerAdapters, "Uses bounded RP/credential operations")
+Rel(providerAdapters, ibmVerify, "Calls approved admin endpoints", "HTTPS / OAuth2")
+Rel(workerSettings, providerAdapters, "Loads approved MAU objects")
+Rel(providerAdapters, mauSource, "Reads usage data", "S3-compatible API")
+Rel(workerSettings, redis, "Dequeues jobs and stores MAU cache", "ARQ")
+
+SHOW_LEGEND()
+@enduml

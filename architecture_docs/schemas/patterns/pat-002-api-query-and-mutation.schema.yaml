@@ -1,0 +1,155 @@
+schema_id: ARCH-SCHEMA-PAT-002-API-QUERY-MUTATION
+schema_version: "0.2"
+title: API Query and Mutation Schema Contract
+status: active
+schema_type: pattern
+
+owner_doc_id: PAT-002
+owner_doc_type: pattern
+owner_doc_path: docs/patterns/frontend/pat-002-api-query-and-mutation.md
+
+summary: >
+  Helps agents and reviewers check typed frontend API helpers, query and
+  mutation hooks, loading and error states, safe backend error handling, cache
+  invalidation, tests, and API contract evidence.
+
+categories:
+  - frontend
+  - api
+  - testing
+search_keywords:
+  - react query
+  - tanstack query
+  - api client
+  - fetch helper
+  - mutation
+  - query hook
+  - loading state
+  - error state
+  - cache invalidation
+  - api contract
+applies_when:
+  - a frontend feature reads, creates, updates, deletes, refreshes, or triggers backend data
+  - the UI needs loading, empty, error, success, refresh, retry, or cache behavior for backend data
+  - frontend API helpers, request types, response types, or query hooks change
+do_not_use_when:
+  - the data is static content
+  - the state is purely local UI state and does not come from the backend
+
+work_contexts:
+  - local_developer
+  - shared_non_production
+  - production
+stack_profiles:
+  - react
+  - typescript
+  - tanstack-query
+  - rest
+artifact_types:
+  - api_client
+  - query_hook
+  - mutation_hook
+  - frontend_page
+  - frontend_test
+  - api_contract
+  - verification_note
+  - adr
+
+related_standards:
+  - STD-004
+  - STD-009
+  - STD-010
+  - STD-012
+  - STD-013
+related_patterns:
+  - PAT-003
+  - PAT-005
+  - PAT-006
+  - PAT-020
+  - PAT-024
+related_controls:
+  - GC-WEB-010
+related_baselines:
+  - BAS-001
+
+required_inputs:
+  - id: api_interaction_scope
+    description: Frontend API reads, writes, request shapes, response shapes, query keys, mutation side effects, and UI states changed.
+    required: true
+    source: implementation plan, PR, issue, API contract, or changed files
+  - id: backend_contract_reference
+    description: Backend endpoint, OpenAPI evidence, API examples, or documented contract that the frontend helper depends on.
+    required: true
+    source: OpenAPI output, endpoint contract, backend schema, API examples, or verification note
+
+checks:
+  - id: typed-request-response-shapes
+    description: Frontend API helpers define or import typed request and response shapes for meaningful backend interactions.
+    required: true
+    check_type: file_review
+    evidence:
+      - API helper, TypeScript types, generated client types, OpenAPI reference, or documented exception.
+    failure_means: Frontend and backend contracts may drift or rely on implicit shapes.
+    adr_required_when: A project intentionally uses untyped frontend API contracts for meaningful backend data.
+    waiver_allowed: true
+
+  - id: fetch-layer-owned
+    description: Low-level fetch behavior lives in the project API helper or service layer rather than being scattered through page components.
+    required: true
+    check_type: file_review
+    evidence:
+      - frontend/src/fetch, frontend/src/services, feature API helper, or equivalent project-approved path.
+    failure_means: Error handling, credentials, headers, and request behavior may become inconsistent.
+    adr_required_when: A project intentionally keeps fetch logic in pages for nontrivial backend interactions.
+    waiver_allowed: true
+
+  - id: query-mutation-hook-boundaries
+    description: Reads use query hooks and writes use mutation hooks or an equivalent project-approved state/data-fetching pattern.
+    required: true
+    check_type: content_review
+    evidence:
+      - Query hook, mutation hook, cache key, invalidation behavior, or documented equivalent pattern.
+    failure_means: Loading, refresh, cache, and update behavior may be inconsistent.
+    adr_required_when: A project intentionally uses a different frontend data-fetching pattern.
+    waiver_allowed: true
+
+  - id: status-feedback-covered
+    description: Pages handle loading, empty, error, success, retry, and safe recoverable error states when they apply.
+    required: true
+    check_type: evidence_required
+    evidence:
+      - Page state code, Storybook fixture, frontend test, screenshot, or verification note.
+    failure_means: Users may see unclear, unsafe, or unreachable UI states.
+    adr_required_when: Meaningful backend data states are intentionally not represented in the UI.
+    waiver_allowed: true
+
+  - id: tests-and-contract-evidence
+    description: Request helpers, query or mutation behavior, and UI states have tests or verification, and API contract changes are visible.
+    required: true
+    check_type: evidence_required
+    evidence:
+      - Unit tests, UI tests, OpenAPI diff, API examples, contract note, or verification note.
+    failure_means: Frontend behavior may drift from backend API behavior.
+    adr_required_when: A project intentionally skips API contract or frontend state verification for a meaningful backend interaction.
+    waiver_allowed: true
+
+outputs:
+  - id: api_query_mutation_review_summary
+    description: Review result showing API types, helper location, query and mutation boundaries, status states, cache behavior, and contract evidence.
+
+evidence_expectations:
+  - Meaningful API interactions have typed helpers and contract evidence.
+  - Loading, empty, error, success, retry, and cache behavior are visible when applicable.
+  - Skipped browser or contract checks are recorded with a reason.
+
+adr_triggers:
+  - Project intentionally avoids typed frontend API contracts for meaningful backend data.
+  - Project uses a different frontend data-fetching or caching pattern.
+  - Backend API shape changes without frontend contract evidence.
+
+waiver_guidance:
+  - Delivery waivers for skipped browser, contract, or frontend state checks belong in the project-local Delorean evidence process.
+  - This schema contract does not define runtime waiver records.
+
+notes:
+  - This schema contract supports PAT-002. PAT-002 remains the source of truth.

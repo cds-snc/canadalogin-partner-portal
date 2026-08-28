@@ -7,6 +7,7 @@ export { default as DataTable } from "./DataTable";
 export { default as DateInput } from "./DateInput";
 export { default as DateModified } from "./DateModified";
 export { default as Details } from "./Details";
+export { default as DescriptionList } from "./DescriptionList";
 export { default as ErrorSummary } from "./ErrorSummary";
 export { default as ExternalLink } from "./ExternalLink";
 export { default as Fieldset } from "./Fieldset";

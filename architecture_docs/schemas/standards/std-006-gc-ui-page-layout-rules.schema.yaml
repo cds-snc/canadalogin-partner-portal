@@ -1,0 +1,174 @@
+schema_id: ARCH-SCHEMA-STD-006-GC-UI-PAGE-LAYOUT-RULES
+schema_version: "0.1"
+title: GC UI Page Layout Rules Schema Contract
+status: active
+schema_type: standard
+
+owner_doc_id: STD-006
+owner_doc_type: standard
+owner_doc_path: docs/standards/std-006-gc-ui-page-layout-rules.md
+
+summary: >
+  Helps agents and reviewers record page pattern selection, navigation path,
+  app shell alignment, layout evidence, mobile or zoomed review, and exceptions
+  for Government of Canada user-facing page work.
+
+categories:
+  - design-system
+  - frontend
+  - accessibility
+  - governance
+search_keywords:
+  - page layout
+  - service home
+  - task hub
+  - dashboard
+  - direct task page
+  - form page
+  - header
+  - footer
+  - menu
+  - breadcrumb
+  - language toggle
+  - mobile
+  - zoom
+  - navigation path
+applies_when:
+  - scaffolding a user-facing frontend page shell or service home
+  - planning or changing a user-facing page
+  - changing layout, navigation, header, footer, menu, breadcrumb, or language toggle behavior
+  - creating forms, multi-step flows, service homes, task hubs, or page shells
+do_not_use_when:
+  - the work is backend-only and has no user-facing page or navigation impact
+  - a non-Government of Canada frontend has an approved alternate page-layout standard
+
+work_contexts:
+  - local_developer
+  - shared_non_production
+  - production
+stack_profiles:
+  - react
+  - gcds
+  - canada.ca
+artifact_types:
+  - frontend_page
+  - page_pattern_decision
+  - navigation_model
+  - form
+  - dashboard
+  - verification_note
+  - adr
+
+related_standards:
+  - STD-004
+  - STD-005
+  - STD-006
+  - STD-007
+  - STD-017
+  - STD-018
+related_patterns:
+  - PAT-001
+  - PAT-003
+  - PAT-013
+  - PAT-014
+  - PAT-019
+  - PAT-021
+  - PAT-022
+related_controls:
+  - GC-WEB-002
+  - GC-WEB-003
+  - GC-WEB-004
+  - GC-WEB-005
+related_baselines:
+  - BAS-001
+
+required_inputs:
+  - id: page_or_layout_scope
+    description: Description of the page, layout, navigation, shell, menu, breadcrumb, language toggle, form, or flow changed.
+    required: true
+    source: plan, issue, PR, page pattern decision, or changed files
+  - id: selected_page_pattern
+    description: Selected page pattern or exception rationale.
+    required: true
+    source: page pattern decision, architecture note, ADR, or plan
+
+checks:
+  - id: page-pattern-selected
+    description: The page selects a service home, task hub, dashboard, direct task page, form page, multi-step flow, or other approved page pattern.
+    required: true
+    check_type: content_review
+    evidence:
+      - Page pattern decision, plan note, architecture note, or ADR.
+    failure_means: The page may be built from an unreviewed custom layout.
+    adr_required_when: The project intentionally uses a custom page layout outside approved patterns.
+    waiver_allowed: true
+
+  - id: shell-elements-aligned
+    description: Header, footer, main content, skip target, H1, menu, breadcrumb, and language toggle expectations are addressed when in scope.
+    required: true
+    check_type: content_review
+    evidence:
+      - Layout code, route metadata, screenshots, or verification note.
+    failure_means: Page shell behavior may be inconsistent or incomplete.
+    adr_required_when: The project intentionally varies from required page shell behavior.
+    waiver_allowed: true
+
+  - id: navigation-path-recorded
+    description: Primary task navigation path is recorded from Home or service home to destination page and back to parent context.
+    required: true
+    check_type: content_review
+    evidence:
+      - Navigation path in plan, route metadata, page pattern decision, or verification note.
+    failure_means: Users may rely on guessing URLs, browser history, or hidden links.
+    adr_required_when: A user-facing route is intentionally not reachable from shared navigation or a recorded task path.
+    waiver_allowed: true
+
+  - id: language-toggle-aligned
+    description: Bilingual routes or content keep header language toggle, equivalent route, page title, breadcrumbs, and route language aligned.
+    required: true
+    check_type: content_review
+    evidence:
+      - Route helper output, header config, screenshots, or bilingual route verification.
+    failure_means: Official-language navigation may be inconsistent or data-losing.
+    adr_required_when: Header language-toggle behavior is intentionally removed, duplicated, or replaced.
+    waiver_allowed: true
+
+  - id: page-layout-evidence
+    description: User-facing page work includes layout evidence such as desktop screenshot, mobile or zoomed screenshot, design-system checklist, or Storybook state.
+    required: true
+    check_type: evidence_required
+    evidence:
+      - Desktop screenshot, mobile screenshot, zoomed view, Storybook state, design-system checklist, or verification note.
+    failure_means: Reviewers cannot confirm the page layout works across expected views.
+    adr_required_when: Meaningful page layout evidence is intentionally skipped.
+    waiver_allowed: true
+
+  - id: route-discoverability-evidence
+    description: Evidence shows user-facing routes are reachable from Home, shared menu, or recorded parent task path.
+    required: true
+    check_type: evidence_required
+    evidence:
+      - Screenshots, route map, navigation metadata, or verification note.
+    failure_means: New pages may be accessible only by direct URL or test fixture.
+    adr_required_when: A user-facing page is intentionally hidden from normal navigation.
+    waiver_allowed: true
+
+outputs:
+  - id: page_layout_review_summary
+    description: Review result showing selected pattern, navigation path, shell behavior, screenshots, and exceptions.
+
+evidence_expectations:
+  - Page pattern decision or exception is visible before implementation.
+  - Desktop and mobile or zoomed evidence is captured for meaningful user-facing layout work.
+  - Route discoverability is verified from Home, service home, menu, or parent task path.
+
+adr_triggers:
+  - Custom layout replaces an approved page pattern.
+  - User-facing route is intentionally not discoverable through normal navigation.
+  - Header, footer, menu, breadcrumb, or language-toggle behavior intentionally varies from the standard.
+
+waiver_guidance:
+  - A project-local waiver may be needed when layout evidence, screenshots, or route discoverability checks are intentionally deferred.
+
+notes:
+  - This schema contract supports STD-006. STD-006 remains the source of truth.

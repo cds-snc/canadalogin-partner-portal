@@ -1,0 +1,200 @@
+ui_page_pattern_decision:
+  page_role: selected workspace task area
+  page_type: chooser plus task hub with focused child pages
+  selected_pattern:
+    - "PAT-001: UI Page Patterns"
+    - "PAT-002: API Query and Mutation"
+    - "PAT-004: Protected Route"
+    - "PAT-010: RBAC Policy Check"
+    - "PAT-013: GC Design System React App Shell"
+    - "PAT-017: Itemized Data Display"
+    - "PAT-020: Status and Feedback"
+    - "PAT-022: Page Length and Splitting"
+  patterns_not_selected:
+    - pattern: "PAT-021: Dashboard Overview Page"
+      reason: The workspace entry page primarily orients users to distinct tasks; full reports and operational record work remain on focused child routes.
+  source_reference:
+    - "ADR-001: BFF and Server Session Authority"
+    - "ADR-002: API Wire and Error Contract"
+    - "ADR-003: Casbin Authorization Model"
+    - "STD-004: Frontend React and TypeScript"
+    - "STD-005: Frontend GC Design System"
+    - "STD-006: GC UI Page Layout Rules"
+    - "STD-007: UI Accessibility Basics"
+    - openspec/changes/refine-workspace-task-hub-and-registration-flow/design.md
+  supersedes:
+    decision: openspec/changes/archive/2026-07-31-restore-workspace-and-application-info-management/workspaces-page-pattern-decision.yaml
+    scope: "workspace entry-page role, Members destination, primary task paths, breadcrumbs, side navigation, and evidence expectations"
+    reason: the selected workspace now uses a task hub with canonical Access and Reports destinations instead of legacy Members and back-link-only navigation.
+  target_stack: Vite React with TanStack Router and GC Design System React components
+  task_structure:
+    multiple_user_goals: true
+    entry_page: /workspaces
+    context_route: /workspaces/$workspaceUuid
+    destination_routes:
+      - /workspaces/$workspaceUuid/application-information
+      - /workspaces/$workspaceUuid/applications
+      - /workspaces/$workspaceUuid/access
+      - /workspaces/$workspaceUuid/reports
+      - /workspaces/$workspaceUuid/settings
+      - /workspaces/$workspaceUuid/applications/$rpApplicationUuid/audit
+    compatibility_routes:
+      - from: /workspaces/$workspaceUuid/members
+        to: /workspaces/$workspaceUuid/access
+        visible_label: Access
+    home_page_or_service_home: /
+    single_page_rationale: null
+  required_shell:
+    header: shared GcdsHeader through AppShell
+    footer: shared GcdsFooter through AppShell
+    main_content: stable AppShell main landmark and skip target
+    skip_link: existing header skip link targeting main content
+    h1: workspace name is the primary selected-context heading
+    date_modified: provided by AppShell when required
+  context_behavior:
+    selection_route: /workspaces
+    selected_context_label: authorized workspace name
+    raw_uuid_as_primary_label: false
+    unavailable_name_fallback: neutral localized Workspace label; never the UUID as a friendly name
+    global_switcher: not included; users return through /workspaces
+  navigation:
+    primary_task_paths:
+      - task: select a workspace
+        entry_route: /workspaces
+        navigation_elements:
+          - accessible workspace link using its name
+        destination_routes:
+          - /workspaces/$workspaceUuid
+        return_path: Partner work Workspaces link or breadcrumb to /workspaces
+      - task: manage application information
+        entry_route: /workspaces/$workspaceUuid
+        navigation_elements:
+          - Application information task link
+          - workspace GcdsSideNav item
+        destination_routes:
+          - /workspaces/$workspaceUuid/application-information
+        return_path: workspace side navigation or breadcrumb to the workspace hub
+      - task: manage RP applications
+        entry_route: /workspaces/$workspaceUuid
+        navigation_elements:
+          - RP applications task link
+          - workspace GcdsSideNav item
+        destination_routes:
+          - /workspaces/$workspaceUuid/applications
+        return_path: workspace side navigation or breadcrumb to the workspace hub
+      - task: manage workspace access
+        entry_route: /workspaces/$workspaceUuid
+        navigation_elements:
+          - authorized Access task link
+          - authorized workspace GcdsSideNav item
+        destination_routes:
+          - /workspaces/$workspaceUuid/access
+        return_path: workspace side navigation or breadcrumb to the workspace hub
+      - task: read selected-workspace reports
+        entry_route: /workspaces/$workspaceUuid
+        navigation_elements:
+          - authorized Reports task link
+          - authorized workspace GcdsSideNav item
+        destination_routes:
+          - /workspaces/$workspaceUuid/reports
+        return_path: workspace side navigation or breadcrumb to the workspace hub
+      - task: inspect application-scoped audit
+        entry_route: /workspaces/$workspaceUuid/applications/$rpApplicationUuid
+        navigation_elements:
+          - Audit task link on the selected RP application
+        destination_routes:
+          - /workspaces/$workspaceUuid/applications/$rpApplicationUuid/audit
+        return_path: selected RP application detail or workspace applications list
+      - task: manage workspace settings
+        entry_route: /workspaces/$workspaceUuid
+        navigation_elements:
+          - authorized Settings task link
+          - authorized workspace GcdsSideNav item
+        destination_routes:
+          - /workspaces/$workspaceUuid/settings
+        return_path: workspace side navigation or breadcrumb to the workspace hub
+    shared_menu:
+      provided: true
+      component: Workspaces child inside the global Partner work GcdsNavGroup
+      home_link: /
+      new_page_or_parent_task_link: /workspaces
+      exclusion_reason: workspace child pages are nested under Workspaces and do not appear in global first-level navigation
+    breadcrumbs:
+      chooser: Home then Workspaces
+      hub: Home then Workspaces then workspace name
+      children: Home then Workspaces then workspace name then localized child label
+      component: GcdsBreadcrumbs and GcdsBreadcrumbsItem
+    language_toggle:
+      provided_by_header: true
+      equivalent_language_route: preserve selected workspace, child route, and safe parameters
+      standalone_toggle_in_body: false
+    top_navigation: Partner work is active for every /workspaces* route
+    side_navigation:
+      component: GcdsSideNav
+      context_heading: workspace name
+      items:
+        - Overview
+        - Application information
+        - RP applications
+        - Access when authorized
+        - Reports when authorized
+        - Settings when authorized
+      items_from: translated route metadata filtered by canonical authorization context
+      persistent_on_children: true
+    route_metadata:
+      single_source: true
+      owns:
+        - localized route and breadcrumb labels
+        - workspace parent and child relationships
+        - capability-based visibility
+        - side-navigation and hub visibility
+        - active route
+        - return path and compatibility redirect
+  forms:
+    required: false
+    scope: no form is present on the chooser or workspace hub
+    pattern: forms remain on focused child routes; registration uses its separate PAT-019 decision
+  component_plan:
+    page_shell:
+      - need: chooser, hub, and child page shell
+        gc_component: shared AppShell with GcdsContainer, GcdsHeading, and GcdsText
+        custom_exception: none
+    navigation:
+      - need: chooser and hub task links
+        gc_component: semantic headings and GcdsLink; GcdsGrid only for responsive layout
+        custom_exception: none
+      - need: selected workspace navigation and location
+        gc_component: GcdsSideNav, GcdsBreadcrumbs, and GcdsBreadcrumbsItem
+        custom_exception: none
+    actions_and_forms: []
+    status_and_content:
+      - need: concise workspace context and status
+        gc_component: PAT-017 itemized data and PAT-020 scoped feedback
+        custom_exception: none
+      - need: report or audit tables on focused children
+        gc_component: PAT-023 with GcdsTable or a recorded semantic-table implementation
+        custom_exception: none
+  content_boundaries:
+    hub_includes:
+      - workspace name and concise context
+      - optional sourced status
+      - authorized task names, descriptions, and links
+    hub_excludes:
+      - full application or access tables
+      - invitation or assignment controls
+      - reports and exports
+      - settings forms
+      - audit event rows
+      - raw UUID as friendly context
+  evidence_required:
+    desktop_screenshot: chooser, hub, Access or Reports child with side navigation and breadcrumbs
+    mobile_screenshot: hub and reflowed side-navigation behavior with the first useful action visible
+    accessibility_result: keyboard, focus, landmarks, H1/context, breadcrumbs, side navigation, active state, and zoom review
+    bilingual_result: English and French chooser, task labels, breadcrumbs, context, status, and accessible names
+    design_system_checklist: required
+    route_reachability_tests: required for every authorized task and compatibility redirect
+    capability_context_visibility_tests: required for representative permitted, hidden, denied, and cross-workspace contexts
+  exceptions:
+    required: false
+    approval_status: not needed
+    notes: No global workspace switcher, custom task-card system, synthetic workspace-audit page, or custom navigation component is planned.

@@ -1,0 +1,279 @@
+@startuml
+' CanadaLogin Partner Portal - C4 level 4 code view.
+'
+' Work context: local illustrative sample only.
+' Source codebase: gc-signin-partner-portal, read as source material only.
+' View question: which code elements implement workspace-scoped invitation,
+' registration/Production-review, credential-history, and MAU paths?
+' Excluded: every route and CRUD adapter, unrelated frontend internals, the
+' complete schema, legacy compatibility fields, and full runtime sequences.
+
+left to right direction
+skinparam linetype ortho
+skinparam shadowing false
+skinparam classAttributeIconSize 0
+skinparam wrapWidth 180
+hide circle
+
+title CanadaLogin Partner Portal - C4 Level 4 Code View: Scoped Partner Operations
+
+package "frontend/src/features/invitations" {
+  class "RPApplicationInvitationPreparePage.tsx\ninvitation-fragment.ts" as InvitationPrepareUI <<module>> {
+    +consumeInvitationTokenFragment()
+    +replaceNavigate(tokenlessAcceptPath)
+  }
+
+  class "RPApplicationInvitationPage.tsx" as InvitationAcceptUI <<module>> {
+    +acceptPreparedOnLoad()
+  }
+}
+
+package "frontend/src/fetch" {
+  class "rp-application-developer-invitations.ts" as InvitationClient <<module>> {
+    +prepareRPApplicationDeveloperInvitation(token)
+    +acceptPreparedRPApplicationDeveloperInvitation()
+  }
+}
+
+package "backend/src/app/api/v1" {
+  class "workspaces.py\nFastAPI router" as WorkspacesRouter <<module>> {
+    +write_application_rp_configuration()
+    +patch_application_rp_configuration_registration_draft()
+    +write_application_rp_configuration_registration_completion()
+    +write_application_rp_configuration_production_review()
+    +patch_application_rp_configuration_production_review()
+    +write_workspace_developer_invitation()
+    +revoke_workspace_developer_invitation()
+    +reissue_workspace_developer_invitation()
+  }
+
+  class "rp_application_developer_invitations.py\nFastAPI router" as InvitationAcceptRouter <<module>> {
+    +prepare_rp_application_developer_invitation()
+    +accept_prepared_rp_application_developer_invitation()
+  }
+
+  class "rp_applications.py\nFastAPI router" as RPApplicationsRouter <<module>> {
+    +read_accessible_rp_application()
+    +download_accessible_rp_application_secret_change_log()
+    +rotate_accessible_rp_application_client_secret()
+    +read_accessible_rp_application_mau_report()
+  }
+}
+
+package "backend/src/app/services" {
+  class WorkspaceService <<service>> {
+    +create_application_rp_configuration_registration_draft(...)
+    +update_application_rp_configuration_registration_draft(...)
+    +complete_application_rp_configuration_registration(...)
+    +upsert_application_rp_configuration_promotion_request(...)
+    +review_application_rp_configuration_promotion_request(...)
+    -_resolve_application_rp_configuration_access(...)
+  }
+
+  class RPApplicationDeveloperInvitationService <<service>> {
+    +create_developer_invitation(...)
+    +prepare_developer_invitation(token, ...)
+    +accept_prepared_developer_invitation(invitation_uuid, ...)
+    +revoke_developer_invitation(...)
+    +reissue_developer_invitation(...)
+    -_ensure_management_access(...)
+    -_ensure_assignment_allowed(...)
+    -_create_access_grant_for_invitation(...)
+    -_create_invitation_record(...)
+    -_accept_developer_invitation_by_lookup(...)
+  }
+
+  class RPApplicationService <<service>> {
+    +get_accessible_rp_application_by_uuid(...)
+    +export_accessible_rp_application_secret_change_log(...)
+    +rotate_accessible_rp_application_client_secret(...)
+    -_resolve_accessible_rp_application_access(...)
+    -_create_audit_log_entry(...)
+  }
+
+  class MAUService <<service>> {
+    +get_mau_by_application(...)
+  }
+}
+
+package "backend/src/app/core" {
+  class "identity.py" as IdentityHelpers <<module>> {
+    +normalize_email_identity(value)
+    +resolve_verified_email_claim(claims)
+    +normalize_partner_access_domain(value)
+    +email_satisfies_partner_access_policy(email, domains)
+  }
+
+  class "identity.py + request.session\nPrepared invitation session contract" as PreparedInvitationSession <<server-session contract>> {
+    +SESSION_PREPARED_INVITATION_UUID_KEY
+    +prepared_invitation_uuid: public UUID
+  }
+
+  class "authorization.py" as AuthorizationContract <<module>> {
+    +CanonicalRoleCode
+    +Capability
+    +ROLE_PERMISSION_MATRIX
+  }
+}
+
+package "backend/src/app/repositories" {
+  class "Focused CRUD adapters" as PersistenceAdapters <<repository-set>> {
+    +crud_workspaces
+    +crud_application_information
+    +crud_rp_applications
+    +crud_rp_application_promotion_requests
+    +crud_rp_application_developer_invitations
+    +crud_rp_application_access_grants
+    +crud_audit_log
+  }
+
+  class IBMVerifyAdminClient <<HTTP client>> {
+    +create_application(payload)
+    +update_application(application_id, payload)
+    +get_client_secret(client_id)
+    +update_client_secret(client_id, payload)
+  }
+}
+
+package "backend/src/app/models" {
+  class Workspace <<SQLAlchemy model>> {
+    +uuid
+    +department_id
+  }
+
+  class ApplicationInformation <<SQLAlchemy model>> {
+    +uuid
+    +workspace_id
+  }
+
+  class RPApplication <<SQLAlchemy model>> {
+    +uuid
+    +workspace_id
+    +application_information_id
+    +configuration_name
+    +partner_environment
+    +canada_login_environment
+    +registration_draft_version
+    +registration_completed_at
+  }
+
+  class RPApplicationPromotionRequest <<SQLAlchemy model>> {
+    +rp_application_id
+    +review_status
+    +external_reference
+    +requested_at
+    +reviewed_by_user_id
+    +reviewed_at
+    +decided_at
+  }
+
+  class RPApplicationDeveloperInvitation <<SQLAlchemy model>> {
+    +uuid
+    +workspace_id
+    +invited_email
+    +token_hash
+    +role
+    +invite_expires_at
+    +accepted_at
+    +revoked_at
+  }
+
+  class RPApplicationAccessGrant <<SQLAlchemy model>> {
+    +uuid
+    +workspace_id
+    +user_id
+    +role
+    +status
+    +source_invitation_uuid
+  }
+}
+
+package "backend/src/app/schemas" {
+  class RPApplicationDeveloperInvitationWriteResponse <<Pydantic schema>> {
+    +acceptance_url
+  }
+  class RPApplicationDeveloperInvitationPrepareRequest <<Pydantic schema>> {
+    +token
+  }
+  class RPApplicationDeveloperInvitationPrepareResponse <<Pydantic schema>> {
+    +prepared
+  }
+  class RPApplicationDeveloperInvitationAcceptResponse <<Pydantic schema>> {
+    +invitation
+    +access_grant
+    +next_destination
+  }
+  class WorkspaceRPApplicationRegistrationCompletionRead <<Pydantic schema>>
+  class ApplicationRPConfigurationProductionReviewRead <<Pydantic schema>>
+}
+
+WorkspacesRouter --> WorkspaceService : registration and Production review
+WorkspacesRouter --> RPApplicationDeveloperInvitationService : create, revoke, reissue
+InvitationPrepareUI --> InvitationClient : 1. prepare with fragment token once
+InvitationClient --> InvitationAcceptRouter : 2/5. POST /prepare or tokenless /accept-prepared
+InvitationAcceptRouter --> RPApplicationDeveloperInvitationService : 3/6. resolve token hash; accept prepared UUID
+InvitationAcceptRouter --> PreparedInvitationSession : 3/6. store then pop public invitation UUID
+InvitationPrepareUI --> InvitationAcceptUI : 4. replace navigation to tokenless /accept
+InvitationAcceptUI --> InvitationClient : 5. accept prepared invitation without token
+RPApplicationsRouter --> RPApplicationService : scoped RP and credential history
+RPApplicationsRouter --> MAUService : accessible RP MAU only
+
+RPApplicationDeveloperInvitationService --> IdentityHelpers : exact verified email/domain rules
+RPApplicationDeveloperInvitationService --> AuthorizationContract : delegation matrix
+WorkspaceService --> AuthorizationContract : workspace/resource capability
+RPApplicationService --> AuthorizationContract : RP/secret capability
+
+WorkspaceService --> PersistenceAdapters : hierarchy and review records
+RPApplicationDeveloperInvitationService --> PersistenceAdapters : invitation and access grant
+RPApplicationService --> PersistenceAdapters : RP and audit history
+WorkspaceService --> IBMVerifyAdminClient : authorized registration operations
+RPApplicationService --> IBMVerifyAdminClient : authorized credential operations
+
+PersistenceAdapters --> Workspace : persists
+PersistenceAdapters --> ApplicationInformation : persists
+PersistenceAdapters --> RPApplication : persists
+PersistenceAdapters --> RPApplicationPromotionRequest : persists
+PersistenceAdapters --> RPApplicationDeveloperInvitation : persists token hash only
+PersistenceAdapters --> RPApplicationAccessGrant : persists scoped assignment
+
+RPApplication --> Workspace : workspace_id
+RPApplication --> ApplicationInformation : application_information_id
+RPApplicationPromotionRequest --> RPApplication : rp_application_id
+RPApplicationDeveloperInvitation --> Workspace : workspace_id
+RPApplicationAccessGrant --> Workspace : workspace_id
+RPApplicationAccessGrant --> RPApplicationDeveloperInvitation : source_invitation_uuid
+
+WorkspacesRouter ..> RPApplicationDeveloperInvitationWriteResponse
+InvitationAcceptRouter ..> RPApplicationDeveloperInvitationPrepareRequest
+InvitationAcceptRouter ..> RPApplicationDeveloperInvitationPrepareResponse
+InvitationAcceptRouter ..> RPApplicationDeveloperInvitationAcceptResponse
+WorkspacesRouter ..> WorkspaceRPApplicationRegistrationCompletionRead
+WorkspacesRouter ..> ApplicationRPConfigurationProductionReviewRead
+
+note right of RPApplicationDeveloperInvitationService
+  Create and reissue return one acceptance URL.
+  List/detail records never return the raw token.
+  Acceptance uses server-owned verified identity context.
+end note
+
+note right of InvitationPrepareUI
+  The manual link carries the bearer only in #token.
+  The prepare page reads and scrubs the fragment before
+  sending the token once to POST /prepare.
+  No raw token enters a path, query, redirect, browser
+  storage, or server session.
+end note
+
+note right of PreparedInvitationSession
+  The server session holds only the public invitation UUID.
+  POST /accept-prepared pops that UUID before the tokenless
+  acceptance call; the raw bearer is never session state.
+end note
+
+note right of RPApplication
+  registration_completed_at is technical completion.
+  Production review is a separate record.
+  Historical lifecycle fields are compatibility data only.
+end note
+
+@enduml

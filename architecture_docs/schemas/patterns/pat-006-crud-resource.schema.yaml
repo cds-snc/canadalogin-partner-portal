@@ -1,0 +1,178 @@
+schema_id: ARCH-SCHEMA-PAT-006-CRUD-RESOURCE
+schema_version: "0.3"
+title: CRUD Resource Schema Contract
+status: active
+schema_type: pattern
+
+owner_doc_id: PAT-006
+owner_doc_type: pattern
+owner_doc_path: docs/patterns/backend/pat-006-crud-resource.md
+
+summary: >
+  Helps agents and reviewers check CRUD resource ownership, API models, service
+  methods, repositories, persistence, authorization, retention, delete behavior,
+  write-path cache consistency, OpenAPI evidence, migrations, and tests.
+
+categories:
+  - backend
+  - api
+  - data
+  - testing
+search_keywords:
+  - crud
+  - resource
+  - create
+  - read
+  - update
+  - delete
+  - repository
+  - ownership
+  - retention
+  - soft delete
+  - migration
+  - cache invalidation
+  - stale cache
+applies_when:
+  - a backend feature needs create, read, update, delete, list, or resource lifecycle behavior
+  - API, service, persistence, repository, migration, authorization, and tests need to evolve together
+  - delete semantics, ownership, pagination, filtering, sorting, or audit behavior are being reviewed
+  - a create, update, or delete path may change backend or frontend cached data
+do_not_use_when:
+  - the domain behavior is an action, workflow transition, job, or command rather than a resource lifecycle
+  - delete semantics, retention, audit rules, authorization, ownership, or data classification are not known
+
+work_contexts:
+  - local_developer
+  - shared_non_production
+  - production
+stack_profiles:
+  - fastapi
+  - pydantic
+  - sqlalchemy
+  - alembic
+  - postgres
+artifact_types:
+  - api_schema
+  - backend_router
+  - service
+  - repository
+  - database_model
+  - migration
+  - backend_test
+  - openapi_contract
+  - verification_note
+  - adr
+
+related_standards:
+  - STD-008
+  - STD-009
+  - STD-010
+  - STD-012
+  - STD-013
+  - STD-020
+related_patterns:
+  - PAT-002
+  - PAT-005
+  - PAT-008
+  - PAT-012
+  - PAT-024
+related_controls:
+  - GC-WEB-006
+  - GC-WEB-007
+  - GC-WEB-009
+  - GC-WEB-010
+related_baselines:
+  - BAS-001
+
+required_inputs:
+  - id: resource_scope
+    description: Resource name, lifecycle operations, API shape, ownership boundary, data classification, persistence needs, delete semantics, and backend or frontend cache applicability.
+    required: true
+    source: API specification, architecture note, ADR, implementation plan, PR, or issue
+  - id: crud_evidence_scope
+    description: Models, routes, services, repositories, migrations, tests, cache behavior, OpenAPI evidence, and authorization review changed.
+    required: true
+    source: changed files, test output, migration review, OpenAPI output, or verification note
+
+checks:
+  - id: resource-ownership-known
+    description: The resource, owner or tenant boundary, data classification, and lifecycle operations are defined before CRUD implementation proceeds.
+    required: true
+    check_type: human_review
+    evidence:
+      - API specification, ADR, data handling record, implementation plan, or verification note.
+    failure_means: CRUD behavior may expose data or actions outside the intended boundary.
+    adr_required_when: Ownership, tenant boundary, retention, audit, or data classification is unclear but implementation proceeds.
+    waiver_allowed: false
+
+  - id: crud-api-and-service-shape
+    description: Create, read, update, delete, and list behavior use explicit API models, router endpoints, service methods, and response shapes where applicable.
+    required: true
+    check_type: file_review
+    evidence:
+      - Pydantic models, router, service, response models, API examples, or OpenAPI output.
+    failure_means: Resource lifecycle behavior may be inconsistent or implicit.
+    adr_required_when: A project intentionally omits explicit CRUD models or service methods for a meaningful resource.
+    waiver_allowed: true
+
+  - id: persistence-and-migration-shape
+    description: Persisted resources use a repository or data-access boundary and tracked migrations when schema changes are needed.
+    required: true
+    check_type: file_review
+    evidence:
+      - Repository, database model, Alembic migration, migration review note, or documented no-persistence reason.
+    failure_means: Persistence behavior may leak into routes or shared database state may drift.
+    adr_required_when: A project intentionally skips repository boundaries or migrations for shared or production persistence.
+    waiver_allowed: true
+
+  - id: authorization-delete-retention-reviewed
+    description: Create, read, update, delete, and list paths enforce authorization and follow known retention, audit, and delete semantics.
+    required: true
+    check_type: human_review
+    evidence:
+      - Authorization tests, service review, retention note, delete behavior decision, audit note, or verification note.
+    failure_means: Users may access or remove records contrary to ownership, retention, or audit expectations.
+    adr_required_when: The project intentionally varies from expected authorization, soft delete, retention, or audit behavior.
+    waiver_allowed: false
+
+  - id: write-cache-consistency
+    description: Each successful create, update, or delete path identifies affected backend and frontend caches, invalidates relevant entries or updates them coherently when cached data changes, and records N/A when neither layer caches the affected data.
+    required: true
+    check_type: evidence_required
+    evidence:
+      - Cache applicability decision, service or mutation logic, focused stale-cache test, invalidation or update assertion, or documented N/A rationale.
+    failure_means: Reads may return stale representations after successful writes, or cache effects may be silently missed.
+    adr_required_when: A project intentionally accepts stale cached data after a resource write.
+    waiver_allowed: false
+
+  - id: crud-tests-and-contract-evidence
+    description: Tests or verification cover validation, ownership restrictions, list controls, delete behavior, persistence constraints, stale-cache prevention when applicable, and API contract changes.
+    required: true
+    check_type: evidence_required
+    evidence:
+      - Pytest output, API tests, service tests, repository tests, migration tests, OpenAPI diff, or verification note.
+    failure_means: Resource behavior may regress across API, service, persistence, and authorization paths.
+    adr_required_when: A meaningful CRUD resource ships without tests or contract evidence.
+    waiver_allowed: true
+
+outputs:
+  - id: crud_resource_review_summary
+    description: Review result showing resource ownership, API/service shape, persistence, migration, authorization, delete semantics, cache consistency, and test evidence.
+
+evidence_expectations:
+  - Resource ownership, classification, and delete semantics are visible before implementation proceeds.
+  - Persisted CRUD resources include repository, migration, and test evidence when applicable.
+  - Write paths include stale-cache prevention evidence, or an N/A rationale when neither backend nor frontend caches affected data.
+  - OpenAPI or equivalent API contract evidence is refreshed when API shape changes.
+
+adr_triggers:
+  - Project proceeds with unclear data classification, ownership, retention, audit, or deletion rules.
+  - Project intentionally skips repository boundaries, migrations, or service separation for persisted CRUD behavior.
+  - Project intentionally varies authorization or delete behavior.
+
+waiver_guidance:
+  - Delivery waivers for missing tests, migration review, or API contract evidence belong in the project-local Delorean evidence process.
+  - This schema contract does not define runtime waiver records.
+
+notes:
+  - This schema contract supports PAT-006. PAT-006 remains the source of truth.

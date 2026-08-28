@@ -93,31 +93,31 @@ def build_formatter(*, json_output: bool, pre_chain: list[Processor]) -> structl
     return structlog.stdlib.ProcessorFormatter(foreign_pre_chain=pre_chain, processors=processors)
 
 
-# Setup log directory
-LOG_DIR = os.path.join(os.path.dirname(os.path.dirname(__file__)), "logs")
-os.makedirs(LOG_DIR, exist_ok=True)
-
-
-# File handler configuration
-file_handler = RotatingFileHandler(
-    filename=os.path.join(LOG_DIR, "app.log"),
-    maxBytes=settings.FILE_LOG_MAX_BYTES,
-    backupCount=settings.FILE_LOG_BACKUP_COUNT,
-)
-file_handler.setLevel(settings.FILE_LOG_LEVEL)
-file_handler.setFormatter(
-    build_formatter(
-        json_output=settings.FILE_LOG_FORMAT_JSON, pre_chain=SHARED_PROCESSORS + [file_log_filter_processors]
+# File logging is opt-in. Container deployments already collect stdout, and
+# importing the application during local tests must not create repository
+# artifacts that may contain request metadata.
+file_handler: RotatingFileHandler | None = None
+if settings.FILE_LOG_ENABLED:
+    log_dir = os.path.join(os.path.dirname(os.path.dirname(__file__)), "logs")
+    os.makedirs(log_dir, exist_ok=True)
+    file_handler = RotatingFileHandler(
+        filename=os.path.join(log_dir, "app.log"),
+        maxBytes=settings.FILE_LOG_MAX_BYTES,
+        backupCount=settings.FILE_LOG_BACKUP_COUNT,
     )
-)
+    file_handler.setLevel(settings.FILE_LOG_LEVEL)
+    file_handler.setFormatter(
+        build_formatter(
+            json_output=settings.FILE_LOG_FORMAT_JSON,
+            pre_chain=SHARED_PROCESSORS + [file_log_filter_processors],
+        )
+    )
 
 # Console handler configuration
 console_handler = logging.StreamHandler()
 console_handler.setLevel(settings.CONSOLE_LOG_LEVEL)
 console_handler.setFormatter(
-    build_formatter(
-        json_output=settings.CONSOLE_LOG_FORMAT_JSON, pre_chain=SHARED_PROCESSORS + [console_log_filter_processors]
-    )
+    build_formatter(json_output=settings.CONSOLE_LOG_FORMAT_JSON, pre_chain=SHARED_PROCESSORS + [console_log_filter_processors])
 )
 
 
@@ -125,7 +125,8 @@ console_handler.setFormatter(
 root_logger = logging.getLogger()
 root_logger.setLevel(logging.INFO)
 root_logger.handlers.clear()  # avoid duplicate logs
-root_logger.addHandler(file_handler)
+if file_handler is not None:
+    root_logger.addHandler(file_handler)
 root_logger.addHandler(console_handler)
 
 # Uvicorn logger integration

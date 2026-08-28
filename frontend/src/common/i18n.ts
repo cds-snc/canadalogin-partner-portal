@@ -40,6 +40,19 @@ const i18nOptions: InitOptions = {
 
 const configuredI18n = i18n.use(initReactI18next).use(LanguageDetector);
 
-void configuredI18n.init(i18nOptions);
+const synchronizeDocumentMetadata = (language: string): void => {
+	if (typeof document === "undefined") {
+		return;
+	}
+
+	const normalizedLanguage = normalizeLanguageCode(language);
+	document.documentElement.lang = normalizedLanguage;
+	document.title = resources[normalizedLanguage].translations.home.title;
+};
+
+configuredI18n.on("languageChanged", synchronizeDocumentMetadata);
+void configuredI18n.init(i18nOptions).then(() => {
+	synchronizeDocumentMetadata(configuredI18n.language);
+});
 
 export default i18n;

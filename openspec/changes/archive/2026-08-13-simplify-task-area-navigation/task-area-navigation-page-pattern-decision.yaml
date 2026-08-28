@@ -1,0 +1,151 @@
+ui_page_pattern_decision:
+  page_role: Administration and selected-workspace task areas with focused child pages
+  page_type: task hubs plus focused child routes
+  selected_pattern:
+    - "PAT-001: UI Page Patterns"
+    - "PAT-013: GC Design System React App Shell"
+    - "PAT-014: Bilingual Route and I18n"
+    - "PAT-022: Page Length and Splitting"
+  patterns_not_selected:
+    - pattern: GcdsSideNav persistent local navigation
+      reason: The current hierarchies are shallow and already have task hubs, shared header navigation, breadcrumbs, and stable return paths; the rail duplicates those destinations and reserves content width.
+    - pattern: generic browser-history Back button
+      reason: Direct entry, redirects, and multi-path arrival require a deterministic parent destination; navigation to that destination is a link.
+    - pattern: "PAT-021: Dashboard Overview Page"
+      reason: Administration and selected workspace pages primarily orient users to distinct tasks; they do not own cross-area monitoring or triage widgets.
+  source_reference:
+    - "STD-005: Frontend GC Design System"
+    - "STD-006: GC UI Page Layout Rules"
+    - "STD-007: UI Accessibility Basics"
+    - "STD-017: Government of Canada Standards Review"
+    - "STD-018: Frontend CSS and Design-System Boundary"
+    - "BAS-001: Government of Canada Web Application Baseline"
+    - "GC-WEB-002: Canada.ca Design, Federal Identity, And Page Shell"
+    - "GC-WEB-003: Accessibility"
+    - "GC-WEB-004: Official Languages And Plain Language"
+    - "GC-WEB-005: Mobile And Responsive Behaviour"
+    - https://design-system.canada.ca/en/components/side-navigation/
+    - https://design-system.canada.ca/en/components/button/
+    - https://design-system.canada.ca/en/components/card/
+    - https://design.canada.ca/common-design-patterns/breadcrumb-trail.html
+    - https://design.canada.ca/common-design-patterns/services-information.html
+  supersedes:
+    - decision: openspec/changes/archive/2026-08-12-add-authenticated-home-and-navigation-groups/authenticated-home-page-pattern-decision.yaml
+      scope: Administration persistent side navigation and child return-path behavior only
+    - decision: openspec/changes/archive/2026-08-12-refine-workspace-task-hub-and-registration-flow/workspace-task-area-page-pattern-decision.yaml
+      scope: selected-workspace persistent side navigation, breadcrumbs, and child return paths only
+  target_stack: Vite React with TanStack Router and GC Design System React components
+  task_structure:
+    multiple_user_goals: true
+    entry_pages:
+      - /administration
+      - /workspaces/$workspaceUuid
+    destination_routes:
+      administration:
+        - /users
+        - /departments
+        - /tiers
+        - /audit-logs
+        - /roles
+      workspace:
+        - /workspaces/$workspaceUuid/application-information
+        - /workspaces/$workspaceUuid/applications
+        - /workspaces/$workspaceUuid/access
+        - /workspaces/$workspaceUuid/reports
+        - /workspaces/$workspaceUuid/settings
+    home_page_or_service_home: /
+    single_page_rationale: null
+    task_hub_groups:
+      authenticated_home:
+        - Partner work
+        - Onboarding oversight
+        - Administration
+      administration:
+        - Access management
+        - Partner configuration
+        - Monitoring and reference
+      selected_workspace:
+        - Setup and applications
+        - Access
+        - Insights
+        - Workspace management
+    task_card_contract:
+      component: GcdsCard
+      content: one linked title and one concise description
+      destinations_per_card: 1
+      nested_interactive_controls: false
+      embedded_metrics_forms_tables: false
+      empty_groups: omitted
+  required_shell:
+    header: shared GcdsHeader through AppShell
+    footer: shared GcdsFooter through AppShell
+    main_content: stable AppShell main landmark and skip target
+    skip_link: existing header skip link targeting main content
+    h1: one localized task-hub or focused-page heading
+    date_modified: provided by AppShell when required
+  navigation:
+    primary_task_paths:
+      - task: open an Administration child
+        entry_route: /administration
+        navigation_elements:
+          - authorized task-hub link
+          - shared Administration header link
+        return_path: translated GcdsLink to /administration
+      - task: open a selected-workspace child
+        entry_route: /workspaces/$workspaceUuid
+        navigation_elements:
+          - authorized workspace task-hub link
+          - Partner work then Workspaces in the shared header
+        return_path: translated GcdsLink to /workspaces/$workspaceUuid using the workspace name or neutral fallback
+    shared_menu:
+      provided: true
+      component: GcdsTopNav, GcdsNavGroup, and GcdsNavLink
+      home_link: /
+      parent_task_links:
+        - /administration
+        - /workspaces
+    breadcrumbs:
+      administration_child: Home then Administration; current child omitted
+      workspace_hub: Home then Workspaces; current workspace page omitted
+      workspace_child: Home then Workspaces then workspace name; current child omitted
+      component: GcdsBreadcrumbs and GcdsBreadcrumbsItem
+    language_toggle:
+      provided_by_header: true
+      equivalent_language_route: preserve the current authorized route and safe parameters
+      standalone_toggle_in_body: false
+    side_navigation:
+      provided: false
+      component: none
+      exclusion_reason: shallow task areas use the existing task hubs, top navigation, breadcrumbs, and deterministic parent links without a persistent local tree
+    parent_return_link:
+      component: GcdsLink
+      browser_history_dependent: false
+      label: localized destination-specific text
+  component_plan:
+    page_shell:
+      - need: shared page chrome and full content width
+        gc_component: shared AppShell, GcdsContainer, GcdsHeading, and GcdsText
+        custom_exception: none
+    navigation:
+      - need: task discovery
+        gc_component: GcdsTopNav, GcdsNavGroup, GcdsNavLink, and task-hub GcdsLink
+        custom_exception: none
+    task_choices:
+      - need: grouped preview of one focused task destination
+        gc_component: GcdsCard in a responsive GcdsGrid below a semantic group heading
+        custom_exception: none
+      - need: hierarchy and deterministic parent return
+        gc_component: GcdsBreadcrumbs, GcdsBreadcrumbsItem, and GcdsLink
+        custom_exception: none
+  evidence_required:
+    desktop_screenshot: grouped authenticated task hub plus Administration and workspace children without a left rail
+    mobile_screenshot: one-column task-card groups and focused child with the first useful action visible
+    zoom_result: 200-percent zoom or equivalent narrow CSS viewport without horizontal scrolling
+    accessibility_result: card accessible names, source order, headings, keyboard order, focus, skip link, landmarks, breadcrumbs, parent links, and direct-entry recovery
+    bilingual_result: English and French task links, breadcrumbs, parent links, and workspace fallback labels
+    design_system_checklist: required
+    route_reachability_tests: required for every authorized parent and child task
+  exceptions:
+    required: false
+    approval_status: not needed
+    notes: No custom navigation component or custom history behavior is planned.

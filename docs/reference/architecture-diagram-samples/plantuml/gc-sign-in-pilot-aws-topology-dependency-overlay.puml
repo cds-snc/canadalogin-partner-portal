@@ -1,0 +1,156 @@
+@startuml
+' GC Sign-In Pilot - AWS topology source model with dependency overlay.
+'
+' Work context: local illustrative sample only.
+' Source: uploaded pilot architecture sketch.
+' View: AWS topology with a basic dependency overlay. Detailed runtime, OAuth,
+' redirect, callback, logout, profile-update, and data-flow sequence lines are
+' intentionally omitted.
+'
+' Boundary model:
+' - AWS Cloud contains the web app and product website deployment.
+' - Canada Central Region contains the regional application entry/runtime and
+'   platform services.
+' - Application VPC contains only network-resident runtime resources.
+' - Edge/static services stay beside the regional application boundary and
+'   outside the VPC.
+' - IBM Verify SaaS, browser, and partner portal stay outside AWS as
+'   free-standing external boxes.
+'
+' Rendering policy:
+' - PlantUML source is the maintainable model.
+' - The layout engine may place boxes differently than the source order.
+' - External boxes are intended as a bottom companion band when the renderer can
+'   satisfy that without distorting boundaries.
+' - Compare DOT/default, Smetana, or ELK only by keeping this model unchanged.
+' - Hidden links are layout-only and must not imply runtime or trust flows.
+' - Visible arrows are short topology-level dependencies only, not OAuth
+'   sequence steps or data-flow guarantees.
+' - Long cross-boundary dependencies are listed in the legend instead of drawn
+'   as layout-distorting edges.
+
+!include <awslib/AWSCommon.puml>
+!include <awslib/Groups/all.puml>
+!include <awslib/NetworkingContentDelivery/all.puml>
+!include <awslib/SecurityIdentityCompliance/all.puml>
+!include <awslib/Containers/all.puml>
+!include <awslib/Database/all.puml>
+!include <awslib/ManagementGovernance/all.puml>
+!include <awslib/Storage/all.puml>
+
+left to right direction
+skinparam linetype ortho
+skinparam packageStyle rectangle
+skinparam shadowing false
+skinparam wrapWidth 120
+skinparam nodesep 28
+skinparam ranksep 26
+skinparam defaultTextAlignment center
+skinparam ArrowColor #2F5D7C
+skinparam ArrowFontColor #2F5D7C
+skinparam ArrowFontSize 11
+skinparam ArrowThickness 1
+
+title GC Sign-In Pilot - AWS Topology (Dependency Overlay)
+
+AWSCloudGroup(awsCloud, "AWS Cloud") {
+  rectangle "Web App and Product Website" as productSite {
+    RegionGroup(canadaCentral, "Canada Central Region") {
+      rectangle "Application entry and runtime" as appRuntime {
+        WAF(appWaf, "Web App\nFirewall", "App protection")
+
+        VPCGroup(applicationVpc, "Application VPC") {
+          rectangle "(back-end)" as backendBoundary {
+            PublicSubnetGroup(publicSubnet, "Public subnet") {
+              ElasticLoadBalancingApplicationLoadBalancer(alb, "App Load\nBalancer", "HTTPS entry")
+            }
+
+            PrivateSubnetGroup(privateSubnet, "Private subnet") {
+              rectangle "ECS Cluster" as ecsCluster {
+                ElasticContainerService(ecsService, "ECS Service(s)", "Fargate tasks")
+                rectangle "Backend\nContainer" as backendContainer
+              }
+
+              ElastiCache(redis, "ElastiCache", "Redis")
+            }
+          }
+        }
+      }
+
+      rectangle "Platform services" as platformServices {
+        SecretsManager(secrets, "Secrets\nManager", "OIDC client secrets")
+        ElasticContainerRegistry(ecr, "Elastic Container\nRegistry", "Container images")
+        CloudWatch(logs, "CloudWatch", "Logs")
+      }
+    }
+
+    rectangle "Edge and static web tier" as edgeTier {
+      WAF(edgeWaf, "Web App\nFirewall", "Edge protection")
+      CloudFront(cloudFront, "CloudFront", "Web distribution")
+      SimpleStorageService(webAssets, "S3", "Web assets / JavaScript")
+      Route53(route53, "Route 53", "DNS")
+    }
+  }
+}
+
+rectangle "IBM Verify SaaS (Canada)" as identitySaas <<External>> {
+  rectangle "Authentication services" as ibmAuth {
+    rectangle "MFA\nServices" as mfaServices
+    rectangle "OIDC Services\n(SSO)" as oidcServices
+  }
+
+  rectangle "Applications and flows" as ibmApps {
+    rectangle "APIs" as identityApis
+    rectangle "OIDC\nApplications" as oidcApplications
+    rectangle "Flow Designer\nFlows" as flowDesigner
+    rectangle "Custom Themes\nand Branding" as themesBranding
+  }
+
+  rectangle "Policy, profile, and operations" as ibmOps {
+    rectangle "Identity Store\nCore Profile" as identityStore
+    rectangle "Access\nPolicies" as accessPolicies
+    rectangle "Monitoring /\nReporting" as monitoringReporting
+  }
+}
+
+rectangle "External participants" as participants <<External>> {
+  rectangle "User Agent\n(Web Browser)" as browser <<External>>
+  rectangle "Relying Party\n(Partner Portal)" as relyingParty <<External>>
+}
+
+' Hidden links are layout-only. They do not represent application, identity,
+' OAuth, callback, logout, profile-update, or data-flow relationships.
+' Hidden-link budget: 8 total.
+awsCloud -[hidden]down-> identitySaas
+canadaCentral -[hidden]right-> edgeTier
+appRuntime -[hidden]down-> platformServices
+appWaf -[hidden]right-> applicationVpc
+publicSubnet -[hidden]right-> privateSubnet
+identitySaas -[hidden]right-> participants
+ibmAuth -[hidden]right-> ibmApps
+ibmApps -[hidden]right-> ibmOps
+
+' Basic dependency overlay. These arrows show short local communication only.
+' Long external dependencies are listed in the legend to avoid layout distortion.
+' Visible-arrow budget: 4 total.
+cloudFront -[#2F5D7C]-> webAssets : origin
+appWaf -[#2F5D7C]-> alb : ingress
+alb -[#2F5D7C]-> ecsService : app traffic
+ecsService -[#2F5D7C]-> redis : cache/session
+
+legend right
+  AWS topology with a basic dependency overlay based on the uploaded pilot sketch.
+  Visible arrows show short local "who talks to who" dependencies only:
+  - CloudFront -> S3 origin
+  - App WAF -> App Load Balancer -> ECS Service
+  - ECS Service -> ElastiCache Redis
+  External dependencies are listed instead of drawn as long cross-boundary arrows:
+  - User Agent -> CloudFront / App WAF: HTTPS
+  - ECS Service -> IBM Verify SaaS: OIDC / APIs
+  Runtime OAuth redirects, callbacks, logout, profile-update, and detailed data-flow lines are omitted.
+  Boundary fidelity is intentional: edge/static, platform, IBM Verify SaaS, and participants are not moved into the VPC.
+  IBM Verify SaaS and external participants are free-standing external boxes, not one shared containment boundary.
+  Hidden links are layout hints only; they do not represent architecture relationships.
+endlegend
+
+@enduml

@@ -1,145 +1,201 @@
-# CanadaLogin Partner Portal - Agent Guide
+# Delorean Solution Agent Instructions
 
-Fast reference for AI agents. Self-contained — all essential coding standards here.
+<!-- delorean-template:codex-agents v1 -->
 
-## Architecture
+This file is the Codex project instruction file for a generated Delorean
+solution repo. It is owned by this solution repo after scaffold and should be
+kept aligned with local docs, standards, checks, and agent skills.
 
-```
-backend/  (FastAPI + SQLAlchemy/PostgreSQL + Redis + Authlib OIDC + Casbin + ARQ)
-├── api/v1/ (routes) → services/ (logic) → repositories/ (FastCRUD + ISV) → models/
-├── schemas/ (Pydantic) / workflows/ (state) / core/ (config, auth, exceptions)
-├── core/worker/ (ARQ: WorkerSettings + task functions)
-└── tests/ + migrations/versions/
+## Start Here
 
-frontend/  (Vite + React 19 + TanStack Router/Query + Zustand + RHF/Zod + Vitest + Playwright)
-├── routes/ (thin, TanStack) → features/<name>/ (pages + hooks) → fetch/ (API clients)
-├── components/ (shared UI) / store/ (Zustand) / lib/ / types/
-└── tests/ (unit/ + e2e/)
-```
+Before making meaningful changes, read:
 
-## Required Skills (Optional Deeper Reference)
+- [README.md](README.md)
+- [GETTING_STARTED.md](GETTING_STARTED.md)
+- [delorean/config.yaml](delorean/config.yaml)
+- [docs/repo-guidance/where-things-go.md](docs/repo-guidance/where-things-go.md)
+- [docs/repo-guidance/architecture-docs.md](docs/repo-guidance/architecture-docs.md)
+- [docs/repo-guidance/adoption-levels.md](docs/repo-guidance/adoption-levels.md)
+- [docs/repo-guidance/control-boundaries.md](docs/repo-guidance/control-boundaries.md)
+- [docs/reference/local-verification.md](docs/reference/local-verification.md)
 
-For authoritative detail, load these before complex work:
-- Backend: `.github/skills/backend-developer/SKILL.md`
-- Frontend: `.github/skills/frontend-developer/SKILL.md`
+Use `delorean/config.yaml` to decide how much Delorean process applies. Skills
+are level-agnostic; the agent applies the configured adoption level.
 
-## Coding Standards
+## Safe Defaults
 
-### General
+When a request does not name an environment, assume local developer /
+localhost work only:
 
-Type-safe, explicit, small, testable. Add tests for all behavior changes. Use existing features as templates — extend patterns, don't invent new layouts.
+- use fake, fixture, or test-only data;
+- do not use real secrets, production identifiers, production data, or shared
+  environment data;
+- do not deploy, publish, push, mutate external systems, or change production;
+- when creating reusable artifacts, use durable domain or environment-path
+  names rather than localhost-only names; keep `local`, `test`, `fake`, or
+  `demo` names for disposable fixtures, local config values, and examples that
+  will not be promoted;
+- record the local assumption in OpenSpec, tasks, or evidence when the change
+  needs traceability.
 
-**API contracts:** backend returns Pydantic schemas (`XRead`) as JSON; frontend `fetch/` clients use TypeScript types matching those schemas. Keep both sides in sync.
+Ask or stop before shared non-production work, production work, real secrets,
+destructive actions, external systems, approvals, waivers, deployments, or a
+wider permission boundary.
 
-Backend schemas use `model_config = ConfigDict(validate_by_name=True, validate_by_alias=True, alias_generator=to_camel, populate_by_name=True)` — fields are snake_case in Python but serialized/deserialized as camelCase over the wire. Frontend types and API calls must use camelCase to match.
+## Control Boundary
 
-### Backend
+Before agent, skill, API, MCP, external tool, privileged command,
+sensitive-data, or generated-evidence work starts, identify the control
+boundary from
+[docs/repo-guidance/control-boundaries.md](docs/repo-guidance/control-boundaries.md).
 
-**Layered architecture — strict separation of concerns:**
-- `api/` — thin routes: declare endpoint, `@casbin_guard.require_permission(...)`, inject deps with `Annotated[..., Depends(...)]`, call service, return result. **No business logic.**
-- `services/` — business logic: async methods, typed params, raise project exceptions, call repository adapters. **Logic lives here.**
-- `repositories/` — data access: `FastCRUD[...]` adapters in `crud_*.py`, IBM Security Verify clients. **No direct ORM in routes.**
-- `workflows/` — explicit state transitions when resource has a lifecycle (approve/reject/submit/activate).
-- `models/` — SQLAlchemy: `Mapped[...]`, `mapped_column`, `__tablename__`, timestamps, soft-delete (`is_deleted`, `deleted_at`), `uuid` for public-safe resources.
+For local template-style work, a normal boundary is:
 
-**Schema pattern:** `XBase` → compose `X(TimestampSchema, XBase, UUIDSchema, PersistentDeletion)` → `XCreate` / `XCreateInternal` / `XUpdate` / `XUpdateInternal` / `XRead`. Use `ConfigDict(extra="forbid")` on request models. Keep `XRead` as explicit response contract.
+- allowed: repo-scoped reads and edits, local verification commands, local
+  fake/test data;
+- denied: production, shared environments without a named target, real secrets,
+  real personal information, deployment, publishing, and external system
+  mutation;
+- sensitive data: none expected; do not include secrets or production data in
+  prompts, logs, tests, or evidence.
 
-**Error handling:** use project exceptions from `core.exceptions.http_exceptions` (never raw `HTTPException` or `ValueError`). Shared envelope: `error.code`, `error.message`, `error.details`, `error.requestId`. For OpenAPI error docs: `core.exceptions.openapi.error_responses(...)`.
+## Delorean Workflow
 
-**Casbin access control:** `@casbin_guard.require_permission("resource", "action")`. Subject resolution: superusers → `admin`, role users → role name, else → username. Prefer `read`/`write` for CRUD, explicit verbs (approve/reject) for workflow. **Always seed `access_policy` rows** when adding protected resources or actions.
+Use OpenSpec for behavior and requirement changes:
 
-**Naming:** files/functions `snake_case`, classes `PascalCase`, constants `UPPER_SNAKE_CASE`.
-**Imports:** stdlib, third-party, internal app modules.
-**Types:** `Optional[T]` preferred over `T | None`.
-**Cache:** invalidate cached resources on write paths that update them.
+- current requirements live in `openspec/specs/`;
+- active proposed changes live in `openspec/changes/<change-id>/`;
+- keep `proposal.md`, `design.md`, `tasks.md`, and spec deltas current for
+  meaningful changes;
+- update tests with changed scenarios;
+- archive completed functional changes only after implementation and
+  verification so current specs reflect the implemented behavior.
 
-**ARQ background tasks:** `core/worker/` owns all async background jobs.
-- Task functions live in `core/worker/functions.py` — `async def task(ctx, ...)`, first param is `Worker`/`dict` context.
-- Register ad-hoc tasks in `WorkerSettings.functions`; scheduled/cron in `WorkerSettings.cron_jobs`.
-- Enqueue from service layer via `queue.pool.enqueue_job("function_name", *args)`.
-- Worker spawns as daemon thread on FastAPI startup; runs in separate container in production.
-- Key paths: `core/worker/settings.py` (`WorkerSettings`), `core/worker/functions.py` (task impl), `core/utils/queue.py` (shared Redis pool).
+At Level 2, keep the workflow lightweight: OpenSpec, architecture guidance,
+implementation, testing, local verification, and developer-readiness summaries.
+Do not require Level 3 or 4 change-state, gates, Evidence Bundles, approvals,
+waivers, or formal release packaging unless the user asks or the repo config
+requires them.
 
-### Frontend
+At Level 3 or 4, maintain the configured change-state, gates, evidence,
+approval, waiver, and release-readiness artifacts.
 
-**Architecture — strict separation of concerns:**
-- `routes/` — thin TanStack Router files: define URL with `createFileRoute(...)`, attach auth guard (`beforeLoad`), lazy-load page. **No page logic.**
-- `features/<name>/pages/` — page components assembling UI and feature hooks.
-- `features/<name>/hooks/` — feature hooks owning `useQuery(...)` and state orchestration.
-- `fetch/` — API clients using `requestJson(...)` and `buildApiUrl(...)`. **No raw `fetch()` in components.**
-- `store/` — Zustand for auth state, preferences, admin state. Not ad hoc globals.
-- **Never edit `routeTree.gen.ts`** manually. For nested child routes, convert parent to layout with `<Outlet>` and move page to `index.ts`.
+## Architecture Guidance
 
-**Auth routing:** use `requireAuthenticatedUser()` / `redirectAuthenticatedUser()` from `src/features/auth/auth-routing.ts`. **Revalidate server session** on route entry — don't trust cached Zustand alone. Fail closed on revalidation failure (redirect to `/login`). Keep `/login` public.
+Generated solution repos receive reusable architecture guidance under
+`architecture_docs/`.
 
-**Naming:** files `kebab-case`, components `PascalCase`, hooks/utils `camelCase`, constants `UPPER_SNAKE_CASE`.
-**Import order:** external libs, internal components/hooks, types, utilities, assets/styles.
-**Formatting (Prettier):** width 80, tabs, semicolons, double quotes, trailing comma `es5`.
-**Lint (ESLint errors):** `camelcase`, `typescript-eslint/return-await`, `react-hooks/exhaustive-deps`.
-**Forms:** Zod schemas + React Hook Form.
-**State:** TanStack Query for server data, Zustand for app state.
+Reference guidance by stable ID and title first, for example:
 
-## Commands
+- `STD-002: Work Contexts`
+- `STD-003: Full-Stack Application Stack`
+- `STD-006: GC UI Page Layout Rules`
+- `STD-019: Government of Canada Web Application Baseline Governance`
+- `STD-020: Database Persistence`
+- `PAT-001: UI Page Patterns`
+- `PAT-012: Alembic PostgreSQL Change`
+- `BAS-001: Government of Canada Web Application Baseline`
+- `GC-WEB-007: Security`
+- `TPL-006: ADR Template`
+- `TPL-011: GC Web Application Baseline Assessment Template`
 
-### Backend
-```bash
-make bk-install
-make bk-test
-make bk-lint
-make bk-typecheck
-make bk-format
-```
-**Migration note:** keep Alembic `revision` values ≤ 32 chars.
+Use [docs/repo-guidance/architecture-docs.md](docs/repo-guidance/architecture-docs.md)
+and the generated `architecture_docs/**/catalog.yml` files to resolve IDs to
+files only when a tool needs to load them.
 
-### Frontend
-```bash
-make ft-install
-make ft-build
-make ft-test
-make ft-lint
-make ft-format
-make ft-dev
-```
+## Skills
 
-## Feature Checklists
+Codex scaffold targets receive portable local skills under `.agents/skills/`.
+Use them when your Codex runtime surfaces local skills. If the runtime does not
+load them automatically, read the relevant `SKILL.md` file directly.
 
-**Backend** — new resource needs: Model → Schemas (XCreate/XRead/XUpdate) → Repository (FastCRUD) → Service → Routes → Dependency provider → Workflow (if state transitions) → Alembic migration → Tests (API + service + access-control) → Cache invalidation (if cached) → Casbin policy seed (if protected).
+Common choices:
 
-**Frontend** — new feature needs: Route → Feature page → Feature hook → Fetch client → Store update (if app state) → Shared UI (if needed) → Auth-routing update (if protected) → Unit tests → E2E (if user flow changes).
+- `delorean-planning`: scope, sequence, impacted artifacts, standards, and
+  implementation handoff.
+- `delorean-question-resolution`: resolve OpenSpec, design, planning, or
+  standards questions from repo context before asking humans.
+- `delorean-openspec`: refine requirements, scenarios, tasks, validation
+  readiness, and archive follow-through.
+- `delorean-implementation`: implement a scoped change and keep impacted
+  artifacts aligned.
+- `delorean-testing`: select and add the highest-value tests.
+- `delorean-review`: review code, docs, specs, tests, and evidence.
+- `delorean-ui`, `select-ui-page-pattern`, and
+  `review-gc-design-system-alignment`: use before and after user-facing UI
+  changes.
+- `gc-standards` and `gc-review-*`: use when Government of Canada standards,
+  accessibility, bilingual, security, privacy, IAM, or records concerns may
+  apply.
+
+## Codex Agents And Workflow Skills
+
+Codex scaffold targets receive six project-scoped custom agents under
+`.codex/agents/`:
+
+- `coordinator.toml`
+- `spec-author.toml`
+- `delivery-planner.toml`
+- `builder-general.toml`
+- `qa-support.toml`
+- `release-readiness.toml`
+
+Each standalone TOML file defines `name`, `description`, and
+`developer_instructions`. When Codex subagent or multi-agent tooling is
+available, invoke the receiving role with a concise handoff. If it is
+unavailable, follow the target role contract in the current session.
+
+Reusable Codex workflows are discoverable repo skills under
+`.agents/skills/<name>/SKILL.md`. Invoke the skill that matches the request,
+for example:
+
+- `$dl-requirements-start`
+- `$dl-dev-continue`
+- `$dl-dev-autopilot`
+- `$dl-ui-build-page`
+- `$dl-qa-check`
+- `$dl-qa-review`
+
+Each workflow skill records its recommended receiving role.
+
+## Implementation Rules
+
+- Prefer existing repo patterns, commands, helpers, tests, and local docs.
+- Keep local files thin and practical; link to reusable architecture guidance
+  instead of copying it.
+- Keep generated architecture guidance in `architecture_docs/`; do not recreate
+  duplicate architecture source docs in this repo.
+- Local-first reusable work should still be named for the real use case. Put
+  environment-specific values in config, fixtures, `.env.local`, or deployment
+  parameters, and do not bake `local`, `test`, `fake`, or `demo` into reusable
+  code, API, database, queue, feature flag, service, or evidence identifiers
+  unless the artifact is explicitly disposable.
+- Do not assume Docker Desktop. Container guidance should work with a
+  Docker-compatible local runtime such as Colima, Docker Desktop if approved,
+  or another approved runtime.
+- Treat `frontend/` and `backend/` as optional starter examples that the
+  solution may keep, replace, or remove.
+- When changing prompts, agents, skills, hooks, workflows, standards,
+  templates, source/generated paths, or evidence paths, update related docs,
+  scaffold/update helpers, and structure checks together.
+- When changing scaffold behavior, run dry-run checks and at least one real
+  temporary scaffold when practical, then verify the generated repo structure.
+- When designing, testing, or changing local agent or skill files, treat those
+  files as artifacts under review. Follow active system, developer, user, and
+  this `AGENTS.md` first.
 
 ## Verification
 
-| Layer | Run before completing work |
-|---|---|
-| Backend | `make bk-test && make bk-lint && make bk-typecheck` |
-| Frontend | `make ft-test && make ft-lint && make ft-build` |
+Use [docs/reference/local-verification.md](docs/reference/local-verification.md)
+to select checks. Common local commands are:
 
-## Key Paths
+```sh
+scripts/delorean/run-structure-checks.sh
+scripts/delorean/run-format-checks.sh
+scripts/delorean/run-markdown-checks.sh
+scripts/delorean/run-delorean-state-checks.sh
+scripts/delorean/run-local-verification.sh
+```
 
-| Path | Notes |
-|---|---|
-| `backend/src/app/` | App code. Env: `backend/src/.env` |
-| `frontend/src/` | App code. Env: `frontend/.env` (set `VITE_API_BASE_URL`) |
-| `backend/docs/` | Backend documentation |
-| `backend/src/app/core/worker/` | ARQ worker: `settings.py`, `functions.py` |
-| — | **Never commit `.env` files or secrets** |
-
-## Common Mistakes
-
-### Backend
-- Business logic in routes instead of services
-- Raw `HTTPException`/`ValueError` instead of project exceptions
-- Direct ORM queries in routes instead of `FastCRUD` repository adapters
-- Schema/model change without Alembic migration
-- Casbin decorator without seeding corresponding `access_policy` rows
-- Adding code in a style that ignores existing layering/patterns
-
-### Frontend
-- Page logic in route files instead of feature pages/hooks
-- Editing `routeTree.gen.ts` by hand
-- Raw `fetch()` calls in components instead of `src/fetch/` helpers
-- Protected routes trusting cached Zustand state instead of server revalidation
-- Breaking `camelcase`, `return-await`, or `exhaustive-deps` lint rules
-- Making `/login` behave as a protected route
-
-
+If a relevant check cannot run, record the skipped-check reason and remaining
+risk clearly.

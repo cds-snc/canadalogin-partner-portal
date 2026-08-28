@@ -173,7 +173,7 @@ For more control or development purposes, you can install everything manually.
 1. **Create admin user**:
 
    ```bash
-   UV_PROJECT_ENVIRONMENT=../.venv uv run python -m src.scripts.create_first_superuser
+   INITIAL_CL_ADMIN_EMAIL=admin@example.test UV_PROJECT_ENVIRONMENT=../.venv uv run python -m src.scripts.create_initial_cl_admin
    ```
 
 1. **Start the application**:
@@ -315,7 +315,7 @@ REDIS_CACHE_HOST=localhost  # or "redis" for Docker
 REDIS_CACHE_PORT=6379
 
 # Security
-SECRET_KEY=your-secret-key-here
+SECRET_KEY=<output-of-openssl-rand-hex-32>
 ALGORITHM=HS256
 ACCESS_TOKEN_EXPIRE_MINUTES=30
 ```

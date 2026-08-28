@@ -1,0 +1,171 @@
+version: 1
+
+change:
+  id: "clarify-role-management-spec"
+  title: "Clarify role management specifications"
+  summary: "Create a dedicated role-management capability spec and clarify how platform and workspace role assignment behaviors are specified."
+  workContext: "local"
+  currentPhase: "archived"
+  decisionState: "draft"
+  owner: ""
+
+openspec:
+  inScope: true
+  lifecycleState: "archived"
+  activeChangeId: "clarify-role-management-spec"
+  activeChangePath: "openspec/changes/archive/2026-08-11-clarify-role-management-spec"
+  currentSpecRefs:
+    - "openspec/specs/partner-portal-role-management/spec.md"
+    - "openspec/specs/partner-portal-platform-administration-and-supportability/spec.md"
+  proposalPath: "openspec/changes/archive/2026-08-11-clarify-role-management-spec/proposal.md"
+  designPath: "openspec/changes/archive/2026-08-11-clarify-role-management-spec/design.md"
+  tasksPath: "openspec/changes/archive/2026-08-11-clarify-role-management-spec/tasks.md"
+  deltaSpecPaths:
+    - "openspec/changes/archive/2026-08-11-clarify-role-management-spec/specs/partner-portal-role-management/spec.md"
+    - "openspec/changes/archive/2026-08-11-clarify-role-management-spec/specs/partner-portal-platform-administration-and-supportability/spec.md"
+  validation:
+    status: "passed"
+    command: "make validate-openspec-change CHANGE_ID=clarify-role-management-spec"
+    resultLink: "Validated locally with the installed OpenSpec CLI available on PATH."
+    skippedReason: ""
+  archive:
+    required: "unknown"
+    status: "passed"
+    archivePath: "openspec/changes/archive/2026-08-11-clarify-role-management-spec"
+    reasonIfNotArchived: ""
+
+controlBoundary:
+  required: true
+  status: "passed"
+  permissionProfile: "local-agent-standard"
+  allowedTools:
+    - "repo read"
+    - "repo-scoped edits for this change"
+    - "local verification commands"
+  allowedFileScope:
+    - "openspec/changes/clarify-role-management-spec/"
+    - "delorean/evidence/clarify-role-management-spec/"
+    - "implementation, test, docs, and contract files needed for this change"
+  allowedApis: []
+  allowedMcpServers: []
+  deniedScope:
+    - "production"
+    - "real secrets"
+    - "real production data"
+    - "deployment"
+    - "external system changes"
+  sensitiveDataClassification: "none expected"
+  sensitiveDataHandling: "Use fake, fixture, or test-only data. Do not use real secrets, production identifiers, or production data."
+  namingPosture: "Use durable domain or environment-path names for reusable artifacts; keep local/test/fake/demo names only for disposable fixtures, local config values, and examples that will not be promoted."
+  requiredApprovals: []
+  exceptions: []
+  auditLinks: []
+
+baselineAssessment:
+  required: "unknown"
+  status: "not_started"
+  baselineId: "BAS-001"
+  baselineVersion: ""
+  governingStandard: "STD-019"
+  baselineCatalogPath: "architecture_docs/baselines/catalog.yml"
+  controlCatalogPath: "architecture_docs/controls/catalog.yml"
+  controlsProfilePath: "architecture_docs/baselines/bas-001-government-of-canada-web-application-baseline.controls.yml"
+  assessmentTemplate: "TPL-011: GC Web Application Baseline Assessment Template"
+  assessmentPath: ""
+  referenceArchitectureId: ""
+  referenceArchitectureRelation: ""
+  affectedControls: []
+  controlStatusValues:
+    - "applies"
+    - "not_applicable"
+    - "deferred"
+    - "exception"
+  controlStatuses: {}
+  deferredControls: []
+  exceptions: []
+  evidence: []
+  notes: "Assess when this is a meaningful Government of Canada web application release or service change."
+
+gates:
+  work-context:
+    level: "block_with_exception"
+    status: "passed"
+    evidence:
+      - "openspec/changes/clarify-role-management-spec/proposal.md"
+    notes: "Confirm before non-local work."
+  openspec-change-package:
+    level: "block_with_exception"
+    status: "passed"
+    evidence:
+      - "openspec/changes/clarify-role-management-spec/proposal.md"
+      - "openspec/changes/clarify-role-management-spec/design.md"
+      - "openspec/changes/clarify-role-management-spec/tasks.md"
+      - "openspec/changes/clarify-role-management-spec/specs/partner-portal-role-management/spec.md"
+      - "openspec/changes/clarify-role-management-spec/specs/partner-portal-platform-administration-and-supportability/spec.md"
+    notes: ""
+  control-boundary:
+    level: "block_with_exception"
+    status: "passed"
+    evidence:
+      - "delorean/evidence/clarify-role-management-spec/change-state.yaml"
+    notes: ""
+  implementation-tasks:
+    level: "block_with_exception"
+    status: "passed"
+    evidence:
+      - "openspec/changes/clarify-role-management-spec/tasks.md"
+    notes: ""
+  openspec-validation:
+    level: "block_with_exception"
+    status: "passed"
+    evidence: []
+    notes: "Run when official OpenSpec CLI is enabled."
+  local-quality-checks:
+    level: "block_with_exception"
+    status: "passed"
+    evidence:
+      - ".venv/bin/pytest backend/tests/test_ibm_sv_user_service.py backend/tests/test_rp_application_department_setup.py backend/tests/test_rp_application_oauth_setup.py backend/tests/test_rp_application_mau_report.py"
+    notes: "Focused backend verification passed on 2026-08-11 after retiring the owner-email fallback from current-user RP application access."
+  baseline-assessment:
+    level: "warn"
+    status: "not_started"
+    evidence: []
+    notes: "At Level 2 this gate is advisory unless full release-readiness artifacts are requested."
+  evidence-bundle:
+    level: "block_with_exception"
+    status: "not_started"
+    evidence:
+      - "delorean/evidence/clarify-role-management-spec/evidence-bundle.md"
+    notes: "Create when the change is meaningful enough for review."
+  approval-or-waiver:
+    level: "block"
+    status: "not_applicable"
+    evidence: []
+    notes: ""
+  openspec-archive:
+    level: "block_with_exception"
+    status: "passed"
+    evidence:
+      - "openspec/changes/archive/2026-08-11-clarify-role-management-spec"
+      - "openspec/specs/partner-portal-role-management/spec.md"
+      - "openspec/specs/partner-portal-platform-administration-and-supportability/spec.md"
+    notes: "Archived on 2026-08-11 after implementation and focused local verification completed."
+
+evidence:
+  evidenceBundlePath: "delorean/evidence/clarify-role-management-spec/evidence-bundle.md"
+  approvalResponsePath: ""
+  waiverPath: ""
+  agentRunLinks: []
+  testResultLinks:
+    - ".venv/bin/pytest backend/tests/test_ibm_sv_user_service.py backend/tests/test_rp_application_department_setup.py backend/tests/test_rp_application_oauth_setup.py backend/tests/test_rp_application_mau_report.py"
+  screenshotLinks: []
+  openFindings: []
+  skippedChecks: []
+  remainingRisk: []
+
+reentry:
+  needed: false
+  phase: ""
+  reasonCode: ""
+  notes: ""
+  owner: ""

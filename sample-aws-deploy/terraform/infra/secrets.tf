@@ -72,7 +72,7 @@ resource "aws_secretsmanager_secret_version" "redis_password" {
   secret_string = random_password.redis_password.result
 }
 
-# ----- Session secret (fallback key) -----
+# ----- Application signing key -----
 
 resource "aws_secretsmanager_secret" "session_secret" {
   name = "${var.app_name}-session-secret-${var.environment}"

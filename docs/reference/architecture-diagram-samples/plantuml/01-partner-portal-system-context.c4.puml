@@ -1,0 +1,44 @@
+@startuml
+' CanadaLogin Partner Portal - C4 level 1 system context.
+'
+' Work context: local illustrative sample only.
+' Source codebase: gc-signin-partner-portal, read as source material only.
+' View question: who uses the approved Partner Portal, and which external
+' systems does the portal depend on?
+' Excluded: AWS topology, containers, database records, route details,
+' invitation communication channels, and production identifiers.
+
+!include <C4/C4_Context>
+
+LAYOUT_LEFT_RIGHT()
+skinparam wrapWidth 180
+skinparam maxMessageSize 140
+
+title CanadaLogin Partner Portal - C4 Level 1 System Context
+
+Person(clAdmin, "CL Admin", "Manages canonical users and access, invitations, retained-RP adoption, and explicit Production-review outcomes without RP secret access.")
+Person(rpAdmin, "RP Admin", "Manages one Partner workspace, its Applications and RP configurations, lower-role access, secrets, checklist/CATS inputs, and scoped MAU.")
+Person(rpUserEdit, "RP User (Edit)", "Edits permitted Application and RP-configuration data, secrets, checklist/CATS inputs, Production-review requests, and scoped MAU.")
+Person(readOnly, "Read Only", "Views permitted workspace, Application, checklist/CATS, RP-configuration, Production-review status, and scoped MAU data.")
+
+System_Boundary(portalBoundary, "CanadaLogin Partner Portal") {
+  System(portal, "Partner Portal", "Bilingual web application and backend for partner access, workspaces, Applications, RP configurations, invitations, credentials, scoped MAU, and Production-review tracking.")
+}
+
+System_Ext(oidcProvider, "CanadaLogin / OIDC identity provider", "Authenticates portal users and returns verified identity claims.")
+System_Ext(ibmVerify, "IBM Security Verify", "Hosts RP registrations and client credentials used through bounded portal operations.")
+System_Ext(mauSource, "Approved MAU data source", "Supplies RP-configuration usage data through the approved pipeline.")
+System_Ext(partnerApplications, "Partner RP applications", "External relying-party applications registered through the portal and IBM Security Verify.")
+
+Rel(clAdmin, portal, "Administers access, adoption, and Production review", "Browser / HTTPS")
+Rel(rpAdmin, portal, "Manages assigned Partner workspaces", "Browser / HTTPS")
+Rel(rpUserEdit, portal, "Edits assigned Partner workspace resources", "Browser / HTTPS")
+Rel(readOnly, portal, "Views assigned Partner workspace resources", "Browser / HTTPS")
+
+Rel(portal, oidcProvider, "Authenticates users", "OIDC")
+Rel(portal, ibmVerify, "Performs authorized RP configuration and credential operations", "HTTPS / OAuth2")
+Rel(portal, mauSource, "Reads scoped usage data", "Approved data pipeline")
+Rel(partnerApplications, ibmVerify, "Use registered OIDC clients for sign-in", "OIDC")
+
+SHOW_LEGEND()
+@enduml

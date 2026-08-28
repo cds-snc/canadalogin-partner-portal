@@ -1,0 +1,241 @@
+schema_id: ARCH-SCHEMA-STD-004-FRONTEND-REACT-TYPESCRIPT
+schema_version: "0.3"
+title: Frontend React And TypeScript Schema Contract
+status: active
+schema_type: standard
+
+owner_doc_id: STD-004
+owner_doc_type: standard
+owner_doc_path: docs/standards/std-004-frontend-react-typescript.md
+
+summary: >
+  Helps agents and reviewers check React and TypeScript frontend structure,
+  typing, thin source routes, nested TanStack layout render paths, feature
+  ownership, typed API client placement, generated router artifacts, UI states,
+  review fixtures, and verification evidence for meaningful frontend changes.
+
+categories:
+  - frontend
+  - testing
+  - code-quality
+search_keywords:
+  - react
+  - typescript
+  - route
+  - route helper
+  - thin route
+  - route generation
+  - routeTree.gen.ts
+  - generated router artifact
+  - TanStack Router
+  - nested route
+  - layout route
+  - Outlet
+  - parent render path
+  - component
+  - hook
+  - feature
+  - api client
+  - loading state
+  - empty state
+  - error state
+  - success state
+  - storybook
+  - accessibility
+applies_when:
+  - scaffolding or generating a React frontend
+  - changing React or TypeScript frontend code
+  - adding frontend components, routes, features, hooks, state, services, or types
+  - changing source routes or generated router artifacts
+  - adding a nested TanStack Router child route beneath an existing page route
+  - reviewing frontend tests or user-facing frontend behavior
+do_not_use_when:
+  - the change is backend-only and does not affect frontend files or frontend contracts
+  - the project does not use React or TypeScript and has a different approved frontend standard
+
+work_contexts:
+  - local_developer
+  - shared_non_production
+  - production
+stack_profiles:
+  - react
+  - typescript
+  - vite
+artifact_types:
+  - frontend_component
+  - frontend_page
+  - frontend_route
+  - frontend_route_layout
+  - generated_router_artifact
+  - frontend_hook
+  - api_client
+  - storybook_fixture
+  - verification_note
+  - adr
+
+related_standards:
+  - STD-003
+  - STD-004
+  - STD-005
+  - STD-006
+  - STD-007
+  - STD-012
+  - STD-018
+related_patterns:
+  - PAT-001
+  - PAT-002
+  - PAT-003
+  - PAT-004
+  - PAT-013
+  - PAT-014
+  - PAT-015
+  - PAT-024
+related_controls: []
+related_baselines: []
+
+required_inputs:
+  - id: frontend_change_scope
+    description: Description of the frontend files, routes, components, hooks, API clients, or user-facing behavior changed.
+    required: true
+    source: implementation plan, PR, issue, or changed files
+  - id: project_frontend_structure
+    description: Existing frontend folder conventions for routes, features, components, services, hooks, types, and tests.
+    required: true
+    source: project files
+  - id: router_generation_scope
+    description: Whether affected route artifacts are generated and which project-supported command regenerates them.
+    required: true
+    source: router configuration, package scripts, project documentation, generated file header, or implementation plan
+  - id: nested_route_scope
+    description: Whether a TanStack Router source-route change adds a child beneath an existing page route and how the parent and index render paths are structured.
+    required: true
+    source: source route tree, changed route files, router configuration, implementation plan, or route test
+
+checks:
+  - id: typed-props-api-responses-and-helpers
+    description: Component props, API responses, and shared helpers are typed, with any `any` usage explained.
+    required: true
+    check_type: file_review
+    evidence:
+      - Type definitions, interfaces, inferred API models, or short reason for unavoidable `any`.
+    failure_means: Frontend contracts may be unsafe or hard to review.
+    adr_required_when: The project intentionally avoids TypeScript typing for meaningful frontend contracts.
+    waiver_allowed: false
+
+  - id: route-structure-and-helpers
+    description: Structured source routes keep route definitions, route IDs, metadata, breadcrumbs, and helpers close to the route model.
+    required: true
+    check_type: file_review
+    evidence:
+      - Route files, route helper, route IDs, or navigation metadata are present when structured routing exists.
+    failure_means: Links, breadcrumbs, and navigation may drift or depend on scattered hard-coded paths.
+    adr_required_when: A multi-route app intentionally avoids route helpers or a route metadata model.
+    waiver_allowed: false
+
+  - id: thin-source-routes-and-feature-ownership
+    description: Source route files contain routing concerns while page composition, server-state orchestration, and feature behavior remain in feature-owned pages and hooks.
+    required: true
+    check_type: file_review
+    evidence:
+      - Route definitions, feature pages, hooks, loaders, guards, lazy imports, or structure review.
+    failure_means: Page and feature behavior may become coupled to routing or scattered across the application.
+    adr_required_when: The project intentionally uses a different documented route and feature ownership boundary.
+    waiver_allowed: false
+
+  - id: nested-tanstack-parent-renders-outlet
+    description: An existing TanStack Router page route that gains a child becomes a layout that renders `<Outlet>`, with the original page moved to an index child or equivalent route.
+    required: true
+    applies_when:
+      - a TanStack Router child route is added beneath an existing page route
+    check_type: file_review
+    evidence:
+      - Parent layout route, index child or equivalent source route, route-tree diff, route test, build output, or browser verification.
+    failure_means: Navigation may update the URL while the child content and its data-loading behavior never render.
+    adr_required_when: Never for an applicable nested TanStack route; select a non-nested route structure if the parent cannot provide an outlet render path.
+    waiver_allowed: false
+
+  - id: feature-owned-pages-and-hooks
+    description: Feature-owned pages and hooks live under the project feature structure.
+    required: true
+    check_type: file_review
+    evidence:
+      - Changed pages and hooks are located under `frontend/src/features/<feature>/` or an existing project convention.
+    failure_means: Feature behavior may be scattered across unrelated frontend folders.
+    adr_required_when: The project intentionally uses a different feature ownership structure.
+    waiver_allowed: false
+
+  - id: api-client-location
+    description: Low-level frontend API calls use typed helpers in the project API client location consistently.
+    required: true
+    check_type: file_review
+    evidence:
+      - Typed API helpers are in `frontend/src/services/`, `frontend/src/fetch/`, or the project-approved API client path.
+    failure_means: API behavior, error handling, and server-state review may be fragmented.
+    adr_required_when: The project intentionally scatters API calls outside the approved client path.
+    waiver_allowed: false
+
+  - id: generated-router-artifacts
+    description: Generated router artifacts are not manually edited; source route definitions change and the project-supported generator refreshes affected output.
+    required: true
+    applies_when:
+      - the selected router generates derived route files
+    check_type: evidence_required
+    evidence:
+      - Source route diff, generated artifact header, supported generation command, build output, or generated diff.
+    failure_means: Generated output may drift from source routes or be overwritten by the next generation run.
+    adr_required_when: A project intentionally manages a normally generated router artifact as source.
+    waiver_allowed: false
+
+  - id: ui-states-covered
+    description: Loading, empty, error, and success states are considered for user-facing data or task behavior.
+    required: true
+    check_type: content_review
+    evidence:
+      - Component states, tests, Storybook states, screenshots, or verification notes show expected UI states.
+    failure_means: Users may see missing, confusing, or untested states.
+    adr_required_when: A meaningful user-facing state is intentionally omitted.
+    waiver_allowed: true
+
+  - id: review-fixture-for-meaningful-ui
+    description: Storybook or an equivalent review fixture exists when meaningful user-facing components, pages, forms, or task states changed.
+    required: true
+    check_type: evidence_required
+    evidence:
+      - Storybook story, fixture route, screenshots, or review notes for meaningful UI states.
+    failure_means: Reviewers may lack a repeatable way to inspect UI behavior and states.
+    adr_required_when: The project intentionally does not use review fixtures for meaningful UI state review.
+    waiver_allowed: true
+
+  - id: tests-or-verification-for-behavior
+    description: Important frontend behavior has tests or verification evidence.
+    required: true
+    check_type: evidence_required
+    evidence:
+      - Unit tests, component tests, route checks, accessibility review, screenshots, or verification note.
+    failure_means: Behavior changes may not be reviewable or regressions may be missed.
+    adr_required_when: The project intentionally ships meaningful frontend behavior without tests or verification.
+    waiver_allowed: true
+
+outputs:
+  - id: frontend_review_summary
+    description: Review summary showing structure, typing, nested route render paths, state coverage, review fixtures, and verification evidence.
+
+evidence_expectations:
+  - Changed frontend structure follows project conventions or records a reason.
+  - Source route and feature-owned behavior boundaries are visible in changed files.
+  - Nested TanStack Router changes show a parent `<Outlet>` render path and a reachable index child or equivalent parent page.
+  - Generated router artifacts include source changes and supported regeneration evidence.
+  - Meaningful UI states are visible through tests, fixtures, screenshots, or review notes.
+  - Accessibility and design-system alignment are reviewed when user-facing behavior changes.
+
+adr_triggers:
+  - Project intentionally avoids typed frontend contracts.
+  - Project chooses a different route, feature, or API client structure.
+  - Project manages a normally generated router artifact as source.
+  - Project omits expected review fixtures or verification for meaningful UI behavior.
+
+waiver_guidance:
+  - A project-local waiver may be needed when a delivery gate expects UI state evidence or tests that are intentionally deferred.
+
+notes:
+  - This schema contract supports STD-004. STD-004 remains the source of truth.

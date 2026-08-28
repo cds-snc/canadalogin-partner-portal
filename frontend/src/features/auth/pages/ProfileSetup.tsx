@@ -5,6 +5,7 @@ import { useDepartments, useSession } from "@/hooks";
 import { setMyDepartment } from "@/fetch/user-departments";
 import { useNavigate } from "@tanstack/react-router";
 import { useToast } from "@/components/ui/Toast";
+import { getAuthorizationLandingPath } from "@/features/auth/auth-routing";
 
 export const ProfileSetup = (): ReactElement => {
 	const { t } = useTranslation() as unknown as {
@@ -41,8 +42,13 @@ export const ProfileSetup = (): ReactElement => {
 			setIsSubmitting(true);
 			await setMyDepartment(selected);
 			toast.success(t("profile.departmentSavedSuccess"));
-			await refreshSession();
-			await navigate({ replace: true, to: "/your-applications" });
+			const refreshedUser = await refreshSession();
+			await navigate({
+				replace: true,
+				to: refreshedUser
+					? getAuthorizationLandingPath(refreshedUser.authorizationContext)
+					: "/access-denied",
+			});
 		} catch (err) {
 			console.error(err);
 			setSubmitError(t("profile.errorSaving"));
@@ -85,10 +91,7 @@ export const ProfileSetup = (): ReactElement => {
 					noticeTitle={t("profile.noDepartments")}
 					noticeTitleTag="h2"
 				>
-					<Text>
-						If no departments are listed you may need to contact an
-						administrator.
-					</Text>
+					<Text>{t("profile.noDepartmentsBody")}</Text>
 				</Notice>
 			</>
 		);

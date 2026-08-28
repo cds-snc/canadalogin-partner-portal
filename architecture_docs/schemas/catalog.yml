@@ -1,0 +1,2925 @@
+catalog_version: 1
+scope: architecture_schema_contracts
+description: >
+  Searchable registry of shared architecture schema contracts. Schema contracts
+  support standards, patterns, controls, baselines, decisions, and architecture
+  review evidence shapes. They do not replace the human-readable guidance they
+  support.
+
+search_fields:
+  - id
+  - title
+  - schema_type
+  - owner_doc_id
+  - categories
+  - applies_when
+  - search_keywords
+  - stack_profiles
+  - artifact_types
+
+schema_types:
+  standard: Supports a STD document.
+  pattern: Supports a PAT document.
+  control: Supports a GC-WEB or other control document.
+  baseline: Supports a BAS document.
+  decision: Supports ADR-style decisions about following, varying from, or not following guidance.
+  evidence: Supports architecture review evidence shapes.
+
+entry_fields:
+  - id
+  - title
+  - schema_type
+  - status
+  - path
+  - owner_doc_id
+  - owner_doc_type
+  - owner_doc_path
+  - primary_category
+  - categories
+  - applies_when
+  - do_not_use_when
+  - search_keywords
+  - work_contexts
+  - stack_profiles
+  - artifact_types
+  - related_standards
+  - related_patterns
+  - related_controls
+  - related_baselines
+
+documents:
+  - id: ARCH-SCHEMA-STD-001-DOCUMENT-IDENTIFIERS
+    title: Document Identifiers Schema Contract
+    schema_type: standard
+    status: active
+    path: docs/schemas/standards/std-001-document-identifiers.schema.yaml
+    owner_doc_id: STD-001
+    owner_doc_type: standard
+    owner_doc_path: docs/standards/std-001-document-identifiers.md
+    primary_category: documentation
+    categories:
+      - documentation
+      - foundation
+    applies_when:
+      - creating reusable architecture guidance
+      - renaming or moving guidance documents
+      - referencing standards, patterns, controls, baselines, ADRs, templates, or schema contracts
+    do_not_use_when:
+      - creating project-local runtime records that do not need shared architecture document IDs
+      - creating generated evidence output owned by a project repo
+    search_keywords:
+      - document id
+      - stable identifier
+      - filename
+      - heading
+      - metadata
+      - schema contract id
+    work_contexts:
+      - local_developer
+    stack_profiles: []
+    artifact_types:
+      - standard
+      - pattern
+      - control
+      - baseline
+      - reference_architecture
+      - adr
+      - template
+      - schema_contract
+    related_standards:
+      - STD-001
+    related_patterns: []
+    related_controls: []
+    related_baselines: []
+
+  - id: ARCH-SCHEMA-STD-002-WORK-CONTEXTS
+    title: Work Contexts Schema Contract
+    schema_type: standard
+    status: active
+    path: docs/schemas/standards/std-002-work-contexts.schema.yaml
+    owner_doc_id: STD-002
+    owner_doc_type: standard
+    owner_doc_path: docs/standards/std-002-work-contexts.md
+    primary_category: foundation
+    categories:
+      - foundation
+      - operations
+      - security-privacy
+    applies_when:
+      - work mentions localhost, environments, deployment, secrets, data, external services, or production
+      - a change may touch shared infrastructure, credentials, real users, or real data
+      - agents need to decide whether local developer defaults apply
+      - a dependency may be unavailable or outside authorized access in the declared work context
+    do_not_use_when:
+      - the work is purely editorial and cannot affect environments, data, secrets, external systems, or approvals
+    search_keywords:
+      - work context
+      - localhost
+      - shared environment
+      - production
+      - secrets
+      - real data
+      - external systems
+      - dependency availability
+      - dependency substitution
+      - stub
+      - simulator
+      - adapter
+      - approvals
+    work_contexts:
+      - local_developer
+      - shared_non_production
+      - production
+    stack_profiles: []
+    artifact_types:
+      - work_context_declaration
+      - implementation_plan
+      - dependency_substitution_record
+      - verification_note
+      - adr
+      - baseline_assessment
+    related_standards:
+      - STD-002
+      - STD-013
+      - STD-014
+      - STD-016
+    related_patterns:
+      - PAT-025
+    related_controls: []
+    related_baselines: []
+
+  - id: ARCH-SCHEMA-STD-004-FRONTEND-REACT-TYPESCRIPT
+    title: Frontend React And TypeScript Schema Contract
+    schema_type: standard
+    status: active
+    path: docs/schemas/standards/std-004-frontend-react-typescript.schema.yaml
+    owner_doc_id: STD-004
+    owner_doc_type: standard
+    owner_doc_path: docs/standards/std-004-frontend-react-typescript.md
+    primary_category: frontend
+    categories:
+      - frontend
+      - testing
+      - code-quality
+    applies_when:
+      - scaffolding or generating a React frontend
+      - changing React or TypeScript frontend code
+      - adding frontend components, routes, features, hooks, state, services, or types
+      - changing source routes or generated router artifacts
+      - adding a nested TanStack Router child route beneath an existing page route
+      - reviewing frontend tests or user-facing frontend behavior
+    do_not_use_when:
+      - the change is backend-only and does not affect frontend files or frontend contracts
+      - the project does not use React or TypeScript and has a different approved frontend standard
+    search_keywords:
+      - react
+      - typescript
+      - route
+      - route helper
+      - thin route
+      - route generation
+      - routeTree.gen.ts
+      - generated router artifact
+      - TanStack Router
+      - nested route
+      - layout route
+      - Outlet
+      - parent render path
+      - component
+      - hook
+      - feature
+      - api client
+      - loading state
+      - empty state
+      - error state
+      - success state
+      - storybook
+      - accessibility
+    work_contexts:
+      - local_developer
+      - shared_non_production
+      - production
+    stack_profiles:
+      - react
+      - typescript
+      - vite
+    artifact_types:
+      - frontend_component
+      - frontend_page
+      - frontend_route
+      - frontend_route_layout
+      - generated_router_artifact
+      - frontend_hook
+      - api_client
+      - storybook_fixture
+      - verification_note
+      - adr
+    related_standards:
+      - STD-003
+      - STD-004
+      - STD-005
+      - STD-006
+      - STD-007
+      - STD-012
+      - STD-018
+    related_patterns:
+      - PAT-001
+      - PAT-002
+      - PAT-003
+      - PAT-004
+      - PAT-013
+      - PAT-014
+      - PAT-015
+      - PAT-024
+    related_controls: []
+    related_baselines: []
+
+  - id: ARCH-SCHEMA-STD-005-FRONTEND-GC-DESIGN-SYSTEM
+    title: Frontend GC Design System Schema Contract
+    schema_type: standard
+    status: active
+    path: docs/schemas/standards/std-005-frontend-gc-design-system.schema.yaml
+    owner_doc_id: STD-005
+    owner_doc_type: standard
+    owner_doc_path: docs/standards/std-005-frontend-gc-design-system.md
+    primary_category: design-system
+    categories:
+      - design-system
+      - frontend
+      - accessibility
+      - governance
+    applies_when:
+      - scaffolding or regenerating a Government of Canada frontend
+      - building Government of Canada UI
+      - choosing UI components, forms, links, buttons, navigation, or page shell behavior
+      - documenting design-system exceptions
+    do_not_use_when:
+      - the UI is not a Government of Canada frontend and no GC Design System baseline applies
+      - the work is backend-only and has no user-facing frontend impact
+    search_keywords:
+      - gc design system
+      - canada.ca
+      - app shell
+      - header
+      - footer
+      - navigation
+      - language toggle
+      - component
+      - form
+      - custom UI
+      - design-system exception
+    work_contexts:
+      - local_developer
+      - shared_non_production
+      - production
+    stack_profiles:
+      - react
+      - gcds
+      - canada.ca
+    artifact_types:
+      - frontend_scaffold
+      - frontend_page
+      - frontend_component
+      - form
+      - navigation_model
+      - standards_impact
+      - verification_note
+      - adr
+    related_standards:
+      - STD-004
+      - STD-005
+      - STD-006
+      - STD-007
+      - STD-017
+      - STD-018
+    related_patterns:
+      - PAT-001
+      - PAT-013
+      - PAT-014
+      - PAT-015
+      - PAT-017
+      - PAT-023
+    related_controls:
+      - GC-WEB-002
+      - GC-WEB-003
+      - GC-WEB-004
+      - GC-WEB-005
+    related_baselines:
+      - BAS-001
+
+  - id: ARCH-SCHEMA-STD-006-GC-UI-PAGE-LAYOUT-RULES
+    title: GC UI Page Layout Rules Schema Contract
+    schema_type: standard
+    status: active
+    path: docs/schemas/standards/std-006-gc-ui-page-layout-rules.schema.yaml
+    owner_doc_id: STD-006
+    owner_doc_type: standard
+    owner_doc_path: docs/standards/std-006-gc-ui-page-layout-rules.md
+    primary_category: design-system
+    categories:
+      - design-system
+      - frontend
+      - accessibility
+      - governance
+    applies_when:
+      - scaffolding a user-facing frontend page shell or service home
+      - planning or changing a user-facing page
+      - changing layout, navigation, header, footer, menu, breadcrumb, or language toggle behavior
+      - creating forms, multi-step flows, service homes, task hubs, or page shells
+    do_not_use_when:
+      - the work is backend-only and has no user-facing page or navigation impact
+      - a non-Government of Canada frontend has an approved alternate page-layout standard
+    search_keywords:
+      - page layout
+      - service home
+      - task hub
+      - dashboard
+      - direct task page
+      - form page
+      - header
+      - footer
+      - menu
+      - breadcrumb
+      - language toggle
+      - mobile
+      - zoom
+      - navigation path
+    work_contexts:
+      - local_developer
+      - shared_non_production
+      - production
+    stack_profiles:
+      - react
+      - gcds
+      - canada.ca
+    artifact_types:
+      - frontend_page
+      - page_pattern_decision
+      - navigation_model
+      - form
+      - dashboard
+      - verification_note
+      - adr
+    related_standards:
+      - STD-004
+      - STD-005
+      - STD-006
+      - STD-007
+      - STD-017
+      - STD-018
+    related_patterns:
+      - PAT-001
+      - PAT-003
+      - PAT-013
+      - PAT-014
+      - PAT-019
+      - PAT-021
+      - PAT-022
+    related_controls:
+      - GC-WEB-002
+      - GC-WEB-003
+      - GC-WEB-004
+      - GC-WEB-005
+    related_baselines:
+      - BAS-001
+
+  - id: ARCH-SCHEMA-STD-007-UI-ACCESSIBILITY-BASICS
+    title: UI Accessibility Basics Schema Contract
+    schema_type: standard
+    status: active
+    path: docs/schemas/standards/std-007-ui-accessibility-basics.schema.yaml
+    owner_doc_id: STD-007
+    owner_doc_type: standard
+    owner_doc_path: docs/standards/std-007-ui-accessibility-basics.md
+    primary_category: accessibility
+    categories:
+      - accessibility
+      - frontend
+      - design-system
+      - governance
+    applies_when:
+      - reviewing labels, headings, keyboard behavior, focus, contrast, errors, or status messages
+      - changing user-facing UI content or layout
+      - checking accessibility for pages, forms, controls, or navigation
+    do_not_use_when:
+      - the change has no user-facing UI, content, interaction, document, media, or navigation impact
+    search_keywords:
+      - accessibility
+      - headings
+      - labels
+      - keyboard
+      - focus
+      - errors
+      - status messages
+      - contrast
+      - screen reader
+      - semantic html
+      - form
+      - verification
+    work_contexts:
+      - local_developer
+      - shared_non_production
+      - production
+    stack_profiles:
+      - react
+      - gcds
+      - html
+    artifact_types:
+      - frontend_page
+      - frontend_component
+      - form
+      - accessibility_review
+      - verification_note
+      - adr
+    related_standards:
+      - STD-005
+      - STD-006
+      - STD-007
+      - STD-017
+      - STD-018
+    related_patterns:
+      - PAT-001
+      - PAT-003
+      - PAT-013
+      - PAT-014
+      - PAT-015
+      - PAT-019
+      - PAT-020
+    related_controls:
+      - GC-WEB-003
+      - GC-WEB-005
+    related_baselines:
+      - BAS-001
+
+  - id: ARCH-SCHEMA-STD-008-BACKEND-FASTAPI
+    title: Backend FastAPI Schema Contract
+    schema_type: standard
+    status: active
+    path: docs/schemas/standards/std-008-backend-fastapi.schema.yaml
+    owner_doc_id: STD-008
+    owner_doc_type: standard
+    owner_doc_path: docs/standards/std-008-backend-fastapi.md
+    primary_category: backend
+    categories:
+      - backend
+      - api
+      - data
+      - security-privacy
+      - testing
+    applies_when:
+      - adding or changing FastAPI routes, services, models, dependencies, or config
+      - changing backend error handling, OpenAPI output, persistence, auth boundaries, or outbound integrations
+      - a selected backend dependency may be unavailable or outside authorized access
+      - reviewing backend tests or service structure
+    do_not_use_when:
+      - the backend does not use FastAPI and has a different approved backend framework decision
+      - the change has no backend route, service, model, config, OpenAPI, auth, persistence, or test impact
+    search_keywords:
+      - fastapi
+      - pydantic
+      - response model
+      - router
+      - service layer
+      - outbound adapter
+      - external api
+      - timeout
+      - upstream error
+      - openapi
+      - configuration
+      - dependency availability
+      - dependency substitution
+      - adapter
+      - simulator
+      - local role simulation
+      - success path
+      - failure path
+    work_contexts:
+      - local_developer
+      - shared_non_production
+      - production
+    stack_profiles:
+      - fastapi
+      - pydantic
+      - python
+    artifact_types:
+      - backend_router
+      - api_endpoint
+      - pydantic_model
+      - service
+      - outbound_adapter
+      - config
+      - openapi_contract
+      - backend_test
+      - dependency_adapter
+      - verification_note
+      - adr
+    related_standards:
+      - STD-002
+      - STD-003
+      - STD-008
+      - STD-009
+      - STD-010
+      - STD-012
+      - STD-013
+      - STD-020
+    related_patterns:
+      - PAT-005
+      - PAT-006
+      - PAT-009
+      - PAT-010
+      - PAT-018
+      - PAT-025
+      - PAT-026
+    related_controls:
+      - GC-WEB-007
+      - GC-WEB-008
+      - GC-WEB-010
+    related_baselines:
+      - BAS-001
+
+  - id: ARCH-SCHEMA-STD-009-API-REST
+    title: REST API Schema Contract
+    schema_type: standard
+    status: active
+    path: docs/schemas/standards/std-009-api-rest.schema.yaml
+    owner_doc_id: STD-009
+    owner_doc_type: standard
+    owner_doc_path: docs/standards/std-009-api-rest.md
+    primary_category: api
+    categories:
+      - api
+      - backend
+      - frontend
+    applies_when:
+      - designing REST endpoints or resources
+      - changing API methods, status codes, pagination, filtering, sorting, or versioning
+      - changing serialized JSON field names, aliases, or casing
+      - reviewing API contracts or OpenAPI behavior
+      - documenting endpoint contract shapes before implementation
+    do_not_use_when:
+      - the change does not affect an HTTP API contract or OpenAPI output
+      - the endpoint intentionally follows an external non-REST protocol with a documented reason
+    search_keywords:
+      - rest
+      - api
+      - http status
+      - resource url
+      - endpoint contract
+      - openapi
+      - json body
+      - json field naming
+      - serialization
+      - wire name
+      - field casing
+      - contract test
+      - response object
+      - breaking change
+      - pagination
+      - filtering
+      - sorting
+    work_contexts:
+      - local_developer
+      - shared_non_production
+      - production
+    stack_profiles:
+      - rest
+      - fastapi
+      - openapi
+    artifact_types:
+      - endpoint_contract
+      - api_endpoint
+      - openapi_contract
+      - serialization_contract
+      - frontend_type
+      - api_test
+      - verification_note
+      - adr
+    related_standards:
+      - STD-008
+      - STD-009
+      - STD-010
+      - STD-012
+    related_patterns:
+      - PAT-002
+      - PAT-005
+      - PAT-006
+      - PAT-024
+    related_controls:
+      - GC-WEB-010
+    related_baselines:
+      - BAS-001
+
+  - id: ARCH-SCHEMA-STD-010-API-RESPONSE-ERROR-MODELS
+    title: API Response And Error Models Schema Contract
+    schema_type: standard
+    status: active
+    path: docs/schemas/standards/std-010-api-response-and-error-models.schema.yaml
+    owner_doc_id: STD-010
+    owner_doc_type: standard
+    owner_doc_path: docs/standards/std-010-api-response-and-error-models.md
+    primary_category: api
+    categories:
+      - api
+      - backend
+      - frontend
+      - security-privacy
+    applies_when:
+      - defining typed API response models
+      - changing frontend API client types or backend response models
+      - changing success envelopes, list responses, validation errors, safe error shapes, error codes, or API examples
+      - changing serialized response or error field names, aliases, or casing
+    do_not_use_when:
+      - the change does not affect API response, error, validation, OpenAPI, or client type behavior
+      - an endpoint intentionally uses a different external protocol contract and records the reason
+    search_keywords:
+      - api response
+      - response model
+      - error model
+      - validation error
+      - correlation id
+      - error code
+      - sensitive data
+      - openapi
+      - success envelope
+      - list response
+      - failure path
+      - json field naming
+      - serialization
+      - wire name
+      - field casing
+      - contract test
+    work_contexts:
+      - local_developer
+      - shared_non_production
+      - production
+    stack_profiles:
+      - fastapi
+      - pydantic
+      - openapi
+      - rest
+    artifact_types:
+      - response_model
+      - error_model
+      - validation_error
+      - openapi_contract
+      - serialization_contract
+      - frontend_type
+      - api_test
+      - verification_note
+      - adr
+    related_standards:
+      - STD-008
+      - STD-009
+      - STD-010
+      - STD-011
+      - STD-013
+    related_patterns:
+      - PAT-002
+      - PAT-005
+      - PAT-006
+      - PAT-024
+    related_controls:
+      - GC-WEB-007
+      - GC-WEB-010
+    related_baselines:
+      - BAS-001
+
+  - id: ARCH-SCHEMA-STD-011-LOGGING-OBSERVABILITY
+    title: Logging and Observability Schema Contract
+    schema_type: standard
+    status: active
+    path: docs/schemas/standards/std-011-logging-and-observability.schema.yaml
+    owner_doc_id: STD-011
+    owner_doc_type: standard
+    owner_doc_path: docs/standards/std-011-logging-and-observability.md
+    primary_category: operations
+    categories:
+      - operations
+      - backend
+      - frontend
+      - security-privacy
+    applies_when:
+      - adding or changing logs, log event shapes, log codes, request IDs, correlation IDs, trace IDs, or diagnostic context
+      - changing frontend error reporting, backend error handling, scheduled jobs, workflows, or operational guides
+      - reviewing logging behavior for privacy, usefulness, alerts, dashboards, runbooks, or verification evidence
+    do_not_use_when:
+      - the change has no logging, diagnostics, observability, operational guide, error reporting, or verification impact
+      - a separate approved observability architecture decision fully covers the logging behavior under review
+    search_keywords:
+      - logging
+      - observability
+      - correlation id
+      - request id
+      - trace id
+      - structured logging
+      - log code
+      - diagnostic context
+      - sensitive data
+      - privacy
+    work_contexts:
+      - local_developer
+      - shared_non_production
+      - production
+    stack_profiles:
+      - fastapi
+      - react
+      - containers
+    artifact_types:
+      - log_event
+      - error_handler
+      - operational_guide
+      - runbook
+      - verification_note
+      - adr
+    related_standards:
+      - STD-010
+      - STD-011
+      - STD-013
+      - STD-014
+      - STD-016
+    related_patterns: []
+    related_controls:
+      - GC-WEB-006
+      - GC-WEB-009
+      - GC-WEB-011
+    related_baselines:
+      - BAS-001
+
+  - id: ARCH-SCHEMA-STD-012-TESTING-BASICS
+    title: Testing Basics Schema Contract
+    schema_type: standard
+    status: active
+    path: docs/schemas/standards/std-012-testing-basics.schema.yaml
+    owner_doc_id: STD-012
+    owner_doc_type: standard
+    owner_doc_path: docs/standards/std-012-testing-basics.md
+    primary_category: testing
+    categories:
+      - testing
+      - frontend
+      - backend
+      - api
+      - data
+      - code-quality
+    applies_when:
+      - adding or changing tests, local checks, verification notes, coverage notes, or skipped-check records
+      - changing frontend UI, backend services, APIs, contracts, persistence, migrations, or user-facing workflows
+      - reviewing whether meaningful success, failure, contract, data, and UI states are covered
+    do_not_use_when:
+      - the change has no behavior, test, verification, contract, UI, API, backend, or data impact
+      - a project-local test strategy fully covers the selected standard and records equivalent evidence
+    search_keywords:
+      - testing
+      - unit test
+      - integration test
+      - contract test
+      - end-to-end test
+      - playwright
+      - accessibility test
+      - vitest
+      - pytest
+      - storybook
+      - verification evidence
+      - skipped check
+    work_contexts:
+      - local_developer
+      - shared_non_production
+      - production
+    stack_profiles:
+      - react
+      - vitest
+      - storybook
+      - playwright
+      - fastapi
+      - pytest
+      - postgres
+    artifact_types:
+      - frontend_test
+      - backend_test
+      - api_test
+      - contract_test
+      - e2e_test
+      - storybook_fixture
+      - migration_test
+      - verification_note
+      - adr
+    related_standards:
+      - STD-004
+      - STD-007
+      - STD-008
+      - STD-009
+      - STD-012
+      - STD-013
+      - STD-015
+      - STD-020
+    related_patterns:
+      - PAT-002
+      - PAT-005
+      - PAT-006
+      - PAT-008
+      - PAT-015
+    related_controls:
+      - GC-WEB-003
+      - GC-WEB-010
+      - GC-WEB-011
+    related_baselines:
+      - BAS-001
+
+  - id: ARCH-SCHEMA-STD-013-SECURITY-PRIVACY-BASICS
+    title: Security and Privacy Basics Schema Contract
+    schema_type: standard
+    status: active
+    path: docs/schemas/standards/std-013-security-and-privacy-basics.schema.yaml
+    owner_doc_id: STD-013
+    owner_doc_type: standard
+    owner_doc_path: docs/standards/std-013-security-and-privacy-basics.md
+    primary_category: security-privacy
+    categories:
+      - security-privacy
+      - backend
+      - frontend
+      - api
+      - data
+      - operations
+    applies_when:
+      - changing authentication, authorization, API access, user data, sensitive data, logging, dependencies, or verification
+      - reviewing privacy impact, safe errors, local network exposure, audit behavior, or sensitive data handling records
+      - using a substitute for an identity, session, database, policy, secret, or cloud-security dependency
+      - deciding whether a security-sensitive or privacy-sensitive change needs a human architecture decision
+    do_not_use_when:
+      - the change has no security, privacy, data, auth, logging, dependency, network exposure, or verification impact
+      - a deeper project-specific security or privacy review already records equivalent evidence for the selected standard
+    search_keywords:
+      - security
+      - privacy
+      - sensitive data
+      - personal information
+      - input validation
+      - authorization
+      - safe errors
+      - audit
+      - logging
+      - dependency substitution
+      - identity simulator
+      - explicit configuration
+      - fail closed
+      - production data
+      - human decision
+    work_contexts:
+      - local_developer
+      - shared_non_production
+      - production
+    stack_profiles:
+      - react
+      - fastapi
+      - postgres
+      - containers
+    artifact_types:
+      - sensitive_data_record
+      - api_endpoint
+      - authorization_rule
+      - error_model
+      - log_event
+      - database_model
+      - dependency_adapter
+      - configuration
+      - verification_note
+      - adr
+    related_standards:
+      - STD-002
+      - STD-010
+      - STD-011
+      - STD-013
+      - STD-014
+      - STD-016
+      - STD-020
+    related_patterns:
+      - PAT-002
+      - PAT-005
+      - PAT-006
+      - PAT-008
+      - PAT-009
+      - PAT-011
+      - PAT-012
+      - PAT-018
+      - PAT-025
+    related_controls:
+      - GC-WEB-006
+      - GC-WEB-007
+      - GC-WEB-008
+      - GC-WEB-009
+      - GC-WEB-010
+      - GC-WEB-011
+    related_baselines:
+      - BAS-001
+
+  - id: ARCH-SCHEMA-STD-014-SECRETS-CONFIGURATION
+    title: Secrets and Configuration Schema Contract
+    schema_type: standard
+    status: active
+    path: docs/schemas/standards/std-014-secrets-and-configuration.schema.yaml
+    owner_doc_id: STD-014
+    owner_doc_type: standard
+    owner_doc_path: docs/standards/std-014-secrets-and-configuration.md
+    primary_category: security-privacy
+    categories:
+      - security-privacy
+      - operations
+      - frontend
+      - backend
+      - deployment
+    applies_when:
+      - adding or changing environment variables, local config, CI settings, deployment settings, generated config, or secret handling
+      - reviewing examples, logs, frontend bundles, backend config, container config, or deployment notes for leaked secrets
+      - documenting configuration entries or deployed secret handling
+    do_not_use_when:
+      - the change has no configuration, environment variable, secret, logging, frontend build-time config, CI, container, or deployment impact
+      - project-local platform guidance already records equivalent deployed secret handling evidence
+    search_keywords:
+      - secrets
+      - configuration
+      - environment variables
+      - env example
+      - config
+      - VITE
+      - frontend public config
+      - ci secrets
+      - secret store
+      - rotation
+      - sensitive data
+    work_contexts:
+      - local_developer
+      - shared_non_production
+      - production
+    stack_profiles:
+      - react
+      - fastapi
+      - containers
+      - ci
+    artifact_types:
+      - env_example
+      - config_file
+      - ci_config
+      - deployment_config
+      - container_config
+      - verification_note
+      - adr
+    related_standards:
+      - STD-002
+      - STD-011
+      - STD-013
+      - STD-014
+      - STD-016
+    related_patterns: []
+    related_controls:
+      - GC-WEB-007
+      - GC-WEB-011
+    related_baselines:
+      - BAS-001
+
+  - id: ARCH-SCHEMA-STD-015-CODE-QUALITY-LINTING-FORMATTING
+    title: Code Quality, Linting, and Formatting Schema Contract
+    schema_type: standard
+    status: active
+    path: docs/schemas/standards/std-015-code-quality-linting-and-formatting.schema.yaml
+    owner_doc_id: STD-015
+    owner_doc_type: standard
+    owner_doc_path: docs/standards/std-015-code-quality-linting-and-formatting.md
+    primary_category: code-quality
+    categories:
+      - code-quality
+      - frontend
+      - backend
+      - testing
+    applies_when:
+      - adding or changing linting, formatting, type checks, static checks, generated files, quality commands, or CI quality checks
+      - reviewing broad lint disables, generated-file exclusions, local command documentation, or frontend CSS reviewability
+      - recording skipped or bypassed quality checks for meaningful changes
+    do_not_use_when:
+      - the change has no source code, generated file, linting, formatting, type-check, local command, or CI quality-check impact
+      - a project-local stack tooling decision already records equivalent quality command and exception evidence
+    search_keywords:
+      - lint
+      - linting
+      - formatting
+      - formatter
+      - type check
+      - static check
+      - eslint
+      - prettier
+      - black
+      - flake8
+      - ruff
+      - generated files
+      - css review
+    work_contexts:
+      - local_developer
+      - shared_non_production
+      - production
+    stack_profiles:
+      - react
+      - typescript
+      - python
+      - fastapi
+      - css
+    artifact_types:
+      - lint_config
+      - format_config
+      - typecheck_config
+      - generated_file
+      - ci_config
+      - verification_note
+      - adr
+    related_standards:
+      - STD-004
+      - STD-008
+      - STD-012
+      - STD-015
+      - STD-018
+    related_patterns:
+      - PAT-015
+      - PAT-017
+    related_controls: []
+    related_baselines:
+      - BAS-001
+
+  - id: ARCH-SCHEMA-STD-016-CONTAINER-BUILD-DEPLOYMENT
+    title: Container Build and Deployment Schema Contract
+    schema_type: standard
+    status: active
+    path: docs/schemas/standards/std-016-container-build-and-deployment.schema.yaml
+    owner_doc_id: STD-016
+    owner_doc_type: standard
+    owner_doc_path: docs/standards/std-016-container-build-and-deployment.md
+    primary_category: deployment
+    categories:
+      - deployment
+      - operations
+      - backend
+      - security-privacy
+    applies_when:
+      - adding or changing container images, Dockerfiles, .dockerignore files, build commands, runtime config, image scanning, or deployment notes
+      - preparing backend services for shared, staging, production, AWS, ECS, ECR, or other approved container deployment
+      - reviewing runtime service contracts, health endpoints, logging, secrets, ports, base images, or deployment readiness
+    do_not_use_when:
+      - the change has no container image, Dockerfile, ignore rule, runtime config, secret, scan, deployment, or operational readiness impact
+      - the service is not deployed as a container and has a separate approved deployment model
+    search_keywords:
+      - container
+      - docker
+      - dockerfile
+      - dockerignore
+      - deployment
+      - image scan
+      - runtime config
+      - secrets
+      - environment variables
+      - ecs
+      - ecr
+      - health check
+    work_contexts:
+      - local_developer
+      - shared_non_production
+      - production
+    stack_profiles:
+      - containers
+      - docker
+      - fastapi
+      - aws
+      - ecs
+      - ecr
+    artifact_types:
+      - dockerfile
+      - dockerignore
+      - container_image
+      - runtime_service_contract
+      - deployment_config
+      - image_scan
+      - verification_note
+      - adr
+    related_standards:
+      - STD-002
+      - STD-011
+      - STD-013
+      - STD-014
+      - STD-016
+    related_patterns: []
+    related_controls:
+      - GC-WEB-007
+      - GC-WEB-011
+    related_baselines:
+      - BAS-001
+
+  - id: ARCH-SCHEMA-STD-017-GC-STANDARDS-REVIEW
+    title: Government of Canada Standards Review Schema Contract
+    schema_type: standard
+    status: active
+    path: docs/schemas/standards/std-017-gc-standards-review.schema.yaml
+    owner_doc_id: STD-017
+    owner_doc_type: standard
+    owner_doc_path: docs/standards/std-017-gc-standards-review.md
+    primary_category: governance
+    categories:
+      - governance
+      - design-system
+      - accessibility
+      - security-privacy
+      - frontend
+      - api
+      - data
+      - operations
+    applies_when:
+      - planning, designing, implementing, or reviewing Government of Canada service work
+      - meaningful service changes affect UI, content, APIs, data, identity, security, privacy, information management, deployment, or verification
+      - a standards impact block or equivalent review is needed
+    do_not_use_when:
+      - the work clearly has no Government of Canada service impact
+      - a narrower standard fully covers a local-only non-service documentation change
+    search_keywords:
+      - standards impact
+      - Government of Canada
+      - GC Design System
+      - accessibility
+      - official languages
+      - security
+      - privacy
+      - identity
+      - information management
+      - verification
+      - baseline
+    work_contexts:
+      - local_developer
+      - shared_non_production
+      - production
+    stack_profiles:
+      - react
+      - gcds
+      - fastapi
+      - postgres
+      - containers
+    artifact_types:
+      - standards_impact
+      - implementation_plan
+      - pull_request
+      - architecture_note
+      - verification_note
+      - baseline_assessment
+      - adr
+    related_standards:
+      - STD-005
+      - STD-006
+      - STD-007
+      - STD-013
+      - STD-017
+      - STD-019
+    related_patterns:
+      - PAT-001
+      - PAT-013
+      - PAT-014
+      - PAT-015
+    related_controls: []
+    related_baselines:
+      - BAS-001
+
+  - id: ARCH-SCHEMA-STD-019-GC-WEB-APPLICATION-BASELINE
+    title: Government of Canada Web Application Baseline Governance Schema Contract
+    schema_type: standard
+    status: active
+    path: docs/schemas/standards/std-019-gc-web-application-baseline.schema.yaml
+    owner_doc_id: STD-019
+    owner_doc_type: standard
+    owner_doc_path: docs/standards/std-019-government-of-canada-web-application-baseline.md
+    primary_category: governance
+    categories:
+      - governance
+      - design-system
+      - accessibility
+      - security-privacy
+      - frontend
+      - backend
+      - api
+      - data
+      - operations
+      - deployment
+      - testing
+    applies_when:
+      - creating, changing, reviewing, or releasing a Government of Canada web application
+      - meaningful service changes affect baseline controls
+      - baseline assessment evidence, deferred controls, exceptions, or release readiness need review
+    do_not_use_when:
+      - the work is not a Government of Canada web application and no baseline controls apply
+      - the change is local documentation-only work with no service, control, release, or evidence impact
+    search_keywords:
+      - baseline
+      - BAS-001
+      - Government of Canada web application
+      - baseline assessment
+      - controls
+      - release evidence
+      - deferred control
+      - exception
+      - open risk
+      - reference architecture
+    work_contexts:
+      - local_developer
+      - shared_non_production
+      - production
+    stack_profiles:
+      - react
+      - gcds
+      - fastapi
+      - postgres
+      - containers
+    artifact_types:
+      - baseline_assessment
+      - standards_impact
+      - release_note
+      - verification_note
+      - adr
+      - reference_architecture
+    related_standards:
+      - STD-005
+      - STD-006
+      - STD-007
+      - STD-009
+      - STD-010
+      - STD-011
+      - STD-013
+      - STD-014
+      - STD-016
+      - STD-017
+      - STD-018
+      - STD-019
+      - STD-020
+    related_patterns: []
+    related_controls:
+      - GC-WEB-001
+      - GC-WEB-002
+      - GC-WEB-003
+      - GC-WEB-004
+      - GC-WEB-005
+      - GC-WEB-006
+      - GC-WEB-007
+      - GC-WEB-008
+      - GC-WEB-009
+      - GC-WEB-010
+      - GC-WEB-011
+    related_baselines:
+      - BAS-001
+
+  - id: ARCH-SCHEMA-STD-018-FRONTEND-CSS-DESIGN-SYSTEM-BOUNDARY
+    title: Frontend CSS And Design-System Boundary Schema Contract
+    schema_type: standard
+    status: active
+    path: docs/schemas/standards/std-018-frontend-css-and-design-system-boundary.schema.yaml
+    owner_doc_id: STD-018
+    owner_doc_type: standard
+    owner_doc_path: docs/standards/std-018-frontend-css-and-design-system-boundary.md
+    primary_category: design-system
+    categories:
+      - design-system
+      - frontend
+      - accessibility
+      - code-quality
+      - governance
+    applies_when:
+      - adding or changing frontend CSS, layout classes, page shell styling, custom UI wrappers, badges, cards, modals, or design-system overrides
+      - deciding whether custom CSS or custom UI is acceptable in a GC Design System frontend
+      - reviewing hard-coded layout values, broad global CSS, duplicated design-system imports, or custom visual components
+      - recording custom UI or CSS exceptions
+    do_not_use_when:
+      - the change has no frontend CSS, style, layout, design-system, or custom visual component impact
+    search_keywords:
+      - custom css
+      - design override
+      - global style
+      - component style
+      - modal
+      - card
+      - badge
+      - custom component
+      - gc design system
+      - design token
+      - responsive
+      - focus
+    work_contexts:
+      - local_developer
+      - shared_non_production
+      - production
+    stack_profiles:
+      - react
+      - gcds
+      - css
+      - canada.ca
+    artifact_types:
+      - stylesheet
+      - frontend_component
+      - custom_ui_exception
+      - modal
+      - card
+      - badge
+      - verification_note
+      - adr
+    related_standards:
+      - STD-004
+      - STD-005
+      - STD-006
+      - STD-007
+      - STD-015
+      - STD-018
+    related_patterns:
+      - PAT-015
+      - PAT-017
+      - PAT-020
+      - PAT-023
+    related_controls:
+      - GC-WEB-002
+      - GC-WEB-003
+      - GC-WEB-005
+    related_baselines:
+      - BAS-001
+
+  - id: ARCH-SCHEMA-STD-020-DATABASE-PERSISTENCE
+    title: Database Persistence Schema Contract
+    schema_type: standard
+    status: active
+    path: docs/schemas/standards/std-020-database-persistence.schema.yaml
+    owner_doc_id: STD-020
+    owner_doc_type: standard
+    owner_doc_path: docs/standards/std-020-database-persistence.md
+    primary_category: data
+    categories:
+      - data
+      - backend
+      - api
+      - security-privacy
+      - operations
+      - testing
+    applies_when:
+      - adding or changing relational persistence, database models, or database repositories
+      - creating or reviewing Alembic migrations, indexes, constraints, or seed data
+      - deciding ownership, retention, soft delete, hard delete, or public identifier behavior for stored records
+      - reviewing database schema, API data contracts, or database-backed service behavior
+    do_not_use_when:
+      - the change has no relational persistence, database model, migration, repository, seed data, retention, or stored record impact
+      - the project uses a non-relational persistence model with a separate approved architecture decision
+    search_keywords:
+      - database
+      - persistence
+      - sqlalchemy
+      - alembic
+      - postgres
+      - migration
+      - repository
+      - data access
+      - soft delete
+      - hard delete
+      - retention
+      - tenant ownership
+      - workspace ownership
+      - public id
+    work_contexts:
+      - local_developer
+      - shared_non_production
+      - production
+    stack_profiles:
+      - postgres
+      - sqlalchemy
+      - alembic
+      - fastapi
+    artifact_types:
+      - database_model
+      - migration
+      - repository
+      - data_access
+      - seed_data
+      - api_schema
+      - backend_test
+      - verification_note
+      - adr
+    related_standards:
+      - STD-003
+      - STD-008
+      - STD-009
+      - STD-010
+      - STD-012
+      - STD-013
+      - STD-014
+      - STD-020
+    related_patterns:
+      - PAT-005
+      - PAT-006
+      - PAT-008
+      - PAT-012
+    related_controls:
+      - GC-WEB-006
+      - GC-WEB-007
+      - GC-WEB-009
+      - GC-WEB-010
+    related_baselines:
+      - BAS-001
+
+  - id: ARCH-SCHEMA-PAT-001-UI-PAGE-PATTERNS
+    title: UI Page Patterns Schema Contract
+    schema_type: pattern
+    status: active
+    path: docs/schemas/patterns/pat-001-ui-page-patterns.schema.yaml
+    owner_doc_id: PAT-001
+    owner_doc_type: pattern
+    owner_doc_path: docs/patterns/design/pat-001-ui-page-patterns.md
+    primary_category: design-system
+    categories:
+      - design-system
+      - frontend
+      - accessibility
+    applies_when:
+      - planning, implementing, or reviewing a user-facing page, route, form, table, dashboard, task hub, or task flow
+      - selecting a service home, task hub, dashboard, direct task page, form page, data table page, or other approved page pattern
+      - changing page shell, shared menu, route reachability, language behavior, or custom UI choices
+    do_not_use_when:
+      - the work is backend-only and does not affect user-facing UI
+      - the project has already selected a different approved page framework and recorded the exception
+    search_keywords:
+      - page pattern
+      - service home
+      - task hub
+      - dashboard
+      - direct task page
+      - form page
+      - data table
+      - navigation
+      - page shell
+      - gc design system
+    work_contexts:
+      - local_developer
+      - shared_non_production
+      - production
+    stack_profiles:
+      - react
+      - gcds
+      - canada.ca
+    artifact_types:
+      - page_pattern_decision
+      - frontend_page
+      - route
+      - navigation
+      - screenshot
+      - verification_note
+      - adr
+    related_standards:
+      - STD-005
+      - STD-006
+      - STD-007
+      - STD-012
+      - STD-017
+      - STD-018
+    related_patterns:
+      - PAT-003
+      - PAT-013
+      - PAT-014
+      - PAT-015
+      - PAT-019
+      - PAT-020
+      - PAT-021
+      - PAT-022
+      - PAT-023
+    related_controls:
+      - GC-WEB-002
+      - GC-WEB-003
+      - GC-WEB-005
+    related_baselines:
+      - BAS-001
+
+  - id: ARCH-SCHEMA-PAT-002-API-QUERY-MUTATION
+    title: API Query and Mutation Schema Contract
+    schema_type: pattern
+    status: active
+    path: docs/schemas/patterns/pat-002-api-query-and-mutation.schema.yaml
+    owner_doc_id: PAT-002
+    owner_doc_type: pattern
+    owner_doc_path: docs/patterns/frontend/pat-002-api-query-and-mutation.md
+    primary_category: frontend
+    categories:
+      - frontend
+      - api
+      - testing
+    applies_when:
+      - a frontend feature reads, creates, updates, deletes, refreshes, or triggers backend data
+      - the UI needs loading, empty, error, success, refresh, retry, or cache behavior for backend data
+      - frontend API helpers, request types, response types, or query hooks change
+    do_not_use_when:
+      - the data is static content
+      - the state is purely local UI state and does not come from the backend
+    search_keywords:
+      - react query
+      - tanstack query
+      - api client
+      - fetch helper
+      - mutation
+      - query hook
+      - loading state
+      - error state
+      - cache invalidation
+      - api contract
+    work_contexts:
+      - local_developer
+      - shared_non_production
+      - production
+    stack_profiles:
+      - react
+      - typescript
+      - tanstack-query
+      - rest
+    artifact_types:
+      - api_client
+      - query_hook
+      - mutation_hook
+      - frontend_page
+      - frontend_test
+      - api_contract
+      - verification_note
+      - adr
+    related_standards:
+      - STD-004
+      - STD-009
+      - STD-010
+      - STD-012
+      - STD-013
+    related_patterns:
+      - PAT-003
+      - PAT-005
+      - PAT-006
+      - PAT-020
+      - PAT-024
+    related_controls:
+      - GC-WEB-010
+    related_baselines:
+      - BAS-001
+
+  - id: ARCH-SCHEMA-PAT-003-FORM-PAGE
+    title: Form Page Schema Contract
+    schema_type: pattern
+    status: active
+    path: docs/schemas/patterns/pat-003-form-page.schema.yaml
+    owner_doc_id: PAT-003
+    owner_doc_type: pattern
+    owner_doc_path: docs/patterns/frontend/pat-003-form-page.md
+    primary_category: frontend
+    categories:
+      - frontend
+      - design-system
+      - accessibility
+      - api
+      - testing
+    applies_when:
+      - a user-facing page collects input and submits it to an API
+      - validation, error recovery, confirmation, or input preservation matters to the user
+      - form components, submit requests, server validation errors, or form tests change
+    do_not_use_when:
+      - the page only displays content
+      - the form is part of a larger multi-step workflow that needs a separate flow decision
+    search_keywords:
+      - form
+      - form page
+      - validation
+      - error summary
+      - field error
+      - submit behavior
+      - react hook form
+      - zod
+      - accessibility
+      - gc design system
+    work_contexts:
+      - local_developer
+      - shared_non_production
+      - production
+    stack_profiles:
+      - react
+      - gcds
+      - react-hook-form
+      - zod
+    artifact_types:
+      - form_page
+      - frontend_component
+      - validation_schema
+      - api_client
+      - frontend_test
+      - screenshot
+      - verification_note
+      - adr
+    related_standards:
+      - STD-004
+      - STD-005
+      - STD-006
+      - STD-007
+      - STD-010
+      - STD-012
+      - STD-013
+    related_patterns:
+      - PAT-001
+      - PAT-002
+      - PAT-019
+      - PAT-020
+      - PAT-022
+    related_controls:
+      - GC-WEB-003
+      - GC-WEB-006
+    related_baselines:
+      - BAS-001
+
+  - id: ARCH-SCHEMA-PAT-004-PROTECTED-ROUTE
+    title: Protected Route Schema Contract
+    schema_type: pattern
+    status: active
+    path: docs/schemas/patterns/pat-004-protected-route.schema.yaml
+    owner_doc_id: PAT-004
+    owner_doc_type: pattern
+    owner_doc_path: docs/patterns/frontend/pat-004-protected-route.md
+    primary_category: frontend
+    categories:
+      - frontend
+      - security
+      - testing
+    applies_when:
+      - a frontend route requires authentication, a role, a permission, or fresh session state
+      - protected route entry uses cached client session data or a server session query
+      - protected route entry uses a cookie-backed backend session during local development
+      - sign-in, retry, forbidden, or unauthorized route behavior is reviewed
+    do_not_use_when:
+      - the route is public content
+      - the change is backend-only and does not affect frontend route behavior
+      - frontend protection would be the only authorization boundary
+    search_keywords:
+      - protected route
+      - route guard
+      - session revalidation
+      - authorization freshness
+      - fail closed
+      - cached auth state
+      - public sign in
+      - unauthorized state
+      - cookie session
+      - local hostname
+      - localhost
+      - 127.0.0.1
+    work_contexts:
+      - local_developer
+      - shared_non_production
+      - production
+    stack_profiles:
+      - react
+      - typescript
+      - rest
+    artifact_types:
+      - frontend_route
+      - route_guard
+      - session_api_client
+      - query_hook
+      - frontend_test
+      - backend_test
+      - verification_note
+      - adr
+    related_standards:
+      - STD-004
+      - STD-008
+      - STD-012
+      - STD-013
+    related_patterns:
+      - PAT-009
+      - PAT-010
+      - PAT-018
+      - PAT-020
+      - PAT-024
+    related_controls:
+      - GC-WEB-007
+      - GC-WEB-008
+    related_baselines:
+      - BAS-001
+
+  - id: ARCH-SCHEMA-PAT-005-ROUTER-SERVICE-SCHEMA
+    title: Router, Service, Schema Pattern Schema Contract
+    schema_type: pattern
+    status: active
+    path: docs/schemas/patterns/pat-005-router-service-schema.schema.yaml
+    owner_doc_id: PAT-005
+    owner_doc_type: pattern
+    owner_doc_path: docs/patterns/backend/pat-005-router-service-schema.md
+    primary_category: backend
+    categories:
+      - backend
+      - api
+      - testing
+    applies_when:
+      - adding or changing a backend endpoint or endpoint group
+      - route behavior, request models, response models, dependencies, service logic, or error handling need a clear boundary
+      - backend route tests, service tests, or OpenAPI output change
+    do_not_use_when:
+      - the route is a one-line health check with no behavior or dependency needs
+      - the project has an approved alternate backend structure decision
+    search_keywords:
+      - router service schema
+      - fastapi
+      - router
+      - service layer
+      - pydantic
+      - dependency
+      - outbound adapter
+      - response model
+      - safe error
+      - openapi
+      - pytest
+    work_contexts:
+      - local_developer
+      - shared_non_production
+      - production
+    stack_profiles:
+      - fastapi
+      - pydantic
+      - python
+      - openapi
+    artifact_types:
+      - backend_router
+      - service
+      - pydantic_model
+      - dependency
+      - api_endpoint
+      - openapi_contract
+      - backend_test
+      - verification_note
+      - adr
+    related_standards:
+      - STD-008
+      - STD-009
+      - STD-010
+      - STD-012
+      - STD-013
+    related_patterns:
+      - PAT-002
+      - PAT-006
+      - PAT-024
+      - PAT-026
+    related_controls:
+      - GC-WEB-007
+      - GC-WEB-010
+    related_baselines:
+      - BAS-001
+
+  - id: ARCH-SCHEMA-PAT-006-CRUD-RESOURCE
+    title: CRUD Resource Schema Contract
+    schema_type: pattern
+    status: active
+    path: docs/schemas/patterns/pat-006-crud-resource.schema.yaml
+    owner_doc_id: PAT-006
+    owner_doc_type: pattern
+    owner_doc_path: docs/patterns/backend/pat-006-crud-resource.md
+    primary_category: backend
+    categories:
+      - backend
+      - api
+      - data
+      - testing
+    applies_when:
+      - a backend feature needs create, read, update, delete, list, or resource lifecycle behavior
+      - API, service, persistence, repository, migration, authorization, and tests need to evolve together
+      - delete semantics, ownership, pagination, filtering, sorting, or audit behavior are being reviewed
+      - a create, update, or delete path may change backend or frontend cached data
+    do_not_use_when:
+      - the domain behavior is an action, workflow transition, job, or command rather than a resource lifecycle
+      - delete semantics, retention, audit rules, authorization, ownership, or data classification are not known
+    search_keywords:
+      - crud
+      - resource
+      - create
+      - read
+      - update
+      - delete
+      - repository
+      - ownership
+      - retention
+      - soft delete
+      - migration
+      - cache invalidation
+      - stale cache
+    work_contexts:
+      - local_developer
+      - shared_non_production
+      - production
+    stack_profiles:
+      - fastapi
+      - pydantic
+      - sqlalchemy
+      - alembic
+      - postgres
+    artifact_types:
+      - api_schema
+      - backend_router
+      - service
+      - repository
+      - database_model
+      - migration
+      - backend_test
+      - openapi_contract
+      - verification_note
+      - adr
+    related_standards:
+      - STD-008
+      - STD-009
+      - STD-010
+      - STD-012
+      - STD-013
+      - STD-020
+    related_patterns:
+      - PAT-002
+      - PAT-005
+      - PAT-008
+      - PAT-012
+      - PAT-024
+    related_controls:
+      - GC-WEB-006
+      - GC-WEB-007
+      - GC-WEB-009
+      - GC-WEB-010
+    related_baselines:
+      - BAS-001
+
+  - id: ARCH-SCHEMA-PAT-009-OIDC-BACKEND-SESSION
+    title: OIDC Backend Session Schema Contract
+    schema_type: pattern
+    status: active
+    path: docs/schemas/patterns/pat-009-oidc-backend-session.schema.yaml
+    owner_doc_id: PAT-009
+    owner_doc_type: pattern
+    owner_doc_path: docs/patterns/security/pat-009-oidc-backend-session.md
+    primary_category: security
+    categories:
+      - security
+      - backend
+      - frontend
+      - operations
+      - testing
+    applies_when:
+      - browser users authenticate through OIDC and the backend owns the application session
+      - access, refresh, or ID tokens must remain outside browser-managed storage
+      - frontend and backend local origins, cookie behavior, credentials, CORS, CSRF posture, or auth redirects are designed or changed
+      - provider or session-store implementations are selected or substituted
+    do_not_use_when:
+      - the caller is a machine-to-machine client with no browser session
+      - the application is static and has no backend session boundary
+      - only simulated local roles are needed and OIDC protocol behavior is not in scope
+    search_keywords:
+      - oidc
+      - backend session
+      - server-side session
+      - session cookie
+      - HttpOnly
+      - SameSite
+      - Secure cookie
+      - localhost
+      - 127.0.0.1
+      - local hostname
+      - same origin
+      - development proxy
+      - credentials include
+      - credentialed CORS
+      - CSRF
+      - login redirect
+      - logout
+      - session store
+      - provider simulator
+    work_contexts:
+      - local_developer
+      - shared_non_production
+      - production
+    stack_profiles:
+      - oidc
+      - browser
+      - backend-session
+      - rest
+    artifact_types:
+      - auth_route
+      - session_store
+      - session_cookie_configuration
+      - cors_configuration
+      - api_client
+      - frontend_test
+      - backend_test
+      - integration_test
+      - verification_note
+      - adr
+    related_standards:
+      - STD-002
+      - STD-003
+      - STD-004
+      - STD-008
+      - STD-012
+      - STD-013
+      - STD-014
+    related_patterns:
+      - PAT-004
+      - PAT-010
+      - PAT-011
+      - PAT-018
+      - PAT-024
+      - PAT-025
+    related_controls:
+      - GC-WEB-007
+      - GC-WEB-008
+    related_baselines:
+      - BAS-001
+
+  - id: ARCH-SCHEMA-PAT-010-RBAC-POLICY-CHECK
+    title: RBAC Policy Check Schema Contract
+    schema_type: pattern
+    status: active
+    path: docs/schemas/patterns/pat-010-rbac-policy-check.schema.yaml
+    owner_doc_id: PAT-010
+    owner_doc_type: pattern
+    owner_doc_path: docs/patterns/security/pat-010-rbac-policy-check.md
+    primary_category: security
+    categories:
+      - security
+      - backend
+      - api
+      - testing
+    applies_when:
+      - a protected resource or action introduces or changes a role, permission, policy, or ownership rule
+      - policy seed, bootstrap, migration, or configuration data may be required
+      - object-level, tenant-level, workspace-level, or ownership access is reviewed
+    do_not_use_when:
+      - the route is public
+      - authentication alone is sufficient and no role, permission, or resource scope applies
+    search_keywords:
+      - rbac
+      - authorization
+      - policy
+      - permission
+      - role
+      - seed
+      - bootstrap
+      - tenant boundary
+      - ownership
+      - object level authorization
+    work_contexts:
+      - local_developer
+      - shared_non_production
+      - production
+    stack_profiles:
+      - fastapi
+      - rest
+    artifact_types:
+      - authorization_policy
+      - policy_seed
+      - backend_dependency
+      - service
+      - api_endpoint
+      - backend_test
+      - verification_note
+      - adr
+    related_standards:
+      - STD-008
+      - STD-012
+      - STD-013
+      - STD-020
+    related_patterns:
+      - PAT-004
+      - PAT-008
+      - PAT-009
+      - PAT-018
+      - PAT-024
+    related_controls:
+      - GC-WEB-007
+      - GC-WEB-008
+    related_baselines:
+      - BAS-001
+
+  - id: ARCH-SCHEMA-PAT-012-ALEMBIC-POSTGRES-CHANGE
+    title: Alembic PostgreSQL Change Schema Contract
+    schema_type: pattern
+    status: active
+    path: docs/schemas/patterns/pat-012-alembic-postgres-change.schema.yaml
+    owner_doc_id: PAT-012
+    owner_doc_type: pattern
+    owner_doc_path: docs/patterns/data/pat-012-alembic-postgres-change.md
+    primary_category: data
+    categories:
+      - data
+      - backend
+      - operations
+      - testing
+    applies_when:
+      - changing PostgreSQL schema with Alembic
+      - adding, modifying, or removing tables, columns, indexes, constraints, seed data, or reference data
+      - coordinating backend models, migrations, tests, deployment notes, rollback, or data conversion
+      - reviewing revision identifier capacity, storage, or migration graph resolution
+    do_not_use_when:
+      - the backend is intentionally database-free
+      - the project does not use PostgreSQL or Alembic
+      - destructive, large, or high-risk data migration needs a separate rollout decision first
+    search_keywords:
+      - migration
+      - alembic
+      - postgres
+      - sqlalchemy
+      - database
+      - rollback
+      - downgrade
+      - data loss
+      - backfill
+      - deployment order
+      - revision identifier
+      - version_num
+      - alembic_version
+      - truncation
+    work_contexts:
+      - local_developer
+      - shared_non_production
+      - production
+    stack_profiles:
+      - postgres
+      - sqlalchemy
+      - alembic
+      - fastapi
+    artifact_types:
+      - database_model
+      - migration
+      - seed_data
+      - repository
+      - backend_test
+      - deployment_note
+      - verification_note
+      - adr
+    related_standards:
+      - STD-008
+      - STD-012
+      - STD-013
+      - STD-014
+      - STD-020
+    related_patterns:
+      - PAT-006
+      - PAT-008
+      - PAT-024
+    related_controls:
+      - GC-WEB-006
+      - GC-WEB-007
+      - GC-WEB-009
+    related_baselines:
+      - BAS-001
+
+  - id: ARCH-SCHEMA-PAT-013-GCDS-REACT-APP-SHELL
+    title: GC Design System React App Shell Schema Contract
+    schema_type: pattern
+    status: active
+    path: docs/schemas/patterns/pat-013-gcds-react-app-shell.schema.yaml
+    owner_doc_id: PAT-013
+    owner_doc_type: pattern
+    owner_doc_path: docs/patterns/frontend/pat-013-gcds-react-app-shell.md
+    primary_category: frontend
+    categories:
+      - frontend
+      - design-system
+      - accessibility
+    applies_when:
+      - a React frontend uses GC Design System React components
+      - scaffolding or regenerating a React frontend that needs a Government of Canada page shell
+      - adding or changing shared navigation, language behavior, breadcrumbs, layout structure, or account summary
+    do_not_use_when:
+      - the project intentionally uses GCWeb, WET, or another approved shell and has recorded the decision
+      - the page is not user-facing and does not need Government of Canada page structure
+    search_keywords:
+      - gc design system
+      - gcds
+      - react app shell
+      - header
+      - footer
+      - top navigation
+      - language toggle
+      - breadcrumbs
+      - route metadata
+      - skip link
+    work_contexts:
+      - local_developer
+      - shared_non_production
+      - production
+    stack_profiles:
+      - react
+      - gcds
+      - canada.ca
+    artifact_types:
+      - app_shell
+      - root_layout
+      - header
+      - footer
+      - route_metadata
+      - navigation
+      - screenshot
+      - verification_note
+      - adr
+    related_standards:
+      - STD-004
+      - STD-005
+      - STD-006
+      - STD-007
+      - STD-018
+    related_patterns:
+      - PAT-001
+      - PAT-014
+      - PAT-015
+      - PAT-020
+    related_controls:
+      - GC-WEB-002
+      - GC-WEB-003
+      - GC-WEB-004
+      - GC-WEB-005
+    related_baselines:
+      - BAS-001
+
+  - id: ARCH-SCHEMA-PAT-014-BILINGUAL-ROUTE-I18N
+    title: Bilingual Route and I18n Schema Contract
+    schema_type: pattern
+    status: active
+    path: docs/schemas/patterns/pat-014-bilingual-route-and-i18n.schema.yaml
+    owner_doc_id: PAT-014
+    owner_doc_type: pattern
+    owner_doc_path: docs/patterns/frontend/pat-014-bilingual-route-and-i18n.md
+    primary_category: frontend
+    categories:
+      - frontend
+      - design-system
+      - accessibility
+    applies_when:
+      - a frontend has English and French routes or content
+      - the page shell includes a Government of Canada language toggle
+      - page titles, breadcrumbs, navigation labels, forms, errors, or success messages need translation
+    do_not_use_when:
+      - the application is intentionally single-language and has recorded that decision
+      - language is controlled by an upstream platform and routes cannot include a language segment
+    search_keywords:
+      - bilingual
+      - i18n
+      - official languages
+      - language toggle
+      - english
+      - french
+      - route parity
+      - page title
+      - breadcrumbs
+      - locale resources
+    work_contexts:
+      - local_developer
+      - shared_non_production
+      - production
+    stack_profiles:
+      - react
+      - gcds
+      - i18n
+    artifact_types:
+      - route_metadata
+      - i18n_resource
+      - language_toggle
+      - breadcrumb
+      - frontend_test
+      - screenshot
+      - verification_note
+      - adr
+    related_standards:
+      - STD-004
+      - STD-005
+      - STD-006
+      - STD-007
+      - STD-012
+    related_patterns:
+      - PAT-001
+      - PAT-013
+      - PAT-015
+      - PAT-020
+    related_controls:
+      - GC-WEB-002
+      - GC-WEB-003
+      - GC-WEB-004
+    related_baselines:
+      - BAS-001
+
+  - id: ARCH-SCHEMA-PAT-020-STATUS-FEEDBACK
+    title: Status and Feedback Schema Contract
+    schema_type: pattern
+    status: active
+    path: docs/schemas/patterns/pat-020-status-and-feedback.schema.yaml
+    owner_doc_id: PAT-020
+    owner_doc_type: pattern
+    owner_doc_path: docs/patterns/design/pat-020-status-and-feedback.md
+    primary_category: design-system
+    categories:
+      - design-system
+      - frontend
+      - accessibility
+      - testing
+    applies_when:
+      - a page reads, creates, updates, deletes, submits, refreshes, or shows asynchronous state
+      - a user action needs success, warning, error, unauthorized, service disruption, or next-step feedback
+      - loading, empty, error, status, recovery, or bilingual feedback states change
+    do_not_use_when:
+      - the message is ordinary instructional content that belongs in the page body
+      - the issue is only a field-level validation problem covered by a form pattern
+      - safe error wording or disclosure rules are unclear for a sensitive state
+    search_keywords:
+      - status message
+      - feedback
+      - loading state
+      - empty state
+      - error state
+      - success message
+      - unauthorized
+      - service disruption
+      - error summary
+      - recovery action
+    work_contexts:
+      - local_developer
+      - shared_non_production
+      - production
+    stack_profiles:
+      - react
+      - gcds
+      - i18n
+    artifact_types:
+      - frontend_component
+      - status_state
+      - notice
+      - error_summary
+      - storybook_fixture
+      - frontend_test
+      - screenshot
+      - verification_note
+      - adr
+    related_standards:
+      - STD-004
+      - STD-005
+      - STD-006
+      - STD-007
+      - STD-010
+      - STD-012
+      - STD-013
+    related_patterns:
+      - PAT-001
+      - PAT-002
+      - PAT-003
+      - PAT-004
+      - PAT-010
+      - PAT-015
+      - PAT-019
+      - PAT-021
+      - PAT-022
+      - PAT-024
+    related_controls:
+      - GC-WEB-003
+      - GC-WEB-006
+      - GC-WEB-007
+    related_baselines:
+      - BAS-001
+
+  - id: ARCH-SCHEMA-PAT-023-FRONTEND-DATA-TABLE
+    title: Frontend Data Table Schema Contract
+    schema_type: pattern
+    status: active
+    path: docs/schemas/patterns/pat-023-frontend-data-table.schema.yaml
+    owner_doc_id: PAT-023
+    owner_doc_type: pattern
+    owner_doc_path: docs/patterns/design/pat-023-frontend-data-table.md
+    primary_category: design-system
+    categories:
+      - design-system
+      - frontend
+      - accessibility
+      - testing
+    applies_when:
+      - a user-facing frontend shows records with shared attributes
+      - users need to scan, compare, sort, filter, or page through related data
+      - a table includes links, row actions, status text, missing values, or responsive behavior that needs review
+    do_not_use_when:
+      - the page shows facts about one item or a short item summary
+      - the repeated values are editable in place
+      - the component is a complex data grid with row selection, bulk actions, inline editing, virtual scrolling, frozen columns, or spreadsheet-like navigation
+      - data model, labels, mobile task, privacy, visibility, masking, export, or retention rules are unclear
+    search_keywords:
+      - data table
+      - frontend data table
+      - gcds table
+      - table
+      - sort
+      - filter
+      - pagination
+      - row action
+      - responsive table
+      - accessibility
+    work_contexts:
+      - local_developer
+      - shared_non_production
+      - production
+    stack_profiles:
+      - react
+      - gcds
+      - css
+    artifact_types:
+      - data_table
+      - frontend_component
+      - table_columns
+      - table_controls
+      - storybook_fixture
+      - frontend_test
+      - screenshot
+      - verification_note
+      - adr
+    related_standards:
+      - STD-004
+      - STD-005
+      - STD-006
+      - STD-007
+      - STD-012
+      - STD-017
+      - STD-018
+    related_patterns:
+      - PAT-001
+      - PAT-002
+      - PAT-013
+      - PAT-015
+      - PAT-017
+      - PAT-020
+      - PAT-021
+      - PAT-022
+    related_controls:
+      - GC-WEB-002
+      - GC-WEB-003
+      - GC-WEB-005
+      - GC-WEB-006
+    related_baselines:
+      - BAS-001
+
+  - id: ARCH-SCHEMA-PAT-024-FULL-STACK-FEATURE-SLICE
+    title: Full-Stack Feature Slice Schema Contract
+    schema_type: pattern
+    status: active
+    path: docs/schemas/patterns/pat-024-full-stack-feature-slice.schema.yaml
+    owner_doc_id: PAT-024
+    owner_doc_type: pattern
+    owner_doc_path: docs/patterns/full-stack/pat-024-full-stack-feature-slice.md
+    primary_category: full-stack
+    categories:
+      - full-stack
+      - frontend
+      - backend
+      - api
+      - data
+      - security
+      - testing
+    applies_when:
+      - a new or materially changed user-facing feature crosses frontend and backend boundaries
+      - requirements, API contracts, persistence, authorization, and user states need coordinated delivery
+      - several layer-specific patterns must be applied as one reviewable slice
+    do_not_use_when:
+      - the change is isolated copy, documentation, styling, static content, or a single-layer adjustment
+      - the work is only a scaffold or placeholder and does not deliver usable end-to-end behavior
+      - data ownership, authorization, API behavior, or required outcomes are too unclear to define the slice
+    search_keywords:
+      - full stack feature
+      - vertical slice
+      - feature slice
+      - api contract
+      - serialized json
+      - repository
+      - migration
+      - authorization
+      - typed api client
+      - query hook
+      - generated artifact
+      - contract test
+      - dependency availability
+      - dependency substitution
+      - adapter
+      - context appropriate verification
+      - cache invalidation
+      - stale cache
+    work_contexts:
+      - local_developer
+      - shared_non_production
+      - production
+    stack_profiles:
+      - react
+      - typescript
+      - fastapi
+      - rest
+      - openapi
+    artifact_types:
+      - requirement
+      - implementation_plan
+      - endpoint_contract
+      - api_schema
+      - service
+      - repository
+      - database_model
+      - migration
+      - authorization_policy
+      - api_client
+      - query_hook
+      - mutation_hook
+      - frontend_page
+      - frontend_route
+      - generated_artifact
+      - contract_test
+      - verification_note
+      - adr
+    related_standards:
+      - STD-002
+      - STD-004
+      - STD-008
+      - STD-009
+      - STD-010
+      - STD-012
+      - STD-013
+      - STD-015
+      - STD-020
+    related_patterns:
+      - PAT-002
+      - PAT-004
+      - PAT-005
+      - PAT-006
+      - PAT-009
+      - PAT-010
+      - PAT-012
+      - PAT-020
+      - PAT-025
+      - PAT-026
+    related_controls:
+      - GC-WEB-003
+      - GC-WEB-006
+      - GC-WEB-007
+      - GC-WEB-008
+      - GC-WEB-010
+    related_baselines:
+      - BAS-001
+
+  - id: ARCH-SCHEMA-PAT-025-DEPENDENCY-SUBSTITUTION
+    title: Dependency Substitution Schema Contract
+    schema_type: pattern
+    status: active
+    path: docs/schemas/patterns/pat-025-dependency-substitution.schema.yaml
+    owner_doc_id: PAT-025
+    owner_doc_type: pattern
+    owner_doc_path: docs/patterns/full-stack/pat-025-dependency-substitution.md
+    primary_category: full-stack
+    categories:
+      - full-stack
+      - architecture
+      - operations
+      - testing
+      - security
+    applies_when:
+      - a target dependency is unavailable or access is not authorized in the declared work context
+      - local or shared non-production work needs a safe substitute for an external or runtime capability
+      - real and substituted implementations need a stable application-owned boundary and common verification
+    do_not_use_when:
+      - the target dependency or application-facing contract is unknown
+      - the requested outcome specifically requires real integration, provider, infrastructure, assurance, performance, or operational behavior
+      - a substitute would bypass required security, privacy, audit, retention, transaction, or business behavior
+    search_keywords:
+      - dependency substitution
+      - dependency availability
+      - authorized access
+      - stub
+      - fake
+      - mock
+      - simulator
+      - adapter
+      - explicit configuration
+      - contract test
+      - production fallback
+    work_contexts:
+      - local_developer
+      - shared_non_production
+      - production
+    stack_profiles: []
+    artifact_types:
+      - implementation_plan
+      - dependency_adapter
+      - configuration
+      - contract_test
+      - integration_test
+      - verification_note
+      - adr
+    related_standards:
+      - STD-002
+      - STD-012
+      - STD-013
+      - STD-014
+    related_patterns:
+      - PAT-007
+      - PAT-009
+      - PAT-011
+      - PAT-018
+      - PAT-024
+      - PAT-026
+    related_controls: []
+    related_baselines: []
+
+  - id: ARCH-SCHEMA-PAT-026-OUTBOUND-SERVICE-ADAPTER
+    title: Outbound Service Adapter Schema Contract
+    schema_type: pattern
+    status: active
+    path: docs/schemas/patterns/pat-026-outbound-service-adapter.schema.yaml
+    owner_doc_id: PAT-026
+    owner_doc_type: pattern
+    owner_doc_path: docs/patterns/backend/pat-026-outbound-service-adapter.md
+    primary_category: backend
+    categories:
+      - backend
+      - api
+      - operations
+      - security
+      - testing
+    applies_when:
+      - a backend service calls an external API, platform, provider, or hosted service
+      - provider-specific requests, responses, authentication, errors, timeouts, or retries need an application boundary
+      - business behavior that depends on an external service needs isolated unit tests
+    do_not_use_when:
+      - the dependency is an in-process library with no network or provider boundary
+      - the work only accesses the application's own database through its persistence boundary
+      - a browser calls a third party directly and needs a separate browser trust and cross-origin review
+    search_keywords:
+      - outbound service
+      - external api
+      - provider adapter
+      - gateway
+      - dependency injection
+      - timeout
+      - retry
+      - idempotency
+      - upstream error
+      - error allowlist
+      - mock adapter
+    work_contexts:
+      - local_developer
+      - shared_non_production
+      - production
+    stack_profiles:
+      - backend
+      - external_api
+      - http
+    artifact_types:
+      - outbound_adapter
+      - service
+      - dependency
+      - error_translation
+      - backend_test
+      - integration_test
+      - verification_note
+      - adr
+    related_standards:
+      - STD-002
+      - STD-008
+      - STD-010
+      - STD-011
+      - STD-012
+      - STD-013
+      - STD-014
+    related_patterns:
+      - PAT-005
+      - PAT-007
+      - PAT-024
+      - PAT-025
+    related_controls:
+      - GC-WEB-007
+      - GC-WEB-010
+      - GC-WEB-011
+    related_baselines:
+      - BAS-001
+
+  - id: ARCH-SCHEMA-GC-WEB-003-ACCESSIBILITY
+    title: GC-WEB-003 Accessibility Schema Contract
+    schema_type: control
+    status: active
+    path: docs/schemas/controls/gc-web-003-accessibility.schema.yaml
+    owner_doc_id: GC-WEB-003
+    owner_doc_type: control
+    owner_doc_path: docs/controls/gc-web/gc-web-003-accessibility.md
+    primary_category: accessibility
+    categories:
+      - accessibility
+      - frontend
+      - design-system
+      - testing
+    applies_when:
+      - assessing user-facing UI, content, documents, media, downloads, or service workflows against GC-WEB-003
+      - changing keyboard behavior, focus order, headings, labels, landmarks, status messages, or accessible error handling
+      - recording accessibility evidence, skipped checks, remaining risk, or baseline assessment notes
+    do_not_use_when:
+      - the work has no user-facing UI, content, document, media, or workflow accessibility impact
+      - a more specific accessibility control or project assessment already records equivalent evidence
+    search_keywords:
+      - accessibility
+      - control assessment
+      - wcag
+      - keyboard
+      - focus
+      - screen reader
+      - labels
+      - headings
+      - error summary
+      - status message
+    work_contexts:
+      - local_developer
+      - shared_non_production
+      - production
+    stack_profiles:
+      - react
+      - gcds
+      - canada.ca
+    artifact_types:
+      - control_assessment
+      - accessibility_checklist
+      - keyboard_review
+      - screen_reader_review
+      - automated_scan
+      - screenshot
+      - verification_note
+      - baseline_assessment
+      - adr
+    related_standards:
+      - STD-007
+      - STD-012
+      - STD-017
+      - STD-019
+    related_patterns:
+      - PAT-001
+      - PAT-003
+      - PAT-013
+      - PAT-014
+      - PAT-020
+      - PAT-023
+    related_controls:
+      - GC-WEB-003
+    related_baselines:
+      - BAS-001
+
+  - id: ARCH-SCHEMA-GC-WEB-006-PRIVACY-PERSONAL-INFORMATION
+    title: GC-WEB-006 Privacy and Personal Information Schema Contract
+    schema_type: control
+    status: active
+    path: docs/schemas/controls/gc-web-006-privacy-and-personal-information.schema.yaml
+    owner_doc_id: GC-WEB-006
+    owner_doc_type: control
+    owner_doc_path: docs/controls/gc-web/gc-web-006-privacy-and-personal-information.md
+    primary_category: security-privacy
+    categories:
+      - security-privacy
+      - data
+      - operations
+    applies_when:
+      - assessing collection, use, disclosure, retention, logging, export, or deletion of personal information against GC-WEB-006
+      - changing personal information, sensitive personal information, privacy notices, consent, screenshots, fixtures, logs, URLs, test data, exports, or retention behavior
+      - recording privacy evidence, PIA decisions, deferred controls, exceptions, or baseline assessment notes
+    do_not_use_when:
+      - the work does not collect, use, disclose, retain, log, export, delete, display, or test with personal information
+      - a deeper project privacy review already records equivalent control evidence
+    search_keywords:
+      - privacy
+      - personal information
+      - sensitive data
+      - control assessment
+      - privacy impact assessment
+      - pia
+      - privacy notice
+      - retention
+      - disclosure
+      - disposition
+    work_contexts:
+      - local_developer
+      - shared_non_production
+      - production
+    stack_profiles:
+      - react
+      - fastapi
+      - postgres
+      - logging
+    artifact_types:
+      - control_assessment
+      - sensitive_data_record
+      - privacy_review
+      - privacy_notice
+      - retention_note
+      - baseline_assessment
+      - verification_note
+      - adr
+    related_standards:
+      - STD-013
+      - STD-017
+      - STD-019
+      - STD-020
+    related_patterns:
+      - PAT-003
+      - PAT-006
+      - PAT-008
+      - PAT-012
+      - PAT-020
+      - PAT-023
+    related_controls:
+      - GC-WEB-006
+      - GC-WEB-009
+    related_baselines:
+      - BAS-001
+
+  - id: ARCH-SCHEMA-GC-WEB-007-SECURITY
+    title: GC-WEB-007 Security Schema Contract
+    schema_type: control
+    status: active
+    path: docs/schemas/controls/gc-web-007-security.schema.yaml
+    owner_doc_id: GC-WEB-007
+    owner_doc_type: control
+    owner_doc_path: docs/controls/gc-web/gc-web-007-security.md
+    primary_category: security-privacy
+    categories:
+      - security-privacy
+      - backend
+      - api
+      - deployment
+      - operations
+      - testing
+    applies_when:
+      - assessing web application, API, deployment, CI, container, operational, or security-sensitive behavior against GC-WEB-007
+      - changing input validation, authorization, safe errors, secrets, transport, request URLs, dependencies, containers, CI, deployment, or threat decisions
+      - recording security evidence, accepted residual risk, deferred controls, exceptions, or baseline assessment notes
+    do_not_use_when:
+      - the work has no security, API, auth, dependency, container, CI, deployment, operational, or sensitive data impact
+      - a deeper project security review already records equivalent control evidence
+    search_keywords:
+      - security
+      - control assessment
+      - authorization
+      - input validation
+      - safe errors
+      - secrets
+      - secure transport
+      - dependency scan
+      - image scan
+      - threat model
+    work_contexts:
+      - local_developer
+      - shared_non_production
+      - production
+    stack_profiles:
+      - react
+      - fastapi
+      - postgres
+      - containers
+      - ci
+    artifact_types:
+      - control_assessment
+      - security_review
+      - threat_model
+      - dependency_scan
+      - image_scan
+      - api_test
+      - verification_note
+      - baseline_assessment
+      - adr
+    related_standards:
+      - STD-013
+      - STD-014
+      - STD-016
+      - STD-017
+      - STD-019
+    related_patterns:
+      - PAT-005
+      - PAT-006
+      - PAT-009
+      - PAT-010
+      - PAT-011
+      - PAT-012
+      - PAT-020
+    related_controls:
+      - GC-WEB-006
+      - GC-WEB-007
+      - GC-WEB-008
+      - GC-WEB-010
+      - GC-WEB-011
+    related_baselines:
+      - BAS-001
+
+  - id: ARCH-SCHEMA-BAS-001-GC-WEB-APPLICATION-BASELINE
+    title: Government of Canada Web Application Baseline Schema Contract
+    schema_type: baseline
+    status: active
+    path: docs/schemas/baselines/bas-001-government-of-canada-web-application-baseline.schema.yaml
+    owner_doc_id: BAS-001
+    owner_doc_type: baseline
+    owner_doc_path: docs/baselines/bas-001-government-of-canada-web-application-baseline.md
+    primary_category: governance
+    categories:
+      - governance
+      - baseline
+      - controls
+      - security-privacy
+      - accessibility
+      - deployment
+      - testing
+    applies_when:
+      - assessing a Government of Canada web application against BAS-001
+      - creating or updating a baseline assessment, release readiness note, control evidence, deferred control, exception, or open risk
+      - deciding whether a more specific app-type baseline or reference architecture applies
+    do_not_use_when:
+      - the work is not a Government of Canada web application and no BAS-001 control assessment applies
+      - a more specific approved app-type baseline applies and records equivalent control evidence
+    search_keywords:
+      - baseline
+      - bas-001
+      - government of canada web application
+      - control assessment
+      - baseline assessment
+      - accessibility
+      - privacy
+      - security
+      - deferred control
+      - release readiness
+    work_contexts:
+      - local_developer
+      - shared_non_production
+      - production
+    stack_profiles:
+      - react
+      - gcds
+      - fastapi
+      - postgres
+      - containers
+    artifact_types:
+      - baseline_assessment
+      - control_assessment
+      - standards_impact
+      - release_note
+      - verification_note
+      - adr
+    related_standards:
+      - STD-017
+      - STD-019
+    related_patterns: []
+    related_controls:
+      - GC-WEB-001
+      - GC-WEB-002
+      - GC-WEB-003
+      - GC-WEB-004
+      - GC-WEB-005
+      - GC-WEB-006
+      - GC-WEB-007
+      - GC-WEB-008
+      - GC-WEB-009
+      - GC-WEB-010
+      - GC-WEB-011
+    related_baselines:
+      - BAS-001
+
+  - id: ARCH-SCHEMA-DECISION-STANDARD-NON-ADOPTION-ADR
+    title: Standard And Pattern Non-Adoption ADR Schema Contract
+    schema_type: decision
+    status: active
+    path: docs/schemas/decisions/standard-non-adoption-adr.schema.yaml
+    owner_doc_id: TPL-006
+    owner_doc_type: template
+    owner_doc_path: docs/templates/architecture/tpl-006-adr-template.md
+    primary_category: governance
+    categories:
+      - governance
+      - architecture
+      - documentation
+    applies_when:
+      - a selected standard, pattern, control, or baseline will not be followed as written
+      - a project varies from a standard or control
+      - a project defers a standard expectation
+      - a project replaces a recommended pattern with another approved approach
+      - a project records a not applicable decision with a reason
+    do_not_use_when:
+      - the project follows the selected guidance without material variation
+      - only a short verification note is needed and no durable decision exists
+    search_keywords:
+      - ADR
+      - non-adoption
+      - does not follow
+      - varies from standard
+      - defers standard
+      - replaces pattern
+      - not applicable
+      - waiver
+      - risk acceptance
+    work_contexts:
+      - local_developer
+      - shared_non_production
+      - production
+    stack_profiles: []
+    artifact_types:
+      - adr
+      - architecture_decision
+      - standards_impact
+      - baseline_assessment
+      - verification_note
+    related_standards:
+      - STD-001
+      - STD-017
+      - STD-019
+    related_patterns: []
+    related_controls: []
+    related_baselines: []

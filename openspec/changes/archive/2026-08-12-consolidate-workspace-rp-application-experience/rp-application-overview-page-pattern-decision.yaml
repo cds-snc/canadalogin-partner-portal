@@ -1,0 +1,150 @@
+ui_page_pattern_decision:
+  page_role: select one focused task for a workspace-owned RP application
+  page_type: role-aware task hub with focused child routes
+  selected_pattern:
+    - "PAT-001: UI Page Patterns"
+    - "PAT-013: GC Design System React App Shell"
+    - "PAT-014: Bilingual Route and I18n"
+    - "PAT-017: Itemized Data Display"
+    - "PAT-020: Status and Feedback"
+    - "PAT-022: Page Length and Splitting"
+  patterns_not_selected:
+    - pattern: "PAT-021: Dashboard Overview Page"
+      reason: The page selects among Configuration, Usage, and Manage credentials and does not own operational monitoring, comparison, or freshness-sensitive summary metrics.
+    - pattern: one long RP application detail page
+      reason: Configuration, usage, credentials, access, audit, and destructive actions have different task and authorization boundaries and require focused routes.
+    - pattern: embedded IBM Verify OAuth setup panel
+      reason: The landing page must remain available from portal-owned RP data and must not make task discovery depend on an upstream provider.
+  source_reference:
+    - "STD-002: Work Contexts"
+    - "STD-005: Frontend GC Design System"
+    - "STD-006: GC UI Page Layout Rules"
+    - "STD-007: UI Accessibility Basics"
+    - "STD-013: Security and Privacy Basics"
+    - "STD-017: Government of Canada Standards Review"
+    - "STD-018: Frontend CSS and Design-System Boundary"
+    - "BAS-001: Government of Canada Web Application Baseline"
+    - "GC-WEB-002: Canada.ca Design, Federal Identity, And Page Shell"
+    - "GC-WEB-003: Accessibility"
+    - "GC-WEB-004: Official Languages And Plain Language"
+    - "GC-WEB-005: Mobile And Responsive Behaviour"
+    - "GC-WEB-007: Security"
+    - https://design-system.canada.ca/en/components/card/
+    - https://design.canada.ca/common-design-patterns/services-information.html
+  target_stack: Vite React with TanStack Router and GC Design System React components
+  task_structure:
+    multiple_user_goals: true
+    entry_page: /workspaces/$workspaceUuid/applications/$rpApplicationUuid
+    destination_routes:
+      - /workspaces/$workspaceUuid/applications/$rpApplicationUuid/configuration
+      - /workspaces/$workspaceUuid/applications/$rpApplicationUuid/usage
+      - /workspaces/$workspaceUuid/applications/$rpApplicationUuid/manage-credentials
+    home_page_or_service_home: /
+    parent_task_area: /workspaces/$workspaceUuid/applications
+    single_page_rationale: null
+    task_card_contract:
+      component: GcdsCard
+      content: one linked title and one concise outcome description
+      destinations_per_card: 1
+      nested_interactive_controls: false
+      embedded_configuration_metrics_secrets_forms: false
+    role_variants:
+      rp_admin:
+        - Configuration
+        - Usage
+        - Manage credentials
+      rp_user_edit:
+        - Configuration
+        - Usage
+        - Manage credentials
+      read_only:
+        - Configuration
+        - Usage
+      cl_admin: []
+      cl_admin_empty_state: Show only permitted RP metadata/status and a localized explanation that partner actions are unavailable; never render a credential destination.
+  required_shell:
+    header: shared GcdsHeader through AppShell
+    footer: shared GcdsFooter through AppShell
+    main_content: stable AppShell main landmark and skip target
+    skip_link: existing header skip link targeting main content
+    h1: localized RP application name with a safe bilingual fallback
+    date_modified: provided by AppShell when required
+    concurrent_navigation_change: inherit the approved shared shell and navigation outcome from the active sidebar-removal work; do not add an RP-specific sidebar requirement
+  navigation:
+    primary_task_paths:
+      - task: select an RP application from the current-user projection
+        entry_route: /your-applications
+        navigation_elements:
+          - shared RP application summary link
+        destination_routes:
+          - /workspaces/$workspaceUuid/applications/$rpApplicationUuid
+        return_path: Back to My applications plus the canonical workspace hierarchy
+      - task: select an RP application in a workspace
+        entry_route: /workspaces/$workspaceUuid/applications
+        navigation_elements:
+          - shared RP application summary link
+        destination_routes:
+          - /workspaces/$workspaceUuid/applications/$rpApplicationUuid
+        return_path: Back to RP applications
+      - task: choose focused RP work
+        entry_route: /workspaces/$workspaceUuid/applications/$rpApplicationUuid
+        navigation_elements:
+          - Configuration card
+          - Usage card
+          - Manage credentials card
+        destination_routes:
+          - /workspaces/$workspaceUuid/applications/$rpApplicationUuid/configuration
+          - /workspaces/$workspaceUuid/applications/$rpApplicationUuid/usage
+          - /workspaces/$workspaceUuid/applications/$rpApplicationUuid/manage-credentials
+        return_path: Back to the selected RP application
+    legacy_routes:
+      - route: /your-applications/$rpApplicationUuid
+        behavior: authorize and redirect to the canonical workspace-scoped overview without loading IBM Verify
+      - route: /your-applications/$rpApplicationUuid/mau-report
+        behavior: authorize and redirect to the canonical workspace-scoped Usage route
+      - route: /your-applications/$rpApplicationUuid/manage-credentials
+        behavior: authorize secret capability and redirect to the canonical workspace-scoped Manage credentials route
+    breadcrumbs:
+      canonical_overview: Home then Workspaces then selected workspace then RP applications; current RP application page omitted
+      focused_child: Home then Workspaces then selected workspace then RP applications then selected RP application; current child page omitted
+      component: GcdsBreadcrumbs and GcdsBreadcrumbsItem
+    language_toggle:
+      provided_by_header: true
+      equivalent_language_route: preserve the same canonical RP application or focused child route
+      standalone_toggle_in_body: false
+    side_navigation:
+      project_specific_requirement: false
+      behavior: inherit the active shared-shell navigation decision and preserve all breadcrumb and explicit return-path requirements
+  component_plan:
+    page_shell:
+      - need: selected RP application task-selection page
+        gc_component: shared AppShell, GcdsContainer, GcdsHeading, and GcdsText
+        custom_exception: none
+    navigation:
+      - need: parent hierarchy and stable return paths
+        gc_component: GcdsBreadcrumbs, GcdsBreadcrumbsItem, and GcdsLink
+        custom_exception: none
+    task_choices:
+      - need: one focused destination per permitted RP feature
+        gc_component: GcdsCard in a responsive GcdsGrid
+        custom_exception: none
+    context_and_states:
+      - need: environment, lifecycle, loading, unavailable, and no-action context
+        gc_component: GcdsText, GcdsBadge or existing status component, and GcdsNotice
+        custom_exception: none
+    configuration:
+      - need: grouped secret-free questionnaire values
+        gc_component: PAT-017 semantic definition or itemized display below logical headings
+        custom_exception: none
+  evidence_required:
+    desktop_screenshot: representative RP Admin, Read Only, and CL Admin overview plus Configuration
+    mobile_screenshot: one-column cards and long French Configuration values
+    zoom_result: 200-percent zoom without horizontal scrolling, clipping, or hidden destinations
+    accessibility_result: H1, card names, headings, source order, keyboard and focus order, landmarks, states, breadcrumbs, error summary, and field-error association
+    bilingual_result: English and French RP name fallback, cards, statuses, Configuration labels, registration errors, accessible names, redirects, and return paths
+    design_system_checklist: required
+    authorization_tests: every card, focused route, legacy redirect, missing resource, revoked grant, mismatched workspace, and direct API case
+  exceptions:
+    required: false
+    approval_status: not needed
+    notes: This decision introduces no RP-specific sidebar and does not alter the concurrent shared sidebar-removal implementation.

@@ -1,0 +1,262 @@
+schema_id: ARCH-SCHEMA-PAT-024-FULL-STACK-FEATURE-SLICE
+schema_version: "0.3"
+title: Full-Stack Feature Slice Schema Contract
+status: active
+schema_type: pattern
+
+owner_doc_id: PAT-024
+owner_doc_type: pattern
+owner_doc_path: docs/patterns/full-stack/pat-024-full-stack-feature-slice.md
+
+summary: >
+  Helps agents and reviewers keep requirements, API contracts, backend layers,
+  persistence, authorization, frontend behavior, write-path cache consistency,
+  user states, tests, generated artifacts, dependency modes, and
+  context-appropriate verification coherent for an end-to-end feature slice.
+
+categories:
+  - full-stack
+  - frontend
+  - backend
+  - api
+  - data
+  - security
+  - testing
+search_keywords:
+  - full stack feature
+  - vertical slice
+  - feature slice
+  - api contract
+  - serialized json
+  - repository
+  - migration
+  - authorization
+  - typed api client
+  - query hook
+  - generated artifact
+  - contract test
+  - dependency availability
+  - dependency substitution
+  - adapter
+  - context appropriate verification
+  - cache invalidation
+  - stale cache
+applies_when:
+  - a new or materially changed user-facing feature crosses frontend and backend boundaries
+  - requirements, API contracts, persistence, authorization, and user states need coordinated delivery
+  - several layer-specific patterns must be applied as one reviewable slice
+do_not_use_when:
+  - the change is isolated copy, documentation, styling, static content, or a single-layer adjustment
+  - the work is only a scaffold or placeholder and does not deliver usable end-to-end behavior
+  - data ownership, authorization, API behavior, or required outcomes are too unclear to define the slice
+
+work_contexts:
+  - local_developer
+  - shared_non_production
+  - production
+stack_profiles:
+  - react
+  - typescript
+  - fastapi
+  - rest
+  - openapi
+artifact_types:
+  - requirement
+  - implementation_plan
+  - endpoint_contract
+  - api_schema
+  - service
+  - repository
+  - database_model
+  - migration
+  - authorization_policy
+  - api_client
+  - query_hook
+  - mutation_hook
+  - frontend_page
+  - frontend_route
+  - generated_artifact
+  - contract_test
+  - verification_note
+  - adr
+
+related_standards:
+  - STD-002
+  - STD-004
+  - STD-008
+  - STD-009
+  - STD-010
+  - STD-012
+  - STD-013
+  - STD-015
+  - STD-020
+related_patterns:
+  - PAT-002
+  - PAT-004
+  - PAT-005
+  - PAT-006
+  - PAT-009
+  - PAT-010
+  - PAT-012
+  - PAT-020
+  - PAT-025
+  - PAT-026
+related_controls:
+  - GC-WEB-003
+  - GC-WEB-006
+  - GC-WEB-007
+  - GC-WEB-008
+  - GC-WEB-010
+related_baselines:
+  - BAS-001
+
+required_inputs:
+  - id: feature_scope
+    description: Requirement, user outcome, success and failure scenarios, work context, affected layers, and external boundaries.
+    required: true
+    source: issue, requirement, implementation plan, architecture note, or ADR
+  - id: applicability_decisions
+    description: Whether persistence, migration, authorization, resource scope, write-path cache effects, empty state, generated artifacts, and target external dependencies apply based on solution requirements rather than local availability.
+    required: true
+    source: implementation plan, endpoint contract, design note, or verification note
+  - id: api_serialization_contract
+    description: Endpoint behavior and canonical serialized JSON field naming shared by backend, OpenAPI, frontend types, and API helpers.
+    required: true
+    source: endpoint contract, API specification, OpenAPI output, or contract tests
+  - id: external_dependency_plan
+    description: Target dependencies, availability and authorized access, selected modes, configuration boundaries, contract evidence, and remaining real-integration verification, or a rationale that no external dependency applies.
+    required: true
+    source: work context declaration, implementation plan, dependency substitution record, configuration, or verification note
+
+checks:
+  - id: applicability-follows-solution-target
+    description: Required persistence, migration, authorization, queue, external-integration, and other capabilities are selected from target product and architecture requirements rather than what happens to be available locally.
+    required: true
+    check_type: human_review
+    evidence:
+      - Applicability record, project architecture, endpoint contract, requirement scenarios, dependency plan, or implementation note.
+    failure_means: A feature may appear complete locally while omitting a target capability or integration boundary.
+    adr_required_when: A project intentionally defers a required target capability or changes the selected solution architecture.
+    waiver_allowed: true
+
+  - id: requirement-and-api-contract-defined
+    description: The requirement and scenarios map to an explicit API contract with auth, statuses, errors, and serialized JSON field naming.
+    required: true
+    check_type: content_review
+    evidence:
+      - Requirement, scenarios, endpoint contract, API specification, or OpenAPI design.
+    failure_means: Backend and frontend behavior may diverge before implementation begins.
+    adr_required_when: A meaningful full-stack feature intentionally proceeds without a reviewable API contract.
+    waiver_allowed: false
+
+  - id: backend-layers-and-persistence-aligned
+    description: Backend schemas, service, route, and applicable persistence, repository, migration, and lifecycle behavior are implemented or explicitly not applicable.
+    required: true
+    check_type: file_review
+    evidence:
+      - Backend files, migration, applicability record, model review, or implementation note.
+    failure_means: The slice may omit a required layer or leak concerns across boundaries.
+    adr_required_when: A project intentionally varies from its selected backend or persistence boundaries.
+    waiver_allowed: true
+
+  - id: authorization-path-complete
+    description: Protected resources and actions include policy definition, required initialization data, server enforcement, resource scope, and tests.
+    required: true
+    applies_when:
+      - the feature introduces or changes a protected resource, protected action, role, permission, or resource-scope rule beyond authentication alone
+    check_type: human_review
+    evidence:
+      - Policy, seed or not-applicable rationale, service or route enforcement, ownership checks, and authorization tests.
+    failure_means: The feature may be inaccessible, over-permissive, or incorrectly scoped.
+    adr_required_when: The project uses a different reviewed authorization model or boundary.
+    waiver_allowed: false
+
+  - id: frontend-boundaries-and-states-aligned
+    description: A typed API helper, query or mutation hook, feature-owned page, thin source route, and applicable loading, empty, error, unauthorized, and success states are present.
+    required: true
+    check_type: file_review
+    evidence:
+      - Frontend helper, hook, feature page, route, tests, fixtures, screenshots, or applicability rationale.
+    failure_means: Frontend behavior may scatter transport logic, page logic, or incomplete user states.
+    adr_required_when: A project intentionally varies from its selected frontend feature structure.
+    waiver_allowed: true
+
+  - id: write-cache-consistency
+    description: Each successful write identifies affected backend and frontend caches, invalidates relevant entries or updates them coherently when cached data changes, and records N/A when neither layer caches the affected data.
+    required: true
+    check_type: evidence_required
+    evidence:
+      - Cache applicability decision, backend or frontend cache logic, focused stale-cache test, invalidation or update assertion, or documented N/A rationale.
+    failure_means: A completed slice may continue to serve stale data after a successful write, or cache effects may be silently missed.
+    adr_required_when: A project intentionally accepts stale cached data after a feature write.
+    waiver_allowed: false
+
+  - id: serialized-contract-aligned
+    description: Backend serialization, generated OpenAPI, frontend types, and API helpers use the same canonical JSON field names.
+    required: true
+    check_type: evidence_required
+    evidence:
+      - Serialization tests, OpenAPI diff, generated or handwritten frontend types, API helper tests, or contract test output.
+    failure_means: Runtime requests or responses may fail despite individually typed layers.
+    adr_required_when: A project intentionally exposes different wire names to different clients.
+    waiver_allowed: false
+
+  - id: generated-artifacts-regenerated
+    description: Derived router and API artifacts are regenerated through project-supported commands rather than hand-edited.
+    required: true
+    applies_when:
+      - generated artifacts exist for affected source definitions
+    check_type: evidence_required
+    evidence:
+      - Supported regeneration command, generated diff, build output, or not-applicable rationale.
+    failure_means: Generated output may drift from source definitions or be overwritten later.
+    adr_required_when: A project intentionally manages a normally generated artifact as source.
+    waiver_allowed: false
+
+  - id: dependency-substitution-preserves-target-contract
+    description: An unavailable or unauthorized dependency uses an explicitly configured substitute behind the same application-owned boundary, preserves important contracts and invariants, and cannot activate through silent production fallback.
+    required: true
+    applies_when:
+      - a required dependency uses a stub, fake, mock, simulator, local service, or other substitute
+    check_type: human_review
+    evidence:
+      - Dependency substitution record, adapter or provider review, contract tests, mode-selection tests, production rejection test, and remaining real-integration gaps.
+    failure_means: Substitute behavior may redefine the feature architecture, bypass required behavior, or be mistaken for real-integration proof.
+    adr_required_when: A project intentionally varies a material contract or permits an alternate production implementation or degraded mode.
+    waiver_allowed: false
+
+  - id: tests-and-work-context-verification-complete
+    description: Focused layer tests, authorization tests, stale-cache prevention when applicable, contract checks, and project-supported verification appropriate to the declared work context are run, with dependency modes, skips, remaining real-integration gaps, and risks recorded.
+    required: true
+    check_type: evidence_required
+    evidence:
+      - Test output, contract diff, work-context verification note, dependency modes, skipped-check reasons, remaining real-integration gaps, and remaining-risk summary.
+    failure_means: Cross-layer behavior may be incomplete or unreviewable.
+    adr_required_when: A meaningful full-stack slice ships without contract or cross-layer verification.
+    waiver_allowed: true
+
+outputs:
+  - id: full_stack_feature_slice_review_summary
+    description: Review result showing target-driven applicability, layer completeness, authorization, cache consistency, serialization alignment, user states, generated artifacts, dependency modes, tests, and context-appropriate verification.
+
+evidence_expectations:
+  - Applicability decisions identify required and not-applicable layers from the solution target rather than current dependency availability.
+  - Requirement scenarios are traceable to implementation and tests.
+  - Write paths include stale-cache prevention evidence, or an N/A rationale when neither backend nor frontend caches affected data.
+  - Contract evidence compares the actual serialized wire shape across backend, OpenAPI, and frontend.
+  - Verification records commands, results, selected dependency modes, substitute coverage, skips, remaining real-integration gaps, and risks.
+
+adr_triggers:
+  - Project varies materially from selected frontend, backend, persistence, or authorization patterns.
+  - A breaking API or serialized field-naming change is introduced.
+  - A required layer, contract check, or high-risk scenario is intentionally deferred.
+  - Production intentionally permits a development or test substitute or alternate degraded mode.
+
+waiver_guidance:
+  - Delivery waivers for deferred tests or verification belong in the project-local Delorean evidence process.
+  - Waivers must not hide unresolved authorization, data ownership, serialized API contract boundaries, or silent production substitution.
+
+notes:
+  - Optional layers and write-path cache effects are considered explicitly and may be recorded as not applicable.
+  - Current work-context availability does not make a target capability not applicable.
+  - This schema contract supports PAT-024. PAT-024 remains the source of truth.

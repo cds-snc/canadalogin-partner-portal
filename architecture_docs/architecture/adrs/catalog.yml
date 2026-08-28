@@ -1,0 +1,7 @@
+catalog_version: 1
+scope: architecture_decision_records
+description: >
+  Machine-readable registry for ADRs. Add entries when ADR documents are
+  published under docs/architecture/adrs.
+
+decisions: []

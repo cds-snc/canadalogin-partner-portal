@@ -1,19 +1,70 @@
 import re
 from datetime import UTC, datetime
+from json import JSONDecodeError
 from typing import Any
+from urllib.parse import urlsplit, urlunsplit
 
+import httpx
 from authlib.integrations.starlette_client import OAuth
+from sqlalchemy.exc import NoResultFound
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from ..repositories.crud_roles import crud_roles
+from ..repositories.crud_rp_application_developer_invitations import crud_rp_application_developer_invitations
 from ..repositories.crud_users import crud_users
-from ..schemas.role import RoleRead
+from ..schemas.rp_application_developer_invitation import RPApplicationDeveloperInvitationReadInternal
 from ..schemas.user import UserCreateInternal, UserReadInternal
+from ..services.authorization_service import AuthorizationResolutionError, AuthorizationService
 from .config import settings
-from .exceptions.http_exceptions import ForbiddenException, UnauthorizedException
+from .exceptions.http_exceptions import CustomException, ForbiddenException, UnauthorizedException
+from .identity import (
+    email_satisfies_partner_access_policy,
+    normalize_email_identity,
+    resolve_verified_email_claim,
+)
 
 oauth = OAuth()
 _client_registered = False
+_OIDC_DISCOVERY_PATH = "/.well-known/openid-configuration"
+_OIDC_DISCOVERY_ERROR_MESSAGE = "OIDC discovery metadata could not be loaded. Check OIDC_SERVER_METADATA_URL."
+
+
+def _build_oidc_configuration_error(detail: str) -> CustomException:
+    return CustomException(status_code=503, detail=detail)
+
+
+def get_oidc_server_metadata_url() -> str | None:
+    configured_server_metadata_url = settings.OIDC_SERVER_METADATA_URL
+    if not configured_server_metadata_url:
+        return None
+
+    normalized_server_metadata_url = configured_server_metadata_url.strip().rstrip("/")
+    if not normalized_server_metadata_url:
+        return None
+
+    parsed_url = urlsplit(normalized_server_metadata_url)
+    if parsed_url.path.endswith(_OIDC_DISCOVERY_PATH):
+        return normalized_server_metadata_url
+
+    discovery_path = f"{parsed_url.path.rstrip('/')}{_OIDC_DISCOVERY_PATH}"
+    if not discovery_path.startswith("/"):
+        discovery_path = f"/{discovery_path}"
+
+    return urlunsplit(
+        (
+            parsed_url.scheme,
+            parsed_url.netloc,
+            discovery_path,
+            parsed_url.query,
+            parsed_url.fragment,
+        )
+    )
+
+
+async def load_oidc_server_metadata(client) -> dict[str, Any]:
+    try:
+        return dict(await client.load_server_metadata())
+    except (httpx.HTTPError, JSONDecodeError, TypeError, ValueError) as exc:
+        raise _build_oidc_configuration_error(_OIDC_DISCOVERY_ERROR_MESSAGE) from exc
 
 
 def register_oidc_client() -> None:
@@ -22,14 +73,15 @@ def register_oidc_client() -> None:
     if _client_registered or not settings.OIDC_ENABLED:
         return
 
-    if not settings.OIDC_SERVER_METADATA_URL or not settings.OIDC_CLIENT_ID or not settings.OIDC_CLIENT_SECRET:
+    server_metadata_url = get_oidc_server_metadata_url()
+    if not server_metadata_url or not settings.OIDC_CLIENT_ID or not settings.OIDC_CLIENT_SECRET:
         return
 
     oauth.register(
         name=settings.OIDC_PROVIDER_NAME,
         client_id=settings.OIDC_CLIENT_ID,
         client_secret=settings.OIDC_CLIENT_SECRET.get_secret_value(),
-        server_metadata_url=settings.OIDC_SERVER_METADATA_URL,
+        server_metadata_url=server_metadata_url,
         client_kwargs={"scope": settings.OIDC_SCOPES},
         code_challenge_method="S256",
     )
@@ -40,7 +92,7 @@ def get_oidc_client():
     register_oidc_client()
     client = oauth.create_client(settings.OIDC_PROVIDER_NAME)
     if client is None:
-        raise RuntimeError("OIDC client is not configured")
+        raise _build_oidc_configuration_error("OIDC login is not configured.")
 
     return client
 
@@ -54,7 +106,7 @@ async def warm_oidc_metadata() -> None:
     if client is None:
         return
 
-    await client.load_server_metadata()
+    await load_oidc_server_metadata(client)
 
 
 def build_oidc_redirect_uri(request) -> str:
@@ -72,70 +124,84 @@ def normalize_username_candidate(value: str) -> str:
     return normalized[:20] or "user"
 
 
-def _normalize_claim_values(value: Any) -> set[str]:
-    if value is None:
-        return set()
+def _extract_current_user_id(user: dict[str, Any]) -> int | None:
+    raw_user_id = user.get("id")
+    if raw_user_id is None or isinstance(raw_user_id, bool):
+        return None
 
-    if isinstance(value, str):
-        raw_values = value.split(",") if "," in value else [value]
-    elif isinstance(value, list | tuple | set):
-        raw_values = [str(item) for item in value]
-    else:
-        raw_values = [str(value)]
+    if isinstance(raw_user_id, int):
+        return raw_user_id
 
-    normalized = {
-        item.strip().lower()
-        for item in raw_values
-        if isinstance(item, str) and item.strip()
-    }
-    return normalized
+    normalized = str(raw_user_id).strip()
+    if not normalized:
+        return None
 
-
-def _resolve_group_membership(claims: dict[str, Any]) -> tuple[bool, bool]:
-    group_claim_key = settings.OIDC_GROUP_CLAIM_KEY
-    claim_values = _normalize_claim_values(claims.get(group_claim_key))
-
-    admin_group = settings.OIDC_ADMIN_GROUP_NAME.strip().lower()
-    application_owners_group = settings.OIDC_APPLICATION_OWNERS_GROUP_NAME.strip().lower()
-
-    is_admin_member = admin_group in claim_values
-    is_application_owners_member = application_owners_group in claim_values
-
-    return is_admin_member, is_application_owners_member
+    try:
+        return int(normalized)
+    except ValueError:
+        return None
 
 
-async def _resolve_role_ids_from_membership(
+def _is_future_datetime(value: Any) -> bool:
+    if not isinstance(value, datetime):
+        return False
+
+    normalized = value.replace(tzinfo=UTC) if value.tzinfo is None else value.astimezone(UTC)
+    return normalized > datetime.now(UTC)
+
+
+async def _has_active_canonical_assignment(db: AsyncSession, user: dict[str, Any]) -> bool:
+    user_id = _extract_current_user_id(user)
+    if user_id is None:
+        return False
+
+    try:
+        state = await AuthorizationService().resolve_for_user(db, user_id=user_id)
+    except AuthorizationResolutionError:
+        return False
+    return state.global_role is not None or bool(state.partner_access)
+
+
+async def _has_pending_invitation_for_email(db: AsyncSession, normalized_email: str) -> bool:
+    if not email_satisfies_partner_access_policy(
+        normalized_email,
+        settings.PARTNER_ACCESS_ALLOWED_EMAIL_DOMAINS,
+    ):
+        return False
+    invitations_data = await crud_rp_application_developer_invitations.get_multi(
+        db=db,
+        invited_email=normalized_email,
+        status="pending",
+        is_deleted=False,
+        schema_to_select=RPApplicationDeveloperInvitationReadInternal,
+    )
+    invitations = invitations_data.get("data", []) if isinstance(invitations_data, dict) else invitations_data
+
+    for invitation in invitations:
+        invitation_data = invitation if isinstance(invitation, dict) else dict(invitation)
+        if _is_future_datetime(invitation_data.get("invite_expires_at")):
+            return True
+
+    return False
+
+
+async def _has_local_portal_access_or_pending_invitation(
     db: AsyncSession,
+    user: dict[str, Any],
+    normalized_email: str,
     *,
-    is_admin_member: bool,
-    is_application_owners_member: bool,
-) -> list[int]:
-    role_ids: list[int] = []
+    email_is_verified: bool,
+) -> bool:
+    if await _has_active_canonical_assignment(db=db, user=user):
+        return True
 
-    if is_admin_member:
-        admin_role = await crud_roles.get(
-            db=db,
-            name=settings.CLPP_ADMIN_ROLE_NAME,
-            is_deleted=False,
-            schema_to_select=RoleRead,
-        )
-        if admin_role is None:
-            raise ForbiddenException("User is not allowed to access this site")
-        role_ids.append(admin_role["id"])
+    if not email_is_verified:
+        return False
+    return await _has_pending_invitation_for_email(db=db, normalized_email=normalized_email)
 
-    if is_application_owners_member:
-        application_owners_role = await crud_roles.get(
-            db=db,
-            name=settings.CLPP_APPLICATION_OWNERS_ROLE_NAME,
-            is_deleted=False,
-            schema_to_select=RoleRead,
-        )
-        if application_owners_role is None:
-            raise ForbiddenException("User is not allowed to access this site")
-        if application_owners_role["id"] not in role_ids:
-            role_ids.append(application_owners_role["id"])
 
-    return role_ids
+def _is_unbound_local_identity(user: dict[str, Any]) -> bool:
+    return user.get("auth_provider") is None and user.get("auth_subject") is None
 
 
 async def generate_unique_username(db: AsyncSession, claims: dict[str, Any]) -> str:
@@ -168,18 +234,14 @@ async def sync_oidc_user(db: AsyncSession, claims: dict[str, Any]) -> dict[str, 
     if not email:
         raise ForbiddenException("User is not allowed to access this site")
 
-    is_admin_member, is_application_owners_member = _resolve_group_membership(claims)
-    if not is_admin_member and not is_application_owners_member:
+    normalized_email = normalize_email_identity(email)
+    if normalized_email is None:
         raise ForbiddenException("User is not allowed to access this site")
-
-    mapped_role_ids = await _resolve_role_ids_from_membership(
-        db,
-        is_admin_member=is_admin_member,
-        is_application_owners_member=is_application_owners_member,
-    )
-
-    normalized_email = str(email).strip().lower()
     provider = settings.OIDC_PROVIDER_NAME
+    verified_email = resolve_verified_email_claim(claims)
+    email_is_verified = verified_email is not None
+    if verified_email is not None:
+        normalized_email = verified_email
 
     existing_user = await crud_users.get(
         db=db,
@@ -189,14 +251,26 @@ async def sync_oidc_user(db: AsyncSession, claims: dict[str, Any]) -> dict[str, 
         schema_to_select=UserReadInternal,
     )
     if existing_user is not None:
+        update_object: dict[str, Any] = {}
+        if email_is_verified:
+            update_object.update(
+                {
+                    "email": normalized_email,
+                    "username": normalized_email,
+                }
+            )
+        access_email = normalized_email if email_is_verified else str(existing_user.get("email") or "").strip().lower()
+        if await _has_local_portal_access_or_pending_invitation(
+            db=db,
+            user=existing_user,
+            normalized_email=access_email,
+            email_is_verified=email_is_verified,
+        ):
+            update_object["last_login_at"] = datetime.now(UTC)
+
         await crud_users.update(
             db=db,
-            object={
-                "last_login_at": datetime.now(UTC),
-                "email": normalized_email,
-                "username": normalized_email,
-                "role_ids": mapped_role_ids,
-            },
+            object=update_object,
             uuid=existing_user["uuid"],
         )
         refreshed = await crud_users.get(
@@ -207,23 +281,58 @@ async def sync_oidc_user(db: AsyncSession, claims: dict[str, Any]) -> dict[str, 
         )
         if refreshed is None:
             raise UnauthorizedException("Failed to refresh existing user")
+        if not await _has_local_portal_access_or_pending_invitation(
+            db=db,
+            user=refreshed,
+            normalized_email=access_email,
+            email_is_verified=email_is_verified,
+        ):
+            raise ForbiddenException("User is not allowed to access this site")
         return refreshed
 
+    if not email_is_verified:
+        raise ForbiddenException("User is not allowed to access this site")
+
     if email:
-        email_user = await crud_users.get(db=db, email=normalized_email, is_deleted=False, schema_to_select=UserReadInternal)
+        email_user = await crud_users.get(
+            db=db,
+            email=normalized_email,
+            is_deleted=False,
+            schema_to_select=UserReadInternal,
+        )
         if email_user is not None:
-            await crud_users.update(
+            if not _is_unbound_local_identity(email_user):
+                raise ForbiddenException("User is not allowed to access this site")
+            update_object = {
+                "auth_provider": provider,
+                "auth_subject": subject,
+                "username": normalized_email,
+                "email": normalized_email,
+            }
+            if await _has_local_portal_access_or_pending_invitation(
                 db=db,
-                object={
-                    "auth_provider": provider,
-                    "auth_subject": subject,
-                    "last_login_at": datetime.now(UTC),
-                    "username": normalized_email,
-                    "email": normalized_email,
-                    "role_ids": mapped_role_ids,
-                },
-                uuid=email_user["uuid"],
-            )
+                user=email_user,
+                normalized_email=normalized_email,
+                email_is_verified=email_is_verified,
+            ):
+                update_object["last_login_at"] = datetime.now(UTC)
+
+            try:
+                bound_user = await crud_users.update(
+                    db=db,
+                    object=update_object,
+                    uuid=email_user["uuid"],
+                    auth_provider=None,
+                    auth_subject=None,
+                    return_columns=["uuid"],
+                    one_or_none=True,
+                )
+            except NoResultFound:
+                bound_user = None
+            if bound_user is None:
+                # A concurrent request or stale read observed an identity that
+                # is no longer unbound. Never overwrite the winning binding.
+                raise ForbiddenException("User is not allowed to access this site")
             refreshed = await crud_users.get(
                 db=db,
                 uuid=email_user["uuid"],
@@ -232,7 +341,17 @@ async def sync_oidc_user(db: AsyncSession, claims: dict[str, Any]) -> dict[str, 
             )
             if refreshed is None:
                 raise UnauthorizedException("Failed to refresh email-linked user")
+            if not await _has_local_portal_access_or_pending_invitation(
+                db=db,
+                user=refreshed,
+                normalized_email=normalized_email,
+                email_is_verified=email_is_verified,
+            ):
+                raise ForbiddenException("User is not allowed to access this site")
             return refreshed
+
+    if not await _has_pending_invitation_for_email(db=db, normalized_email=normalized_email):
+        raise ForbiddenException("User is not allowed to access this site")
 
     created_user = await crud_users.create(
         db=db,
@@ -242,17 +361,28 @@ async def sync_oidc_user(db: AsyncSession, claims: dict[str, Any]) -> dict[str, 
             username=normalized_email,
             auth_provider=provider,
             auth_subject=subject,
+            # A matching live invitation is the explicit activation event for
+            # a newly created identity. Existing disabled accounts are never
+            # silently reactivated by this path.
+            enabled=True,
         ),
         schema_to_select=UserReadInternal,
     )
     if created_user is None:
         raise UnauthorizedException("Failed to create OIDC user")
 
+    if not await _has_local_portal_access_or_pending_invitation(
+        db=db,
+        user=created_user,
+        normalized_email=normalized_email,
+        email_is_verified=email_is_verified,
+    ):
+        raise ForbiddenException("User is not allowed to access this site")
+
     await crud_users.update(
         db=db,
         object={
             "last_login_at": datetime.now(UTC),
-            "role_ids": mapped_role_ids,
         },
         uuid=created_user["uuid"],
     )
@@ -267,4 +397,3 @@ async def sync_oidc_user(db: AsyncSession, claims: dict[str, Any]) -> dict[str, 
         raise UnauthorizedException("Failed to refresh created user")
 
     return refreshed
-

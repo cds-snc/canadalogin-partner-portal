@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState, type FormEvent } from "react";
+import { useMemo, useState, type FormEvent } from "react";
 import { useParams } from "@tanstack/react-router";
 import { useTranslation } from "react-i18next";
 import type { FunctionComponent } from "@/common/types";
@@ -14,7 +14,6 @@ import {
 } from "@/components/ui";
 import type { DataTableColumn } from "@/components/ui/DataTable";
 import { getRequestErrorNotice } from "@/fetch";
-import { HttpRequestError } from "@/fetch/errors";
 import type {
 	MAUReportItemRead,
 	MAUReportResponseRead,
@@ -77,10 +76,11 @@ const exportToCSV = (
 
 export const MAUReportPage = (): FunctionComponent => {
 	const { i18n, t } = useTranslation();
-	const { rpApplicationUuid } = useParams({
-		from: "/your-applications/$rpApplicationUuid/mau-report",
-	});
-	const rpApplicationUuidValue = String(rpApplicationUuid);
+	const params = useParams({ strict: false });
+	const applicationInformationUuid = params["applicationInformationUuid"] ?? "";
+	const rpApplicationUuidValue =
+		params["rpConfigurationUuid"] || params["rpApplicationUuid"] || "";
+	const workspaceUuidValue = params["workspaceUuid"] ?? "";
 	const defaultDateRange = useMemo(() => buildDefaultDateRange(), []);
 	const [draftStartDate, setDraftStartDate] = useState(
 		defaultDateRange.startDate
@@ -92,22 +92,12 @@ export const MAUReportPage = (): FunctionComponent => {
 	const [activeEndDate, setActiveEndDate] = useState(defaultDateRange.endDate);
 
 	const { data, error, isLoading, isRefetching } = useMauReport(
+		workspaceUuidValue,
 		rpApplicationUuidValue,
 		activeStartDate,
-		activeEndDate
+		activeEndDate,
+		applicationInformationUuid
 	);
-
-	useEffect(() => {
-		if (
-			error instanceof HttpRequestError &&
-			error.status === 409 &&
-			error.code === "rp_application_department_required"
-		) {
-			globalThis.location.replace(
-				`/your-applications/${rpApplicationUuidValue}/department-setup`
-			);
-		}
-	}, [error, rpApplicationUuidValue]);
 
 	const responseData = data as MAUReportResponseRead | null;
 
@@ -199,15 +189,64 @@ export const MAUReportPage = (): FunctionComponent => {
 		setActiveEndDate(draftEndDate);
 	};
 
-	const departmentName = responseData?.department_name ?? null;
+	const isFrench = lang.toLowerCase().startsWith("fr");
+	const localizedApplicationName = responseData
+		? (isFrench
+				? responseData.application_name_fr
+				: responseData.application_name_en
+			)?.trim() || t("common.notProvided")
+		: null;
+	const departmentName = responseData
+		? (isFrench
+				? responseData.department_name_fr
+				: responseData.department_name
+			)?.trim() || null
+		: null;
 
 	return (
 		<Grid columns="1fr" tag="div">
 			<Heading tag="h1">{t("mauReport.pageTitle")}</Heading>
+			{responseData ? (
+				<>
+					<Text>
+						{t("mauReport.workspaceLabel", {
+							workspace: responseData.workspace_name,
+						})}
+					</Text>
+					<Text>
+						{t("mauReport.applicationLabel", {
+							application: localizedApplicationName,
+						})}
+					</Text>
+					<Text>
+						{t("mauReport.configurationLabel", {
+							configuration: responseData.configuration_name,
+						})}
+					</Text>
+				</>
+			) : null}
 			{departmentName ? (
 				<Text>
 					{t("mauReport.departmentLabel", { department: departmentName })}
 				</Text>
+			) : null}
+			{responseData ? (
+				<>
+					<Text>
+						{t("mauReport.partnerEnvironmentLabel", {
+							environment:
+								responseData.partner_environment?.trim() ||
+								t("common.notProvided"),
+						})}
+					</Text>
+					<Text>
+						{t("mauReport.canadaLoginEnvironmentLabel", {
+							environment:
+								responseData.canada_login_environment?.trim() ||
+								t("common.notProvided"),
+						})}
+					</Text>
+				</>
 			) : null}
 
 			<form
@@ -338,6 +377,7 @@ export const MAUReportPage = (): FunctionComponent => {
 					<div className="mt-200 overflow-x-auto">
 						<DataTable
 							columns={mauTableColumns}
+							filter={false}
 							itemLabel={t("mauReport.dailyListTitle")}
 							pagination={false}
 							rows={orderedRecords}

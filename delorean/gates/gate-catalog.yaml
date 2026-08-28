@@ -1,0 +1,141 @@
+version: 1
+
+levels:
+  record:
+    meaning: Record the status only. This does not block work.
+  warn:
+    meaning: Warn and record the issue. Work may continue, but the issue should be visible.
+  block_with_exception:
+    meaning: Block unless a human-approved exception or waiver is linked.
+  block:
+    meaning: Block until fixed. This is not normally waived.
+
+statuses:
+  - not_started
+  - pending
+  - pass
+  - fail
+  - blocked
+  - waived
+  - not_applicable
+
+gates:
+  - id: work-context
+    name: Work context is clear
+    plainLanguage: The change says whether it is local-only, shared non-production, or production-facing.
+    appliesWhen: Every Delorean change.
+    defaultLevel: block_with_exception
+    blocksBefore:
+      - plan
+      - implement
+    expectedEvidence:
+      - work context in `openspec/changes/<change-id>/proposal.md`
+      - work context in `delorean/evidence/<change-id>/change-state.yaml`
+
+  - id: openspec-change-package
+    name: OpenSpec change package exists
+    plainLanguage: Behaviour changes have an active OpenSpec change package or a clear current-spec reference.
+    appliesWhen: The work changes expected behaviour, business rules, scenarios, API behaviour, UI behaviour, data behaviour, or release behaviour.
+    defaultLevel: block_with_exception
+    blocksBefore:
+      - implement
+    expectedEvidence:
+      - '`openspec/changes/<change-id>/proposal.md`'
+      - '`openspec/changes/<change-id>/design.md` when needed'
+      - '`openspec/changes/<change-id>/tasks.md`'
+      - '`openspec/changes/<change-id>/specs/<capability>/spec.md`'
+
+  - id: control-boundary
+    name: Control boundary is recorded
+    plainLanguage: The allowed tools, files, APIs, MCP servers, data, and denied areas are clear.
+    appliesWhen: Every agent-assisted change, tool-assisted change, API/MCP use, sensitive-data use, generated evidence, or permission-sensitive workflow.
+    defaultLevel: block_with_exception
+    blocksBefore:
+      - implement
+      - verify
+    expectedEvidence:
+      - '`delorean/evidence/<change-id>/change-state.yaml`'
+      - Control boundary notes in the Evidence Bundle when review is needed
+
+  - id: implementation-tasks
+    name: Implementation tasks are current
+    plainLanguage: OpenSpec `tasks.md` reflects the actual implementation, review, and verification work.
+    appliesWhen: Active OpenSpec change is in scope.
+    defaultLevel: block_with_exception
+    blocksBefore:
+      - verify
+    expectedEvidence:
+      - active `openspec/changes/<change-id>/tasks.md` checklist state
+
+  - id: openspec-validation
+    name: OpenSpec validation result is recorded
+    plainLanguage: The active OpenSpec change was validated when the CLI is enabled, or the reason for skipping validation is recorded.
+    appliesWhen: Active OpenSpec change is in scope.
+    defaultLevel: block_with_exception
+    blocksBefore:
+      - release-ready
+    expectedEvidence:
+      - '`make validate-openspec-change CHANGE_ID=<change-id>` result when official OpenSpec CLI is enabled'
+      - skipped reason when the CLI is not enabled
+
+  - id: local-quality-checks
+    name: Local quality checks are recorded
+    plainLanguage: Relevant local checks were run, or skipped checks have reasons.
+    appliesWhen: Every meaningful implementation change.
+    defaultLevel: block_with_exception
+    blocksBefore:
+      - release-ready
+    expectedEvidence:
+      - local verification command results
+      - skipped-check reasons
+
+  - id: baseline-assessment
+    name: GC web application baseline assessment is current
+    plainLanguage: Meaningful Government of Canada web application releases or service changes assess the active baseline and record control evidence, deferred controls, or exceptions.
+    appliesWhen: The work creates, changes, reviews, or releases a Government of Canada web application and affects UI, content, APIs, data, identity, security, privacy, information management, deployment, operations, or release evidence.
+    defaultLevel: block_with_exception
+    adoptionLevelBehavior:
+      "2": warn
+      "3": block_with_exception
+      "4": block_with_exception
+    blocksBefore:
+      - release-ready
+    expectedEvidence:
+      - STD-019: Government of Canada Web Application Baseline Governance
+      - BAS-001: Government of Canada Web Application Baseline
+      - TPL-011 baseline assessment record when a release or meaningful service change needs one
+      - baseline assessment summary in `delorean/evidence/<change-id>/change-state.yaml`
+      - baseline assessment summary in `delorean/evidence/<change-id>/evidence-bundle.md`
+
+  - id: evidence-bundle
+    name: Evidence Bundle is ready
+    plainLanguage: Review-facing evidence exists and links back to OpenSpec requirements, scenarios, tests, checks, approvals, and waivers where relevant.
+    appliesWhen: Every meaningful change before release-ready review.
+    defaultLevel: block_with_exception
+    blocksBefore:
+      - release-ready
+    expectedEvidence:
+      - '`delorean/evidence/<change-id>/evidence-bundle.md`'
+
+  - id: approval-or-waiver
+    name: Approval or waiver state is clear
+    plainLanguage: Any required human approval, exception, or waiver is recorded and linked.
+    appliesWhen: Approval-sensitive changes, production-facing changes, waivers, exceptions, sensitive access, protected environment changes, release decisions, or risk acceptance.
+    defaultLevel: block
+    blocksBefore:
+      - release-ready
+    expectedEvidence:
+      - approval record based on `delorean/templates/approval-response-template.md` when approval is needed
+      - waiver record based on `delorean/templates/waiver-template.md` when a waiver is needed
+
+  - id: openspec-archive
+    name: Completed OpenSpec change is archived
+    plainLanguage: Completed active OpenSpec changes are archived during release readiness, or the reason for leaving them active is recorded.
+    appliesWhen: Active OpenSpec change is complete.
+    defaultLevel: block_with_exception
+    blocksBefore:
+      - release
+    expectedEvidence:
+      - updated `openspec/specs/`
+      - archived change under `openspec/changes/archive/`
+      - reason if the change remains active

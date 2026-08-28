@@ -23,7 +23,10 @@ async def sample_background_task(ctx: Worker, name: str) -> str:
     return f"Task {name} is complete!"
 
 
-async def sync_ibm_verify_rp_applications(ctx: dict[str, Any]) -> dict[str, int]:
+async def sync_ibm_verify_rp_applications(ctx: dict[str, Any]) -> dict[str, int | bool]:
+    if not settings.IBM_RP_APPLICATION_SYNC_ENABLED:
+        logging.warning("IBM Verify RP application sync skipped because it is disabled")
+        return {"skipped": True}
     if not is_in_hour_window(6, 21):
         return {"skipped": True}
     ibm_admin_client = await get_ibm_sv_admin_client()

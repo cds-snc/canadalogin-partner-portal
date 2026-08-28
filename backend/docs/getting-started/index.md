@@ -51,7 +51,7 @@ POSTGRES_PORT=5432
 POSTGRES_DB="myapp"
 
 # Security
-SECRET_KEY="your-secret-key-here"
+SECRET_KEY="<output-of-openssl-rand-hex-32>"
 ALGORITHM="HS256"
 ACCESS_TOKEN_EXPIRE_MINUTES=30
 REFRESH_TOKEN_EXPIRE_DAYS=7
@@ -172,4 +172,4 @@ Not using Docker? No problem!
 
 ---
 
-**Ready to dive deeper?** Continue with the [detailed installation guide](installation.md) or explore the [user guide](../user-guide/index.md). 
+**Ready to dive deeper?** Continue with the [detailed installation guide](installation.md) or explore the [user guide](../user-guide/index.md).

@@ -1,0 +1,51 @@
+#!/usr/bin/env bash
+
+set -euo pipefail
+
+message_file="${1:-}"
+
+if [ -z "${message_file}" ] || [ ! -f "${message_file}" ]; then
+  echo "Commit message file was not provided." >&2
+  exit 1
+fi
+
+message="$(grep -v '^[[:space:]]*#' "${message_file}" | sed '/^[[:space:]]*$/d' || true)"
+
+if [ -z "${message}" ]; then
+  echo "Commit message cannot be empty." >&2
+  exit 1
+fi
+
+first_line="$(printf '%s\n' "${message}" | sed -n '1p')"
+
+if [ "${#first_line}" -gt 120 ]; then
+  echo "Warning: commit message summary is longer than 120 characters." >&2
+fi
+
+traceability_mode="${DELOREAN_TRACEABILITY_MODE:-warn}"
+traceability_mode="$(printf '%s' "${traceability_mode}" | tr '[:upper:]' '[:lower:]')"
+
+case "${traceability_mode}" in
+  off | warn | strict)
+    ;;
+  *)
+    echo "Warning: unknown DELOREAN_TRACEABILITY_MODE='${DELOREAN_TRACEABILITY_MODE:-}'. Using warn." >&2
+    traceability_mode="warn"
+    ;;
+esac
+
+if [ "${traceability_mode}" != "off" ]; then
+  traceability_pattern='(^|[^[:alnum:]_#-])((ISSUE|SCN|BR)-[0-9]+|#[0-9]+)([^[:alnum:]_-]|$)'
+
+  if ! printf '%s\n' "${message}" | grep -Eiq "${traceability_pattern}"; then
+    warning="Commit message has no traceability reference. Add ISSUE-123, SCN-123, BR-123, or #123 when this change has a related artifact."
+
+    if [ "${traceability_mode}" = "strict" ]; then
+      echo "${warning}" >&2
+      echo "DELOREAN_TRACEABILITY_MODE=strict is enabled, so this commit is blocked." >&2
+      exit 1
+    fi
+
+    echo "Warning: ${warning}" >&2
+  fi
+fi

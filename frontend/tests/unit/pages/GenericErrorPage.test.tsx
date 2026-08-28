@@ -9,10 +9,12 @@ vi.mock("react-i18next", () => ({
 			const map: Record<string, string> = {
 				"genericError.dashboardAction": "Go to dashboard",
 				"genericError.homeAction": "Go to home",
-				"genericError.notFoundBody": "The page or resource you requested could not be found.",
+				"genericError.notFoundBody":
+					"The page or resource you requested could not be found.",
 				"genericError.notFoundTitle": "We could not find that page",
 				"genericError.title": "Something went wrong",
-				"genericError.unexpectedBody": "An unexpected error occurred while loading this page. Try again from the dashboard.",
+				"genericError.unexpectedBody":
+					"An unexpected error occurred while loading this page. Try again from the dashboard.",
 				"genericError.unexpectedTitle": "Unexpected error",
 			};
 			return map[key] ?? key;
@@ -27,7 +29,10 @@ vi.mock("@/components/ui", () => ({
 	}: PropsWithChildren<{ href?: string }>): ReactElement => (
 		<a href={href}>{children}</a>
 	),
-	Heading: ({ children, tag }: PropsWithChildren<{ tag?: string }>): ReactElement => {
+	Heading: ({
+		children,
+		tag,
+	}: PropsWithChildren<{ tag?: string }>): ReactElement => {
 		if (tag === "h2") {
 			return <h2>{children}</h2>;
 		}
@@ -49,7 +54,9 @@ describe("GenericErrorPage", () => {
 	it("renders not-found variant and recovery actions", () => {
 		render(<GenericErrorPage kind="not_found" />);
 
-		expect(screen.getByRole("heading", { name: "Something went wrong" })).toBeTruthy();
+		expect(
+			screen.getByRole("heading", { name: "Something went wrong" })
+		).toBeTruthy();
 		expect(
 			screen.getByRole("heading", { name: "We could not find that page" })
 		).toBeTruthy();
@@ -58,7 +65,7 @@ describe("GenericErrorPage", () => {
 		).toBeTruthy();
 		expect(
 			screen.getByRole("link", { name: "Go to dashboard" }).getAttribute("href")
-		).toBe("/your-applications");
+		).toBe("/workspaces");
 		expect(
 			screen.getByRole("link", { name: "Go to home" }).getAttribute("href")
 		).toBe("/");

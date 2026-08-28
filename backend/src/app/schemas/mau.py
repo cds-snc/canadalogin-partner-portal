@@ -1,8 +1,10 @@
 import json
+import uuid as uuid_pkg
 from datetime import date
 from typing import Any
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field
+from pydantic.alias_generators import to_camel
 
 
 class MAUCsvRow(BaseModel):
@@ -48,9 +50,43 @@ class MAUReportItem(BaseModel):
     mtd_unique_users: int
 
 
+class MAUReportDestinationRead(BaseModel):
+    """Minimum secret-free navigation context for one scoped usage report."""
+
+    model_config = ConfigDict(
+        extra="forbid",
+        frozen=True,
+        validate_by_name=True,
+        validate_by_alias=True,
+        alias_generator=to_camel,
+        populate_by_name=True,
+        serialize_by_alias=True,
+    )
+
+    uuid: uuid_pkg.UUID
+    workspace_uuid: uuid_pkg.UUID
+    workspace_name: str
+    application_information_uuid: uuid_pkg.UUID
+    application_name_en: str
+    application_name_fr: str
+    configuration_name: str
+    partner_environment: str | None = None
+    canada_login_environment: str | None = None
+
+
 class MAUReportResponse(BaseModel):
     application_name: str
+    workspace_uuid: uuid_pkg.UUID
+    workspace_name: str
+    application_information_uuid: uuid_pkg.UUID
+    application_name_en: str
+    application_name_fr: str
+    rp_configuration_uuid: uuid_pkg.UUID
+    configuration_name: str
+    canada_login_environment: str | None = None
     start_date: date
     end_date: date
     department_name: str | None = None
+    department_name_fr: str | None = None
+    partner_environment: str | None = None
     records: list[MAUReportItem]

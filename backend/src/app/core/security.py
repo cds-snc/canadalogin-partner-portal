@@ -1,9 +1,8 @@
 from datetime import UTC, datetime, timedelta
-from enum import Enum
+from enum import StrEnum
 from typing import Any
 
 import jwt
-from fastapi.security import OAuth2PasswordBearer
 from jwt import PyJWTError
 from pydantic import SecretStr
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -17,11 +16,8 @@ ALGORITHM = settings.ALGORITHM
 ACCESS_TOKEN_EXPIRE_MINUTES = settings.ACCESS_TOKEN_EXPIRE_MINUTES
 REFRESH_TOKEN_EXPIRE_DAYS = settings.REFRESH_TOKEN_EXPIRE_DAYS
 
-oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/v1/oidc/login")
-optional_oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/v1/oidc/login", auto_error=False)
 
-
-class TokenType(str, Enum):
+class TokenType(StrEnum):
     ACCESS = "access"
     REFRESH = "refresh"
 

@@ -4,6 +4,7 @@ from datetime import datetime
 from pydantic import BaseModel, ConfigDict, Field
 from pydantic.alias_generators import to_camel
 
+from ..core.authorization import CanonicalRoleCode, RoleScope
 from ..core.schemas import PersistentDeletion, TimestampSchema
 
 
@@ -26,7 +27,23 @@ class RoleRead(RoleBase):
 
     id: int
     uuid: uuid_pkg.UUID
+    code: CanonicalRoleCode | None = None
     created_at: datetime
+
+
+class CanonicalRoleReferenceRead(BaseModel):
+    """Immutable server-owned role key and scope exposed to clients."""
+
+    model_config = ConfigDict(
+        extra="forbid",
+        validate_by_name=True,
+        validate_by_alias=True,
+        alias_generator=to_camel,
+        populate_by_name=True,
+    )
+
+    code: CanonicalRoleCode
+    scope: RoleScope
 
 
 class RoleCreate(RoleBase):

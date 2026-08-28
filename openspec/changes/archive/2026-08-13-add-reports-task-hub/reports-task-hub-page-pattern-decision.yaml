@@ -1,0 +1,149 @@
+ui_page_pattern_decision:
+  page_role: cross-cutting report discovery and scope selection
+  page_type: role-aware task hub with focused chooser pages
+  selected_pattern:
+    - "PAT-001: UI Page Patterns"
+    - "PAT-013: GC Design System React App Shell"
+    - "PAT-014: Bilingual Route and I18n"
+    - "PAT-017: Itemized Data Display"
+    - "PAT-020: Status and Feedback"
+    - "PAT-022: Page Length and Splitting"
+  patterns_not_selected:
+    - pattern: "PAT-021: Dashboard Overview Page"
+      reason: The first version supports report discovery and scope selection but owns no operational summary, triage, comparison, resume-work data, or freshness contract.
+    - pattern: one page containing report filters and results from every scope
+      reason: Cross-workspace, workspace, and application reports have different authorization scopes and remain on focused existing routes.
+  source_reference:
+    - "STD-005: Frontend GC Design System"
+    - "STD-006: GC UI Page Layout Rules"
+    - "STD-007: UI Accessibility Basics"
+    - "STD-017: Government of Canada Standards Review"
+    - "STD-018: Frontend CSS and Design-System Boundary"
+    - "BAS-001: Government of Canada Web Application Baseline"
+    - "GC-WEB-002: Canada.ca Design, Federal Identity, And Page Shell"
+    - "GC-WEB-003: Accessibility"
+    - "GC-WEB-004: Official Languages And Plain Language"
+    - "GC-WEB-005: Mobile And Responsive Behaviour"
+    - https://design-system.canada.ca/en/components/card/
+    - https://design.canada.ca/common-design-patterns/services-information.html
+  target_stack: Vite React with TanStack Router and GC Design System React components
+  task_structure:
+    multiple_user_goals: true
+    entry_page: /reports
+    destination_routes:
+      - /onboarding-oversight/reports
+      - /reports/workspaces
+      - /reports/applications
+      - /workspaces/$workspaceUuid/reports
+      - /workspaces/$workspaceUuid/applications/$rpApplicationUuid/usage
+    home_page_or_service_home: /
+    single_page_rationale: null
+    groups:
+      platform_reporting:
+        - Onboarding and invitation reports
+      partner_reporting:
+        - Workspace reports
+        - Application usage reports
+    task_card_contract:
+      component: GcdsCard
+      content: one linked title and one concise scope description
+      destinations_per_card: 1
+      nested_interactive_controls: false
+      embedded_metrics_filters_tables_exports: false
+      empty_groups: omitted
+  report_scope:
+    cross_workspace:
+      capability: onboarding_oversight_read
+      destination: /onboarding-oversight/reports
+    workspace:
+      capability: aggregate_report_read
+      chooser: /reports/workspaces
+      destination: /workspaces/$workspaceUuid/reports
+    application:
+      capability: mau_report_read
+      chooser: /reports/applications
+      destination: /workspaces/$workspaceUuid/applications/$rpApplicationUuid/usage
+    existing_report_routes_preserved: true
+    combined_results_on_hub: false
+    browser_side_broad_dataset_filtering: false
+  required_shell:
+    header: shared GcdsHeader through AppShell
+    footer: shared GcdsFooter through AppShell
+    main_content: stable AppShell main landmark and skip target
+    skip_link: existing header skip link targeting main content
+    h1: localized Reports
+    date_modified: provided by AppShell when required
+  navigation:
+    primary_task_paths:
+      - task: discover available report families
+        entry_route: /
+        navigation_elements:
+          - authenticated Home Reports card
+          - shared Reports top-navigation item
+        destination_routes:
+          - /reports
+        return_path: shared Home link
+      - task: choose a workspace report
+        entry_route: /reports
+        navigation_elements:
+          - Workspace reports GcdsCard
+          - authorized workspace chooser links
+        destination_routes:
+          - /reports/workspaces
+          - /workspaces/$workspaceUuid/reports
+        return_path: Back to Reports from the chooser; existing workspace hierarchy from the report page
+      - task: choose an application usage report
+        entry_route: /reports
+        navigation_elements:
+          - Application usage reports GcdsCard
+          - authorized application chooser links
+        destination_routes:
+          - /reports/applications
+          - /workspaces/$workspaceUuid/applications/$rpApplicationUuid/usage
+        return_path: Back to Reports from the chooser; existing application hierarchy from the report page
+    shared_menu:
+      provided: true
+      component: GcdsTopNav and GcdsNavLink
+      home_link: /
+      new_page_or_parent_task_link: /reports
+      visibility: at least one report capability
+    breadcrumbs:
+      reports_hub: Home; current Reports page omitted
+      chooser: Home then Reports; current chooser page omitted
+      existing_report_pages: preserve their canonical oversight, workspace, or application hierarchy
+      component: GcdsBreadcrumbs and GcdsBreadcrumbsItem
+    language_toggle:
+      provided_by_header: true
+      equivalent_language_route: preserve the current report hub or chooser route
+      standalone_toggle_in_body: false
+    side_navigation:
+      provided: false
+      exclusion_reason: the hub has at most three report-family destinations and focused chooser pages; it does not have a persistent local tree
+  component_plan:
+    page_shell:
+      - need: report discovery page shell
+        gc_component: shared AppShell, GcdsContainer, GcdsHeading, and GcdsText
+        custom_exception: none
+    navigation:
+      - need: primary Reports discovery and return paths
+        gc_component: GcdsTopNav, GcdsNavLink, GcdsBreadcrumbs, GcdsBreadcrumbsItem, and GcdsLink
+        custom_exception: none
+    task_choices:
+      - need: grouped preview of one report family
+        gc_component: GcdsCard in a responsive GcdsGrid below a semantic group heading
+        custom_exception: none
+      - need: authorized workspace and application scope selection
+        gc_component: PAT-017 semantic itemized links with PAT-020 section states
+        custom_exception: none
+  evidence_required:
+    desktop_screenshot: each representative role-specific Reports hub and one chooser
+    mobile_screenshot: one-column card groups and chooser links with long French content
+    zoom_result: 200-percent zoom without horizontal scrolling or clipped content
+    accessibility_result: card and chooser names, headings, source order, keyboard, focus, landmarks, status states, breadcrumbs, and return links
+    bilingual_result: English and French menu, Home, hub, cards, choosers, states, and accessible names
+    design_system_checklist: required
+    authorization_tests: every report family plus permitted, hidden, denied, stale, and cross-scope chooser cases
+  exceptions:
+    required: false
+    approval_status: not needed
+    notes: A future operational Reports dashboard requires a new decision and sourced summary-data contract.

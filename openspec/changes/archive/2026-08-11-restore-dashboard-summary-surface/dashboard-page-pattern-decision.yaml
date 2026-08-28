@@ -1,0 +1,88 @@
+ui_page_pattern_decision:
+  page_role: authenticated current-user dashboard
+  page_type: read-only service home
+  selected_pattern:
+    - PAT-001: UI Page Patterns
+    - PAT-021: Dashboard Pattern
+    - PAT-017: Detail Summary Pattern
+  source_reference:
+    - STD-005: Frontend GC Design System
+    - STD-006: GC UI Page Layout Rules
+    - STD-017: Government of Canada Standards Review
+    - openspec/changes/restore-dashboard-summary-surface/design.md
+  target_stack: Vite React with TanStack Router and GC Design System wrappers
+  task_structure:
+    multiple_user_goals: true
+    entry_page: /your-applications
+    destination_routes:
+      - /your-applications/$rpApplicationUuid
+      - /workspaces
+      - /workspaces/$workspaceUuid
+    home_page_or_service_home: /your-applications
+    single_page_rationale: Keep the partner landing experience read-only and summary-oriented while deeper tasks stay on dedicated routes.
+  required_shell:
+    header: existing shared app header
+    footer: existing shared app footer
+    main_content: existing AppShell main region
+    skip_link: existing header skip link to main content
+    h1: required on the dashboard route
+    date_modified: provided by AppShell
+  navigation:
+    primary_task_paths:
+      - task: review personal portal context
+        entry_route: /your-applications
+        navigation_elements:
+          - profile summary section
+        destination_routes:
+          - /your-applications
+        return_path: not applicable
+      - task: open an accessible RP application
+        entry_route: /your-applications
+        navigation_elements:
+          - RP application list item link
+        destination_routes:
+          - /your-applications/$rpApplicationUuid
+        return_path: shared header dashboard link
+      - task: review accessible workspaces
+        entry_route: /your-applications
+        navigation_elements:
+          - workspace summary link
+          - shared top navigation Workspaces item
+        destination_routes:
+          - /workspaces
+          - /workspaces/$workspaceUuid
+        return_path: shared header dashboard link or top navigation
+    shared_menu:
+      provided: true
+      component: shared header top navigation
+      home_link: /
+      new_page_or_parent_task_link: /your-applications
+      exclusion_reason: null
+    breadcrumbs: header back link context only
+    language_toggle:
+      provided_by_header: true
+      equivalent_language_route: same route with translated content
+      standalone_toggle_in_body: false
+    top_navigation: shared authenticated top navigation
+    side_navigation: none
+  component_plan:
+    page_shell:
+      - need: page heading, summary text, and notices
+        gc_component: existing AppShell with Heading, Text, and Notice wrappers
+        custom_exception: none
+    summary_sections:
+      - need: profile and access summary blocks
+        gc_component: existing Card, Text, Link, and Notice wrappers styled to PAT-017 summary sections
+        custom_exception: none
+      - need: accessible workspace and RP application navigation lists
+        gc_component: existing Card, Link, and list wrappers with no admin data table in the MVP slice
+        custom_exception: none
+  evidence_required:
+    desktop_screenshot: pending after implementation
+    mobile_screenshot: pending after implementation
+    accessibility_result: pending after implementation
+    design_system_checklist: pending after implementation
+  exceptions:
+    required: false
+    approval_status: not needed for this slice
+    notes: The MVP dashboard intentionally excludes inline admin tables, reporting widgets, and custom layout exceptions.

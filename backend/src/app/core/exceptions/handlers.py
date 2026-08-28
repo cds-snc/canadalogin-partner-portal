@@ -8,9 +8,14 @@ from fastapi.responses import JSONResponse
 from starlette.exceptions import HTTPException as StarletteHTTPException
 
 from ..logger import logging
+from ..logging_privacy import hash_log_value, safe_request_path
 from ..schemas import ErrorDetail, ErrorResponse
 from .cache_exceptions import CacheIdentificationInferenceError, InvalidRequestError, MissingClientError
-from .http_exceptions import RPApplicationDepartmentRequiredException
+from .http_exceptions import (
+    RegistrationDraftConflictException,
+    RPApplicationAdoptionConflictException,
+    RPApplicationDepartmentRequiredException,
+)
 from .ibm_sv_exceptions import IBMVerifyException
 from .standardized_logger import StandardizedLogger
 
@@ -35,6 +40,17 @@ _STATUS_CODE_MAP = {
     500: "internal_server_error",
     503: "service_unavailable",
 }
+
+_REGISTRATION_DRAFT_ROUTE = "/api/v1/workspaces/{workspace_uuid}/applications/{rp_application_uuid}/registration-draft"
+_REGISTRATION_DATA_STEPS = {
+    "basics",
+    "client-and-access",
+    "encryption",
+    "endpoints",
+    "signing",
+}
+_REGISTRATION_SAVE_MODES = {"completeStep", "partial"}
+_SAFE_FIELD_NAME = re.compile(r"^[A-Za-z][A-Za-z0-9]{0,63}$")
 
 
 def _format_validation_location(location: list[Any] | tuple[Any, ...]) -> str:
@@ -64,6 +80,58 @@ def _get_request_id(request: Request) -> str | None:
         return header_request_id
 
     return None
+
+
+def _log_registration_draft_validation(
+    request: Request,
+    exc: RequestValidationError,
+) -> None:
+    if request.method != "PATCH" or safe_request_path(request) != _REGISTRATION_DRAFT_ROUTE:
+        return
+
+    body = exc.body if isinstance(exc.body, dict) else {}
+    step_id = body.get("stepId")
+    save_mode = body.get("saveMode")
+    if step_id not in _REGISTRATION_DATA_STEPS:
+        step_id = "unknown"
+    if save_mode not in _REGISTRATION_SAVE_MODES:
+        save_mode = "unknown"
+
+    invalid_field_names: set[str] = set()
+    for error in exc.errors():
+        location = error.get("loc")
+        if not isinstance(location, list | tuple):
+            continue
+        try:
+            answer_index = location.index("registrationAnswers")
+        except ValueError:
+            continue
+        field_name = location[answer_index + 1] if len(location) > answer_index + 1 else None
+        if isinstance(field_name, str) and _SAFE_FIELD_NAME.fullmatch(field_name):
+            invalid_field_names.add(field_name)
+
+    session_user_reference: object | None = None
+    try:
+        session_user_reference = request.session.get("user_uuid")
+    except (AssertionError, RuntimeError):
+        pass
+    actor_reference = hash_log_value(session_user_reference) if session_user_reference is not None else "unknown"
+    workspace_reference = hash_log_value(request.path_params.get("workspace_uuid", "unknown"))
+    application_reference = hash_log_value(request.path_params.get("rp_application_uuid", "unknown"))
+    logger.warning(
+        "RP registration event=draft_validation actor_reference=%s "
+        "workspace_reference=%s rp_application_reference=%s step_id=%s "
+        "save_mode=%s invalid_field_names=%s result=validation_error "
+        "error_code=validation_error "
+        "correlation_id=%s",
+        actor_reference,
+        workspace_reference,
+        application_reference,
+        step_id,
+        save_mode,
+        ",".join(sorted(invalid_field_names)),
+        _get_request_id(request) or "none",
+    )
 
 
 def _serialize_error_response(
@@ -120,6 +188,7 @@ def _ibm_message_and_details(exc: IBMVerifyException) -> tuple[str, Any]:
 def register_exception_handlers(application: FastAPI) -> None:
     @application.exception_handler(RequestValidationError)
     async def validation_exception_handler(request: Request, exc: RequestValidationError) -> JSONResponse:
+        _log_registration_draft_validation(request, exc)
         response = _serialize_error_response(
             request=request,
             status_code=422,
@@ -131,13 +200,39 @@ def register_exception_handlers(application: FastAPI) -> None:
         return response
 
     @application.exception_handler(RPApplicationDepartmentRequiredException)
-    async def rp_application_department_required_handler(
-        request: Request, exc: RPApplicationDepartmentRequiredException
-    ) -> JSONResponse:
+    async def rp_application_department_required_handler(request: Request, exc: RPApplicationDepartmentRequiredException) -> JSONResponse:
         response = _serialize_error_response(
             request=request,
             status_code=409,
             code="rp_application_department_required",
+            message=exc.message,
+        )
+        standardized_logger.log(request, response)
+        return response
+
+    @application.exception_handler(RegistrationDraftConflictException)
+    async def registration_draft_conflict_handler(
+        request: Request,
+        exc: RegistrationDraftConflictException,
+    ) -> JSONResponse:
+        response = _serialize_error_response(
+            request=request,
+            status_code=409,
+            code=exc.code,
+            message=exc.message,
+        )
+        standardized_logger.log(request, response)
+        return response
+
+    @application.exception_handler(RPApplicationAdoptionConflictException)
+    async def rp_application_adoption_conflict_handler(
+        request: Request,
+        exc: RPApplicationAdoptionConflictException,
+    ) -> JSONResponse:
+        response = _serialize_error_response(
+            request=request,
+            status_code=409,
+            code=exc.code,
             message=exc.message,
         )
         standardized_logger.log(request, response)

@@ -1,0 +1,161 @@
+schema_id: ARCH-SCHEMA-STD-011-LOGGING-OBSERVABILITY
+schema_version: "0.1"
+title: Logging and Observability Schema Contract
+status: active
+schema_type: standard
+
+owner_doc_id: STD-011
+owner_doc_type: standard
+owner_doc_path: docs/standards/std-011-logging-and-observability.md
+
+summary: >
+  Helps agents and reviewers check useful diagnostic logging, stable structured
+  event shapes, request or correlation identifiers, safe context values,
+  sensitive value masking, and operational verification evidence.
+
+categories:
+  - operations
+  - backend
+  - frontend
+  - security-privacy
+search_keywords:
+  - logging
+  - observability
+  - correlation id
+  - request id
+  - trace id
+  - structured logging
+  - log code
+  - diagnostic context
+  - sensitive data
+  - privacy
+applies_when:
+  - adding or changing logs, log event shapes, log codes, request IDs, correlation IDs, trace IDs, or diagnostic context
+  - changing frontend error reporting, backend error handling, scheduled jobs, workflows, or operational guides
+  - reviewing logging behavior for privacy, usefulness, alerts, dashboards, runbooks, or verification evidence
+do_not_use_when:
+  - the change has no logging, diagnostics, observability, operational guide, error reporting, or verification impact
+  - a separate approved observability architecture decision fully covers the logging behavior under review
+
+work_contexts:
+  - local_developer
+  - shared_non_production
+  - production
+stack_profiles:
+  - fastapi
+  - react
+  - containers
+artifact_types:
+  - log_event
+  - error_handler
+  - operational_guide
+  - runbook
+  - verification_note
+  - adr
+
+related_standards:
+  - STD-010
+  - STD-011
+  - STD-013
+  - STD-014
+  - STD-016
+related_patterns: []
+related_controls:
+  - GC-WEB-006
+  - GC-WEB-009
+  - GC-WEB-011
+related_baselines:
+  - BAS-001
+
+required_inputs:
+  - id: logging_change_scope
+    description: Description of changed log events, error handlers, correlation identifiers, operational diagnostics, runbooks, tests, or verification evidence.
+    required: true
+    source: implementation plan, PR, issue, changed files, or verification note
+  - id: sensitive_logging_review
+    description: Review of whether logged values include secrets, tokens, credentials, personal information, sensitive query parameters, or sensitive-adjacent operational data.
+    required: true
+    source: implementation note, privacy review, code review, tests, or verification note
+
+checks:
+  - id: correlation-identifiers-used-when-available
+    description: Logs include a correlation, request, or trace identifier when one is available and useful for connecting related events.
+    required: true
+    check_type: content_review
+    evidence:
+      - Log event examples, error handler review, request middleware review, tests, or verification note.
+    failure_means: Operational failures may be hard to connect across client, API, job, and platform logs.
+    adr_required_when: A project intentionally omits correlation, request, or trace identifiers for meaningful operational events.
+    waiver_allowed: true
+
+  - id: stable-structured-log-envelope
+    description: Structured or consistent log events use a stable envelope and keep context-specific details inside a context object or equivalent project convention.
+    required: true
+    check_type: content_review
+    evidence:
+      - Log event schema, sample log event, logger helper, code review, or verification note.
+    failure_means: Logs may be hard to filter, alert on, or compare across services.
+    adr_required_when: A project intentionally uses a different log event shape for shared or production logging.
+    waiver_allowed: true
+
+  - id: diagnostic-context-without-sensitive-data
+    description: Diagnostic context helps explain failures without recording secrets, raw tokens, credentials, raw identifiers, full request bodies, or unnecessary personal information.
+    required: true
+    check_type: human_review
+    evidence:
+      - Logging code review, sample log events, privacy review, tests, or verification note.
+    failure_means: Logs may create privacy, security, or operational risk.
+    adr_required_when: A project intentionally logs sensitive-adjacent data or narrowed debug detail for a specific approved purpose.
+    waiver_allowed: false
+
+  - id: sensitive-values-masked-or-omitted
+    description: Sensitive query parameters, credentials, tokens, and private configuration values are masked, hashed, or omitted.
+    required: true
+    check_type: file_review
+    evidence:
+      - Masking helper, logging tests, error handler review, config logging review, or verification note.
+    failure_means: Logs may expose secrets or personal information.
+    adr_required_when: A project intentionally logs a sensitive-adjacent value and records the risk, owner, and review trigger.
+    waiver_allowed: false
+
+  - id: operational-diagnostics-visible
+    description: Logs provide enough operational detail for important failures, user-facing errors, jobs, or workflows without relying on local-only debugging.
+    required: true
+    check_type: evidence_required
+    evidence:
+      - Verification note, runbook, test output, sample log event, alert/dashboard note, or operational guide update.
+    failure_means: Operators may not have enough evidence to diagnose shared or production incidents.
+    adr_required_when: Operational diagnostics are intentionally deferred for a meaningful shared or production workflow.
+    waiver_allowed: true
+
+  - id: logging-changes-reviewed-for-privacy-and-usefulness
+    description: Meaningful logging changes are reviewed for both privacy risk and diagnostic usefulness.
+    required: true
+    check_type: human_review
+    evidence:
+      - PR review, privacy note, verification note, standards impact note, or ADR.
+    failure_means: Logging may either miss important operational context or collect unnecessary sensitive data.
+    adr_required_when: The project accepts a known logging privacy or diagnostic trade-off.
+    waiver_allowed: true
+
+outputs:
+  - id: logging_review_summary
+    description: Review result showing identifier handling, structured event shape, safe context values, sensitive value masking, and operational evidence.
+
+evidence_expectations:
+  - Meaningful logging changes include sample log events, tests, runbook notes, or verification notes when useful.
+  - Privacy-sensitive log fields are masked, hashed, omitted, or explicitly reviewed.
+  - Operational diagnostics for shared or production workflows are visible before release.
+
+adr_triggers:
+  - Project intentionally logs sensitive-adjacent data.
+  - Project uses a different shared log event envelope or context convention.
+  - Project defers operational diagnostics for a meaningful shared or production workflow.
+  - Project accepts a logging privacy, audit, or diagnostic trade-off.
+
+waiver_guidance:
+  - Delivery waivers for deferred logging tests, runbook updates, or operational evidence belong in the project-local Delorean evidence process.
+  - This schema contract does not define runtime waiver records.
+
+notes:
+  - This schema contract supports STD-011. STD-011 remains the source of truth.

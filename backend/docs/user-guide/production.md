@@ -43,7 +43,7 @@ REDIS_RATE_LIMIT_HOST="redis"
 REDIS_RATE_LIMIT_PORT=6379
 
 # ------------- security -------------
-SECRET_KEY="your-super-secure-secret-key-generate-with-openssl"
+SECRET_KEY="<output-of-openssl-rand-hex-32>"
 ALGORITHM="HS256"
 ACCESS_TOKEN_EXPIRE_MINUTES=30
 REFRESH_TOKEN_EXPIRE_DAYS=7
@@ -670,4 +670,4 @@ find $BACKUP_DIR -name "backup_*.sql.gz" -mtime +7 -delete
 - Optimize Docker image layers
 - Configure proper resource limits
 
-This production guide provides a solid foundation for deploying the FastAPI boilerplate to production environments with proper performance, security, and reliability configurations. 
+This production guide provides a solid foundation for deploying the FastAPI boilerplate to production environments with proper performance, security, and reliability configurations.

@@ -6,11 +6,17 @@ interface LinkProps {
 	className?: string;
 	external?: boolean;
 	href: string;
+	onGcdsClick?: (event: Event) => void;
 }
 
 const Link: React.FC<LinkProps> = React.memo(
-	({ children, className, external, href }) => (
-		<GcdsLink className={className} external={external} href={href}>
+	({ children, className, external, href, onGcdsClick }) => (
+		<GcdsLink
+			className={className}
+			external={external}
+			href={href}
+			onClickCapture={(event) => onGcdsClick?.(event.nativeEvent)}
+		>
 			{children}
 		</GcdsLink>
 	)

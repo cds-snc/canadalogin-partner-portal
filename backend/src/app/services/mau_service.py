@@ -1,6 +1,6 @@
 import logging
 from datetime import date, timedelta
-from typing import Any, Optional
+from typing import Any
 
 from redis.asyncio import Redis as AsyncRedis
 
@@ -10,7 +10,7 @@ from ..schemas.mau import MAUApplicationRecord, MAUCsvRow
 
 
 class MAUService:
-    def __init__(self, redis: Optional[AsyncRedis] = None) -> None:
+    def __init__(self, redis: AsyncRedis | None = None) -> None:
         self.s3_repo = S3Repository()
         self._redis = redis
 
@@ -54,8 +54,8 @@ class MAUService:
     async def get_mau_by_application(
         self,
         application_name: str,
-        start_date: Optional[date] = None,
-        end_date: Optional[date] = None,
+        start_date: date | None = None,
+        end_date: date | None = None,
     ) -> list[MAUApplicationRecord]:
         if end_date is None:
             end_date = date.today()
@@ -63,10 +63,7 @@ class MAUService:
             start_date = end_date - timedelta(days=30)
 
         app_key = self._cache_key(application_name)
-        date_fields = [
-            d.isoformat()
-            for d in _date_range(start_date, end_date)
-        ]
+        date_fields = [d.isoformat() for d in _date_range(start_date, end_date)]
         if not date_fields:
             return []
 

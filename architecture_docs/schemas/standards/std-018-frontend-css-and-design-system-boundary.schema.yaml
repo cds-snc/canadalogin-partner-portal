@@ -1,0 +1,170 @@
+schema_id: ARCH-SCHEMA-STD-018-FRONTEND-CSS-DESIGN-SYSTEM-BOUNDARY
+schema_version: "0.1"
+title: Frontend CSS And Design-System Boundary Schema Contract
+status: active
+schema_type: standard
+
+owner_doc_id: STD-018
+owner_doc_type: standard
+owner_doc_path: docs/standards/std-018-frontend-css-and-design-system-boundary.md
+
+summary: >
+  Helps agents and reviewers check custom CSS boundaries, design-system
+  overrides, global style changes, modal/card/badge/custom component behavior,
+  responsive evidence, and exception decisions for frontend styling work.
+
+categories:
+  - design-system
+  - frontend
+  - accessibility
+  - code-quality
+  - governance
+search_keywords:
+  - custom css
+  - design override
+  - global style
+  - component style
+  - modal
+  - card
+  - badge
+  - custom component
+  - gc design system
+  - design token
+  - responsive
+  - focus
+applies_when:
+  - adding or changing frontend CSS, layout classes, page shell styling, custom UI wrappers, badges, cards, modals, or design-system overrides
+  - deciding whether custom CSS or custom UI is acceptable in a GC Design System frontend
+  - reviewing hard-coded layout values, broad global CSS, duplicated design-system imports, or custom visual components
+  - recording custom UI or CSS exceptions
+do_not_use_when:
+  - the change has no frontend CSS, style, layout, design-system, or custom visual component impact
+
+work_contexts:
+  - local_developer
+  - shared_non_production
+  - production
+stack_profiles:
+  - react
+  - gcds
+  - css
+  - canada.ca
+artifact_types:
+  - stylesheet
+  - frontend_component
+  - custom_ui_exception
+  - modal
+  - card
+  - badge
+  - verification_note
+  - adr
+
+related_standards:
+  - STD-004
+  - STD-005
+  - STD-006
+  - STD-007
+  - STD-015
+  - STD-018
+related_patterns:
+  - PAT-015
+  - PAT-017
+  - PAT-020
+  - PAT-023
+related_controls:
+  - GC-WEB-002
+  - GC-WEB-003
+  - GC-WEB-005
+related_baselines:
+  - BAS-001
+
+required_inputs:
+  - id: style_change_scope
+    description: Description of CSS, layout classes, custom UI, design-system override, modal, card, badge, or visual component changed.
+    required: true
+    source: plan, PR, issue, changed files, or custom UI exception
+  - id: design_system_consideration
+    description: GC Design System component, token, utility, or documented extension point considered first.
+    required: false
+    source: custom UI exception, standards impact block, PR, or verification note
+
+checks:
+  - id: css-boundary-reviewed
+    description: New CSS is scoped to app shell, feature, page, or component ownership and does not create broad undocumented global behavior.
+    required: true
+    check_type: file_review
+    evidence:
+      - Stylesheet path, component ownership, CSS review note, or PR summary.
+    failure_means: Styling may leak across pages or become hard to maintain.
+    adr_required_when: The project intentionally adopts a broad global CSS or utility layer.
+    waiver_allowed: true
+
+  - id: design-system-override-reviewed
+    description: GC Design System components, tokens, and documented layout behavior were considered before custom CSS or overrides.
+    required: true
+    check_type: content_review
+    evidence:
+      - Custom UI exception, component considered list, standards impact block, or verification note.
+    failure_means: The project may override or duplicate design-system behavior without review.
+    adr_required_when: A design-system override materially changes shared component behavior or page shell posture.
+    waiver_allowed: true
+
+  - id: global-style-review
+    description: Global CSS changes are limited to documented imports, shell setup, root/body setup, or governed utilities.
+    required: true
+    check_type: file_review
+    evidence:
+      - Global stylesheet review, import location, or CSS ownership note.
+    failure_means: Global styles may introduce visual regressions or duplicate design-system imports.
+    adr_required_when: The project intentionally adds a new global style system or utility layer.
+    waiver_allowed: true
+
+  - id: custom-component-exception
+    description: Custom visual components such as modal, card, badge, alert, button, link, or navigation equivalents have an exception and accessibility behavior.
+    required: true
+    check_type: human_review
+    evidence:
+      - Custom UI or CSS exception with reason, components considered, accessibility behavior, owner, and review evidence.
+    failure_means: Custom UI may bypass design-system and accessibility expectations.
+    adr_required_when: Custom component behavior becomes a reusable project pattern or replaces a fitting GC Design System component.
+    waiver_allowed: true
+
+  - id: modal-overlay-focus-keyboard
+    description: Modal, overlay, or dialog changes preserve focus management, keyboard dismissal, labeling, and screen-reader behavior.
+    required: true
+    check_type: human_review
+    evidence:
+      - Accessibility review, Storybook state, keyboard check, semantic review, or verification note.
+    failure_means: Modal or overlay interactions may block keyboard or assistive technology users.
+    adr_required_when: The project intentionally uses a custom modal or overlay implementation.
+    waiver_allowed: true
+
+  - id: responsive-layout-evidence
+    description: Meaningful CSS changes include mobile and desktop or zoomed layout evidence.
+    required: true
+    check_type: evidence_required
+    evidence:
+      - Mobile screenshot, desktop screenshot, zoomed view, Storybook state, or verification note.
+    failure_means: Layout regressions may be missed across viewport sizes.
+    adr_required_when: Responsive evidence is intentionally skipped for meaningful visual changes.
+    waiver_allowed: true
+
+outputs:
+  - id: css_boundary_review_summary
+    description: Review result showing CSS ownership, design-system consideration, exceptions, accessibility behavior, and responsive evidence.
+
+evidence_expectations:
+  - Custom CSS and overrides identify ownership and reason.
+  - Custom UI exceptions include accessibility behavior and review evidence.
+  - Meaningful layout changes include mobile and desktop or zoomed review evidence.
+
+adr_triggers:
+  - Project introduces broad global CSS or a new utility layer.
+  - Custom UI replaces a GC Design System component that fits.
+  - Custom modal, overlay, dialog, navigation, or status component becomes a reusable project pattern.
+
+waiver_guidance:
+  - A project-local waiver may be needed when a delivery gate expects custom UI evidence, accessibility review, or responsive screenshots that are intentionally deferred.
+
+notes:
+  - This schema contract supports STD-018. STD-018 remains the source of truth.

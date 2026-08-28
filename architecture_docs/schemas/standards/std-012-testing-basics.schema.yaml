@@ -1,0 +1,190 @@
+schema_id: ARCH-SCHEMA-STD-012-TESTING-BASICS
+schema_version: "0.1"
+title: Testing Basics Schema Contract
+status: active
+schema_type: standard
+
+owner_doc_id: STD-012
+owner_doc_type: standard
+owner_doc_path: docs/standards/std-012-testing-basics.md
+
+summary: >
+  Helps agents and reviewers check meaningful success and failure coverage,
+  frontend, backend, API contract, migration, and data checks, skipped-check
+  reasons, and named verification evidence.
+
+categories:
+  - testing
+  - frontend
+  - backend
+  - api
+  - data
+  - code-quality
+search_keywords:
+  - testing
+  - unit test
+  - integration test
+  - contract test
+  - end-to-end test
+  - playwright
+  - accessibility test
+  - vitest
+  - pytest
+  - storybook
+  - verification evidence
+  - skipped check
+applies_when:
+  - adding or changing tests, local checks, verification notes, coverage notes, or skipped-check records
+  - changing frontend UI, backend services, APIs, contracts, persistence, migrations, or user-facing workflows
+  - reviewing whether meaningful success, failure, contract, data, and UI states are covered
+do_not_use_when:
+  - the change has no behavior, test, verification, contract, UI, API, backend, or data impact
+  - a project-local test strategy fully covers the selected standard and records equivalent evidence
+
+work_contexts:
+  - local_developer
+  - shared_non_production
+  - production
+stack_profiles:
+  - react
+  - vitest
+  - storybook
+  - playwright
+  - fastapi
+  - pytest
+  - postgres
+artifact_types:
+  - frontend_test
+  - backend_test
+  - api_test
+  - contract_test
+  - e2e_test
+  - storybook_fixture
+  - migration_test
+  - verification_note
+  - adr
+
+related_standards:
+  - STD-004
+  - STD-007
+  - STD-008
+  - STD-009
+  - STD-012
+  - STD-013
+  - STD-015
+  - STD-020
+related_patterns:
+  - PAT-002
+  - PAT-005
+  - PAT-006
+  - PAT-008
+  - PAT-015
+related_controls:
+  - GC-WEB-003
+  - GC-WEB-010
+  - GC-WEB-011
+related_baselines:
+  - BAS-001
+
+required_inputs:
+  - id: test_change_scope
+    description: Description of behavior changed and the frontend, backend, API, data, migration, or user workflow checks that apply.
+    required: true
+    source: implementation plan, PR, issue, test plan, or changed files
+  - id: verification_target
+    description: Scenario, issue, contract, ADR, baseline, or risk that the tests or documented checks verify.
+    required: false
+    source: verification note, issue, ADR, standards impact note, or PR
+
+checks:
+  - id: success-and-failure-paths-covered
+    description: Highest-risk user, operator, or system behavior has meaningful success and failure path tests or documented checks.
+    required: true
+    check_type: evidence_required
+    evidence:
+      - Test files, test output, scenario checks, verification note, or documented manual check.
+    failure_means: Important behavior may regress or fail without visible evidence.
+    adr_required_when: A project intentionally skips important success or failure coverage for a risky change.
+    waiver_allowed: true
+
+  - id: frontend-checks-cover-ui-states
+    description: Frontend changes cover meaningful loading, empty, error, success, accessibility, layout, or interaction states when relevant.
+    required: true
+    check_type: evidence_required
+    evidence:
+      - Vitest tests, Storybook fixtures, Playwright checks, accessibility checks, screenshots, or verification note.
+    failure_means: User-facing states may be unreviewed or inaccessible.
+    adr_required_when: A project intentionally ships meaningful UI behavior without frontend checks or review fixtures.
+    waiver_allowed: true
+
+  - id: backend-checks-cover-service-api-paths
+    description: Backend service or API changes cover meaningful success, validation, authorization, not-found, conflict, and failure paths when applicable.
+    required: true
+    check_type: evidence_required
+    evidence:
+      - Pytest tests, API tests, service tests, failure path tests, or verification note.
+    failure_means: Backend behavior and error handling may regress.
+    adr_required_when: A project intentionally skips backend coverage for a meaningful service or API change.
+    waiver_allowed: true
+
+  - id: contract-checks-when-apis-change
+    description: API changes include contract evidence for request shapes, response shapes, errors, status codes, OpenAPI output, or client expectations.
+    required: true
+    check_type: evidence_required
+    evidence:
+      - Contract tests, OpenAPI export, API examples, client type checks, endpoint tests, or verification note.
+    failure_means: API producers and consumers may drift.
+    adr_required_when: A project intentionally changes API behavior without contract evidence.
+    waiver_allowed: true
+
+  - id: migration-data-checks-when-persistence-changes
+    description: Persistence changes include data, migration, constraint, ownership, retention, or CRUD checks when relevant.
+    required: true
+    check_type: evidence_required
+    evidence:
+      - Migration tests, model tests, repository tests, migration review note, data check, or verification note.
+    failure_means: Stored data behavior may regress or shared database state may drift.
+    adr_required_when: A project intentionally skips migration or data checks for a risky persistence change.
+    waiver_allowed: true
+
+  - id: skipped-checks-recorded-with-reason
+    description: Skipped, deferred, unavailable, or not-run checks are recorded with a reason and follow-up where needed.
+    required: true
+    check_type: content_review
+    evidence:
+      - Verification note, implementation note, PR comment, issue, ADR, or project-local waiver when a gate requires it.
+    failure_means: Reviewers may not know which checks were missing or why.
+    adr_required_when: The skipped check changes a durable architecture, security, privacy, data, or release decision.
+    waiver_allowed: true
+
+  - id: verification-evidence-named
+    description: Verification evidence names the checks run, the result, and the scenario, issue, contract, ADR, or risk when useful.
+    required: true
+    check_type: evidence_required
+    evidence:
+      - Verification note, CI output, test output, linked issue, linked ADR, or baseline assessment.
+    failure_means: Reviewers may not be able to connect test evidence to the work or risk.
+    adr_required_when: Verification evidence is intentionally omitted for a high-risk or shared release change.
+    waiver_allowed: true
+
+outputs:
+  - id: testing_review_summary
+    description: Review result showing success, failure, frontend, backend, API contract, data, migration, skipped-check, and verification evidence.
+
+evidence_expectations:
+  - Tests or documented checks cover the highest-risk changed behavior.
+  - Skipped checks are visible with reasons and follow-up owners when needed.
+  - Verification evidence is named and connected to the relevant scenario, issue, contract, ADR, or risk.
+
+adr_triggers:
+  - Project intentionally skips important tests for a risky change.
+  - Project changes API behavior without contract evidence.
+  - Project skips migration or data checks for persistence work.
+  - Project accepts a durable testing trade-off that changes architecture, security, privacy, data, or release risk.
+
+waiver_guidance:
+  - Delivery waivers for missing, skipped, or deferred checks belong in the project-local Delorean evidence process when a gate requires one.
+  - This schema contract does not define runtime waiver records.
+
+notes:
+  - This schema contract supports STD-012. STD-012 remains the source of truth.

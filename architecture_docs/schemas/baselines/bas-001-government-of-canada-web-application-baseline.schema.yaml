@@ -1,0 +1,163 @@
+schema_id: ARCH-SCHEMA-BAS-001-GC-WEB-APPLICATION-BASELINE
+schema_version: "0.1"
+title: Government of Canada Web Application Baseline Schema Contract
+status: active
+schema_type: baseline
+
+owner_doc_id: BAS-001
+owner_doc_type: baseline
+owner_doc_path: docs/baselines/bas-001-government-of-canada-web-application-baseline.md
+
+summary: >
+  Helps agents and reviewers check Government of Canada web application baseline
+  assessment shape, control profile use, applicability, assessment statuses,
+  evidence, deferred controls, exceptions, open risks, release readiness, and
+  links to ADRs or project-local waivers when needed.
+
+categories:
+  - governance
+  - baseline
+  - controls
+  - security-privacy
+  - accessibility
+  - deployment
+  - testing
+search_keywords:
+  - baseline
+  - bas-001
+  - government of canada web application
+  - control assessment
+  - baseline assessment
+  - accessibility
+  - privacy
+  - security
+  - deferred control
+  - release readiness
+applies_when:
+  - assessing a Government of Canada web application against BAS-001
+  - creating or updating a baseline assessment, release readiness note, control evidence, deferred control, exception, or open risk
+  - deciding whether a more specific app-type baseline or reference architecture applies
+do_not_use_when:
+  - the work is not a Government of Canada web application and no BAS-001 control assessment applies
+  - a more specific approved app-type baseline applies and records equivalent control evidence
+
+work_contexts:
+  - local_developer
+  - shared_non_production
+  - production
+stack_profiles:
+  - react
+  - gcds
+  - fastapi
+  - postgres
+  - containers
+artifact_types:
+  - baseline_assessment
+  - control_assessment
+  - standards_impact
+  - release_note
+  - verification_note
+  - adr
+
+related_standards:
+  - STD-017
+  - STD-019
+related_patterns: []
+related_controls:
+  - GC-WEB-001
+  - GC-WEB-002
+  - GC-WEB-003
+  - GC-WEB-004
+  - GC-WEB-005
+  - GC-WEB-006
+  - GC-WEB-007
+  - GC-WEB-008
+  - GC-WEB-009
+  - GC-WEB-010
+  - GC-WEB-011
+related_baselines:
+  - BAS-001
+
+required_inputs:
+  - id: baseline_assessment_scope
+    description: Application type, release or review scope, selected baseline, control profile, applicable controls, and assessment status set.
+    required: true
+    source: baseline assessment, standards impact note, release note, PR, or architecture note
+  - id: control_evidence_scope
+    description: Evidence, deferred controls, exceptions, not-applicable reasons, open risks, release readiness, ADRs, and project-local waivers when applicable.
+    required: true
+    source: baseline assessment, verification note, ADR, release evidence, or project-local Delorean evidence process
+
+checks:
+  - id: baseline-selected-and-profile-current
+    description: BAS-001 is selected for a Government of Canada web application unless a more specific approved app-type baseline applies.
+    required: true
+    check_type: content_review
+    evidence:
+      - Baseline assessment, standards impact note, baseline profile reference, or not-applicable decision.
+    failure_means: The project may assess the wrong control profile or miss required controls.
+    adr_required_when: The project intentionally uses a different baseline or treats BAS-001 as not applicable.
+    waiver_allowed: false
+
+  - id: all-profile-controls-assessed
+    description: All controls in the BAS-001 profile are assessed with an allowed status and clear applicability reason where needed.
+    required: true
+    check_type: evidence_required
+    evidence:
+      - Baseline assessment, control assessment table, machine-readable profile reference, or verification note.
+    failure_means: Required controls may be skipped or hidden.
+    adr_required_when: A required control is intentionally not assessed or treated as not applicable with material risk.
+    waiver_allowed: true
+
+  - id: control-evidence-linked
+    description: Each applicable control has evidence or a visible reason for deferred, exception, or not-applicable status.
+    required: true
+    check_type: evidence_required
+    evidence:
+      - Evidence links, verification notes, screenshots, test results, review notes, ADRs, or baseline assessment.
+    failure_means: Reviewers may not be able to evaluate control readiness.
+    adr_required_when: Material control evidence is intentionally deferred or replaced with an alternate approach.
+    waiver_allowed: true
+
+  - id: open-risks-and-exceptions-visible
+    description: Open risks, deferred controls, exceptions, owners, review triggers, and related ADRs or waiver records are visible.
+    required: true
+    check_type: human_review
+    evidence:
+      - Baseline assessment, risk register, ADR, release note, verification note, or project-local waiver when a gate requires it.
+    failure_means: Baseline gaps and accepted risks may be hidden from approvers.
+    adr_required_when: The project accepts material baseline variation, deferred controls, or reference architecture variation.
+    waiver_allowed: true
+
+  - id: release-readiness-evidence
+    description: Shared or production release readiness evidence identifies baseline status, open risks, deferred controls, exceptions, and verification evidence.
+    required: true
+    check_type: evidence_required
+    evidence:
+      - Release note, baseline assessment, standards impact note, verification bundle, or approval record.
+    failure_means: A release may advance without visible baseline readiness.
+    adr_required_when: Shared or production release proceeds without baseline assessment or release readiness evidence.
+    waiver_allowed: true
+
+outputs:
+  - id: baseline_review_summary
+    description: Review result showing selected baseline, control profile, assessment statuses, evidence, deferred controls, exceptions, open risks, ADRs, waivers, and release readiness.
+
+evidence_expectations:
+  - Baseline assessments link reusable controls rather than duplicating control detail.
+  - Deferred controls, exceptions, not-applicable decisions, and open risks are visible.
+  - Release readiness evidence identifies baseline status before shared or production release.
+
+adr_triggers:
+  - Project decides BAS-001 does not apply to a Government of Canada web application.
+  - Project varies materially from baseline or reference architecture expectations.
+  - Required controls are deferred, excepted, or treated as not applicable with material risk.
+  - Shared or production release proceeds with open baseline risk.
+
+waiver_guidance:
+  - Delivery waivers for baseline gates, deferred controls, missing release evidence, or risk acceptance belong in the project-local Delorean evidence process.
+  - Waivers do not replace durable ADRs for architecture, design, standard, control, or baseline variation.
+  - This schema contract does not define runtime waiver records.
+
+notes:
+  - This schema contract supports BAS-001. BAS-001 remains the source of truth.

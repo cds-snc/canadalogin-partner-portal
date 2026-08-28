@@ -31,8 +31,7 @@ services:
   # Optional services (commented out by default):
   # pgadmin:    # Database administration
   # nginx:      # Reverse proxy
-  # create_superuser: # One-time superuser creation
-  # create_tier:      # One-time tier creation
+  # create_initial_cl_admin: # One-time canonical CL Admin assignment
 ```
 
 ## Basic Docker Compose
@@ -273,10 +272,10 @@ server {
 
 ### Initialization Services
 
-#### Create First Superuser
+#### Create Initial CL Admin
 
 ```yaml
-create_superuser:
+create_initial_cl_admin:
   build:
     context: .
     dockerfile: Dockerfile
@@ -285,33 +284,16 @@ create_superuser:
   depends_on:
     - db
     - web
-  command: python -m src.scripts.create_first_superuser
-  volumes:
-    - ./src:/code/src
-```
-
-#### Create First Tier
-
-```yaml
-create_tier:
-  build:
-    context: .
-    dockerfile: Dockerfile
-  env_file:
-    - ./src/.env
-  depends_on:
-    - db
-    - web
-  command: python -m src.scripts.create_first_tier
+  command: python -m src.scripts.create_initial_cl_admin
   volumes:
     - ./src:/code/src
 ```
 
 **Usage:**
 
-- These are one-time setup services
-- Uncomment when you need to initialize data
-- Run once, then comment out again
+- The initial CL Admin bootstrap is a one-time setup service.
+- Set `INITIAL_CL_ADMIN_EMAIL` only for the explicit invocation.
+- Run it once, then disable the service again.
 
 ## Dockerfile Details
 
@@ -552,4 +534,4 @@ ports:
 - Monitor resource usage with `docker stats`
 - Use structured logging for better observability
 
-The Docker setup provides everything you need for both development and production. Start with the default configuration and customize as your needs grow! 
+The Docker setup provides everything you need for both development and production. Start with the default configuration and customize as your needs grow!

@@ -1,4 +1,5 @@
 import React from "react";
+import { useTranslation } from "react-i18next";
 import { GcdsRadios } from "@gcds-core/components-react";
 
 type RadioObject = {
@@ -10,6 +11,7 @@ type RadioObject = {
 };
 
 interface RadiosProps {
+	errorMessage?: string;
 	hint?: string;
 	legend: string;
 	name: string;
@@ -23,6 +25,7 @@ interface RadiosProps {
 
 const Radios: React.FC<RadiosProps> = React.memo(
 	({
+		errorMessage,
 		hint,
 		legend,
 		name,
@@ -32,19 +35,27 @@ const Radios: React.FC<RadiosProps> = React.memo(
 		value,
 		className,
 		options,
-	}) => (
-		<GcdsRadios
-			className={className}
-			hint={hint}
-			legend={legend}
-			name={name}
-			options={options}
-			required={required}
-			validateOn={validateOn}
-			value={value}
-			onInput={onInput}
-		></GcdsRadios>
-	)
+	}) => {
+		const { i18n } = useTranslation();
+		const lang = i18n.language?.startsWith("fr") ? "fr" : "en";
+
+		return (
+			<GcdsRadios
+				className={className}
+				errorMessage={errorMessage}
+				hint={hint}
+				id={name}
+				lang={lang}
+				legend={legend}
+				name={name}
+				options={options}
+				required={required}
+				validateOn={validateOn}
+				value={value}
+				onInput={onInput}
+			></GcdsRadios>
+		);
+	}
 );
 
 export default Radios;

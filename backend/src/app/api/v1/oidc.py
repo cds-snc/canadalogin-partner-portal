@@ -1,4 +1,4 @@
-from typing import Annotated, Optional
+from typing import Annotated
 
 from fastapi import APIRouter, Depends, Form, Query, Request
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -14,9 +14,13 @@ router = APIRouter(prefix="/auth/oidc", tags=["oidc"])
 async def oidc_login(
     request: Request,
     service: Annotated[OidcService, Depends(get_oidc_service)],
-    ui_locales: Optional[str] = Query(None, pattern="^(en|fr)$"),
+    ui_locales: str | None = Query(None, pattern="^(en|fr)$"),
+    redirect: str | None = None,
 ):
-    return await service.login(request, ui_locales=ui_locales)
+    if redirect is None:
+        return await service.login(request, ui_locales=ui_locales)
+
+    return await service.login(request, ui_locales=ui_locales, redirect=redirect)
 
 
 @router.get("/callback")

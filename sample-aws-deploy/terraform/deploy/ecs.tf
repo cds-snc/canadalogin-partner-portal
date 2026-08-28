@@ -1,109 +1,105 @@
 locals {
-  computed_cors_origins = var.cors_origins != "" ? var.cors_origins : jsonencode(["https://${var.frontend_url}"])
+  computed_cors_origins = var.cors_origins != "" ? var.cors_origins : jsonencode([trimsuffix(var.frontend_url, "/")])
 
   common_env = [
-    { name = "ENVIRONMENT",         value = var.environment },
-    { name = "APP_NAME",            value = var.app_name },
-    { name = "APP_DESCRIPTION",     value = var.app_description },
-    { name = "APP_VERSION",         value = var.app_version },
-    { name = "CONTACT_NAME",        value = var.contact_name },
-    { name = "CONTACT_EMAIL",       value = var.contact_email },
-    { name = "LICENSE_NAME",        value = var.license_name },
-    { name = "TERMS_VERSION",       value = var.terms_version },
+    { name = "ENVIRONMENT", value = var.environment },
+    { name = "APP_NAME", value = var.app_name },
+    { name = "APP_DESCRIPTION", value = var.app_description },
+    { name = "APP_VERSION", value = var.app_version },
+    { name = "CONTACT_NAME", value = var.contact_name },
+    { name = "CONTACT_EMAIL", value = var.contact_email },
+    { name = "LICENSE_NAME", value = var.license_name },
+    { name = "TERMS_VERSION", value = var.terms_version },
 
-    { name = "POSTGRES_USER",       value = var.postgres_user },
-    { name = "POSTGRES_SERVER",     value = split(":", var.rds_endpoint)[0] },
-    { name = "POSTGRES_PORT",       value = tostring(var.rds_port) },
-    { name = "POSTGRES_DB",         value = var.postgres_db },
+    { name = "POSTGRES_USER", value = var.postgres_user },
+    { name = "POSTGRES_SERVER", value = split(":", var.rds_endpoint)[0] },
+    { name = "POSTGRES_PORT", value = tostring(var.rds_port) },
+    { name = "POSTGRES_DB", value = var.postgres_db },
 
-    { name = "SESSION_COOKIE_NAME",    value = var.session_cookie_name },
-    { name = "SESSION_COOKIE_SECURE",  value = "true" },
-    { name = "SESSION_COOKIE_DOMAIN",  value = "" },
-    { name = "SESSION_MAX_AGE",        value = tostring(var.session_max_age) },
-    { name = "SESSION_ROLLING",        value = tostring(var.session_rolling) },
+    { name = "SESSION_COOKIE_NAME", value = var.session_cookie_name },
+    { name = "SESSION_COOKIE_SECURE", value = "true" },
+    { name = "SESSION_COOKIE_DOMAIN", value = var.session_cookie_domain },
+    { name = "SESSION_MAX_AGE", value = tostring(var.session_max_age) },
+    { name = "SESSION_ROLLING", value = tostring(var.session_rolling) },
     { name = "SESSION_COOKIE_SAMESITE", value = "lax" },
 
-    { name = "REDIS_SESSION_HOST",     value = var.elasticache_endpoint },
-    { name = "REDIS_SESSION_PORT",     value = "6379" },
-    { name = "REDIS_SESSION_DB",       value = tostring(var.redis_session_db) },
-    { name = "REDIS_SESSION_SSL",      value = tostring(var.redis_session_ssl) },
-    { name = "REDIS_SESSION_PREFIX",   value = var.redis_session_prefix },
-    { name = "REDIS_SESSION_GC_TTL",   value = tostring(var.redis_session_gc_ttl) },
+    { name = "REDIS_SESSION_HOST", value = var.elasticache_endpoint },
+    { name = "REDIS_SESSION_PORT", value = "6379" },
+    { name = "REDIS_SESSION_DB", value = tostring(var.redis_session_db) },
+    { name = "REDIS_SESSION_SSL", value = tostring(var.redis_session_ssl) },
+    { name = "REDIS_SESSION_PREFIX", value = var.redis_session_prefix },
+    { name = "REDIS_SESSION_GC_TTL", value = tostring(var.redis_session_gc_ttl) },
 
 
-    { name = "REDIS_CACHE_PORT",         value = "6379" },
-    { name = "REDIS_CACHE_DB",           value = tostring(var.redis_cache_db) },
-    { name = "REDIS_CACHE_SSL",          value = tostring(var.redis_cache_ssl) },
-    { name = "REDIS_QUEUE_PORT",         value = "6379" },
-    { name = "REDIS_QUEUE_DB",           value = tostring(var.redis_queue_db) },
-    { name = "REDIS_QUEUE_SSL",          value = tostring(var.redis_queue_ssl) },
-    { name = "REDIS_RATE_LIMIT_PORT",    value = "6379" },
-    { name = "REDIS_RATE_LIMIT_DB",      value = tostring(var.redis_rate_limit_db) },
-    { name = "REDIS_RATE_LIMIT_SSL",     value = tostring(var.redis_rate_limit_ssl) },
+    { name = "REDIS_CACHE_PORT", value = "6379" },
+    { name = "REDIS_CACHE_DB", value = tostring(var.redis_cache_db) },
+    { name = "REDIS_CACHE_SSL", value = tostring(var.redis_cache_ssl) },
+    { name = "REDIS_QUEUE_PORT", value = "6379" },
+    { name = "REDIS_QUEUE_DB", value = tostring(var.redis_queue_db) },
+    { name = "REDIS_QUEUE_SSL", value = tostring(var.redis_queue_ssl) },
+    { name = "REDIS_RATE_LIMIT_PORT", value = "6379" },
+    { name = "REDIS_RATE_LIMIT_DB", value = tostring(var.redis_rate_limit_db) },
+    { name = "REDIS_RATE_LIMIT_SSL", value = tostring(var.redis_rate_limit_ssl) },
 
-    { name = "OIDC_ENABLED",                   value = tostring(var.oidc_enabled) },
-    { name = "OIDC_PROVIDER_NAME",             value = var.oidc_provider_name },
-    { name = "OIDC_SERVER_METADATA_URL",       value = var.oidc_server_metadata_url },
-    { name = "OIDC_CLIENT_ID",                 value = var.oidc_client_id },
-    { name = "OIDC_SCOPES",                    value = var.oidc_scopes },
-    { name = "OIDC_REDIRECT_URI",              value = "${var.api_url}/api/v1/auth/oidc/callback" },
-    { name = "OIDC_REDIRECT_PATH",             value = "/api/v1/auth/oidc/callback" },
-    { name = "OIDC_POST_LOGIN_REDIRECT",       value = "${var.frontend_url}${var.oidc_post_login_redirect}" },
-    { name = "OIDC_POST_LOGOUT_REDIRECT_URI",  value = var.frontend_url },
-    { name = "OIDC_ACCESS_DENIED_REDIRECT",    value = "${var.frontend_url}${var.oidc_access_denied_redirect}" },
-    { name = "OIDC_GROUP_CLAIM_KEY",           value = var.oidc_group_claim_key },
-    { name = "OIDC_ADMIN_GROUP_NAME",          value = var.oidc_admin_group_name },
-    { name = "OIDC_APPLICATION_OWNERS_GROUP_NAME", value = var.oidc_application_owners_group_name },
-    { name = "CLPP_ADMIN_ROLE_NAME",           value = var.clpp_admin_role_name },
-    { name = "CLPP_APPLICATION_OWNERS_ROLE_NAME", value = var.clpp_application_owners_role_name },
+    { name = "OIDC_ENABLED", value = tostring(var.oidc_enabled) },
+    { name = "OIDC_PROVIDER_NAME", value = var.oidc_provider_name },
+    { name = "OIDC_SERVER_METADATA_URL", value = var.oidc_server_metadata_url },
+    { name = "OIDC_CLIENT_ID", value = var.oidc_client_id },
+    { name = "OIDC_SCOPES", value = var.oidc_scopes },
+    { name = "PARTNER_ACCESS_ALLOWED_EMAIL_DOMAINS", value = jsonencode(var.partner_access_allowed_email_domains) },
+    { name = "RP_APPLICATION_INVITE_URL_BASE", value = "${trimsuffix(var.frontend_url, "/")}/invitations/rp-applications" },
+    { name = "OIDC_REDIRECT_URI", value = "${var.api_url}/api/v1/auth/oidc/callback" },
+    { name = "OIDC_REDIRECT_PATH", value = "/api/v1/auth/oidc/callback" },
+    { name = "OIDC_POST_LOGIN_REDIRECT", value = "${var.frontend_url}${var.oidc_post_login_redirect}" },
+    { name = "OIDC_POST_LOGOUT_REDIRECT_URI", value = var.frontend_url },
+    { name = "OIDC_ACCESS_DENIED_REDIRECT", value = "${var.frontend_url}${var.oidc_access_denied_redirect}" },
+    { name = "IBM_SV_ADMIN_BASE_URL", value = var.ibm_sv_admin_base_url },
+    { name = "IBM_SV_ADMIN_CLIENT_ID", value = var.ibm_sv_admin_client_id },
 
-    { name = "IBM_SV_ADMIN_BASE_URL",   value = var.ibm_sv_admin_base_url },
-    { name = "IBM_SV_ADMIN_CLIENT_ID",  value = var.ibm_sv_admin_client_id },
-
-    { name = "TIMEZONE",              value = var.timezone },
-    { name = "LOAD_MAU_ENABLED",      value = tostring(var.load_mau_enabled) },
+    { name = "TIMEZONE", value = var.timezone },
+    { name = "LOAD_MAU_ENABLED", value = tostring(var.load_mau_enabled) },
 
     { name = "CORS_ORIGINS", value = local.computed_cors_origins },
     { name = "CORS_METHODS", value = var.cors_methods },
     { name = "CORS_HEADERS", value = var.cors_headers },
     { name = "CLIENT_CACHE_MAX_AGE", value = tostring(var.client_cache_max_age) },
 
-    { name = "AWS_S3_REGION",      value = var.aws_region },
-    { name = "AWS_S3_ROLE_ARN",    value = var.aws_s3_role_arn },
+    { name = "AWS_S3_REGION", value = var.aws_region },
+    { name = "AWS_S3_ROLE_ARN", value = var.aws_s3_role_arn },
     { name = "S3_MAU_BUCKET_NAME", value = var.mau_s3_bucket_name },
-    { name = "S3_MAU_FOLDER",      value = var.s3_mau_folder },
+    { name = "S3_MAU_FOLDER", value = var.s3_mau_folder },
 
-    { name = "DEFAULT_RATE_LIMIT_LIMIT",  value = tostring(var.default_rate_limit_limit) },
+    { name = "DEFAULT_RATE_LIMIT_LIMIT", value = tostring(var.default_rate_limit_limit) },
     { name = "DEFAULT_RATE_LIMIT_PERIOD", value = tostring(var.default_rate_limit_period) },
   ]
 
   common_secrets = [
-    { name = "POSTGRES_PASSWORD",          valueFrom = var.db_password_secret_arn },
-    { name = "OIDC_CLIENT_SECRET",         valueFrom = var.oidc_client_secret_arn },
+    { name = "POSTGRES_PASSWORD", valueFrom = var.db_password_secret_arn },
+    { name = "OIDC_CLIENT_SECRET", valueFrom = var.oidc_client_secret_arn },
     { name = "IBM_SV_ADMIN_CLIENT_SECRET", valueFrom = var.ibm_sv_admin_client_secret_arn },
-    { name = "SESSION_SECRET_KEY",         valueFrom = var.session_secret_arn },
-    { name = "REDIS_SESSION_PASSWORD",     valueFrom = var.redis_password_secret_arn },
-    { name = "REDIS_CACHE_PASSWORD",       valueFrom = var.redis_password_secret_arn },
-    { name = "REDIS_QUEUE_PASSWORD",       valueFrom = var.redis_password_secret_arn },
-    { name = "REDIS_RATE_LIMIT_PASSWORD",  valueFrom = var.redis_password_secret_arn },
+    { name = "SECRET_KEY", valueFrom = var.secret_key_arn },
+    { name = "REDIS_SESSION_PASSWORD", valueFrom = var.redis_password_secret_arn },
+    { name = "REDIS_CACHE_PASSWORD", valueFrom = var.redis_password_secret_arn },
+    { name = "REDIS_QUEUE_PASSWORD", valueFrom = var.redis_password_secret_arn },
+    { name = "REDIS_RATE_LIMIT_PASSWORD", valueFrom = var.redis_password_secret_arn },
   ]
 
   web_container = {
-    name         = "web"
-    image        = var.ecr_repository_url
-    essential    = true
-    command      = [
-       "sh", "-c",
-    "alembic -c /code/alembic.ini upgrade head && exec gunicorn app.main:app -w 4 -k uvicorn.workers.UvicornWorker --bind 0.0.0.0:8000 --forwarded-allow-ips='*' --timeout 300 --keep-alive 5 --max-requests 1000 --max-requests-jitter 100 --access-logfile - --error-logfile - --log-level info"
+    name      = "web"
+    image     = var.ecr_repository_url
+    essential = true
+    command = [
+      "sh", "-c",
+      "alembic -c /code/alembic.ini upgrade head && exec gunicorn app.main:app -w 4 -k uvicorn.workers.UvicornWorker --bind 0.0.0.0:8000 --forwarded-allow-ips='*' --timeout 300 --keep-alive 5 --max-requests 1000 --max-requests-jitter 100 --access-logfile - --error-logfile - --log-level info"
     ]
     portMappings = [
       { containerPort = 8000, protocol = "tcp" }
     ]
     environment = concat(local.common_env, [
-      { name = "LOAD_MAU_ENABLED",      value = "false" },
-      { name = "START_ARQ_ON_STARTUP",  value = "false" },
+      { name = "LOAD_MAU_ENABLED", value = "false" },
+      { name = "START_ARQ_ON_STARTUP", value = "false" },
       { name = "NO_COLOR", value = "1" },
-  
+
     ])
     secrets = local.common_secrets
     logConfiguration = {
@@ -118,12 +114,12 @@ locals {
 
 
   worker_container = {
-    name         = "worker"
-    image        = var.ecr_repository_url
-    essential    = true
-    command      = ["arq", "app.core.worker.settings.WorkerSettings"]
+    name      = "worker"
+    image     = var.ecr_repository_url
+    essential = true
+    command   = ["arq", "app.core.worker.settings.WorkerSettings"]
     environment = concat(local.common_env, [
-      { name = "LOAD_MAU_ENABLED",      value = "true" },
+      { name = "LOAD_MAU_ENABLED", value = "true" },
       { name = "START_ARQ_ON_STARTUP", value = "true" },
       { name = "NO_COLOR", value = "1" },
     ])
@@ -195,8 +191,8 @@ resource "aws_ecs_service" "web" {
   launch_type     = "FARGATE"
 
   network_configuration {
-    subnets         = var.private_subnet_ids
-    security_groups = [var.ecs_web_security_group_id]
+    subnets          = var.private_subnet_ids
+    security_groups  = [var.ecs_web_security_group_id]
     assign_public_ip = false
   }
 
@@ -230,8 +226,8 @@ resource "aws_ecs_service" "worker" {
   launch_type     = "FARGATE"
 
   network_configuration {
-    subnets         = var.private_subnet_ids
-    security_groups = [var.ecs_worker_security_group_id]
+    subnets          = var.private_subnet_ids
+    security_groups  = [var.ecs_worker_security_group_id]
     assign_public_ip = false
   }
 

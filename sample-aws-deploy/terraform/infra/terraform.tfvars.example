@@ -31,9 +31,9 @@ session_max_age      = 1800
 session_rolling      = true
 
 # ----- CORS -----
-cors_origins = "[\"*\"]"
-cors_methods = "[\"*\"]"
-cors_headers = "[\"*\"]"
+cors_origins = ""
+cors_methods = "[\"GET\",\"POST\",\"PUT\",\"PATCH\",\"DELETE\",\"OPTIONS\"]"
+cors_headers = "[\"Accept\",\"Content-Type\",\"X-Request-ID\"]"
 
 # ----- S3 MAU (optional — local bucket auto-created) -----
 # aws_s3_role_arn = "arn:aws:iam::123456789012:role/cl-pp-mau-s3-read"

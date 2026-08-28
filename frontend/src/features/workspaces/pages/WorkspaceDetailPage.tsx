@@ -1,0 +1,168 @@
+import { useParams, useSearch } from "@tanstack/react-router";
+import { useTranslation } from "react-i18next";
+import type { FunctionComponent } from "@/common/types";
+import { Card, Grid, Heading, Link, Notice, Text } from "@/components/ui";
+import { hasCapability } from "@/features/auth/authorization";
+import { getRequestErrorNotice } from "@/fetch";
+import { useSession } from "@/hooks";
+import { useWorkspace } from "../hooks/use-workspace";
+import {
+	getWorkspaceRoutePath,
+	getWorkspaceRoutesForSurface,
+	type WorkspaceRouteDefinition,
+} from "../workspace-route-catalog";
+
+const WORKSPACE_TASK_DESCRIPTION_KEYS = {
+	access: "workspaces.taskDescriptions.access",
+	applicationInformation: "workspaces.taskDescriptions.applications",
+	settings: "workspaces.taskDescriptions.settings",
+} as const;
+
+type WorkspaceTaskRoute = WorkspaceRouteDefinition & {
+	id: keyof typeof WORKSPACE_TASK_DESCRIPTION_KEYS;
+};
+
+const isWorkspaceTaskRoute = (
+	route: WorkspaceRouteDefinition
+): route is WorkspaceTaskRoute => route.id in WORKSPACE_TASK_DESCRIPTION_KEYS;
+
+const WORKSPACE_TASK_GROUPS = [
+	{
+		id: "setupAndApplications",
+		routeIds: ["applicationInformation"],
+		titleKey: "workspaces.taskGroups.setupAndApplications",
+	},
+	{
+		id: "access",
+		routeIds: ["access"],
+		titleKey: "workspaces.taskGroups.access",
+	},
+	{
+		id: "workspaceManagement",
+		routeIds: ["settings"],
+		titleKey: "workspaces.taskGroups.workspaceManagement",
+	},
+] as const;
+
+export const WorkspaceDetailPage = (): FunctionComponent => {
+	const { t } = useTranslation() as unknown as {
+		t: (
+			key: string | Array<string>,
+			options?: Record<string, unknown>
+		) => string;
+	};
+	const { workspaceUuid } = useParams({ from: "/workspaces/$workspaceUuid" });
+	const { currentUser } = useSession();
+	const search = useSearch({ from: "/workspaces/$workspaceUuid" });
+	const { error, isLoading, workspace } = useWorkspace(workspaceUuid);
+	const errorNotice = getRequestErrorNotice(error, {
+		bodyKey: "workspaces.detailErrorBody",
+		titleKey: "workspaces.detailErrorTitle",
+	});
+	const successMessage =
+		search.created === "1"
+			? t("workspaces.createdSuccess")
+			: search.updated === "1"
+				? t("workspaces.updatedSuccess")
+				: null;
+	const authorizationContext = currentUser?.authorizationContext;
+	const taskRoutes = getWorkspaceRoutesForSurface(
+		"hub",
+		authorizationContext,
+		workspaceUuid
+	).filter(isWorkspaceTaskRoute);
+	const canDiscoverUsage = hasCapability(
+		authorizationContext,
+		"mau_report_read",
+		workspaceUuid
+	);
+
+	return (
+		<>
+			<Heading tag="h1">
+				{workspace?.name.trim() || t("workspaces.workspaceLabel")}
+			</Heading>
+			<Text>{t("workspaces.detailSummary")}</Text>
+
+			{successMessage ? (
+				<Notice
+					noticeRole="success"
+					noticeTitle={successMessage}
+					noticeTitleTag="h2"
+				>
+					<Text>{successMessage}</Text>
+				</Notice>
+			) : null}
+
+			{isLoading ? (
+				<Notice
+					noticeRole="info"
+					noticeTitle={t("workspaces.detailLoadingTitle")}
+					noticeTitleTag="h2"
+				>
+					<Text>{t("workspaces.detailLoadingBody")}</Text>
+				</Notice>
+			) : null}
+
+			{errorNotice ? (
+				<Notice
+					noticeRole={errorNotice.noticeRole}
+					noticeTitle={t(errorNotice.titleKey)}
+					noticeTitleTag="h2"
+				>
+					<Text>{errorNotice.bodyText ?? t(errorNotice.bodyKey)}</Text>
+				</Notice>
+			) : null}
+
+			{workspace ? (
+				<div className="grid gap-300">
+					{WORKSPACE_TASK_GROUPS.map((group) => {
+						const groupRoutes = taskRoutes.filter((route) =>
+							(group.routeIds as ReadonlyArray<string>).includes(route.id)
+						);
+						if (groupRoutes.length === 0) return null;
+
+						return (
+							<section key={group.id}>
+								<Heading tag="h2">{t(group.titleKey)}</Heading>
+								<Grid columns="1fr" columnsTablet="1fr 1fr" tag="div">
+									{groupRoutes.map((route) => (
+										<Card
+											key={route.id}
+											cardTitle={String(t(route.labelKey as never))}
+											cardTitleTag="h3"
+											href={getWorkspaceRoutePath(route.id, workspaceUuid)}
+											description={String(
+												t(WORKSPACE_TASK_DESCRIPTION_KEYS[route.id] as never)
+											)}
+										/>
+									))}
+								</Grid>
+							</section>
+						);
+					})}
+					{canDiscoverUsage ? (
+						<section>
+							<Heading tag="h2">{t("workspaces.taskGroups.insights")}</Heading>
+							<Grid columns="1fr" columnsTablet="1fr 1fr" tag="div">
+								<Card
+									cardTitle={t("workspaces.navigation.reports")}
+									cardTitleTag="h3"
+									description={t("workspaces.taskDescriptions.reports")}
+									href="/reports/applications"
+								/>
+							</Grid>
+						</section>
+					) : null}
+					{workspace.description?.trim() ? (
+						<section>
+							<Heading tag="h2">{t("workspaces.detailsTitle")}</Heading>
+							<Text>{`${t("workspaces.descriptionLabel")}: ${workspace.description}`}</Text>
+						</section>
+					) : null}
+					<Link href="/workspaces">{t("workspaces.chooseAnother")}</Link>
+				</div>
+			) : null}
+		</>
+	);
+};

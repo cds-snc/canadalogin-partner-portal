@@ -1,0 +1,157 @@
+schema_id: ARCH-SCHEMA-GC-WEB-003-ACCESSIBILITY
+schema_version: "0.1"
+title: GC-WEB-003 Accessibility Schema Contract
+status: active
+schema_type: control
+
+owner_doc_id: GC-WEB-003
+owner_doc_type: control
+owner_doc_path: docs/controls/gc-web/gc-web-003-accessibility.md
+
+summary: >
+  Helps agents and reviewers check accessibility assessment evidence for
+  Government of Canada web applications, including WCAG AA target, keyboard
+  behavior, focus, headings, labels, landmarks, status messages, error handling,
+  complete user processes, skipped checks, and remaining risk.
+
+categories:
+  - accessibility
+  - frontend
+  - design-system
+  - testing
+search_keywords:
+  - accessibility
+  - control assessment
+  - wcag
+  - keyboard
+  - focus
+  - screen reader
+  - labels
+  - headings
+  - error summary
+  - status message
+applies_when:
+  - assessing user-facing UI, content, documents, media, downloads, or service workflows against GC-WEB-003
+  - changing keyboard behavior, focus order, headings, labels, landmarks, status messages, or accessible error handling
+  - recording accessibility evidence, skipped checks, remaining risk, or baseline assessment notes
+do_not_use_when:
+  - the work has no user-facing UI, content, document, media, or workflow accessibility impact
+  - a more specific accessibility control or project assessment already records equivalent evidence
+
+work_contexts:
+  - local_developer
+  - shared_non_production
+  - production
+stack_profiles:
+  - react
+  - gcds
+  - canada.ca
+artifact_types:
+  - control_assessment
+  - accessibility_checklist
+  - keyboard_review
+  - screen_reader_review
+  - automated_scan
+  - screenshot
+  - verification_note
+  - baseline_assessment
+  - adr
+
+related_standards:
+  - STD-007
+  - STD-012
+  - STD-017
+  - STD-019
+related_patterns:
+  - PAT-001
+  - PAT-003
+  - PAT-013
+  - PAT-014
+  - PAT-020
+  - PAT-023
+related_controls:
+  - GC-WEB-003
+related_baselines:
+  - BAS-001
+
+required_inputs:
+  - id: accessibility_assessment_scope
+    description: User-facing pages, workflows, content, documents, media, downloads, and accessibility behaviors assessed.
+    required: true
+    source: baseline assessment, control assessment, implementation plan, PR, or verification note
+  - id: accessibility_evidence
+    description: Accessibility checklist, keyboard test, automated scan, screen-reader note when warranted, and skipped-check rationale.
+    required: true
+    source: verification note, accessibility review, screenshots, test output, or baseline assessment
+
+checks:
+  - id: applicable-expectations-identified
+    description: The assessment identifies the applicable Government of Canada accessibility expectations and WCAG Level AA target.
+    required: true
+    check_type: human_review
+    evidence:
+      - Control assessment, standards impact note, accessibility checklist, or baseline assessment.
+    failure_means: Reviewers may not know which accessibility expectations were applied.
+    adr_required_when: The project intentionally treats the accessibility control as not applicable or applies a different accessibility target.
+    waiver_allowed: false
+
+  - id: core-ui-accessibility-reviewed
+    description: Keyboard operation, focus order, visible focus, semantic headings, labels, landmarks, status messages, and accessible error handling are reviewed.
+    required: true
+    check_type: evidence_required
+    evidence:
+      - Keyboard test result, accessibility checklist, automated scan, screenshots, or verification note.
+    failure_means: Core user interactions may be inaccessible.
+    adr_required_when: Core accessibility checks are intentionally skipped for a meaningful user-facing workflow.
+    waiver_allowed: true
+
+  - id: non-text-documents-media-reviewed
+    description: Non-text content, documents, media, and downloadable files have accessible alternatives or a recorded not-applicable reason where required.
+    required: true
+    check_type: content_review
+    evidence:
+      - Document review note, media review note, alt text review, content review, or baseline assessment.
+    failure_means: Users may not have accessible alternatives for required content.
+    adr_required_when: Required accessible alternatives are deferred or not provided.
+    waiver_allowed: true
+
+  - id: complete-processes-tested
+    description: Accessibility review covers complete user processes, not only isolated pages, when a process is in scope.
+    required: true
+    check_type: evidence_required
+    evidence:
+      - Workflow accessibility review, keyboard path result, screen-reader note, Playwright result, or verification note.
+    failure_means: Individual pages may pass while the end-to-end workflow remains inaccessible.
+    adr_required_when: Complete-process accessibility testing is intentionally skipped for a meaningful workflow.
+    waiver_allowed: true
+
+  - id: skipped-checks-and-risk-visible
+    description: Skipped accessibility checks and remaining accessibility risk are visible with reason, owner, and review trigger where needed.
+    required: true
+    check_type: evidence_required
+    evidence:
+      - Baseline assessment, verification note, issue, ADR, or project-local waiver when a gate requires it.
+    failure_means: Accessibility risk may be hidden from reviewers and approvers.
+    adr_required_when: The project accepts material accessibility risk or control variation.
+    waiver_allowed: true
+
+outputs:
+  - id: accessibility_control_assessment_summary
+    description: Assessment result showing applicable expectations, core accessibility checks, complete-process evidence, skipped checks, and remaining risk.
+
+evidence_expectations:
+  - Accessibility evidence includes keyboard review and automated or manual checks appropriate to the risk.
+  - Screen-reader review is recorded where risk warrants it.
+  - Skipped accessibility checks are visible in baseline or verification evidence.
+
+adr_triggers:
+  - Project treats GC-WEB-003 as not applicable for a user-facing workflow.
+  - Project accepts material accessibility risk or defers required accessible alternatives.
+  - Complete-process accessibility testing is skipped for a meaningful service flow.
+
+waiver_guidance:
+  - Delivery waivers for deferred accessibility checks belong in the project-local Delorean evidence process.
+  - This schema contract does not define runtime waiver records.
+
+notes:
+  - This schema contract supports GC-WEB-003. GC-WEB-003 remains the source of truth.

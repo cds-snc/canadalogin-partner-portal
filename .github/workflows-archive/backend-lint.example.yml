@@ -1,0 +1,44 @@
+# Example only. Archived workflows do not run from .github/workflows-archive/.
+# Move into .github/workflows/ only after the solution repo chooses this pattern.
+# Review action version policy before enabling: use pinned SHAs or approved major tags, but do not mix policies silently.
+
+name: Backend lint example
+
+on:
+  pull_request:
+    paths:
+      - "backend/**"
+      - "Makefile"
+      - ".python-version"
+      - ".flake8"
+      - "pytest.ini"
+      - ".github/workflows-archive/backend-lint.example.yml"
+  push:
+    paths:
+      - "backend/**"
+      - "Makefile"
+      - ".python-version"
+      - ".flake8"
+      - "pytest.ini"
+
+permissions:
+  contents: read
+
+jobs:
+  backend-lint:
+    name: Backend lint, format, and tests
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+
+      - name: Install backend dependencies
+        run: make install-dev-python
+
+      - name: Run backend lint adapter
+        run: DELOREAN_LINT_SCOPE=backend scripts/delorean/run-lint.sh
+
+      - name: Run backend fast tests
+        run: scripts/delorean/run-fast-tests.sh

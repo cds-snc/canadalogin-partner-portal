@@ -1,8 +1,10 @@
 import React from "react";
+import { useTranslation } from "react-i18next";
 import { GcdsSelect } from "@gcds-core/components-react";
 
 interface SelectProps {
 	children: React.ReactNode;
+	errorMessage?: string;
 	hint?: string;
 	label: string;
 	hideLabel?: boolean;
@@ -18,6 +20,7 @@ interface SelectProps {
 const Select: React.FC<SelectProps> = React.memo(
 	({
 		children,
+		errorMessage,
 		hint,
 		label,
 		hideLabel,
@@ -28,22 +31,30 @@ const Select: React.FC<SelectProps> = React.memo(
 		validateOn,
 		required,
 		value,
-	}) => (
-		<GcdsSelect
-			defaultValue={defaultValue}
-			hideLabel={hideLabel}
-			hint={hint}
-			label={label}
-			name={name}
-			required={required}
-			selectId={selectId}
-			validateOn={validateOn}
-			value={value}
-			onInput={onInput}
-		>
-			{children}
-		</GcdsSelect>
-	)
+	}) => {
+		const { i18n } = useTranslation();
+		const lang = i18n.language?.startsWith("fr") ? "fr" : "en";
+
+		return (
+			<GcdsSelect
+				defaultValue={defaultValue}
+				errorMessage={errorMessage}
+				hideLabel={hideLabel}
+				hint={hint}
+				id={selectId}
+				label={label}
+				lang={lang}
+				name={name}
+				required={required}
+				selectId={selectId}
+				validateOn={validateOn}
+				value={value}
+				onInput={onInput}
+			>
+				{children}
+			</GcdsSelect>
+		);
+	}
 );
 
 export default Select;

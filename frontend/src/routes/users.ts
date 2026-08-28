@@ -1,20 +1,18 @@
-import { createFileRoute } from "@tanstack/react-router";
-import { lazy } from "react";
+import { Outlet, createFileRoute } from "@tanstack/react-router";
 import i18n from "@/common/i18n";
 import type { RouteBackLinkContext } from "@/types/route-breadcrumbs";
-import { requireSuperuser } from "../features/auth/auth-routing";
-
-const UsersPage = lazy(async () => ({
-	default: (await import("../features/users/pages/UsersPage")).UsersPage,
-}));
+import { requireCapability } from "../features/auth/auth-routing";
 
 export const Route = createFileRoute("/users")({
 	beforeLoad: async () => {
-		await requireSuperuser("/users");
+		await requireCapability("/users", "access_administration");
 
 		return {
-			backLink: { href: "/", label: i18n.t("nav.home") },
+			backLink: {
+				href: "/administration",
+				label: i18n.t("nav.administration"),
+			},
 		} satisfies RouteBackLinkContext;
 	},
-	component: UsersPage,
+	component: Outlet,
 });

@@ -6,6 +6,7 @@ import {
 	type ReactNode,
 	type FC,
 } from "react";
+import { useTranslation } from "react-i18next";
 
 export type ToastType = "success" | "error" | "warning" | "info";
 
@@ -98,6 +99,7 @@ interface ToastProps {
 }
 
 const ToastItem: FC<ToastProps> = ({ toast, onClose }): React.ReactElement => {
+	const { t } = useTranslation();
 	const icons: Record<ToastType, string> = {
 		success: "✓",
 		error: "✕",
@@ -119,6 +121,8 @@ const ToastItem: FC<ToastProps> = ({ toast, onClose }): React.ReactElement => {
 
 	return (
 		<div
+			aria-live={toast.type === "error" ? "assertive" : "polite"}
+			role={toast.type === "error" ? "alert" : "status"}
 			style={{
 				display: "flex",
 				alignItems: "center",
@@ -139,7 +143,7 @@ const ToastItem: FC<ToastProps> = ({ toast, onClose }): React.ReactElement => {
 				{toast.message}
 			</span>
 			<button
-				aria-label="Close"
+				aria-label={t("common.close")}
 				style={{
 					background: "none",
 					border: "none",

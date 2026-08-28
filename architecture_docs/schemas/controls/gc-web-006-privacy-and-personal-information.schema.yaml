@@ -1,0 +1,159 @@
+schema_id: ARCH-SCHEMA-GC-WEB-006-PRIVACY-PERSONAL-INFORMATION
+schema_version: "0.1"
+title: GC-WEB-006 Privacy and Personal Information Schema Contract
+status: active
+schema_type: control
+
+owner_doc_id: GC-WEB-006
+owner_doc_type: control
+owner_doc_path: docs/controls/gc-web/gc-web-006-privacy-and-personal-information.md
+
+summary: >
+  Helps agents and reviewers check privacy and personal information assessment
+  evidence, including identification, collection authority, purpose, use,
+  disclosure, retention, notices, consent or notification flows, exposure risks,
+  PIA decisions, and disposition expectations.
+
+categories:
+  - security-privacy
+  - data
+  - operations
+search_keywords:
+  - privacy
+  - personal information
+  - sensitive data
+  - control assessment
+  - privacy impact assessment
+  - pia
+  - privacy notice
+  - retention
+  - disclosure
+  - disposition
+applies_when:
+  - assessing collection, use, disclosure, retention, logging, export, or deletion of personal information against GC-WEB-006
+  - changing personal information, sensitive personal information, privacy notices, consent, screenshots, fixtures, logs, URLs, test data, exports, or retention behavior
+  - recording privacy evidence, PIA decisions, deferred controls, exceptions, or baseline assessment notes
+do_not_use_when:
+  - the work does not collect, use, disclose, retain, log, export, delete, display, or test with personal information
+  - a deeper project privacy review already records equivalent control evidence
+
+work_contexts:
+  - local_developer
+  - shared_non_production
+  - production
+stack_profiles:
+  - react
+  - fastapi
+  - postgres
+  - logging
+artifact_types:
+  - control_assessment
+  - sensitive_data_record
+  - privacy_review
+  - privacy_notice
+  - retention_note
+  - baseline_assessment
+  - verification_note
+  - adr
+
+related_standards:
+  - STD-013
+  - STD-017
+  - STD-019
+  - STD-020
+related_patterns:
+  - PAT-003
+  - PAT-006
+  - PAT-008
+  - PAT-012
+  - PAT-020
+  - PAT-023
+related_controls:
+  - GC-WEB-006
+  - GC-WEB-009
+related_baselines:
+  - BAS-001
+
+required_inputs:
+  - id: privacy_assessment_scope
+    description: Personal information, sensitive personal information, collection, use, disclosure, retention, logging, export, deletion, and test-data behavior assessed.
+    required: true
+    source: sensitive data handling record, privacy review, baseline assessment, implementation plan, or PR
+  - id: privacy_evidence
+    description: Privacy review note, PIA decision, privacy notice review, retention note, data handling record, and exposure review.
+    required: true
+    source: privacy review, PIA referral, verification note, baseline assessment, or ADR
+
+checks:
+  - id: personal-information-identified
+    description: Personal information and sensitive personal information are identified before collection, use, disclosure, retention, logging, export, or deletion.
+    required: true
+    check_type: human_review
+    evidence:
+      - Sensitive data handling record, privacy review, data map, baseline assessment, or verification note.
+    failure_means: Personal information may be collected or handled without visible privacy controls.
+    adr_required_when: The project proceeds with unknown personal information classification or handling.
+    waiver_allowed: false
+
+  - id: collection-purpose-retention-reviewed
+    description: Collection authority, service purpose, use, disclosure, retention, disposition, and privacy path are reviewed when needed.
+    required: true
+    check_type: human_review
+    evidence:
+      - Privacy review note, PIA decision or referral, retention note, ADR, or baseline assessment.
+    failure_means: Privacy authority, purpose, or lifecycle expectations may be unclear.
+    adr_required_when: Collection authority, privacy path, retention, or disposition is unclear but work proceeds.
+    waiver_allowed: false
+
+  - id: minimum-collection-and-notices
+    description: The service collects only needed personal information and provides required privacy notices, consent, or notification flows.
+    required: true
+    check_type: content_review
+    evidence:
+      - Form review, privacy notice review, content review, screenshots, or verification note.
+    failure_means: The service may over-collect data or fail to inform users appropriately.
+    adr_required_when: A privacy notice, consent, or notification flow is intentionally deferred.
+    waiver_allowed: true
+
+  - id: exposure-paths-reviewed
+    description: Personal information is not exposed in URLs, client errors, logs, analytics, screenshots, fixtures, or test data.
+    required: true
+    check_type: evidence_required
+    evidence:
+      - Code review, log review, screenshot review, test data review, fixture review, analytics review, or verification note.
+    failure_means: Personal information may leak through operational, testing, or user-facing artifacts.
+    adr_required_when: The project intentionally uses production data in local or test environments or exposes sensitive-adjacent values.
+    waiver_allowed: false
+
+  - id: pia-and-residual-risk-visible
+    description: PIA or privacy protocol decision, remaining privacy risk, and review trigger are visible when applicable.
+    required: true
+    check_type: evidence_required
+    evidence:
+      - PIA decision, privacy protocol note, privacy review, baseline assessment, ADR, or project-local waiver when a gate requires it.
+    failure_means: Privacy review path and residual risk may be hidden.
+    adr_required_when: Material privacy risk is accepted, deferred, or treated as not applicable.
+    waiver_allowed: true
+
+outputs:
+  - id: privacy_control_assessment_summary
+    description: Assessment result showing personal information identification, privacy path, minimum collection, exposure review, retention, PIA decision, and residual risk.
+
+evidence_expectations:
+  - Sensitive data handling records are present when personal information is in scope.
+  - Privacy notice, retention, and PIA decision evidence is visible when needed.
+  - Exposure paths across URLs, logs, errors, screenshots, fixtures, analytics, and test data are reviewed.
+
+adr_triggers:
+  - Project treats GC-WEB-006 as not applicable while personal information is in scope.
+  - Project uses production data in local or test environments.
+  - Collection authority, purpose, retention, disposition, PIA path, or privacy notice is unclear.
+  - Project accepts material residual privacy risk.
+
+waiver_guidance:
+  - Delivery waivers for deferred privacy review, PIA decisions, or control evidence belong in the project-local Delorean evidence process.
+  - Waivers must not hide personal information, collection authority, retention, or exposure risk.
+  - This schema contract does not define runtime waiver records.
+
+notes:
+  - This schema contract supports GC-WEB-006. GC-WEB-006 remains the source of truth.

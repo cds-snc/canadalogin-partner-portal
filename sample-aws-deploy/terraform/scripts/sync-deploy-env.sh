@@ -73,7 +73,7 @@ cloudwatch_log_group_worker          = "$(extract cloudwatch_log_group_worker)"
 db_password_secret_arn               = "$(extract db_password_secret_arn)"
 oidc_client_secret_arn               = "$(extract oidc_client_secret_arn)"
 ibm_sv_admin_client_secret_arn       = "$(extract ibm_sv_admin_client_secret_arn)"
-session_secret_arn                   = "$(extract session_secret_arn)"
+secret_key_arn                       = "$(extract secret_key_arn)"
 redis_password_secret_arn            = "$(extract redis_password_secret_arn)"
 
 # ----- Redis TLS (must match infra/elasticache.tf transit_encryption_enabled) -----

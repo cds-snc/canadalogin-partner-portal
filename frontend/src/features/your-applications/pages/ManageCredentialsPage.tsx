@@ -16,13 +16,14 @@ import {
 } from "@/components/ui";
 import { HttpRequestError } from "@/fetch/errors";
 import {
-	createCurrentUserRPApplicationRotatedClientSecret,
-	deleteCurrentUserRPApplicationRotatedClientSecret,
-	getCurrentUserRPOAuthSetup,
-	getCurrentUserRPApplicationClientCredentials,
-	getCurrentUserRPApplicationRotatedClientSecrets,
-	rotateCurrentUserRPApplicationClientSecret,
-	type CurrentUserRPOAuthSetupRead,
+	createAccessibleRPApplicationRotatedClientSecret,
+	deleteAccessibleRPApplicationRotatedClientSecret,
+	getAccessibleRPApplicationClientCredentials,
+	getAccessibleRPApplicationRotatedClientSecrets,
+	getAccessibleRPApplicationSecretChangeLog,
+	getApplicationRPConfiguration,
+	rotateAccessibleRPApplicationClientSecret,
+	type ApplicationRPConfigurationSummaryRead,
 	type RPApplicationClientCredentialsRead,
 	type RPApplicationRotatedSecretRead,
 } from "@/fetch/rp-applications";
@@ -37,17 +38,9 @@ type RotatedSecretCheckboxOption = {
 	value: string;
 };
 
-const getRotatedSecretDeleteValue = (
+const getRotatedSecretId = (
 	secret: RPApplicationRotatedSecretRead
 ): string | null => {
-	if (typeof secret.value === "string" && secret.value.length > 0) {
-		return secret.value;
-	}
-
-	if (typeof secret.path === "string" && secret.path.length > 0) {
-		return secret.path;
-	}
-
 	if (typeof secret.secretId === "string" && secret.secretId.length > 0) {
 		return secret.secretId;
 	}
@@ -57,6 +50,15 @@ const getRotatedSecretDeleteValue = (
 
 const getDefaultRotationExpiryEpochSeconds = (): number =>
 	Math.floor(Date.now() / 1000) + ROTATION_EXPIRY_DAYS * 24 * 60 * 60;
+
+const downloadBlob = (blob: Blob, filename: string): void => {
+	const url = URL.createObjectURL(blob);
+	const anchor = document.createElement("a");
+	anchor.download = filename;
+	anchor.href = url;
+	anchor.click();
+	URL.revokeObjectURL(url);
+};
 
 const formatEpochForDisplay = (
 	epochSeconds: number | null | undefined,
@@ -77,20 +79,24 @@ const formatEpochForDisplay = (
 };
 
 export const ManageCredentialsPage = (): FunctionComponent => {
-	const { rpApplicationUuid } = useParams({
-		from: "/your-applications/$rpApplicationUuid/manage-credentials",
-	});
+	const params = useParams({ strict: false });
+	const applicationInformationUuid = params["applicationInformationUuid"] ?? "";
+	const rpApplicationUuid =
+		params["rpConfigurationUuid"] || params["rpApplicationUuid"] || "";
+	const workspaceUuid = params["workspaceUuid"] ?? "";
 	const { i18n, t } = useTranslation();
 	const toast = useToast();
 
-	const [oauthSetup, setOauthSetup] =
-		useState<CurrentUserRPOAuthSetupRead | null>(null);
+	const [application, setApplication] =
+		useState<ApplicationRPConfigurationSummaryRead | null>(null);
 	const [credentials, setCredentials] =
 		useState<RPApplicationClientCredentialsRead | null>(null);
 	const [rotatedSecrets, setRotatedSecrets] = useState<
 		Array<RPApplicationRotatedSecretRead>
 	>([]);
 	const [isLoading, setIsLoading] = useState(true);
+	const [loadError, setLoadError] = useState<Error | null>(null);
+	const [operationError, setOperationError] = useState<string | null>(null);
 	const [isSecretVisible, setIsSecretVisible] = useState(false);
 	const [rotationName, setRotationName] = useState("");
 	const [rotationError, setRotationError] = useState<string | null>(null);
@@ -100,6 +106,9 @@ export const ManageCredentialsPage = (): FunctionComponent => {
 	const [isRegenerating, setIsRegenerating] = useState(false);
 	const [isCreatingRotation, setIsCreatingRotation] = useState(false);
 	const [isDeletingRotatedSecret, setIsDeletingRotatedSecret] = useState(false);
+	const [isDownloadingSecretChangeLog, setIsDownloadingSecretChangeLog] =
+		useState(false);
+	const [secretChangeLogError, setSecretChangeLogError] = useState(false);
 	const [selectedSecretId, setSelectedSecretId] = useState<string | null>(null);
 	const [deleteSecretId, setDeleteSecretId] = useState<string | null>(null);
 	const lang = i18n.resolvedLanguage?.startsWith("fr") ? "fr" : "en";
@@ -109,20 +118,34 @@ export const ManageCredentialsPage = (): FunctionComponent => {
 
 		const loadClientData = async (): Promise<void> => {
 			try {
-				const [
-					oauthSetupResponse,
-					credentialsResponse,
-					rotatedSecretsResponse,
-				] = await Promise.all([
-					getCurrentUserRPOAuthSetup(rpApplicationUuid),
-					getCurrentUserRPApplicationClientCredentials(rpApplicationUuid),
-					getCurrentUserRPApplicationRotatedClientSecrets(rpApplicationUuid),
-				]);
+				const applicationResponse = await getApplicationRPConfiguration(
+					workspaceUuid,
+					applicationInformationUuid,
+					rpApplicationUuid
+				);
+				if (!isMounted) {
+					return;
+				}
+				setApplication(applicationResponse);
+
+				const [credentialsResponse, rotatedSecretsResponse] = await Promise.all(
+					[
+						getAccessibleRPApplicationClientCredentials(
+							rpApplicationUuid,
+							workspaceUuid,
+							applicationInformationUuid
+						),
+						getAccessibleRPApplicationRotatedClientSecrets(
+							rpApplicationUuid,
+							workspaceUuid,
+							applicationInformationUuid
+						),
+					]
+				);
 				if (!isMounted) {
 					return;
 				}
 
-				setOauthSetup(oauthSetupResponse);
 				setCredentials(credentialsResponse);
 				setRotatedSecrets(rotatedSecretsResponse);
 				setIsLoading(false);
@@ -140,7 +163,8 @@ export const ManageCredentialsPage = (): FunctionComponent => {
 					return;
 				}
 
-				globalThis.location.replace("/error?kind=unexpected");
+				setLoadError(error as Error);
+				setIsLoading(false);
 			}
 		};
 
@@ -149,7 +173,7 @@ export const ManageCredentialsPage = (): FunctionComponent => {
 		return () => {
 			isMounted = false;
 		};
-	}, [rpApplicationUuid]);
+	}, [applicationInformationUuid, rpApplicationUuid, workspaceUuid]);
 
 	const rotatedSecretCheckboxOptions = useMemo<
 		Array<RotatedSecretCheckboxOption>
@@ -157,8 +181,8 @@ export const ManageCredentialsPage = (): FunctionComponent => {
 		() =>
 			rotatedSecrets
 				.map((secret) => {
-					const deleteValue = getRotatedSecretDeleteValue(secret);
-					if (!deleteValue) {
+					const secretId = getRotatedSecretId(secret);
+					if (!secretId) {
 						return null;
 					}
 
@@ -168,9 +192,9 @@ export const ManageCredentialsPage = (): FunctionComponent => {
 							lang,
 							t("common.notAvailable")
 						)}`,
-						id: deleteValue,
+						id: secretId,
 						label: secret.description?.trim() || t("common.notAvailable"),
-						value: deleteValue,
+						value: secretId,
 					};
 				})
 				.filter(
@@ -193,15 +217,20 @@ export const ManageCredentialsPage = (): FunctionComponent => {
 
 	const handleRegenerateSecret = async (): Promise<void> => {
 		setIsRegenerating(true);
+		setOperationError(null);
 		try {
-			const nextCredentials =
-				await rotateCurrentUserRPApplicationClientSecret(rpApplicationUuid);
+			const nextCredentials = await rotateAccessibleRPApplicationClientSecret(
+				rpApplicationUuid,
+				undefined,
+				workspaceUuid,
+				applicationInformationUuid
+			);
 			setCredentials(nextCredentials);
 			setIsSecretVisible(true);
 			toast.success(t("manageCredentials.applicationRotateSecretSuccess"));
 			setIsRegenerateConfirmOpen(false);
 		} catch {
-			globalThis.location.replace("/error?kind=unexpected");
+			setOperationError(t("manageCredentials.applicationClientOperationError"));
 		} finally {
 			setIsRegenerating(false);
 		}
@@ -210,25 +239,31 @@ export const ManageCredentialsPage = (): FunctionComponent => {
 	const handleCreateRotation = async (): Promise<void> => {
 		const normalizedName = rotationName.trim();
 		setIsCreatingRotation(true);
+		setOperationError(null);
 		try {
 			const expiresAt = getDefaultRotationExpiryEpochSeconds();
 			const nextRotatedSecrets =
-				await createCurrentUserRPApplicationRotatedClientSecret(
+				await createAccessibleRPApplicationRotatedClientSecret(
 					rpApplicationUuid,
 					{
 						description: normalizedName,
 						rotatedSecretExpiredAt: expiresAt,
-					}
+					},
+					workspaceUuid,
+					applicationInformationUuid
 				);
-			const nextCredentials =
-				await getCurrentUserRPApplicationClientCredentials(rpApplicationUuid);
+			const nextCredentials = await getAccessibleRPApplicationClientCredentials(
+				rpApplicationUuid,
+				workspaceUuid,
+				applicationInformationUuid
+			);
 			setRotatedSecrets(nextRotatedSecrets);
 			setCredentials(nextCredentials);
 			setIsSecretVisible(false);
 			setRotationName("");
 			toast.success(t("manageCredentials.applicationRotateSecretSuccess"));
 		} catch {
-			globalThis.location.replace("/error?kind=unexpected");
+			setOperationError(t("manageCredentials.applicationClientOperationError"));
 		} finally {
 			setIsCreatingRotation(false);
 			setIsCreateRotationConfirmOpen(false);
@@ -253,31 +288,47 @@ export const ManageCredentialsPage = (): FunctionComponent => {
 			return;
 		}
 
-		const deleteValue =
-			rotatedSecrets
-				.map((secret) => getRotatedSecretDeleteValue(secret))
-				.find((value) => value === deleteSecretId) ?? deleteSecretId;
-
 		setIsDeletingRotatedSecret(true);
+		setOperationError(null);
 		try {
-			await deleteCurrentUserRPApplicationRotatedClientSecret(
+			await deleteAccessibleRPApplicationRotatedClientSecret(
 				rpApplicationUuid,
-				deleteValue
+				deleteSecretId,
+				workspaceUuid,
+				applicationInformationUuid
 			);
 			setRotatedSecrets((current) =>
 				current.filter(
-					(secret) => getRotatedSecretDeleteValue(secret) !== deleteValue
+					(secret) => getRotatedSecretId(secret) !== deleteSecretId
 				)
 			);
 			setSelectedSecretId((current) =>
-				current === deleteValue ? null : current
+				current === deleteSecretId ? null : current
 			);
 			toast.success(t("manageCredentials.applicationClientDeletedSuccess"));
 		} catch {
-			globalThis.location.replace("/error?kind=unexpected");
+			setOperationError(t("manageCredentials.applicationClientOperationError"));
 		} finally {
 			setDeleteSecretId(null);
 			setIsDeletingRotatedSecret(false);
+		}
+	};
+
+	const handleDownloadSecretChangeLog = async (): Promise<void> => {
+		setIsDownloadingSecretChangeLog(true);
+		setSecretChangeLogError(false);
+		try {
+			const log = await getAccessibleRPApplicationSecretChangeLog(
+				rpApplicationUuid,
+				workspaceUuid,
+				applicationInformationUuid
+			);
+			downloadBlob(log, `secret-change-log-${rpApplicationUuid}.csv`);
+			toast.success(t("manageCredentials.secretChangeLogDownloadSuccess"));
+		} catch {
+			setSecretChangeLogError(true);
+		} finally {
+			setIsDownloadingSecretChangeLog(false);
 		}
 	};
 
@@ -296,17 +347,53 @@ export const ManageCredentialsPage = (): FunctionComponent => {
 		);
 	}
 
-	if (!oauthSetup || !credentials) {
+	const applicationName = application
+		? application.configurationName?.trim() ||
+			(lang === "fr" ? application.serviceNameFr : application.serviceNameEn)
+		: t("manageCredentials.clientCredentials");
+	const parentPath = `/workspaces/${workspaceUuid}/applications/${applicationInformationUuid}/rp-configurations/${rpApplicationUuid}`;
+
+	if (loadError) {
+		return (
+			<Grid columns="1fr" tag="div">
+				<Heading tag="h1">{applicationName}</Heading>
+				<Notice
+					noticeRole="danger"
+					noticeTitle={t("manageCredentials.applicationClientUnavailableTitle")}
+					noticeTitleTag="h2"
+				>
+					<Text>{t("manageCredentials.applicationClientUnavailableBody")}</Text>
+				</Notice>
+				<Button href={parentPath} type="link">
+					{t("manageCredentials.applicationClientBackAction")}
+				</Button>
+			</Grid>
+		);
+	}
+
+	if (!application || !credentials) {
 		return null;
 	}
 
 	return (
 		<Grid columns="1fr" tag="div">
 			<Heading marginBottom="0" tag="h1">
-				{oauthSetup.rpApplicationName}
+				{applicationName}
 			</Heading>
 
 			<Text>{t("manageCredentials.applicationClientHelp")}</Text>
+
+			{operationError ? (
+				<Notice
+					noticeRole="danger"
+					noticeTitleTag="h2"
+					noticeTitle={t(
+						"manageCredentials.applicationClientOperationErrorTitle"
+					)}
+				>
+					<Text>{operationError}</Text>
+				</Notice>
+			) : null}
 
 			<Container id="rp-application-client-credentials" tag="section">
 				<Heading marginTop="0" tag="h2">
@@ -436,6 +523,34 @@ export const ManageCredentialsPage = (): FunctionComponent => {
 						</Button>
 					</div>
 				</form>
+			</Container>
+
+			<Container id="rp-application-secret-change-log" tag="section">
+				<Heading marginTop="0" tag="h2">
+					{t("manageCredentials.secretChangeLogTitle")}
+				</Heading>
+				<Text>{t("manageCredentials.secretChangeLogBody")}</Text>
+				{secretChangeLogError ? (
+					<Notice
+						noticeRole="danger"
+						noticeTitle={t("manageCredentials.secretChangeLogErrorTitle")}
+						noticeTitleTag="h3"
+					>
+						<Text>{t("manageCredentials.secretChangeLogErrorBody")}</Text>
+					</Notice>
+				) : null}
+				<Button
+					buttonRole="secondary"
+					disabled={isDownloadingSecretChangeLog}
+					type="button"
+					onGcdsClick={() => {
+						void handleDownloadSecretChangeLog();
+					}}
+				>
+					{isDownloadingSecretChangeLog
+						? t("manageCredentials.secretChangeLogDownloadingAction")
+						: t("manageCredentials.secretChangeLogDownloadAction")}
+				</Button>
 			</Container>
 
 			{rotatedSecretCheckboxOptions.length > 0 ? (

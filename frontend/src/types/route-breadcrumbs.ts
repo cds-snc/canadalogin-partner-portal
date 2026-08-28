@@ -5,4 +5,5 @@ export type RouteBackLink = {
 
 export type RouteBackLinkContext = {
 	backLink: RouteBackLink;
+	breadcrumbLabel?: string;
 };

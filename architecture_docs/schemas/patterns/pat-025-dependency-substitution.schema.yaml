@@ -1,0 +1,164 @@
+schema_id: ARCH-SCHEMA-PAT-025-DEPENDENCY-SUBSTITUTION
+schema_version: "0.1"
+title: Dependency Substitution Schema Contract
+status: active
+schema_type: pattern
+
+owner_doc_id: PAT-025
+owner_doc_type: pattern
+owner_doc_path: docs/patterns/full-stack/pat-025-dependency-substitution.md
+
+summary: >
+  Helps agents and reviewers select real, local, substituted, or unavailable
+  dependency modes from availability and authorized access while preserving the
+  target application contract, explicit configuration, fail-safe production
+  behavior, and visible real-integration gaps.
+
+categories:
+  - full-stack
+  - architecture
+  - operations
+  - testing
+  - security
+search_keywords:
+  - dependency substitution
+  - dependency availability
+  - authorized access
+  - stub
+  - fake
+  - mock
+  - simulator
+  - adapter
+  - explicit configuration
+  - contract test
+  - production fallback
+applies_when:
+  - a target dependency is unavailable or access is not authorized in the declared work context
+  - local or shared non-production work needs a safe substitute for an external or runtime capability
+  - real and substituted implementations need a stable application-owned boundary and common verification
+do_not_use_when:
+  - the target dependency or application-facing contract is unknown
+  - the requested outcome specifically requires real integration, provider, infrastructure, assurance, performance, or operational behavior
+  - a substitute would bypass required security, privacy, audit, retention, transaction, or business behavior
+
+work_contexts:
+  - local_developer
+  - shared_non_production
+  - production
+stack_profiles: []
+artifact_types:
+  - implementation_plan
+  - dependency_adapter
+  - configuration
+  - contract_test
+  - integration_test
+  - verification_note
+  - adr
+
+related_standards:
+  - STD-002
+  - STD-012
+  - STD-013
+  - STD-014
+related_patterns:
+  - PAT-007
+  - PAT-009
+  - PAT-011
+  - PAT-018
+  - PAT-024
+  - PAT-026
+related_controls: []
+related_baselines: []
+
+required_inputs:
+  - id: target_dependency_contract
+    description: Target dependency and the application-owned request, response, event, session, policy, and important failure semantics that apply.
+    required: true
+    source: project architecture, API or provider contract, implementation plan, or selected standard and pattern
+  - id: dependency_availability_and_access
+    description: Whether the target is available and access is authorized in the declared work context.
+    required: true
+    source: work context declaration, environment inventory, access owner, or implementation plan
+  - id: selected_dependency_mode
+    description: Explicit real, local service, stub, fake, simulator, other substitute, or unavailable mode and its configuration boundary.
+    required: true
+    source: configuration, composition root, dependency provider, implementation plan, or verification note
+
+checks:
+  - id: target-contract-preserved
+    description: Real and substituted implementations use the same application-owned boundary and preserve canonical contracts and important success and failure semantics.
+    required: true
+    check_type: human_review
+    evidence:
+      - Interface, protocol, client, repository, session, provider, adapter, contract tests, or implementation review.
+    failure_means: Local or substituted behavior may implement a different architecture or hide integration drift.
+    adr_required_when: The project intentionally exposes materially different application contracts or business semantics for different dependency modes.
+    waiver_allowed: false
+
+  - id: dependency-mode-explicit
+    description: Dependency mode is selected through explicit configuration or composition rather than environment checks spread through domain or UI behavior.
+    required: true
+    check_type: file_review
+    evidence:
+      - Settings, dependency injection, composition root, provider wiring, startup validation, or configuration tests.
+    failure_means: Runtime behavior may vary implicitly by environment or activate an unintended implementation.
+    adr_required_when: A project intentionally selects dependency behavior through a different reviewed composition model.
+    waiver_allowed: false
+
+  - id: substitute-preserves-application-invariants
+    description: A substitute preserves application-owned authorization, validation, audit, retention, transaction, and business rules that apply to the capability.
+    required: true
+    applies_when:
+      - selected_dependency_mode is a stub, fake, mock, simulator, local service, or other substitute
+    check_type: human_review
+    evidence:
+      - Contract tests, authorization tests, validation tests, audit tests, business-rule tests, or adaptation note.
+    failure_means: The substitute may bypass behavior the real integration is expected to protect.
+    adr_required_when: A substitute intentionally cannot preserve a required invariant and the project accepts the resulting architecture risk.
+    waiver_allowed: false
+
+  - id: production-and-shared-use-fail-safe
+    description: Shared-environment substitution is explicit and visible, while production rejects development or test substitutes and never silently falls back when real configuration or connectivity fails.
+    required: true
+    applies_when:
+      - a substitute, alternate implementation, or degraded mode is configured or available for selection
+    check_type: evidence_required
+    evidence:
+      - Mode-selection tests, startup validation, production configuration test, failure-path test, or reviewed degraded-mode ADR.
+    failure_means: A substitute may activate unintentionally or conceal a real dependency outage.
+    adr_required_when: Production intentionally supports an alternate implementation or degraded mode.
+    waiver_allowed: false
+
+  - id: real-integration-gaps-recorded
+    description: Verification identifies the selected mode, behavior proved by the substitute, known differences, skipped real-integration checks, and the context required to close each gap.
+    required: true
+    check_type: evidence_required
+    evidence:
+      - Dependency substitution record, contract-test output, integration-test result, skipped-check reasons, and remaining-risk summary.
+    failure_means: Substitute coverage may be mistaken for real integration or operational evidence.
+    adr_required_when: A project accepts a durable gap in required real-integration verification.
+    waiver_allowed: true
+
+outputs:
+  - id: dependency_substitution_review_summary
+    description: Review result showing target contract, availability, authorized access, selected mode, configuration boundary, preserved behavior, and remaining verification.
+
+evidence_expectations:
+  - Each affected dependency has one explicit selected mode and reason.
+  - Contract and mode-selection tests distinguish substitute behavior from real-integration behavior.
+  - Verification records remaining provider, infrastructure, assurance, performance, and operational gaps.
+
+adr_triggers:
+  - A project intentionally uses materially different application contracts or business rules for real and substituted implementations.
+  - A substitute weakens a required security, privacy, audit, retention, transaction, or authorization boundary.
+  - Production intentionally permits an alternate implementation, substitute, or degraded mode.
+  - Required real-integration verification is durably omitted.
+
+waiver_guidance:
+  - A project-local waiver may cover a specific deferred real-integration check when substitute coverage and remaining risk are explicit.
+  - Waivers must not permit silent production fallback or bypass required application-owned invariants.
+
+notes:
+  - Local development commonly uses more substitutes, but work context alone does not select dependency mode.
+  - PAT-018 remains an intentionally local-only specialization for fixture identities and roles.
+  - This schema contract supports PAT-025. PAT-025 remains the source of truth.

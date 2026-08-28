@@ -5,15 +5,19 @@ from redis.asyncio import ConnectionPool, Redis
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from ...core.logger import logging
-from ...schemas.rate_limit import sanitize_path
+from ...core.logging_privacy import hash_log_value
 
 logger = logging.getLogger(__name__)
 
 
+def sanitize_path(path: str) -> str:
+    return path.strip("/").replace("/", "_")
+
+
 class RateLimiter:
     _instance: Optional["RateLimiter"] = None
-    pool: Optional[ConnectionPool] = None
-    client: Optional[Redis] = None
+    pool: ConnectionPool | None = None
+    client: Redis | None = None
 
     def __new__(cls) -> "RateLimiter":
         if cls._instance is None:
@@ -35,13 +39,21 @@ class RateLimiter:
             raise Exception("Redis client is not initialized.")
         return instance.client
 
-    async def is_rate_limited(self, db: AsyncSession, user_id: int, path: str, limit: int, period: int) -> bool:
+    async def is_rate_limited(
+        self,
+        db: AsyncSession,
+        user_id: int | str,
+        path: str,
+        limit: int,
+        period: int,
+    ) -> bool:
         client = self.get_client()
         current_timestamp = int(datetime.now(UTC).timestamp())
         window_start = current_timestamp - (current_timestamp % period)
 
         sanitized_path = sanitize_path(path)
-        key = f"ratelimit:{user_id}:{sanitized_path}:{window_start}"
+        actor_id = hash_log_value(user_id)
+        key = f"ratelimit:{actor_id}:{sanitized_path}:{window_start}"
 
         try:
             current_count = await client.incr(key)
@@ -51,9 +63,13 @@ class RateLimiter:
             if current_count > limit:
                 return True
 
-        except Exception as e:
-            logger.exception(f"Error checking rate limit for user {user_id} on path {path}: {e}")
-            raise e
+        except Exception:
+            logger.exception(
+                "Error checking rate limit for actor %s on path %s",
+                actor_id,
+                sanitized_path,
+            )
+            raise
 
         return False
 
