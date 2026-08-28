@@ -3,7 +3,7 @@
 ## Document Status
 
 - Status: Scope-aligned draft
-- Last reviewed: 2026-08-25
+- Last reviewed: 2026-08-28
 - Purpose: High-level infrastructure handoff for the approved Partner Portal
   scope; it is not a production deployment approval
 - Requirement sources: explicit approved decisions recorded in the active
@@ -69,12 +69,15 @@ flowchart LR
     Worker --> PG
     API --> OIDC
     API --> IBM
+    Worker --> IBM
     Worker --> S3MAU
 ```
 
 This diagram is structure-oriented and illustrative. Account, region, VPC,
 subnet, ingress, and production resilience decisions require a separate named
-environment design and approval.
+  environment design and approval. The detailed security boundary and permitted
+  runtime flows are recorded in
+  [trust-boundaries-and-information-flows.md](../architecture/trust-boundaries-and-information-flows.md).
 
 ## 3. Required Infrastructure Components
 
@@ -127,7 +130,10 @@ selected here and is not modelled as a portal integration.
 
 - Frontend and backend endpoints are reachable over HTTPS.
 - The backend reaches PostgreSQL and Redis over private approved paths.
-- Only the API initiates OIDC and IBM Verify calls.
+- Only the backend API initiates CanadaLogin/OIDC calls.
+- The backend API and the explicitly enabled ARQ synchronization job may
+  initiate bounded IBM Security Verify calls; the worker job only synchronizes
+  approved RP metadata.
 - Only the worker path that ingests MAU data needs access to the MAU bucket.
 - Browser origins, callback URLs, cookie domains, invitation URL base, and
   partner email-domain allowlists are explicit per environment.
