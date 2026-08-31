@@ -1,4 +1,25 @@
 import { requestJson } from "@/fetch";
+import type { ApiMessageResponse } from "./api-types";
+
+export type DepartmentCreate = {
+	abbreviation?: string | null;
+	abbreviationFr?: string | null;
+	gcOrgId?: number | null;
+	leadDepartmentName?: string | null;
+	leadDepartmentNameFr?: string | null;
+	name: string;
+	nameFr?: string | null;
+};
+
+export type DepartmentUpdate = {
+	abbreviation?: string | null;
+	abbreviationFr?: string | null;
+	gcOrgId?: number | null;
+	leadDepartmentName?: string | null;
+	leadDepartmentNameFr?: string | null;
+	name?: string;
+	nameFr?: string | null;
+};
 
 export type DepartmentRead = {
 	abbreviation: string | null;
@@ -20,6 +41,14 @@ export type DepartmentsListResponse = {
 	total_count: number;
 };
 
+export const createDepartment = async (
+	payload: DepartmentCreate
+): Promise<DepartmentRead | null> =>
+	requestJson<DepartmentRead>("/api/v1/department", {
+		body: JSON.stringify(payload),
+		method: "POST",
+	});
+
 export const getDepartments = async (
 	page = 1,
 	itemsPerPage = 10
@@ -36,6 +65,28 @@ export const getDepartments = async (
 		}
 	)) as DepartmentsListResponse;
 };
+
+export const updateDepartment = async (
+	departmentUuid: string,
+	payload: DepartmentUpdate
+): Promise<ApiMessageResponse | null> =>
+	requestJson<ApiMessageResponse>(
+		`/api/v1/department/${encodeURIComponent(departmentUuid)}`,
+		{
+			body: JSON.stringify(payload),
+			method: "PATCH",
+		}
+	);
+
+export const deleteDepartment = async (
+	departmentUuid: string
+): Promise<ApiMessageResponse | null> =>
+	requestJson<ApiMessageResponse>(
+		`/api/v1/department/${encodeURIComponent(departmentUuid)}`,
+		{
+			method: "DELETE",
+		}
+	);
 
 export const getDepartment = async (
 	departmentUuid: string

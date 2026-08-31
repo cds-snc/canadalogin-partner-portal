@@ -1,5 +1,6 @@
 from unittest.mock import AsyncMock, Mock, patch
 
+import httpx
 import pytest
 from ibm_verify_community_sdk.applications.models import GetApplicationsResponse
 from ibm_verify_community_sdk.users.models import GetAccountDetailsResponse

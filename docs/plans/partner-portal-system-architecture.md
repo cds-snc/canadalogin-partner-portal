@@ -2,161 +2,113 @@
 
 ## Document Status
 
-- Status: Scope-aligned draft
-- Last reviewed: 2026-08-28
-- Purpose: High-level infrastructure handoff for the approved Partner Portal
-  scope; it is not a production deployment approval
-- Requirement sources: explicit approved decisions recorded in the active
-  [`align-partner-portal-to-approved-product-scope`](../../openspec/changes/align-partner-portal-to-approved-product-scope/)
-  change and confirmed expansions in the
-  [onboarding PRD](partner-portal-onboarding-prd.md), then the
-  [MVP PRD](partner-portal-mvp.md) as fallback
-
-The broader [historical PRD](partner-portal-prd.md) and its derived backlog are
-not architecture requirements.
+- Status: Draft
+- Date: 2026-05-28
+- Purpose: High-level infrastructure handoff for AWS setup
 
 ## 1. Infrastructure Summary
 
-The Partner Portal is a browser application with separate frontend, API, worker,
-persistence, and cache/session responsibilities:
+CanadaLogin Partner Portal requires a simple web application setup on AWS with separate frontend and backend delivery targets.
 
-- Frontend: static React build deployed to Amazon S3 and served over HTTPS.
-- Backend: FastAPI container image in Amazon ECR, run on Amazon ECS.
-- Worker: separate ARQ process for queued and scheduled work.
-- Database: PostgreSQL for portal-owned records and retained history.
-- Redis: server sessions, cache entries, runtime rate-limit counters, and ARQ
-  queue state.
-- External integrations: CanadaLogin/OIDC for authentication and bounded IBM
-  Security Verify operations for RP configuration and credentials.
-- MAU source: approved S3 data pipeline consumed by the worker and API.
+- Frontend: static site build deployed to Amazon S3
+- Backend: container image pushed to Amazon ECR and deployed to Amazon ECS
+- Database: PostgreSQL
+- Cache and session store: Redis
+- External integrations: CanadaLogin OIDC identity provider, GC Notify, IBM Security Verify
 
-The portal does not send invitation email and does not require GC Notify.
-Create and reissue operations return a one-time tokenized acceptance URL to the
-authorized administrator, who shares it through an approved external channel.
-That communication channel is an operational launch decision, not a portal
-runtime dependency.
+Note: Amazon ECR is the image registry and Amazon ECS is the container runtime target.
 
-## 2. Illustrative AWS Topology
+## 2. Target AWS Topology
 
 ```mermaid
 flowchart LR
-    User[Portal user]
+    User[End User]
     Browser[Browser]
 
     subgraph AWS[AWS]
-        S3Frontend[S3 frontend hosting]
-        S3MAU[S3 approved MAU data]
-        ECR[ECR backend image]
-        API[Amazon ECS API]
-        Worker[Amazon ECS ARQ worker]
+        S3_FE[S3 Frontend Hosting]
+        S3_MAU[S3 MAU CSV Data]
+        ECR[ECR Backend Image]
+        Compute[Amazon ECS]
         PG[(PostgreSQL)]
         Redis[(Redis)]
     end
 
-    subgraph External[External identity systems]
-        OIDC[CanadaLogin / OIDC provider]
+    subgraph External[External Services]
+        OIDC[CanadaLogin OIDC IdP]
+        Notify[GC Notify]
         IBM[IBM Security Verify]
     end
 
     User --> Browser
-    Browser --> S3Frontend
-    Browser --> API
-    API --> ECR
-    Worker --> ECR
-    API --> PG
-    API --> Redis
-    Worker --> Redis
-    Worker --> PG
-    API --> OIDC
-    API --> IBM
-    Worker --> IBM
-    Worker --> S3MAU
+    Browser --> S3_FE
+    Browser --> Compute
+    Compute --> ECR
+    Compute --> PG
+    Compute --> Redis
+    Compute --> OIDC
+    Compute --> Notify
+    Compute --> IBM
+    Compute -->|"hourly cron 7am-7pm"| S3_MAU
 ```
-
-This diagram is structure-oriented and illustrative. Account, region, VPC,
-subnet, ingress, and production resilience decisions require a separate named
-  environment design and approval. The detailed security boundary and permitted
-  runtime flows are recorded in
-  [trust-boundaries-and-information-flows.md](../architecture/trust-boundaries-and-information-flows.md).
 
 ## 3. Required Infrastructure Components
 
 ### 3.1 Frontend
 
-- Deploy the built frontend as static assets.
-- Serve it over HTTPS with the approved GC page shell and bilingual routes.
-- Route API traffic to the backend without exposing provider tokens or secret
-  values to browser storage.
-- Apply a no-referrer policy so invitation bearer URLs are not propagated.
+- Deploy the built frontend as static assets in Amazon S3.
+- Serve the frontend over HTTPS.
+- The frontend needs to call the backend API endpoint.
 
-### 3.2 Backend API
+### 3.2 Backend
 
-- Build and publish the reviewed backend image to an approved registry.
-- Run the FastAPI application as a managed container service.
-- Provide outbound access to PostgreSQL, Redis, CanadaLogin/OIDC, IBM Security
-  Verify, and the approved MAU data path only where required.
-- Keep authentication, exact verified-email invitation matching, configured
-  partner-domain admission, role and workspace authorization, and provider
-  access in the backend boundary.
+- Build the backend as a container image.
+- Push the image to Amazon ECR.
+- Deploy the container from ECR into Amazon ECS.
+- The backend must have outbound access to PostgreSQL, Redis, CanadaLogin OIDC, GC Notify, and IBM Security Verify.
 
-### 3.3 Worker
+### 3.3 Data Services
 
-- Run ARQ independently from the web process.
-- Use Redis for queue state and approved S3 data for MAU ingestion.
-- Do not add notification-delivery work for invitations.
+- PostgreSQL for application data.
+- Redis for backend runtime state.
 
-### 3.4 Data Services
-
-- PostgreSQL stores users, immutable role references, assignments, workspaces,
-  Applications, contacts, RP configurations, invitation hashes/history,
-  checklist/CATS records when their mechanism is approved, registration
-  completion metadata, Production-review records, and required audit history.
-- Redis stores server sessions, caches, rate-limit counters, and ARQ queue
-  state. Product tier/rate-limit catalog administration is not part of this
-  scope; runtime rate limiting remains infrastructure.
+Redis is used by the application for multiple purposes, but the infrastructure requirement is simply that a Redis service is available to the backend.
 
 ## 4. External Integrations
 
-| Integration              | Portal use                                                 | Boundary                                                          |
-| ------------------------ | ---------------------------------------------------------- | ----------------------------------------------------------------- |
-| CanadaLogin/OIDC         | Authenticate users and return verified identity claims     | Backend session only; the browser does not retain provider tokens |
-| IBM Security Verify      | Bounded RP configuration, credential, and usage operations | Not a generic Verify administration console                       |
-| Approved MAU S3 pipeline | Source scoped RP-configuration usage data                  | Retained MAU only; no cross-partner aggregate report family       |
+- CanadaLogin OIDC IdP: user authentication
+- GC Notify: email notifications for invitation flow
+- IBM Security Verify: RP application and client management
 
-The manual channel used by an administrator to share an invitation link is not
-selected here and is not modelled as a portal integration.
+These are external dependencies and are not hosted inside AWS as part of this application stack.
 
-## 5. Environment And Network Requirements
+## 5. Environment and Network Requirements
 
-- Frontend and backend endpoints are reachable over HTTPS.
-- The backend reaches PostgreSQL and Redis over private approved paths.
-- Only the backend API initiates CanadaLogin/OIDC calls.
-- The backend API and the explicitly enabled ARQ synchronization job may
-  initiate bounded IBM Security Verify calls; the worker job only synchronizes
-  approved RP metadata.
-- Only the worker path that ingests MAU data needs access to the MAU bucket.
-- Browser origins, callback URLs, cookie domains, invitation URL base, and
-  partner email-domain allowlists are explicit per environment.
-- Local development uses fake identities and data. Shared non-production and
-  production need named targets, real secret sources, rollback, monitoring,
-  privacy/security review, and human release approval.
+- Frontend must be reachable by end users over HTTPS.
+- Backend API must be reachable by the frontend over HTTPS.
+- Backend must be able to establish outbound connections to:
+  - PostgreSQL
+  - Redis
+  - CanadaLogin OIDC endpoints
+  - GC Notify API
+  - IBM Security Verify API
 
 ## 6. Minimal Deployment Checklist
 
-- Static frontend hosting and HTTPS delivery.
-- ECR repository and separate ECS API/worker task definitions.
-- PostgreSQL and Redis with backup, recovery, and access controls.
-- DNS, TLS, CORS, secure-cookie, and OIDC callback configuration.
-- IBM Verify bounded-adapter credentials and allowlisted endpoints.
-- Approved MAU bucket access for the worker.
-- Explicit `PARTNER_ACCESS_ALLOWED_EMAIL_DOMAINS` and
-  `RP_APPLICATION_INVITE_URL_BASE` values.
-- Database migration and rollback plan that preserves historical lifecycle,
-  internal-review, and audit records until retention/disposition is approved.
-- Logs and monitoring that exclude secret values, invitation tokens, and
-  unnecessary personal information.
+- S3 bucket for frontend deployment
+- ECR repository for backend image
+- ECS service or task for backend runtime
+- PostgreSQL instance
+- Redis instance
+- DNS and TLS for frontend and backend endpoints
+- Runtime configuration for external services:
+  - CanadaLogin OIDC
+  - GC Notify
+  - IBM Security Verify
 
-## 7. Configuration Guidance
+## 7. Recommendations From Env Samples
+
+Based on `backend/.env.sample` and `frontend/.env.sample`, the infrastructure team should plan configuration in these groups.
 
 ### 7.1 Store As Secrets
 
@@ -164,88 +116,70 @@ selected here and is not modelled as a portal integration.
 - `SECRET_KEY`
 - `OIDC_CLIENT_SECRET`
 - `IBM_SV_ADMIN_CLIENT_SECRET`
-- Redis passwords when Redis authentication is enabled
-- approved AWS workload credentials or role configuration for MAU access
+- `GC_NOTIFY_API_KEY`
+- `REDIS_SESSION_PASSWORD` if Redis auth is enabled
 
-Use AWS Secrets Manager or an equivalent approved secret store. Do not hardcode
-secrets in task definitions, images, documentation, or frontend variables.
+These should be stored in AWS Secrets Manager or an equivalent secret store, not hardcoded in task definitions or deployment scripts.
 
 ### 7.2 Store As Runtime Configuration
 
-- PostgreSQL and Redis endpoints, database names, and non-secret identifiers.
-- Redis endpoints for session, cache, queue, and runtime rate limiting.
-- OIDC metadata, client ID, callbacks, and logout settings.
-- IBM Security Verify base URL, client ID, and bounded adapter settings.
-- `PARTNER_ACCESS_ALLOWED_EMAIL_DOMAINS` using exact domain values.
-- invitation expiry and `RP_APPLICATION_INVITE_URL_BASE`.
-- MAU S3 region, bucket, and folder identifiers.
-- frontend environment, API base URL, and post-login route.
-
-There are no GC Notify API keys or invitation template IDs in the required
-runtime contract.
+- Backend database endpoint values: `POSTGRES_SERVER`, `POSTGRES_PORT`, `POSTGRES_DB`, `POSTGRES_USER`
+- Redis endpoint values for session, cache, queue, and rate limiting
+- OIDC metadata and client ID values
+- IBM Security Verify base URL and client ID
+- GC Notify template IDs and invite expiry settings
+- Frontend variables: `VITE_APP_ENVIRONMENT`, `VITE_API_BASE_URL`, `VITE_AUTH_POST_LOGIN_PATH`
 
 ### 7.3 Production Recommendations
 
-- Set `ENVIRONMENT=production` and secure session cookies.
-- Use explicit frontend origins instead of wildcard CORS.
-- Use the deployed frontend callback and invitation URL base.
-- Use server-side secrets and workload identity for external systems.
-- Verify exact-email/domain invitation acceptance and one-time-link response
-  handling in the deployed environment without recording bearer URLs.
-- Complete target-specific security, privacy, accessibility, bilingual,
-  migration, backup, and rollback evidence before release.
+- Set `ENVIRONMENT` to `production` in deployed environments.
+- Set `SESSION_COOKIE_SECURE=true` in production so session cookies are only sent over HTTPS.
+- Replace `CORS_ORIGINS=["*"]` with the real frontend origin or origins.
+- Set `OIDC_POST_LOGIN_REDIRECT` to the real frontend auth-complete URL.
+- Set `RP_APPLICATION_INVITE_URL_BASE` to the public frontend invitation URL.
+- Set `VITE_API_BASE_URL` to the public backend API origin unless the final setup is strictly same-origin and intentionally relies on browser-origin resolution.
 
 ### 7.4 Redis Recommendation
 
-One managed Redis service may back sessions, cache, queue, and rate limiting if
-isolation, authentication, availability, and operational ownership are
-appropriate. Keep distinct logical clients/settings so a future split does not
-change application contracts.
-
-## 8. MAU Data Loading From S3
+The backend sample exposes separate Redis settings for sessions, cache, queue. Infrastructure can back these with one managed Redis service if desired.
+## 8. MAU Data Loading from S3
 
 ### 8.1 Overview
 
-Approved MAU CSV data is loaded into Redis by an ARQ job and queried only for
-an RP configuration the current role may access.
+Monthly Active User (MAU) data is stored as CSV files on S3 and loaded into Redis cache via an ARQ cron job.
 
-- Source pattern:
-  `s3://{bucket}/{folder}/date={yyyy-mm-dd}/app_login_counts.csv`
-- Expected columns:
-  `application_name,total_logins,unique_users,failed_logins,successful_logins,mtd_unique_users,date`
-- Cache key family: `mau:{application_name}` plus a loaded-date marker.
-- Schedule: current worker configuration loads the prior day's data during the
-  configured hourly window.
+- **Source**: S3 bucket at `s3://{bucket}/{folder}/date={yyyy-mm-dd}/app_login_counts.csv`
+- **CSV columns**: `application_name,total_logins,unique_users,failed_logins,successful_logins,mtd_unique_users,date`
+- **Cache**: Redis hash under key `mau:{yyyy-mm-dd}` (field=app_name, value=mau_count), no TTL
+- **Schedule**: ARQ cron job runs every hour from 7:00 to 19:00 (7am–7pm)
 
 ### 8.2 Data Flow
 
-1. The ARQ worker selects the target date.
-2. A loaded marker prevents duplicate ingestion.
-3. The worker reads the approved CSV object.
-4. Rows are cached by application name and date.
-5. Scoped API routes read only the selected accessible RP configuration.
+1. **Cron job**: ARQ worker triggers `load_mau_data` every hour between 7am and 7pm.
+2. **Target date**: Always loads yesterday's data (`date.today() - 1 day`).
+3. **Loaded check**: `EXISTS mau:loaded:{yesterday}` — if the key exists, skip loading.
+4. **S3 fetch**: If not yet loaded, download `date={yesterday}/app_login_counts.csv` from the configured S3 folder path.
+5. **Cache write**: Each CSV row is stored in `HSET mau:{application_name} {date} {full_record_json}` — keyed by app name for efficient queries by application + date range.
+6. **Loaded flag**: Set `mau:loaded:{file_date}` to prevent redundant S3 fetches on subsequent cron runs.
 
-### 8.3 Query Boundary
+### 8.3 Query Layer
 
-`MAUService.get_mau_by_application(...)` reads a date range for one
-application identifier and may load a missing date through the approved data
-adapter. Portal discovery exposes only the safe hierarchy and environment
-labels needed to reach that scoped report. Aggregate onboarding, invitation,
-secret-hygiene, executive, or cross-workspace analytics are not part of this
-architecture.
+- `MAUService.get_mau_by_application(name, start_date, end_date)` — queries a single app's MAU over a date range (default last 30 days). On cache miss, auto-loads the missing date from S3.
+- `MAUService.get_mau_by_application(application_name, start_date, end_date)` — queries one app's MAU over a date range. Auto-loads missing dates from S3 on cache miss.
 
 ### 8.4 Configuration
 
-| Variable             | Description                                       |
-| -------------------- | ------------------------------------------------- |
-| `AWS_S3_REGION`      | S3 region, currently defaulting to `ca-central-1` |
-| `S3_MAU_BUCKET_NAME` | Bucket containing approved MAU CSV files          |
-| `S3_MAU_FOLDER`      | Folder path for MAU objects                       |
+| Variable | Description |
+|---|---|
+| `AWS_ACCESS_KEY_ID` | S3 access key |
+| `AWS_SECRET_ACCESS_KEY` | S3 secret access key (store in Secrets Manager) |
+| `AWS_S3_REGION` | S3 region (default: `ca-central-1`) |
+| `S3_MAU_BUCKET_NAME` | Bucket containing MAU CSV files |
+| `S3_MAU_FOLDER` | Folder path (default: `ibm_verify/app_login_counts/`) |
 
-Prefer an ECS task role to long-lived AWS access keys.
+### 7.5 Frontend Routing Recommendation
 
-## 9. Frontend Routing Recommendation
+The frontend sample shows that post-login routing is client-side.
 
-Post-login routing remains client-side. `VITE_AUTH_POST_LOGIN_PATH` names a
-frontend route, while `VITE_API_BASE_URL` names the backend origin unless the
-deployment intentionally uses same-origin routing.
+- `VITE_AUTH_POST_LOGIN_PATH` should remain a frontend route such as `/dashboard`.
+- `VITE_API_BASE_URL` should point to the backend origin, not the frontend S3 origin.

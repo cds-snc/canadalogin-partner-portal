@@ -1,17 +1,8 @@
 import { useQuery } from "@tanstack/react-query";
 import { getUsers, type UsersListResponse } from "@/fetch/users";
 
-export const usersQueryKey = (
-	page: number,
-	itemsPerPage: number,
-	searchQuery = ""
-) =>
-	[
-		"users",
-		page,
-		itemsPerPage,
-		searchQuery.trim().toLocaleLowerCase(),
-	] as const;
+export const usersQueryKey = (page: number, itemsPerPage: number) =>
+	["users", page, itemsPerPage] as const;
 
 export type UsersState = {
 	error: Error | null;

@@ -1,7 +1,7 @@
 import uuid as uuid_pkg
 from datetime import UTC, datetime
 
-from sqlalchemy import DateTime, ForeignKey, Index, String, Text
+from sqlalchemy import DateTime, ForeignKey, String, Text
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import Mapped, mapped_column
 from uuid6 import uuid7
@@ -11,16 +11,6 @@ from ..core.db.database import Base
 
 class AuditLog(Base):
     __tablename__ = "audit_log"
-    __table_args__ = (
-        Index("ix_audit_log_created_at", "created_at"),
-        Index("ix_audit_log_target_uuid_created_at", "target_uuid", "created_at"),
-        Index(
-            "ix_audit_log_target_operation_created_at",
-            "target",
-            "operation",
-            "created_at",
-        ),
-    )
 
     id: Mapped[int] = mapped_column(autoincrement=True, primary_key=True, init=False)
     user: Mapped[str] = mapped_column(String(255))

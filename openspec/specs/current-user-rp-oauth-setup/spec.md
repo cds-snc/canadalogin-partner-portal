@@ -1,41 +1,74 @@
 # current-user-rp-oauth-setup
 
 ## Purpose
+Define the current-user OAuth setup detail API and frontend experience for RP application owners. Purpose details can be expanded as implementation evolves.
 
-Define the retirement of the workspace-agnostic IBM-backed current-user OAuth
-setup detail and its migration to the canonical Partner workspace,
-Application, and RP-configuration task hierarchy.
 ## Requirements
-### Requirement: Legacy current-user OAuth setup is retired
 
-The portal SHALL NOT use a workspace-agnostic, IBM-backed current-user OAuth
-setup detail as an Application or RP-configuration landing experience.
-`/your-applications` SHALL redirect to `/workspaces` and SHALL NOT provide a
-selection list. A saved record-specific current-user path SHALL authorize and
-resolve the retained RP record to its owning workspace and Application before
-redirecting to the canonical nested RP-configuration overview or
-Configuration.
+### Requirement: Current-user OAuth setup detail endpoint
+The system SHALL provide a current-user scoped endpoint at `/api/v1/rp-applications/mine/{rpApplicationUuid}/oauth-setup` that returns a strict DTO for OAuth setup and application context. The response MUST exclude workspace identifiers and other workspace concepts.
 
-Provider-backed Usage and credential operations MAY continue behind their
-focused, separately authorized nested routes. A provider outage SHALL NOT make
-the Application hub, RP-configuration hub, or portal-owned Configuration
-unavailable.
+#### Scenario: Authorized owner requests OAuth setup detail
+- **WHEN** an authenticated user who is an RP application owner requests `/api/v1/rp-applications/mine/{rpApplicationUuid}/oauth-setup`
+- **THEN** the API returns `200` with fields for application context (`rpApplicationName`, `status`, optional `applicationUrl`, optional `discoveryEndpoint`) and OAuth setup (`clientId`, `clientSecret`, optional `pkceEnabled`, `redirectUris`, optional `logoutUri`, `logoutRedirectUris`)
 
-#### Scenario: Current-user selection opens the canonical RP task hub
+#### Scenario: Non-owner requests OAuth setup detail
+- **WHEN** an authenticated user who does not own the RP application requests `/api/v1/rp-applications/mine/{rpApplicationUuid}/oauth-setup`
+- **THEN** the API returns `403`
 
-- **WHEN** an authorized partner follows a saved `/your-applications/$rpApplicationUuid` record link
-- **THEN** the portal resolves current workspace and Application scope and redirects to `/workspaces/$workspaceUuid/applications/$applicationUuid/rp-configurations/$rpConfigurationUuid`
-- **AND** it does not load or render the retired IBM-backed OAuth setup detail
-- **AND** new selection starts from `/workspaces`, not a current-user RP list
+### Requirement: Owner authorization and upstream retrieval ordering
+The system MUST authorize access using local synced owner data before performing IBM Verify detail retrieval.
 
-#### Scenario: Portal-owned configuration survives a provider outage
+#### Scenario: Unauthorized request short-circuits upstream calls
+- **WHEN** a non-owner requests OAuth setup detail
+- **THEN** authorization fails with `403` before the system attempts IBM Verify detail retrieval for that request
 
-- **WHEN** IBM Verify is unavailable and an authorized partner opens the Application, RP-configuration overview, or Configuration
-- **THEN** portal-owned summary, task, registration, and lifecycle data remain available
-- **AND** the outage is shown only by a focused provider-backed operation that is affected
+### Requirement: Secret presence is enforced
+The system MUST treat missing `clientSecret` as an unexpected failure for this endpoint.
 
-#### Scenario: Retired current-user root does not call provider discovery
+#### Scenario: Upstream payload omits client secret
+- **WHEN** IBM Verify detail retrieval succeeds but no client secret is present
+- **THEN** the endpoint returns an error response in the unexpected/server failure class rather than a partial success payload
 
-- **WHEN** an admitted user follows `/your-applications`
-- **THEN** the portal redirects to `/workspaces` without loading IBM Verify or an RP configuration list
-- **AND** the Workspaces destination applies current server-owned authorization
+### Requirement: Discovery endpoint is backend-sourced
+The system MUST source `discoveryEndpoint` from backend OIDC configuration and return it in the OAuth setup response when configured.
+
+#### Scenario: OIDC metadata URL is configured on backend
+- **WHEN** the authorized owner requests OAuth setup detail and backend `OIDC_SERVER_METADATA_URL` is set
+- **THEN** the response includes `discoveryEndpoint` matching the configured metadata URL
+
+### Requirement: Current-user OAuth setup page route and rendering
+The frontend SHALL provide a route at `/rp-applications/mine/$rpApplicationUuid` and render a read-only page with sections ordered as Application context first and OAuth client setup second.
+
+#### Scenario: User opens detail page from dashboard
+- **WHEN** a user clicks an RP application name in dashboard resources
+- **THEN** navigation resolves to `/rp-applications/mine/$rpApplicationUuid` and the page renders read-only setup data
+
+### Requirement: Secret display is protected in the UI
+The OAuth setup page MUST mask client secret by default and require explicit reveal to view the value.
+
+#### Scenario: User loads page before revealing secret
+- **WHEN** the OAuth setup page first renders
+- **THEN** client secret is not shown in clear text until the user chooses reveal
+
+### Requirement: OAuth setup fetch uses fresh data
+The frontend MUST request OAuth setup detail with no-store semantics to avoid stale credential/configuration data.
+
+#### Scenario: User refreshes OAuth setup page
+- **WHEN** the user reloads `/rp-applications/mine/$rpApplicationUuid`
+- **THEN** the frontend issues a fresh request and does not rely on cached setup payload
+
+### Requirement: RP OAuth setup error routing
+The frontend MUST route RP OAuth setup failures according to the agreed mapping.
+
+#### Scenario: Forbidden OAuth setup response
+- **WHEN** the OAuth setup request returns `403`
+- **THEN** the user is redirected to `/access-denied`
+
+#### Scenario: Missing RP OAuth setup resource
+- **WHEN** the OAuth setup request returns `404`
+- **THEN** the user is redirected to `/error?kind=not_found`
+
+#### Scenario: Unexpected OAuth setup failures
+- **WHEN** the OAuth setup request returns `5xx`, network failure, or any non-403/non-404 error
+- **THEN** the user is redirected to `/error?kind=unexpected`

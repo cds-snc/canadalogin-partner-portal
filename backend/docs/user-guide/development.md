@@ -533,11 +533,8 @@ class Settings(BaseSettings):
 dependencies=[Depends(rate_limiter_dependency)]
 ```
 
-2. Remove the rate-limiter startup hook and unused Redis settings only after
-   confirming no endpoint depends on them.
-
-Historical database tables are not used by the active limiter and do not need
-to change when the Redis dependency is removed.
+2. Remove rate limiting models and schemas
+3. Update database migrations to remove rate limit tables
 
 ### Disabling Authentication
 
@@ -699,6 +696,8 @@ class Category(Base):
 # 2. Import in src/app/models/__init__.py
 from .user import User
 from .post import Post
+from .tier import Tier
+from .rate_limit import RateLimit
 from .category import Category  # Add this line
 ```
 
@@ -727,4 +726,4 @@ UV_PROJECT_ENVIRONMENT=../../.venv uv run alembic revision --autogenerate -m "Ad
 UV_PROJECT_ENVIRONMENT=../../.venv uv run alembic upgrade head
 ```
 
-This guide provides the foundation for extending and customizing the FastAPI boilerplate. For specific implementation details, refer to the existing code examples throughout the boilerplate.
+This guide provides the foundation for extending and customizing the FastAPI boilerplate. For specific implementation details, refer to the existing code examples throughout the boilerplate. 

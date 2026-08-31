@@ -5,7 +5,6 @@ import type { SpacingValues } from "../../utils/constants";
 interface ContainerProps {
 	border?: boolean;
 	children: React.ReactNode;
-	className?: string;
 	alignment?: "start" | "center" | "end";
 	id: string;
 	layout?: "full" | "page";
@@ -19,7 +18,6 @@ const Container: React.FC<ContainerProps> = React.memo(
 	({
 		border = false,
 		alignment,
-		className,
 		id,
 		layout,
 		margin,
@@ -31,7 +29,6 @@ const Container: React.FC<ContainerProps> = React.memo(
 		<GcdsContainer
 			alignment={alignment}
 			border={border}
-			className={className}
 			id={id}
 			layout={layout}
 			margin={margin}

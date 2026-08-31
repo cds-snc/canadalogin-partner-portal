@@ -1,5 +1,5 @@
 import React from "react";
-import { GcdsNavLink, GcdsTopicMenu } from "@gcds-core/components-react";
+import { GcdsTopicMenu } from "@gcds-core/components-react";
 
 interface TopicMenuItem {
 	href: string;
@@ -21,9 +21,9 @@ const TopicMenu: React.FC<TopicMenuProps> = React.memo(
 		return (
 			<GcdsTopicMenu className={className} home={home}>
 				{items.map((item) => (
-					<GcdsNavLink key={item.href} href={item.href}>
+					<a key={item.href} href={item.href}>
 						{item.label}
-					</GcdsNavLink>
+					</a>
 				))}
 			</GcdsTopicMenu>
 		);

@@ -10,7 +10,7 @@ Product / CanadaLogin
 2026-07-22
 
 ## Summary
-This PRD defines onboarding, RP-configuration copy, and Production-review requirements for the CanadaLogin Partner Portal, grounded in:
+This PRD defines onboarding and environment progression requirements for the CanadaLogin Partner Portal, grounded in:
 - The story map shared for Partner Portal.
 - Partner onboarding artifacts (Application info, Application contacts, RP registration form, onboarding checklist).
 - Current implemented behavior observed in the existing Partner Portal repository.
@@ -29,7 +29,7 @@ Partner onboarding currently spans in-app workflows and out-of-app processes acr
 
 ## Scope
 In scope:
-- Account access, role-based access, onboarding data capture, contacts, RP setup data, configuration-copy lineage, Production-review metadata, secret handling, status visibility, MAU/usage visibility, and process links.
+- Account access, role-based access, onboarding data capture, contacts, RP setup data, environment progression metadata, secret handling, status visibility, MAU/usage visibility, and process links.
 
 Out of scope for this iteration:
 - Replacing external review systems.
@@ -39,8 +39,8 @@ Out of scope for this iteration:
 ## Confirmed Decisions
 - Scope includes all identified stories.
 - TEST may be skipped if IBM config change is not required and partner confidence is sufficient.
-- Copying a selected TEST, STAGING, or PRODUCTION configuration into any target environment is self-serve for authorized partner editors.
-- Copying to PRODUCTION creates only a draft. Production review requires a separate partner request and CL review.
+- TEST to STAGING is self-serve.
+- STAGING to PRODUCTION requires partner request and CL review.
 - CanadaLogin sign-up is mandatory for partner users.
 - Partner access is domain-restricted.
 - RP secrets are available to authorized RP roles via one-time reveal behavior.
@@ -66,7 +66,7 @@ Partially implemented or implementation-specific:
 - Review workflow primitives exist in planning/backlog artifacts, but production onboarding approvals remain out-of-band.
 
 Not implemented or intentionally deferred:
-- Formalized end-to-end in-app Production review approvals.
+- Formalized end-to-end in-app promotion approvals.
 - Finalized contact-type gating policy by stage.
 - Finalized CATS evidence collection mechanism.
 - Finalized volume-spike submission mechanism.
@@ -101,8 +101,8 @@ Open Spec statement:
 - The system shall enforce role-based permissions that support RP Admin, RP User (Edit), Read Only, and CL Admin responsibilities while preventing CL Admin access to RP secrets.
 
 Required behavior:
-- RP Admin: all partner permissions except Production-review approve/reject.
-- RP User (Edit): read/edit and copy for configuration, Production-review request metadata, secret-reveal workflows, and CATS-related submission fields.
+- RP Admin: all partner permissions except promotion approve/reject.
+- RP User (Edit): read/edit for config, promotion request metadata, secret-reveal workflows, and CATS-related submission fields.
 - Read Only: no edit actions.
 - CL Admin: metadata/status visibility only; no secret values.
 
@@ -125,24 +125,19 @@ TBD:
 Implementation status: Partially implemented
 
 Open Spec statement:
-- The system shall support several named environment-scoped RP configurations and let an authorized editor copy a reviewed allowlist of reusable, non-secret answers from one selected configuration into an independent draft in any TEST, STAGING, or PRODUCTION environment.
-
-Required behavior:
-- The target name, Partner environment, and CanadaLogin environment are explicit.
-- The source remains unchanged and optional lineage is recorded.
-- Endpoints, URLs, redirect and logout URIs, credentials, secrets, provider identifiers, certificates, key material, review outcomes, and audit history are not copied.
+- The system shall support environment-scoped RP registration data and pre-fill previously provided values when promoting from one environment to the next.
 
 ### Feature 7: Environment Lifecycle Rules
 Implementation status: Partially implemented
 
 Open Spec statement:
-- The system shall keep configuration copy separate from onboarding submission, Production review, approval, deployment, and launch. A Production copy is a draft only.
+- The system shall support TEST-optional onboarding, self-serve TEST to STAGING progression, and CL-reviewed STAGING to PRODUCTION progression.
 
-### Feature 8: Production Review Tracking (Out-of-Band Approval)
+### Feature 8: Promotion Review Tracking (Out-of-Band Approval)
 Implementation status: Net new
 
 Open Spec statement:
-- The system shall let an authorized partner explicitly request review for one selected Production configuration and track the out-of-band outcome and external review reference without requiring a source configuration.
+- The system shall track promotion request status and external review references when approval actions occur outside the portal.
 
 Required minimum:
 - Status states (for example pending, approved, rejected).
@@ -159,7 +154,7 @@ Open Spec statement:
 Implementation status: Partially implemented/TBD
 
 Open Spec statement:
-- The system shall represent CATS readiness for an explicit Production-review request and support traceable evidence references.
+- The system shall represent CATS readiness in production progression and support traceable evidence references.
 
 TBD:
 - Evidence mechanism: upload, reference, or both.
@@ -168,7 +163,7 @@ TBD:
 Implementation status: Partially implemented
 
 Open Spec statement:
-- The system shall represent onboarding checklist progress from preparation through go-live and make required artifacts visible before an explicit Production-review request.
+- The system shall represent onboarding checklist progress from preparation through go-live and make required artifacts visible before production progression.
 
 ### Feature 12: Documentation and External Link Hub
 Implementation status: Implemented baseline/expandable
@@ -235,7 +230,7 @@ Entities and relationships must support:
 - Partner org and user role context.
 - Application info and application contacts.
 - RP application records across environments.
-- Production review request metadata and out-of-band review references.
+- Promotion request metadata and out-of-band review references.
 - Secret lifecycle metadata and audit events.
 - Onboarding checklist status.
 - Future deprecation state transitions.

@@ -19,20 +19,15 @@ const Notice: React.FC<NoticeProps> = React.memo(
 		noticeTitleTag,
 		tabIndex,
 	}) => (
-		<div
-			aria-live={noticeRole === "danger" ? "assertive" : "polite"}
-			role={noticeRole === "danger" ? "alert" : "status"}
+		<GcdsNotice
+			className={className}
+			noticeRole={noticeRole}
+			noticeTitle={noticeTitle}
+			noticeTitleTag={noticeTitleTag}
+			tabIndex={tabIndex}
 		>
-			<GcdsNotice
-				className={className}
-				noticeRole={noticeRole}
-				noticeTitle={noticeTitle}
-				noticeTitleTag={noticeTitleTag}
-				tabIndex={tabIndex}
-			>
-				{children}
-			</GcdsNotice>
-		</div>
+			{children}
+		</GcdsNotice>
 	)
 );
 

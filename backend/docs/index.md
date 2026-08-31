@@ -39,7 +39,7 @@ This boilerplate leverages cutting-edge Python technologies:
 ### Security & Authentication
 - JWT-based authentication with refresh tokens
 - Cookie-based secure token storage
-- Four-role access control with workspace-scoped grants
+- Role-based access control with user tiers
 - Rate limiting to prevent abuse
 - Production-ready security configurations
 
@@ -91,5 +91,5 @@ That's it! Your API will be available at `http://localhost:8000/docs`
 
 - **REST APIs** - Build robust, scalable REST APIs
 - **Microservices** - Create microservice architectures
-- **Partner Portals** - Workspace-scoped access and application onboarding
+- **SaaS Applications** - Multi-tenant applications with user tiers
 - **Data APIs** - APIs for data processing and analytics

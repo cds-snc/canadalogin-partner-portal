@@ -2,14 +2,15 @@ from datetime import datetime
 from typing import Any, cast
 from unittest.mock import AsyncMock, Mock, patch
 
-import httpx
 import pytest
+import httpx
 from ibm_verify_community_sdk.applications.models import (
     GetApplicationResponse,
     ListApplicationsResponse,
 )
 from ibm_verify_community_sdk.client import APIClientError
 from ibm_verify_community_sdk.reports.models import ReportResponse
+
 from src.app.core.exceptions.ibm_sv_exceptions import IBMVerifyBadRequest, IBMVerifyServerError
 from src.app.repositories.ibm_sv_admin import IBMVerifyAdminClient
 
@@ -23,12 +24,6 @@ class FixedDateTime(datetime):
         return fixed_value
 
 
-@pytest.fixture(autouse=True)
-def _configured_ibm_sv_admin_base_url():
-    with patch("src.app.core.config.settings.IBM_SV_ADMIN_BASE_URL", "https://example.com"):
-        yield
-
-
 class TestIBMVerifyAdminClient:
     def _api_client_error_with_response(self, status_code: int, payload: dict[str, object]) -> APIClientError:
         response = httpx.Response(status_code, json=payload)
@@ -40,7 +35,9 @@ class TestIBMVerifyAdminClient:
 
     def test_translate_sdk_error_preserves_400_message(self) -> None:
         client = IBMVerifyAdminClient(Mock())
-        translated = client._translate_sdk_error(self._api_client_error_with_response(400, {"message": "template validation failed"}))
+        translated = client._translate_sdk_error(
+            self._api_client_error_with_response(400, {"message": "template validation failed"})
+        )
 
         assert isinstance(translated, IBMVerifyBadRequest)
         detail = cast(dict[str, Any], translated.detail)
@@ -60,9 +57,7 @@ class TestIBMVerifyAdminClient:
         mock_http_client = Mock()
         client = IBMVerifyAdminClient(mock_http_client)
         with (
-            patch.object(
-                client, "_run_sdk", AsyncMock(return_value=GetApplicationResponse.model_validate({"name": "[TBS] - Example App"}))
-            ) as run_sdk,
+            patch.object(client, "_run_sdk", AsyncMock(return_value=GetApplicationResponse.model_validate({"name": "[TBS] - Example App"}))) as run_sdk,
             patch("src.app.repositories.ibm_sv_admin.ApplicationRequest.model_validate", return_value=Mock()),
         ):
             result = await client.create_application({"name": "[TBS] - Example App"})
@@ -117,6 +112,37 @@ class TestIBMVerifyAdminClient:
         with patch.object(client, "_run_sdk", AsyncMock(return_value=ReportResponse(response={"total": 11}, success=True))) as run_sdk:
             with patch("datetime.datetime", FixedDateTime):
                 result = await client.get_application_total_logins("ibm-app-123")
+
+            assert isinstance(result, ReportResponse)
+            run_sdk.assert_awaited_once()
+
+    @pytest.mark.asyncio
+    async def test_get_application_audit_trail_defaults_to_today_when_dates_are_invalid(self) -> None:
+        mock_http_client = Mock()
+        client = IBMVerifyAdminClient(mock_http_client)
+        with patch.object(client, "_run_sdk", AsyncMock(return_value=ReportResponse(response={"events": [], "total": 0}, success=True))) as run_sdk:
+            with patch("datetime.datetime", FixedDateTime):
+                result = await client.get_application_audit_trail(
+                    "ibm-app-123",
+                    from_date="not-a-timestamp",
+                    to_date="",
+                    size=15,
+                )
+
+            assert isinstance(result, ReportResponse)
+            run_sdk.assert_awaited_once()
+
+    @pytest.mark.asyncio
+    async def test_app_audit_trail_search_after_defaults_to_today_when_dates_are_missing(self) -> None:
+        mock_http_client = Mock()
+        client = IBMVerifyAdminClient(mock_http_client)
+        with patch.object(client, "_run_sdk", AsyncMock(return_value=ReportResponse(response={"events": [], "next": None, "total": 0}, success=True))) as run_sdk:
+            with patch("datetime.datetime", FixedDateTime):
+                result = await client.app_audit_trail_search_after(
+                    "ibm-app-123",
+                    size=25,
+                    search_after='"1775692800000", "event-2"',
+                )
 
             assert isinstance(result, ReportResponse)
             run_sdk.assert_awaited_once()

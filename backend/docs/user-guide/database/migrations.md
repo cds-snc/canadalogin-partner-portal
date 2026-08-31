@@ -206,6 +206,8 @@ class Category(Base):
 # src/app/models/__init__.py
 from .user import User
 from .post import Post
+from .tier import Tier
+from .rate_limit import RateLimit
 from .category import Category  # Add new import
 ```
 
@@ -465,4 +467,4 @@ def upgrade() -> None:
 
 - **[CRUD Operations](crud.md)** - Working with migrated database schema
 - **[API Development](../api/index.md)** - Building endpoints for your models
-- **[Testing](../testing.md)** - Testing database migrations
+- **[Testing](../testing.md)** - Testing database migrations 

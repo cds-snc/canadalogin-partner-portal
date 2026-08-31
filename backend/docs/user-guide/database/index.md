@@ -134,15 +134,25 @@ async def get_users(db: Annotated[AsyncSession, Depends(async_get_db)]):
 
 ## Included Models
 
-The current data model centres on users, canonical role assignments,
-workspace-scoped access grants and invitations, Application records, RP
-configurations, review requests, and audit events. Public API schemas expose
-only the fields required by those workflows.
+The boilerplate includes four example models:
 
-Historical `tier` and `rate_limit` tables remain in the migration-compatible
-schema. They do not back a product catalog, user authorization, public response
-fields, or administration APIs. The active limiter uses Redis and the global
-default settings documented in [Rate Limiting](../rate-limiting/index.md).
+### **User Model** - Authentication & user management
+- Username, email, password (hashed)
+- Soft delete support
+- Tier-based access control
+
+### **Post Model** - Content with user relationships  
+- Title, content, creation metadata
+- Foreign key to user (no SQLAlchemy relationships)
+- Soft delete built-in
+
+### **Tier Model** - User subscription levels
+- Name-based tiers (free, premium, etc.)
+- Links to rate limiting system
+
+### **Rate Limit Model** - API access control
+- Path-specific rate limits per tier
+- Configurable limits and time periods
 
 ## Directory Structure
 

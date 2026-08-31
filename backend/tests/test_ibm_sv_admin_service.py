@@ -1,35 +1,13 @@
 from unittest.mock import AsyncMock, Mock
 
 import pytest
-from ibm_verify_community_sdk.applications.models import GetApplicationResponse
+from ibm_verify_community_sdk.applications.models import ApplicationOwner, GetApplicationResponse
+
 from src.app.core.exceptions.http_exceptions import BadRequestException
 from src.app.services.ibm_sv_admin_service import IBMVerifyAdminService
 
 
 class TestIBMVerifyAdminServiceApplicationPayloads:
-    def test_collect_supported_rp_setup_fields_filters_unsupported_values(self) -> None:
-        service = IBMVerifyAdminService(Mock())
-
-        payload = service.collect_supported_rp_setup_fields(
-            {
-                "name": "[TBS] - Application One",
-                "application_url": "https://example.gc.ca",
-                "redirect_uris": ["https://example.gc.ca/callback"],
-                "pkce_enabled": True,
-                "logout_method": "frontchannel",
-                "requested_scopes": ["openid", "profile"],
-                "sector_identifier_uri": "https://example.gc.ca/sector.json",
-            }
-        )
-
-        assert payload == {
-            "name": "[TBS] - Application One",
-            "application_url": "https://example.gc.ca",
-            "redirect_uris": ["https://example.gc.ca/callback"],
-            "pkce_enabled": True,
-            "logout_method": "frontchannel",
-        }
-
     def test_build_application_creation_payload_accepts_structured_json_values(self) -> None:
         service = IBMVerifyAdminService(Mock())
 
@@ -52,59 +30,48 @@ class TestIBMVerifyAdminServiceApplicationPayloads:
 
         assert payload["name"] == "[TBS] - Application One"
         assert payload["owners"] == ["owner-1"]
-        assert payload["providers"]["oidc"]["properties"]["redirectUris"] == ["https://example.gc.ca/callback"]
+        assert payload["providers"]["oidc"]["properties"]["redirectUris"] == [
+            "https://example.gc.ca/callback"
+        ]
         assert payload["providers"]["oidc"]["requirePkceVerification"] == "true"
         assert payload["providers"]["oidc"]["properties"]["additionalConfig"]["logoutOption"] == "frontchannel"
-        assert payload["providers"]["oidc"]["properties"]["additionalConfig"]["logoutRedirectURIs"] == ["https://example.gc.ca/post-logout"]
+        assert payload["providers"]["oidc"]["properties"]["additionalConfig"]["logoutRedirectURIs"] == [
+            "https://example.gc.ca/post-logout"
+        ]
         assert payload["providers"]["saml"]["properties"]["companyName"] == "Treasury Board Secretariat"
 
-    @pytest.mark.asyncio
-    async def test_create_application_from_rp_setup_delegates_filtered_payload(self) -> None:
+
+class TestIBMVerifyAdminServiceAuditReportNormalization:
+    def test_normalize_audit_report_builds_quoted_search_after_token(self) -> None:
         service = IBMVerifyAdminService(Mock())
-        service.create_application_from_payload = AsyncMock(return_value={"id": "app-1"})
 
-        result = await service.create_application_from_rp_setup(
-            {
-                "name": "[TBS] - Application One",
-                "application_url": "https://example.gc.ca",
-                "requested_scopes": ["openid"],
-                "client_type": "public",
-            },
-            owners=["owner-1"],
-        )
+        payload = {
+            "response": {
+                "report": {
+                    "hits": [
+                        {
+                            "_id": "3dcd5307-1714-4b81-9ce1-f926ec1a3a45",
+                            "_source": {
+                                "data": {
+                                    "origin": "192.0.2.10",
+                                    "result": "SUCCESS",
+                                    "username": "jane.doe@example.com",
+                                },
+                                "geoip": {"country_name": "Canada"},
+                                "time": 1774982586111,
+                            },
+                            "sort": ["1774982586111", "3dcd5307-1714-4b81-9ce1-f926ec1a3a45"],
+                        }
+                    ],
+                    "total": 1,
+                }
+            }
+        }
 
-        assert result == {"id": "app-1"}
-        service.create_application_from_payload.assert_awaited_once_with(
-            {
-                "name": "[TBS] - Application One",
-                "application_url": "https://example.gc.ca",
-                "client_type": "public",
-            },
-            ["owner-1"],
-        )
+        result = service._normalize_audit_report(payload)
 
-    @pytest.mark.asyncio
-    async def test_update_application_from_rp_setup_delegates_filtered_payload(self) -> None:
-        service = IBMVerifyAdminService(Mock())
-        service.update_application_from_payload = AsyncMock(return_value=True)
-
-        result = await service.update_application_from_rp_setup(
-            "ibm-app-123",
-            {
-                "logout_method": "frontchannel",
-                "logout_uri": "https://example.gc.ca/logout",
-                "sector_identifier_uri": "https://example.gc.ca/sector.json",
-            },
-        )
-
-        assert result is True
-        service.update_application_from_payload.assert_awaited_once_with(
-            "ibm-app-123",
-            {
-                "logout_method": "frontchannel",
-                "logout_uri": "https://example.gc.ca/logout",
-            },
-        )
+        assert result["next"] == '"1774982586111", "3dcd5307-1714-4b81-9ce1-f926ec1a3a45"'
+        assert result["total"] == 1
 
     def test_build_application_creation_payload_requires_jwks_for_private_key_jwt(self) -> None:
         service = IBMVerifyAdminService(Mock())
@@ -174,9 +141,13 @@ class TestIBMVerifyAdminServiceApplicationPayloads:
         assert payload["name"] == "[TBS] - Renamed App"
         assert payload["description"] == "Updated description"
         assert payload["providers"]["oidc"]["applicationUrl"] == "https://example.gc.ca"
-        assert payload["providers"]["oidc"]["properties"]["redirectUris"] == ["https://example.gc.ca/callback"]
+        assert payload["providers"]["oidc"]["properties"]["redirectUris"] == [
+            "https://example.gc.ca/callback"
+        ]
         assert payload["providers"]["oidc"]["requirePkceVerification"] == "true"
         assert payload["providers"]["oidc"]["properties"]["additionalConfig"]["logoutOption"] == "frontchannel"
         assert payload["providers"]["oidc"]["properties"]["additionalConfig"]["logoutURI"] == "https://example.gc.ca/logout"
-        assert payload["providers"]["oidc"]["properties"]["additionalConfig"]["logoutRedirectURIs"] == ["https://example.gc.ca/post-logout"]
+        assert payload["providers"]["oidc"]["properties"]["additionalConfig"]["logoutRedirectURIs"] == [
+            "https://example.gc.ca/post-logout"
+        ]
         assert payload["providers"]["saml"]["properties"]["companyName"] == "Treasury Board Secretariat"

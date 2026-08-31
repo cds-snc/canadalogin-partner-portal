@@ -7,12 +7,11 @@ Frontend application for the CanadaLogin Partner Portal.
 - [Overview](#overview)
 - [Requirements](#requirements)
 - [Getting Started](#getting-started)
-- [Application Structure](#application-structure)
-- [Routing Model](#routing-model)
-- [Feature Organization](#feature-organization)
+- [Important Note](#important-note)
 - [Testing](#testing)
-- [Storybook](#storybook)
-- [Environment Notes](#environment-notes)
+- [Preparing for Deployment](#preparing-for-deployment)
+- [DevTools](#devtools)
+- [Installed Packages](#installed-packages)
 
 ## Overview
 
@@ -97,52 +96,24 @@ This frontend uses file-based TanStack Router routes in `src/routes/`.
 
 Examples:
 
-- `/` is the role-aware home/dashboard anchor.
-- `/workspaces` owns workspace, application-information, RP-configuration,
-  registration, checklist/evidence, Production-review, credentials, and
-  workspace-scoped MAU routes.
-- `/administration`, `/users`, and `/roles` provide the CL Admin task hub,
-  user access and invitations, and the fixed-role reference.
-- `/reports` is limited to MAU reporting and RP-application selection.
-- `/onboarding-oversight` is the CL Admin dashboard anchor and explicit
-  Production-review queue. It is not a generic onboarding lifecycle,
-  readiness-scoring, or internal-review workflow.
-- `/invitations/rp-applications/prepare` and
-  `/invitations/rp-applications/accept` implement the public, token-scrubbing
-  invitation handoff before authenticated acceptance.
-- `/account` and `/support` provide account and support surfaces.
-
-Browser compatibility routes remain bounded: old `/your-applications`,
-`/application-information`, mixed Application/RP-configuration,
-`/readiness`, `/progression`, and workspace `/members` URLs reauthorize and
-redirect only when a semantically equivalent destination exists. The frontend
-does not call the deprecated progression API; other temporary flat backend
-adapters and their remaining in-repo fallbacks are explicitly inventoried. See
-[`docs/reference/access-copy-route-compatibility.md`](../docs/reference/access-copy-route-compatibility.md).
+- `src/routes/login.ts` maps to the auth login page.
+- `src/routes/access.ts` maps to the access feature.
+- `src/routes/dashboard.ts` maps to the dashboard feature.
 
 ## Feature Organization
 
-Route-backed or otherwise active product feature directories include:
+Current feature directories include:
 
-- `account/`
-- `administration/`
+- `access/`
 - `auth/`
-- `errors/`
-- `invitations/`
-- `mau-reports/`
-- `navigation/`
-- `onboarding-oversight/`
-- `reports/`
+- `dashboard/`
+- `policies/`
+- `posts/`
 - `roles/`
-- `rp-applications/`
+- `system/`
+- `tiers/`
+- `user-roles/`
 - `users/`
-- `workspaces/`
-- `your-applications/` (bounded browser compatibility)
-
-`departments/` and `system/` currently contain supporting hooks rather than
-standalone routed product areas. Empty or retained historical folders must not
-be treated as evidence that audit explorers, tier/catalog administration, or
-other out-of-scope product surfaces are available.
 
 The common pattern is:
 
@@ -151,9 +122,9 @@ The common pattern is:
 
 Example paths:
 
-- `src/features/auth/pages/ProfileSetup.tsx`
-- `src/features/workspaces/pages/WorkspaceAccessPage.tsx`
-- `src/features/workspaces/pages/ApplicationRPConfigurationProductionReviewPage.tsx`
+- `src/features/auth/pages/LoginPage.tsx`
+- `src/features/auth/pages/ProfilePage.tsx`
+- `src/features/access/pages/AccessPage.tsx`
 
 ## Layout And Shared UI
 
@@ -164,6 +135,7 @@ Important layout components:
 - `AppShell` - global app chrome.
 - `PageContent` - vertical page content wrapper inside the shell.
 - `CenteredPageLayout` - constrained centered content layout.
+- `ContentPageLayout` - constrained left-aligned content layout.
 
 Shared UI primitives live in `src/components/ui/` and wrap GCDS components where appropriate.
 
@@ -193,8 +165,7 @@ pnpm run test:e2e
 pnpm run test:e2e:report
 ```
 
-The `pnpm run test` command runs the Vitest unit suite. Run
-`pnpm run test:e2e` separately for Playwright.
+The aggregate `pnpm run test` command runs unit tests and Playwright.
 
 ## Storybook
 

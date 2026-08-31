@@ -18,39 +18,30 @@ REDIS_QUEUE_SSL = settings.REDIS_QUEUE_SSL or False
 REDIS_QUEUE_DB = settings.REDIS_QUEUE_DB or 0
 
 
-def _build_worker_registrations(
-    *,
-    ibm_rp_application_sync_enabled: bool,
-    load_mau_enabled: bool,
-) -> tuple[list[Any], list[CronJob]]:
-    # ARQ requires at least one registered function or cron job. Keep this
-    # independently guarded handler registered even when its schedule is off.
+class WorkerSettings:
     functions: list[Any] = [sync_ibm_verify_rp_applications]
-    cron_jobs: list[CronJob] = []
+    cron_jobs = [
+        CronJob(
+            "sync_ibm_verify_rp_applications",
+            sync_ibm_verify_rp_applications,
+            month=None,
+            day=None,
+            weekday=None,
+            hour=None,
+            minute={0, 10, 20, 30, 40, 50}, # run every 10 minutes
+            second=0,
+            microsecond=0,
+            run_at_startup=True,
+            unique=True,
+            job_id=None,
+            timeout_s=300.0,
+            keep_result_s=None,
+            keep_result_forever=None,
+            max_tries=1,
+        ),
+    ]
 
-    if ibm_rp_application_sync_enabled:
-        cron_jobs.append(
-            CronJob(
-                "sync_ibm_verify_rp_applications",
-                sync_ibm_verify_rp_applications,
-                month=None,
-                day=None,
-                weekday=None,
-                hour=None,
-                minute={0, 10, 20, 30, 40, 50},  # run every 10 minutes
-                second=0,
-                microsecond=0,
-                run_at_startup=True,
-                unique=True,
-                job_id=None,
-                timeout_s=300.0,
-                keep_result_s=None,
-                keep_result_forever=None,
-                max_tries=1,
-            ),
-        )
-
-    if load_mau_enabled:
+    if settings.LOAD_MAU_ENABLED:
         functions.append(load_mau_data)
         cron_jobs.append(
             CronJob(
@@ -72,15 +63,6 @@ def _build_worker_registrations(
                 max_tries=1,
             ),
         )
-
-    return functions, cron_jobs
-
-
-class WorkerSettings:
-    functions, cron_jobs = _build_worker_registrations(
-        ibm_rp_application_sync_enabled=settings.IBM_RP_APPLICATION_SYNC_ENABLED,
-        load_mau_enabled=settings.LOAD_MAU_ENABLED,
-    )
 
     redis_settings = RedisSettings(
         host=REDIS_QUEUE_HOST,

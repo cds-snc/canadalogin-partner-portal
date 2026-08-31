@@ -59,6 +59,9 @@ CLIENT_CACHE_MAX_AGE=0  # Disable caching for development
 DEFAULT_RATE_LIMIT_LIMIT=1000   # Higher limits for development
 DEFAULT_RATE_LIMIT_PERIOD=3600
 
+# ------------- tier -------------
+TIER_NAME="dev_tier"
+
 # ------------- logging -------------
 DATABASE_ECHO=true  # Log all SQL queries
 ```
@@ -156,6 +159,9 @@ CLIENT_CACHE_MAX_AGE=300  # 5 minutes
 # ------------- rate limiting -------------
 DEFAULT_RATE_LIMIT_LIMIT=100
 DEFAULT_RATE_LIMIT_PERIOD=3600
+
+# ------------- tier -------------
+TIER_NAME="staging_tier"
 
 # ------------- logging -------------
 DATABASE_ECHO=false
@@ -259,6 +265,9 @@ CLIENT_CACHE_MAX_AGE=3600  # 1 hour
 # ------------- rate limiting -------------
 DEFAULT_RATE_LIMIT_LIMIT=100
 DEFAULT_RATE_LIMIT_PERIOD=3600
+
+# ------------- tier -------------
+TIER_NAME="production_tier"
 
 # ------------- logging -------------
 DATABASE_ECHO=false

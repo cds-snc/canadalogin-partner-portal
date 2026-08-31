@@ -1,125 +1,25 @@
 {
-  "version": "0.2.0",
-  "configurations": [
-    {
-      "name": "Backend: FastAPI",
-      "type": "debugpy",
-      "request": "launch",
-      "module": "uvicorn",
-      "args": [
-        "app.main:app",
-        "--reload",
-        "--app-dir",
-        "backend",
-        "--host",
-        "127.0.0.1",
-        "--port",
-        "8000"
-      ],
-      "cwd": "${workspaceFolder}",
-      "console": "integratedTerminal",
-      "justMyCode": true,
-      "env": {
-        "PYTHONUNBUFFERED": "1"
-      }
-    },
-    {
-      "name": "Frontend: Vite Dev Server",
-      "type": "node-terminal",
-      "request": "launch",
-      "command": "npm --prefix frontend run dev -- --host 127.0.0.1 --port 3000",
-      "cwd": "${workspaceFolder}"
-    },
-    {
-      "name": "Backend: Pytest All Tests",
-      "type": "debugpy",
-      "request": "launch",
-      "module": "pytest",
-      "args": [
-        "backend/tests"
-      ],
-      "cwd": "${workspaceFolder}",
-      "console": "integratedTerminal",
-      "justMyCode": true,
-      "env": {
-        "PYTHONDONTWRITEBYTECODE": "1"
-      }
-    },
-    {
-      "name": "Backend: Pytest Current File",
-      "type": "debugpy",
-      "request": "launch",
-      "module": "pytest",
-      "args": [
-        "${file}"
-      ],
-      "cwd": "${workspaceFolder}",
-      "console": "integratedTerminal",
-      "justMyCode": true,
-      "env": {
-        "PYTHONDONTWRITEBYTECODE": "1"
-      }
-    },
-    {
-      "name": "Frontend: Vitest All Tests",
-      "type": "node",
-      "request": "launch",
-      "program": "${workspaceFolder}/frontend/node_modules/vitest/vitest.mjs",
-      "args": [
-        "run",
-        "--config",
-        "vitest.config.js"
-      ],
-      "cwd": "${workspaceFolder}/frontend",
-      "console": "integratedTerminal",
-      "autoAttachChildProcesses": true,
-      "skipFiles": [
-        "<node_internals>/**"
-      ]
-    },
-    {
-      "name": "Frontend: Vitest Current File",
-      "type": "node",
-      "request": "launch",
-      "program": "${workspaceFolder}/frontend/node_modules/vitest/vitest.mjs",
-      "args": [
-        "run",
-        "${file}",
-        "--config",
-        "vitest.config.js"
-      ],
-      "cwd": "${workspaceFolder}/frontend",
-      "console": "integratedTerminal",
-      "autoAttachChildProcesses": true,
-      "skipFiles": [
-        "<node_internals>/**"
-      ]
-    },
-    {
-      "name": "Frontend: Browser Launch",
-      "type": "pwa-chrome",
-      "request": "launch",
-      "url": "http://127.0.0.1:3000",
-      "webRoot": "${workspaceFolder}/frontend/src",
-      "sourceMaps": true
-    },
-    {
-      "name": "Frontend: Browser Attach",
-      "type": "pwa-chrome",
-      "request": "attach",
-      "port": 9222,
-      "webRoot": "${workspaceFolder}/frontend/src",
-      "sourceMaps": true
-    }
-  ],
-  "compounds": [
-    {
-      "name": "App: Frontend + Backend",
-      "configurations": [
-        "Backend: FastAPI",
-        "Frontend: Vite Dev Server"
-      ],
-      "stopAll": true
-    }
-  ]
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "name": "Backend: FastAPI (uvicorn)",
+            "type": "debugpy",
+            "request": "launch",
+            "module": "uvicorn",
+            "cwd": "${workspaceFolder}/backend",
+            "args": [
+                "src.app.main:app",
+                "--host",
+                "127.0.0.1",
+                "--port",
+                "8000",
+                "--reload"
+            ],
+            "envFile": "${workspaceFolder}/backend/.env",
+            "env": {
+                "PYTHONPATH": "${workspaceFolder}/backend"
+            },
+            "justMyCode": true
+        }
+    ]
 }

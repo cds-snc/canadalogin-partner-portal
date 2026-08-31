@@ -1,6 +1,5 @@
 import type { PropsWithChildren, ReactNode, ReactElement } from "react";
 import { Dialog, DialogPanel, DialogTitle } from "@headlessui/react";
-import { useTranslation } from "react-i18next";
 import "./Modal.css";
 
 export type ModalProps = PropsWithChildren<{
@@ -21,7 +20,6 @@ const Modal = ({
 	size = "regular",
 	title,
 }: ModalProps): ReactElement | null => {
-	const { t } = useTranslation();
 	if (!isOpen) {
 		return null;
 	}
@@ -50,12 +48,12 @@ const Modal = ({
 						) : null}
 					</div>
 					<button
-						aria-label={t("common.close")}
+						aria-label="Close"
 						className="government-modal__close"
 						type="button"
 						onClick={onClose}
 					>
-						{t("common.close")}
+						Close
 					</button>
 				</div>
 				<div className="government-modal__body">{children}</div>

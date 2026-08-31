@@ -1,23 +1,43 @@
+import hashlib
 import json
 import logging
 from datetime import datetime
+from urllib.parse import urlencode
 
 from fastapi import Request
 from fastapi.responses import JSONResponse
-
-from ..logging_privacy import hash_log_value, hash_query_values, safe_request_path
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.WARNING)
 
 PROJECT_NAME = "CanadaLogin"
 APPLICATION_NAME = "PartnerPortal"
+QUERY_STRING_BLACKLIST = [
+    "secret",
+    "token",
+    "access_token",
+    "id_token",
+    "code",
+    "claims",
+]
 
 
 class StandardizedLogger:
-    def _hash_query_params(self, query_params) -> str:
-        items = query_params.multi_items() if hasattr(query_params, "multi_items") else query_params.items()
-        return hash_query_values(items)
+    def _hash_blacklisted_params(self, query_params) -> str:
+        """
+        Takes a dictionary of parameters, hashes blacklisted values,
+        and returns a clean query string.
+        """
+        processed = {}
+
+        for key, value in query_params.items():
+            if key in QUERY_STRING_BLACKLIST and value:
+                # Hash the value
+                processed[key] = hashlib.sha256(str(value).encode("utf-8")).hexdigest()
+            else:
+                processed[key] = value
+
+        return urlencode(processed)
 
     def _build_context(self, request, response):
         context = {
@@ -36,7 +56,7 @@ class StandardizedLogger:
             if not user_uuid:
                 return None
             return {
-                "id": hash_log_value(user_uuid),
+                "id": hashlib.sha256(str(user_uuid).encode("utf-8")).hexdigest(),
             }
         except Exception:
             return None
@@ -44,8 +64,8 @@ class StandardizedLogger:
     def _build_request(self, request):
         result = {
             "method": request.method,
-            "path": safe_request_path(request),
-            "query_string": self._hash_query_params(request.query_params),
+            "path": request.url.path,
+            "query_string": self._hash_blacklisted_params(request.query_params),
         }
         request_id = getattr(request.state, "request_id", None) or request.headers.get("X-Request-ID")
         if request_id:

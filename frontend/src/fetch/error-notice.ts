@@ -1,6 +1,5 @@
 import {
 	isBadRequestError,
-	isConflictRequestError,
 	isForbiddenRequestError,
 	isServerRequestError,
 	isUnauthorizedRequestError,
@@ -39,15 +38,6 @@ export const getRequestErrorNotice = (
 			bodyKey: "errors.badRequestBody",
 			noticeRole: "warning",
 			titleKey: "errors.badRequestTitle",
-		};
-	}
-
-	if (isConflictRequestError(error)) {
-		return {
-			bodyText: error.detail,
-			bodyKey: "errors.conflictBody",
-			noticeRole: "warning",
-			titleKey: "errors.conflictTitle",
 		};
 	}
 

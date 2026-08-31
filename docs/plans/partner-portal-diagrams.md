@@ -2,215 +2,164 @@
 
 ## Document Status
 
-- Status: Scope-aligned draft
-- Last reviewed: 2026-08-25
-- Purpose: Companion architecture and workflow diagrams for the approved
-  Partner Portal scope
-- Requirement sources: explicit approved decisions in the active
-  [`align-partner-portal-to-approved-product-scope`](../../openspec/changes/align-partner-portal-to-approved-product-scope/)
-  change and confirmed expansions in the
-  [onboarding PRD](partner-portal-onboarding-prd.md), then the
-  [MVP PRD](partner-portal-mvp.md) as fallback
-
-The [broader historical PRD](partner-portal-prd.md) and its derived backlog are
-not requirements for these diagrams.
+- Status: Draft
+- Date: 2026-05-13
+- Purpose: Companion architecture and workflow diagrams for the product PRD
 
 ## 1. System Architecture
 
 ```mermaid
 flowchart LR
-    subgraph People[Portal roles]
-        CL[CL Admin]
-        RPA[RP Admin]
-        RPE[RP User Edit]
-        RO[Read Only]
+    subgraph Users[User Personas]
+        SA[Platform Superuser]
+        WA[Workspace Administrator]
+        WM[Workspace Member]
+        ID[Invited External Developer]
     end
 
-    subgraph Frontend[React web UI]
-        Shell[Dashboard and task-hub shells]
-        Partner[Workspace, Application and RP configuration flows]
-        Access[Users, access and invitations]
+    subgraph FE[Frontend]
+        UI[React + TanStack Router Portal UI]
+        Dashboard[Dashboard and Admin Modules]
+        WorkspaceUI[Workspace and RP Application Flows]
     end
 
-    subgraph Backend[FastAPI backend-for-frontend]
-        API[API routes and safe errors]
-        Auth[OIDC and server session]
-        Authorization[Immutable roles and scoped authorization]
-        Workspace[Workspace and RP services]
-        Invitations[Invitation token service]
-        MAU[Scoped MAU service]
-        Worker[ARQ worker]
+    subgraph BE[Backend]
+        API[FastAPI API Layer]
+        Auth[OIDC and Session Handling]
+        Access[Casbin Authorization]
+        WorkspaceSvc[Workspace Service]
+        IBMService[IBM Verify Admin Service]
+        InviteSvc[Invitation and GC Notify Service]
+        Tasks[ARQ Tasks]
     end
 
-    subgraph Data[Portal data services]
+    subgraph Data[Data Stores]
         PG[(PostgreSQL)]
-        Redis[(Redis sessions, cache, rate counters and queue)]
-        S3[(Approved MAU data)]
+        Redis[(Redis)]
     end
 
-    subgraph External[External identity systems]
-        OIDC[CanadaLogin / OIDC provider]
+    subgraph External[External Services]
+        OIDC[OIDC Identity Provider]
         IBM[IBM Security Verify]
+        Notify[GC Notify]
     end
 
-    CL --> Shell
-    RPA --> Partner
-    RPE --> Partner
-    RO --> Partner
-    CL --> Access
-    RPA --> Access
+    SA --> UI
+    WA --> UI
+    WM --> UI
+    ID --> UI
 
-    Shell --> API
-    Partner --> API
-    Access --> API
+    UI --> Dashboard
+    UI --> WorkspaceUI
+    Dashboard --> API
+    WorkspaceUI --> API
+
     API --> Auth
-    API --> Authorization
-    API --> Workspace
-    API --> Invitations
-    API --> MAU
+    API --> Access
+    API --> WorkspaceSvc
+    API --> IBMService
+    API --> InviteSvc
+    API --> Tasks
+
     Auth --> OIDC
     Auth --> Redis
-    Authorization --> PG
-    Workspace --> PG
-    Workspace --> IBM
-    Invitations --> PG
-    MAU --> Redis
-    Worker --> Redis
-    Worker --> S3
+    WorkspaceSvc --> PG
+    Access --> PG
+    IBMService --> IBM
+    InviteSvc --> Notify
+    Tasks --> Redis
 ```
 
-Invitation links are returned to an authorized administrator for one-time
-display. The external channel used to share a copied link is intentionally not
-modelled as a portal dependency.
-
-## 2. Workspace And RP Configuration Domain Model
+## 2. Workspace And RP Application Domain Model
 
 ```mermaid
 flowchart TD
-    Department[Department reference]
-    User[User identity]
-    GlobalRole[CL Admin assignment]
-    Workspace[Partner workspace]
-    WorkspaceAccess[Workspace role assignment]
-    Application[Application]
-    Contact[Application contact]
-    Checklist[Checklist item and CATS evidence record]
-    RPConfig[Named RP configuration]
-    Registration[Registration completion metadata]
-    ProductionReview[Production review request and outcome]
-    Invitation[Invitation token hash and history]
-    SecretHistory[Secret change history]
-    MAU[Scoped MAU data]
+    Department[Department]
+    User[User]
+    Role[Role]
+    Tier[Tier]
+    Workspace[Workspace]
+    Member[Workspace Member]
+    AppInfo[Application Information]
+    Contact[Application Contact]
+    RPApp[RP Application]
+    Invite[RP Application Developer Invitation]
+    Usage[Usage and Audit Data]
 
-    Department --> Workspace
     Department --> User
-    User --> GlobalRole
-    User --> WorkspaceAccess
-    Workspace --> WorkspaceAccess
-    Workspace --> Application
-    Application --> Contact
-    Application --> Checklist
-    Application --> RPConfig
-    RPConfig --> Registration
-    RPConfig --> ProductionReview
-    Workspace --> Invitation
-    Invitation --> WorkspaceAccess
-    RPConfig --> SecretHistory
-    RPConfig --> MAU
+    Department --> Workspace
+    Role --> User
+    Tier --> User
+    User --> Member
+    Workspace --> Member
+    Workspace --> AppInfo
+    AppInfo --> Contact
+    Workspace --> RPApp
+    AppInfo --> RPApp
+    RPApp --> Invite
+    RPApp --> Usage
+    User --> Invite
 ```
 
-The fixed workspace roles are RP Admin, RP User (Edit), and Read Only. CL Admin
-is global and never receives RP secret values. Checklist/CATS records show
-item-level evidence or missing inputs; the upload-versus-reference mechanism is
-still TBD and there is no overall readiness score. Registration completion and
-Production review are separate state domains.
-
-## 3. Manually Shared Invitation Workflow
+## 3. Invited Developer Workflow
 
 ```mermaid
 sequenceDiagram
-    actor Admin as CL Admin or RP Admin
-    participant Portal as Partner Portal UI
+    participant Admin as Workspace Admin
+    participant Portal as Partner Portal
+    participant Notify as GC Notify
+    participant Invitee as Invited Developer
+    participant OIDC as OIDC Provider
     participant API as Backend API
-    participant OIDC as CanadaLogin / OIDC
-    actor Invitee as Invited user
 
-    Admin->>Portal: Enter permitted email and delegated role
-    Portal->>API: Create invitation
-    API->>API: Check role, workspace and exact domain policy
-    API->>API: Store only token hash and expiry
-    API-->>Portal: Return acceptance URL once
-    Portal-->>Admin: Display copy control and approved-channel warning
-    Admin-->>Invitee: Share copied URL out of band
+    Admin->>Portal: Open RP application developer invitations page
+    Admin->>Portal: Submit invitee email
+    Portal->>API: Create invitation for RP application
+    API->>Notify: Send invitation email with tokenized link
+    Notify-->>Invitee: Invitation email delivered
 
-    Invitee->>Portal: Open tokenized acceptance URL
-    Portal->>OIDC: Authenticate when no valid session exists
-    OIDC-->>Portal: Verified identity callback
-    Portal->>API: Accept opaque token
-    API->>API: Match normalized verified email exactly
-    API->>API: Reapply domain policy and create one scoped assignment
-    API-->>Portal: Accepted without returning token
-    Portal-->>Invitee: Open authorized workspace destination
+    Invitee->>OIDC: Sign in with invited email
+    OIDC-->>Portal: Authenticated session callback
+    Invitee->>Portal: Open invitation link with token
+    Portal->>API: Accept invitation token
+    API->>API: Validate token, email, state, expiry
+    API-->>Portal: Invitation accepted
+    Portal-->>Invitee: Redirect to current-user RP application page
+    Invitee->>Portal: View and edit scoped RP application details
 ```
 
-Create and reissue are the only responses that reveal a new URL. Reissue makes
-the earlier pending token unusable. Revoke prevents acceptance. Tokens are
-excluded from list/detail responses, plaintext persistence, logs, analytics,
-evidence, and referrer data.
-
-## 4. Partner Onboarding Workflow
+## 4. Internal Onboarding Workflow
 
 ```mermaid
 flowchart TD
-    Login[Authenticate through CanadaLogin] --> Access{Canonical assignment?}
-    Access -- No --> Denied[Safe access denied or invitation path]
-    Access -- Yes --> Dashboard[Authorized dashboard shell]
-    Dashboard --> Workspaces[Choose partner workspace]
-    Workspaces --> Application[Create or maintain Application]
-    Application --> Contacts[Maintain contacts]
-    Application --> Checklist[Review item-level checklist and CATS inputs]
-    Application --> RPConfig[Create or copy named RP configuration draft]
-    RPConfig --> Registration[Complete technical registration]
-    RPConfig --> Credentials[Authorized secret operations and change log]
-    RPConfig --> Usage[Scoped MAU usage]
-    Registration --> IsProduction{Production configuration?}
-    IsProduction -- No --> Continue[Continue environment-specific work]
-    IsProduction -- Yes --> Request[Partner explicitly requests Production review]
-    Checklist --> Request
-    Request --> Pending[Production review pending]
-    Pending --> Outcome{CL Admin outcome}
-    Outcome -- Approved --> Approved[Approved]
-    Outcome -- Rejected --> Rejected[Rejected]
+    Login[User Signs In] --> Session{Authenticated Session Exists?}
+    Session -- No --> OIDCLogin[Redirect to OIDC Login]
+    OIDCLogin --> DepartmentCheck
+    Session -- Yes --> DepartmentCheck{Department Set?}
+    DepartmentCheck -- No --> ProfileSetup[Profile Setup: Select Department]
+    ProfileSetup --> Dashboard[Dashboard]
+    DepartmentCheck -- Yes --> Dashboard
+
+    Dashboard --> Workspaces[Open Workspaces]
+    Workspaces --> WorkspaceDetail[Workspace Detail]
+    WorkspaceDetail --> AppInfo[Create or Update Application Information]
+    AppInfo --> Contacts[Manage Application Contacts]
+    Contacts --> RPApp[Create or Update RP Application]
+    RPApp --> Credentials[View Credentials or Rotate Secret]
+    RPApp --> Usage[Review Usage and Audit Trail]
 ```
 
-Technical registration completion does not submit a Production review. Copying
-to Production creates an independent editable draft. Checklist changes do not
-advance review status automatically.
+## 5. Future-State Workflow Anchor
 
-## 5. Separate State Domains
+This diagram captures the intended future workflow implied by the backlog and PRD roadmap.
 
 ```mermaid
 flowchart LR
-    subgraph Registration[RP registration]
-        Draft[Editable incomplete draft] --> Complete[Technical completion metadata]
-    end
-
-    subgraph Review[Production review]
-        Absent[No request] --> Pending[Pending]
-        Pending --> Approved[Approved]
-        Pending --> Rejected[Rejected]
-    end
-
-    subgraph Invite[Invitation]
-        IPending[Pending] --> Accepted[Accepted]
-        IPending --> Expired[Expired]
-        IPending --> Revoked[Revoked]
-    end
-
-    subgraph Assignment[Role assignment]
-        Active[Active] --> Historical[Revoked or replaced history]
-    end
+    Draft[Draft] --> Ready[Ready for Review]
+    Ready --> Review[Under Review]
+    Review --> Changes[Changes Requested]
+    Changes --> Draft
+    Review --> Approved[Approved]
+    Approved --> Operational[Operational]
+    Operational --> Ongoing[Ongoing Monitoring and Rotation]
 ```
-
-There is no shared Workspace/Application/RP-configuration lifecycle and no
-generic `draft -> submitted -> under review -> approved -> launched` sequence.

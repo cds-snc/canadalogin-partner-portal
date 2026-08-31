@@ -3,9 +3,7 @@ import { authStore, resetAuthStore } from "@/store";
 
 vi.mock("@/fetch/auth", () => ({
 	getCurrentUser: vi.fn(),
-	getOidcLoginUrl: vi.fn(
-		(): string => "http://localhost:8000/api/v1/auth/oidc/login"
-	),
+	getOidcLoginUrl: vi.fn((): string => "http://localhost:8000/api/v1/auth/oidc/login"),
 }));
 
 type DeferredPromise<T> = {
@@ -14,7 +12,7 @@ type DeferredPromise<T> = {
 	reject: (reason?: unknown) => void;
 };
 
-const createDeferred = <T>(): DeferredPromise<T> => {
+const createDeferred = <T,>(): DeferredPromise<T> => {
 	let resolve!: (value: T) => void;
 	let reject!: (reason?: unknown) => void;
 
@@ -27,21 +25,14 @@ const createDeferred = <T>(): DeferredPromise<T> => {
 };
 
 const sampleUser = {
-	acceptedTermsAt: "2026-06-11T12:00:00Z",
-	authorizationContext: {
-		globalRole: null,
-		partnerAccess: [
-			{ role: "rp_admin" as const, workspaceUuid: "workspace-uuid-1" },
-		],
-	},
-	departmentAbbreviation: "TBS",
-	departmentUuid: "department-uuid-1",
+	authProvider: "gc-sso",
+	authSubject: "subject-123",
 	email: "jane@example.com",
 	name: "Jane Doe",
 	profileImageUrl: "https://example.com/jane.png",
-	termsVersion: "2026-01",
+	roleUuids: ["role-uuid-2"],
+	tierUuid: "tier-uuid-3",
 	uuid: "user-uuid-7",
-	username: "jane@example.com",
 };
 
 describe("authStore", () => {
@@ -60,9 +51,7 @@ describe("authStore", () => {
 	it("hydrates session state from the backend", async () => {
 		vi.mocked(getCurrentUser).mockResolvedValue(sampleUser);
 
-		await expect(authStore.getState().hydrateSession()).resolves.toEqual(
-			sampleUser
-		);
+		await expect(authStore.getState().hydrateSession()).resolves.toEqual(sampleUser);
 		expect(authStore.getState()).toMatchObject({
 			currentUser: sampleUser,
 			hasHydrated: true,
@@ -89,9 +78,7 @@ describe("authStore", () => {
 	it("keeps the user signed out when logout wins over an in-flight hydration", async () => {
 		const deferredCurrentUser = createDeferred<typeof sampleUser | null>();
 
-		vi.mocked(getCurrentUser).mockImplementation(
-			() => deferredCurrentUser.promise
-		);
+		vi.mocked(getCurrentUser).mockImplementation(() => deferredCurrentUser.promise);
 
 		const hydratePromise = authStore.getState().hydrateSession();
 		await authStore.getState().logout();

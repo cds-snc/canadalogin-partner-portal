@@ -19,17 +19,6 @@ class TestSessionMiddlewareSetup:
         assert SessionAutoloadMiddleware in middleware_classes
         assert StarletteSessionMiddleware not in middleware_classes
 
-    def test_create_application_omits_canadaca_cookie_domain_in_local_environment(self) -> None:
-        with (
-            patch.object(settings, "ENVIRONMENT", settings.ENVIRONMENT.LOCAL),
-            patch.object(settings, "SESSION_COOKIE_DOMAIN", None),
-        ):
-            app = create_application(APIRouter(), settings, create_tables_on_start=False)
-
-        session_middleware = next(middleware for middleware in app.user_middleware if middleware.cls is SessionMiddleware)
-
-        assert session_middleware.kwargs["cookie_domain"] is None
-
 
 class TestSessionLifespan:
     @pytest.mark.asyncio

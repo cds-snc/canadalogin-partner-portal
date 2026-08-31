@@ -4,7 +4,6 @@ import type { ApiErrorDetail } from "./api-types";
 import { buildApiUrl } from "./base-url";
 import {
 	BadRequestError,
-	ConflictRequestError,
 	ForbiddenRequestError,
 	HttpRequestError,
 	ServerRequestError,
@@ -15,7 +14,6 @@ const unauthorizedPaths = new Set(["/auth-complete", "/login"]);
 const forbiddenPaths = new Set(["/access-denied"]);
 
 type RequestJsonOptions = {
-	redirectOnForbidden?: boolean;
 	redirectOnUnauthorized?: boolean;
 };
 
@@ -151,39 +149,11 @@ const toRequestError = (
 		return new ForbiddenRequestError(errorOptions);
 	}
 
-	if (status === 409) {
-		return new ConflictRequestError(errorOptions);
-	}
-
 	if (status >= 500) {
 		return new ServerRequestError({ ...errorOptions, status });
 	}
 
 	return new HttpRequestError({ ...errorOptions, status });
-};
-
-const throwRequestError = async (
-	response: Response,
-	options: RequestJsonOptions
-): Promise<never> => {
-	const responseData: unknown = await parseResponseData(response);
-	const requestError = toRequestError(response.status, responseData);
-
-	if (
-		requestError instanceof UnauthorizedRequestError &&
-		options.redirectOnUnauthorized !== false
-	) {
-		redirectToLogin();
-	}
-
-	if (
-		requestError instanceof ForbiddenRequestError &&
-		options.redirectOnForbidden !== false
-	) {
-		redirectToAccessDenied();
-	}
-
-	throw requestError;
 };
 
 export const requestJson = async <ResponseType>(
@@ -206,14 +176,27 @@ export const requestJson = async <ResponseType>(
 		return null;
 	}
 
-	if (!response.ok) {
-		return throwRequestError(response, options);
-	}
-
 	// parseResponseData may call Response.json() which is typed as `any` by lib.dom;
 	// narrow to `unknown` here intentionally before further checks.
 
 	const responseData: unknown = await parseResponseData(response);
+
+	if (!response.ok) {
+		const requestError = toRequestError(response.status, responseData);
+
+		if (
+			requestError instanceof UnauthorizedRequestError &&
+			options.redirectOnUnauthorized !== false
+		) {
+			redirectToLogin();
+		}
+
+		if (requestError instanceof ForbiddenRequestError) {
+			redirectToAccessDenied();
+		}
+
+		throw requestError;
+	}
 
 	if (responseData === null) {
 		markBackendActivity();
@@ -223,27 +206,4 @@ export const requestJson = async <ResponseType>(
 	markBackendActivity();
 
 	return responseData as ResponseType;
-};
-
-export const requestBlob = async (
-	path: string,
-	requestInit: RequestInit,
-	options: RequestJsonOptions = {}
-): Promise<Blob> => {
-	const response = await fetch(buildApiUrl(path), {
-		...requestInit,
-		credentials: requestInit.credentials ?? "include",
-		headers: {
-			Accept: "application/octet-stream",
-			...(requestInit.headers ?? {}),
-		},
-	});
-
-	if (!response.ok) {
-		return throwRequestError(response, options);
-	}
-
-	const blob = await response.blob();
-	markBackendActivity();
-	return blob;
 };

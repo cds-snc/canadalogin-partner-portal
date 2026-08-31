@@ -15,19 +15,21 @@ from fastapi.openapi.utils import get_openapi
 from starsessions import SessionAutoloadMiddleware, SessionMiddleware
 from starsessions.stores.redis import RedisStore
 
-from ..api.dependencies import get_current_cl_admin
+from ..api.dependencies import get_current_superuser
 from ..core.logger import logging
 from ..core.utils.rate_limit import rate_limiter
 from ..middleware.client_cache_middleware import ClientCacheMiddleware
-from ..middleware.cookie_origin_middleware import CookieOriginMiddleware
 from ..middleware.logger_middleware import LoggerMiddleware
 from ..models import *  # noqa: F403
 from ..repositories.dependencies import close_ibm_sv_admin_client as close_ibm_sv_admin_client_dep
 from ..repositories.dependencies import set_ibm_sv_admin_client
 from ..repositories.ibm_sv_admin import IBMVerifyAdminClient, create_admin_oauth_client
+from .exceptions import register_exception_handlers
+
+logger = logging.getLogger(__name__)
+
+from ..models import *  # noqa: F403
 from .config import (
-    LOCAL_DEV_SESSION_ALLOWED_ORIGINS_STATE_KEY,
-    LOCAL_DEV_SESSION_GATE_STATE_KEY,
     AppSettings,
     ClientSideCacheSettings,
     CORSSettings,
@@ -41,18 +43,11 @@ from .config import (
     RedisRateLimiterSettings,
     RedisSessionSettings,
     SessionSettings,
-    is_local_dev_session_enabled,
-    local_dev_session_gate,
-    normalize_local_origin,
     settings,
-    validate_local_dev_session_configuration,
 )
 from .db.database import Base, get_async_engine
-from .exceptions import register_exception_handlers
 from .oidc import warm_oidc_metadata
 from .utils import cache, queue
-
-logger = logging.getLogger(__name__)
 
 redis_session_client: redis.Redis | None = None
 redis_session_store: RedisStore | None = None
@@ -171,6 +166,7 @@ async def close_ibm_sv_admin_client() -> None:
     logger.info("Closing IBM Security Verify admin client...")
     await close_ibm_sv_admin_client_dep()
     logger.info("IBM Security Verify admin client closed")
+
 
 
 # -------------- application --------------
@@ -322,25 +318,13 @@ def create_application(
     based on the environment settings.
     """
     # --- before creating application ---
-    validate_local_dev_session_configuration(settings)
-
     if isinstance(settings, AppSettings):
-        to_update: dict[str, Any] = {
+        to_update = {
             "title": settings.APP_NAME,
             "description": settings.APP_DESCRIPTION,
+            "contact": {"name": settings.CONTACT_NAME, "email": settings.CONTACT_EMAIL},
+            "license_info": {"name": settings.LICENSE_NAME},
         }
-        contact: dict[str, str] = {}
-        if settings.CONTACT_NAME:
-            contact["name"] = settings.CONTACT_NAME
-        if settings.CONTACT_EMAIL:
-            contact["email"] = settings.CONTACT_EMAIL
-        if contact:
-            to_update["contact"] = contact
-
-        license_name = settings.LICENSE_NAME.strip() if settings.LICENSE_NAME else ""
-        if license_name:
-            to_update["license_info"] = {"name": license_name}
-
         kwargs.update(to_update)
 
     if isinstance(settings, EnvironmentSettings):
@@ -355,21 +339,6 @@ def create_application(
 
     application = FastAPI(lifespan=lifespan, **kwargs)
     application.include_router(router)
-    setattr(
-        application.state,
-        LOCAL_DEV_SESSION_GATE_STATE_KEY,
-        local_dev_session_gate(settings),
-    )
-    configured_dev_origins = getattr(settings, "DEV_SESSION_ALLOWED_ORIGINS", ())
-    setattr(
-        application.state,
-        LOCAL_DEV_SESSION_ALLOWED_ORIGINS_STATE_KEY,
-        tuple(normalize_local_origin(origin) for origin in configured_dev_origins),
-    )
-    if is_local_dev_session_enabled(settings):
-        from ..api.v1.dev_session import router as dev_session_router
-
-        application.include_router(dev_session_router, prefix="/api/v1")
 
     if isinstance(settings, SessionSettings):
         application.add_middleware(SessionAutoloadMiddleware)
@@ -381,14 +350,7 @@ def create_application(
             cookie_name=settings.SESSION_COOKIE_NAME,
             cookie_https_only=settings.SESSION_COOKIE_SECURE,
             cookie_domain=settings.SESSION_COOKIE_DOMAIN,
-            cookie_same_site=settings.SESSION_COOKIE_SAMESITE,
-        )
-
-    if isinstance(settings, CORSSettings) and isinstance(settings, SessionSettings):
-        application.add_middleware(
-            CookieOriginMiddleware,
-            allowed_origins=settings.CORS_ORIGINS,
-            session_cookie_name=settings.SESSION_COOKIE_NAME,
+            cookie_same_site=settings.SESSION_COOKIE_SAMESITE
         )
 
     if isinstance(settings, ClientSideCacheSettings):
@@ -409,7 +371,7 @@ def create_application(
         if settings.ENVIRONMENT != EnvironmentOption.PRODUCTION:
             docs_router = APIRouter()
             if settings.ENVIRONMENT != EnvironmentOption.LOCAL:
-                docs_router = APIRouter(dependencies=[Depends(get_current_cl_admin)])
+                docs_router = APIRouter(dependencies=[Depends(get_current_superuser)])
 
             @docs_router.get("/docs", include_in_schema=False)
             async def get_swagger_documentation() -> fastapi.responses.HTMLResponse:

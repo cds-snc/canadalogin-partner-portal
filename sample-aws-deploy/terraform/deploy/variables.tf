@@ -153,8 +153,8 @@ variable "ibm_sv_admin_client_secret_arn" {
   type        = string
 }
 
-variable "secret_key_arn" {
-  description = "Application signing key ARN (from infra)"
+variable "session_secret_arn" {
+  description = "Session secret ARN (from infra)"
   type        = string
 }
 
@@ -203,15 +203,6 @@ variable "oidc_scopes" {
   default     = "openid profile email"
 }
 
-variable "partner_access_allowed_email_domains" {
-  description = "Exact email domains allowed to receive partner workspace access"
-  type        = list(string)
-  validation {
-    condition     = length(var.partner_access_allowed_email_domains) > 0
-    error_message = "At least one partner-access email domain must be configured."
-  }
-}
-
 variable "oidc_post_login_redirect" {
   description = "Frontend path to redirect after login"
   type        = string
@@ -222,6 +213,36 @@ variable "oidc_access_denied_redirect" {
   description = "Frontend path for access denied"
   type        = string
   default     = "/access-denied"
+}
+
+variable "oidc_group_claim_key" {
+  description = "JWT claim key for group membership"
+  type        = string
+  default     = "groupIds"
+}
+
+variable "oidc_admin_group_name" {
+  description = "Group name for admin role"
+  type        = string
+  default     = "admin"
+}
+
+variable "oidc_application_owners_group_name" {
+  description = "Group name for application owners"
+  type        = string
+  default     = "application owners"
+}
+
+variable "clpp_admin_role_name" {
+  description = "Admin role name in app"
+  type        = string
+  default     = "admin"
+}
+
+variable "clpp_application_owners_role_name" {
+  description = "Application owners role name in app"
+  type        = string
+  default     = "application owners"
 }
 
 # ----- IBM Security Verify -----
@@ -346,13 +367,13 @@ variable "cors_origins" {
 variable "cors_methods" {
   description = "Allowed CORS methods"
   type        = string
-  default     = "[\"GET\",\"POST\",\"PUT\",\"PATCH\",\"DELETE\",\"OPTIONS\"]"
+  default     = "[\"*\"]"
 }
 
 variable "cors_headers" {
   description = "Allowed CORS headers"
   type        = string
-  default     = "[\"Accept\",\"Content-Type\",\"X-Request-ID\"]"
+  default     = "[\"*\"]"
 }
 
 # ----- S3 MAU -----

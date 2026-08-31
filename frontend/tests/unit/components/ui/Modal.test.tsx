@@ -5,45 +5,13 @@ import Modal from "@/components/ui/Modal";
 import ConfirmDialog from "@/components/ui/ConfirmDialog";
 
 vi.mock("@gcds-core/components-react", () => ({
-	GcdsButton: ({
-		children,
-		disabled,
-		onClickCapture,
-		onKeyDownCapture,
-		onKeyUpCapture,
-		type,
-	}: PropsWithChildren<{
-		disabled?: boolean;
-		onClickCapture?: React.MouseEventHandler<HTMLButtonElement>;
-		onKeyDownCapture?: React.KeyboardEventHandler<HTMLButtonElement>;
-		onKeyUpCapture?: React.KeyboardEventHandler<HTMLButtonElement>;
-		type?: "button" | "submit" | "reset" | "link";
-	}>): ReactElement => (
-		<button
-			disabled={disabled}
-			type={type === "link" ? "button" : (type ?? "button")}
-			onClickCapture={onClickCapture}
-			onKeyDownCapture={onKeyDownCapture}
-			onKeyUpCapture={onKeyUpCapture}
-		>
+	GcdsButton: ({ children, disabled, onGcdsClick, type }: PropsWithChildren<{ disabled?: boolean; onGcdsClick?: () => void; type?: "button" | "submit" | "reset" | "link" }>): ReactElement => (
+		<button disabled={disabled} onClick={onGcdsClick} type={type === "link" ? "button" : (type ?? "button")}>
 			{children}
 		</button>
 	),
-	GcdsHeading: ({ children }: PropsWithChildren): ReactElement => (
-		<h2>{children}</h2>
-	),
-	GcdsNotice: ({
-		children,
-		noticeTitle,
-	}: PropsWithChildren<{ noticeTitle: string }>): ReactElement => (
-		<section>
-			<h3>{noticeTitle}</h3>
-			{children}
-		</section>
-	),
-	GcdsText: ({ children }: PropsWithChildren): ReactElement => (
-		<p>{children}</p>
-	),
+	GcdsHeading: ({ children }: PropsWithChildren): ReactElement => <h2>{children}</h2>,
+	GcdsText: ({ children }: PropsWithChildren): ReactElement => <p>{children}</p>,
 }));
 
 describe("Modal", () => {
@@ -51,24 +19,15 @@ describe("Modal", () => {
 		const handleClose = vi.fn();
 
 		render(
-			<Modal
-				footer={<button type="button">Save</button>}
-				isOpen
-				onClose={handleClose}
-				title="Edit role"
-			>
+			<Modal footer={<button type="button">Save</button>} isOpen onClose={handleClose} title="Edit role">
 				<p>Role form fields</p>
-			</Modal>
+			</Modal>,
 		);
 
 		expect(screen.getByRole("dialog", { name: /edit role/i })).toBeTruthy();
 		expect(screen.getByText(/role form fields/i)).toBeTruthy();
-		expect(
-			document.querySelector(".government-modal__backdrop--visible")
-		).toBeTruthy();
-		expect(
-			document.querySelector(".government-modal__panel--animated")
-		).toBeTruthy();
+		expect(document.querySelector(".government-modal__backdrop--visible")).toBeTruthy();
+		expect(document.querySelector(".government-modal__panel--animated")).toBeTruthy();
 
 		fireEvent.click(screen.getByRole("button", { name: /close/i }));
 
@@ -79,7 +38,7 @@ describe("Modal", () => {
 		render(
 			<Modal isOpen={false} onClose={vi.fn()} title="Hidden modal">
 				<p>Hidden content</p>
-			</Modal>
+			</Modal>,
 		);
 
 		expect(screen.queryByRole("dialog", { name: /hidden modal/i })).toBeNull();
@@ -100,32 +59,12 @@ describe("ConfirmDialog", () => {
 				onClose={handleClose}
 				onConfirm={handleConfirm}
 				title="Delete role?"
-			/>
+			/>,
 		);
 
 		fireEvent.click(screen.getByRole("button", { name: /delete role/i }));
 
 		expect(handleConfirm).toHaveBeenCalledTimes(1);
 		expect(handleClose).not.toHaveBeenCalled();
-	});
-
-	it("renders confirmation failures through the shared accessible notice", () => {
-		render(
-			<ConfirmDialog
-				cancelLabel="Cancel"
-				confirmLabel="Retry"
-				description="This action can be retried."
-				errorMessage="The change could not be completed."
-				errorTitle="Unable to complete the change"
-				isOpen
-				onClose={vi.fn()}
-				onConfirm={vi.fn()}
-				title="Change role?"
-			/>
-		);
-
-		const alert = screen.getByRole("alert");
-		expect(alert.textContent).toContain("Unable to complete the change");
-		expect(alert.textContent).toContain("The change could not be completed.");
 	});
 });
