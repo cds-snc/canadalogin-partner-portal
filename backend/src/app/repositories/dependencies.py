@@ -2,26 +2,17 @@
 
 import asyncio
 import logging
-from collections.abc import Awaitable, Callable
 from typing import Annotated
 
 from fastapi import Depends, Request
 
-from ..core.exceptions.http_exceptions import CustomException, UnauthorizedException
+from ..core.exceptions.http_exceptions import UnauthorizedException
 from ..repositories.ibm_sv_admin import IBMVerifyAdminClient, create_admin_oauth_client
 from ..repositories.ibm_sv_user import IBMVerifyUserClient
 
 _ibm_sv_admin_client: IBMVerifyAdminClient | None = None
 _ibm_sv_admin_client_loop_id: int | None = None
 logger = logging.getLogger(__name__)
-
-_IBM_SV_NOT_CONFIGURED_MESSAGE = "IBM Security Verify is not configured. Check IBM_SV_ADMIN_BASE_URL."
-
-IBMVerifyAdminClientFactory = Callable[[], Awaitable[IBMVerifyAdminClient]]
-
-
-def _build_ibm_sv_not_configured_error() -> CustomException:
-    return CustomException(status_code=503, detail=_IBM_SV_NOT_CONFIGURED_MESSAGE)
 
 
 async def get_ibm_sv_admin_client() -> IBMVerifyAdminClient:
@@ -48,29 +39,14 @@ async def get_ibm_sv_admin_client() -> IBMVerifyAdminClient:
         await _ibm_sv_admin_client.aclose()
         _ibm_sv_admin_client = None
 
-    try:
-        oauth_client = await create_admin_oauth_client()
+    oauth_client = await create_admin_oauth_client()
 
-        if oauth_client.token is None or oauth_client.token.is_expired():
-            await oauth_client.fetch_token()
+    if oauth_client.token is None or oauth_client.token.is_expired():
+        await oauth_client.fetch_token()
 
-        _ibm_sv_admin_client = IBMVerifyAdminClient(oauth_client)
-    except ValueError as exc:
-        raise _build_ibm_sv_not_configured_error() from exc
-
+    _ibm_sv_admin_client = IBMVerifyAdminClient(oauth_client)
     _ibm_sv_admin_client_loop_id = current_loop_id
     return _ibm_sv_admin_client
-
-
-def get_ibm_sv_admin_client_factory() -> IBMVerifyAdminClientFactory:
-    """Return a lazy admin-client factory without resolving provider credentials.
-
-    Protected resource services call the factory only after their canonical
-    role and object-scope checks succeed. Keeping this dependency lazy prevents
-    FastAPI from fetching an IBM Verify token for an unauthorized request.
-    """
-
-    return get_ibm_sv_admin_client
 
 
 def get_ibm_sv_user_client(request: Request) -> IBMVerifyUserClient:
@@ -93,10 +69,7 @@ def get_ibm_sv_user_client(request: Request) -> IBMVerifyUserClient:
     if not access_token:
         raise UnauthorizedException("User access token not found in session")
 
-    try:
-        return IBMVerifyUserClient(access_token=access_token)
-    except ValueError as exc:
-        raise _build_ibm_sv_not_configured_error() from exc
+    return IBMVerifyUserClient(access_token=access_token)
 
 
 async def get_ibm_sv_user_client_from_token(access_token: str) -> IBMVerifyUserClient:
@@ -108,10 +81,7 @@ async def get_ibm_sv_user_client_from_token(access_token: str) -> IBMVerifyUserC
     if not access_token:
         raise UnauthorizedException("Access token is required")
 
-    try:
-        return IBMVerifyUserClient(access_token=access_token)
-    except ValueError as exc:
-        raise _build_ibm_sv_not_configured_error() from exc
+    return IBMVerifyUserClient(access_token=access_token)
 
 
 async def close_ibm_sv_admin_client() -> None:

@@ -10,20 +10,11 @@ Learn how the backend authenticates Partner Portal users with OIDC and server-si
 
 ## Authentication Overview
 
-The normal login path is OIDC. After a successful callback, the backend stores
-the authenticated user in a server-side Redis session and resolves the user
-from that session on protected routes. The browser cookie only carries the
-session identifier. An allowlisted local persona adapter is available only
-under the exact local-development gate documented in the repository README.
+The only login path is OIDC. After a successful callback, the backend stores the authenticated user in a server-side Redis session and resolves the user from that session on protected routes. The browser cookie only carries the session identifier.
 
 When the frontend and backend run on different origins in development, configure `OIDC_POST_LOGIN_REDIRECT` as an absolute frontend URL such as `http://localhost:3000/auth-complete`. A backend-relative path like `/auth-complete` would keep the browser on the backend origin.
 
 If your identity provider returns `redirect_uri` mismatch errors (for example `CSIAQ0167E`), set `OIDC_REDIRECT_URI` in backend configuration to the exact callback URL registered for your OAuth client, including scheme, host, port, and path.
-
-OIDC establishes identity and account linkage only. Before the backend creates
-a session, it verifies that the enabled local user has a current canonical
-assignment or an eligible pending invitation. Upstream group claims never
-grant a portal role.
 
 ```python
 @router.get("/auth/oidc/login")
@@ -40,28 +31,19 @@ async def oidc_callback(request: Request, db: AsyncSession):
     return RedirectResponse(url=settings.OIDC_POST_LOGIN_REDIRECT)
 ```
 
-### Canonical Role Assignment
-
-The portal owns four fixed role codes: `cl_admin`, `rp_admin`,
-`rp_user_edit`, and `read_only`. The backend resolves active assignments on
-each protected request, including workspace scope, so revocation takes effect
-on the next request.
-
-Bootstrap the first CL Admin through the explicitly invoked, idempotent
-`create_initial_cl_admin` script with `INITIAL_CL_ADMIN_EMAIL` set for that
-invocation. Manage later assignments through the authorized role-assignment
-API. Do not repurpose identity claims as application roles.
-
 ### Authorization Overview
 
-Coarse permission checks use code-owned Casbin policies keyed by canonical
-role codes. Backend services enforce workspace and object scope. Mutable legacy
-policy rows and user-specific subjects do not grant runtime authority.
+Authorization for admin-heavy routes uses `casbin-fastapi-decorator` with per-route `PermissionGuard` decorators. Superusers map to the Casbin subject `admin`, and additional policies are loaded from the `access_policy` table.
+
+Minimal RBAC is split into two Casbin resources:
+
+- `roles`: create, list, update, and soft-delete role definitions
+- `users_admin`: assign roles to users, manage tiers, and perform broader user administration
 
 ```python
-@router.get("/roles")
-@casbin_guard.require_permission("roles", "read")
-async def read_role_reference(...):
+@router.get("/tiers")
+@casbin_guard.require_permission("tiers", "read")
+async def read_tiers(...):
     ...
 ```
 
@@ -78,10 +60,11 @@ async def read_role_reference(...):
 
 ### Permission System
 - Casbin decorators: Route-level authorization via `PermissionGuard`
-- Canonical subjects: Only the four fixed role codes enter policy evaluation
-- Current assignments: Role and workspace scope are resolved on each request
+- Superuser mapping: Superusers map to the Casbin subject `admin`
+- Dedicated role policies: Role CRUD uses the `roles` Casbin resource instead of reusing `users_admin`
 - Resource ownership: User-specific data access
-- Rate limiting: Redis-backed per-actor, per-path default limits
+- User tiers: Subscription-based feature access
+- Rate limiting: Per-user and per-tier API limits
 
 ## Authentication Patterns
 
@@ -100,8 +83,7 @@ async def public_endpoint(user: dict | None = Depends(get_optional_user)):
     return {"premium_content": False}
 
 
-@router.get("/admin")
-@casbin_guard.require_permission("users_admin", "read")
+@router.get("/admin", dependencies=[Depends(get_current_superuser)])
 async def admin_endpoint():
     return {"admin_data": "sensitive"}
 ```
@@ -134,9 +116,6 @@ OIDC_CLIENT_ID="your-client-id"
 OIDC_CLIENT_SECRET="your-client-secret"
 ```
 
-Set `INITIAL_CL_ADMIN_EMAIL` only during the explicit initial-assignment
-bootstrap; do not keep it in long-lived runtime configuration.
-
 For local development without Docker, run a Redis server before starting the backend. If you already use Redis locally for caching, queues, or rate limiting, you can reuse it and isolate session data with `REDIS_SESSION_DB`.
 
 ### Security Settings
@@ -157,7 +136,7 @@ Understand how OIDC login, session-backed authentication, and browser request au
 Implement profile management and portal-owned metadata.
 
 ### 3. **[Permissions](permissions.md)** - Access Control
-Set up fixed-role access control and workspace/object scope checks.
+Set up role-based access control, resource ownership checking, and tier-based permissions.
 
 ## What's Next
 

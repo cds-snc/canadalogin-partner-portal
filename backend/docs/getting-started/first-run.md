@@ -71,10 +71,11 @@ Check if the database tables were created:
 # For Docker Compose
 docker compose exec db psql -U postgres -d myapp -c "\dt"
 
-# You should see migrated portal tables such as:
-# public | user       | table | postgres
-# public | workspace  | table | postgres
-# public | role       | table | postgres
+# You should see tables like:
+# public | users        | table | postgres
+# public | posts        | table | postgres
+# public | tiers        | table | postgres
+# public | rate_limits  | table | postgres
 ```
 
 ### 4. Redis Connection
@@ -90,21 +91,20 @@ docker compose exec redis redis-cli ping
 
 ## Initial Setup
 
-Before testing administrative features, create the initial CL Admin assignment.
+Before testing features, you need to create the first superuser and tier.
 
-### Creating the Initial CL Admin
+### Creating the First Superuser
 
 !!! warning "Prerequisites"
-    Make sure migrations are current before running the bootstrap. Set
-    `INITIAL_CL_ADMIN_EMAIL` only for the explicit bootstrap invocation.
+    Make sure the database and tables are created before running create_superuser. The database should be running and the API should have started at least once.
 
 #### Using Docker Compose
 
 If using Docker Compose, uncomment this section in your `docker-compose.yml`:
 
 ```yaml
-#-------- uncomment to create the initial CL Admin assignment --------
-create_initial_cl_admin:
+#-------- uncomment to create first superuser --------
+create_superuser:
   build:
     context: .
     dockerfile: Dockerfile
@@ -112,7 +112,7 @@ create_initial_cl_admin:
     - ./src/.env
   depends_on:
     - db
-  command: python -m src.scripts.create_initial_cl_admin
+  command: python -m src.scripts.create_first_superuser
   volumes:
     - ./src:/code/src
 ```
@@ -120,14 +120,14 @@ create_initial_cl_admin:
 Then run:
 
 ```bash
-# Start services and run the configured bootstrap
+# Start services and run create_superuser automatically
 docker compose up -d
 
 # Or run it manually
-docker compose run --rm create_initial_cl_admin
+docker compose run --rm create_superuser
 
-# Stop the bootstrap service when done
-docker compose stop create_initial_cl_admin
+# Stop the create_superuser service when done
+docker compose stop create_superuser
 ```
 
 #### From Scratch
@@ -136,7 +136,27 @@ If running manually, use:
 
 ```bash
 # Make sure you're in the root folder
-INITIAL_CL_ADMIN_EMAIL=admin@example.test uv run python -m src.scripts.create_initial_cl_admin
+uv run python -m src.scripts.create_first_superuser
+```
+
+### Creating the First Tier
+
+!!! warning "Prerequisites"
+    Make sure the database and tables are created before running create_tier.
+
+#### Using Docker Compose
+
+Uncomment the `create_tier` service in `docker-compose.yml` and run:
+
+```bash
+docker compose run --rm create_tier
+```
+
+#### From Scratch
+
+```bash
+# Make sure you're in the root folder
+uv run python -m src.scripts.create_first_tier
 ```
 
 ## Testing Core Features
@@ -148,7 +168,17 @@ Let's test the main features of your API.
 Users authenticate through the OIDC browser flow at `/api/v1/auth/oidc/login`.
 There is no local credential login path in this OIDC-only setup.
 
-#### 1a. Start the OIDC flow
+#### 1a. Seed default Casbin policies
+
+Before testing the admin-heavy routes, seed the default `admin` policies:
+
+```bash
+uv run python -m src.scripts.seed_access_policies
+```
+
+This creates policies for `tiers`, `rate_limits`, and `users_admin` resources.
+
+#### 1b. Start the OIDC flow
 
 If OIDC is enabled, start the browser login flow with:
 
@@ -157,15 +187,6 @@ open http://localhost:8000/api/v1/auth/oidc/login
 ```
 
 After a successful callback, the backend stores the authenticated user in the server-side session cookie.
-
-OIDC establishes identity only. Before this works, make sure the enabled test
-user has a current canonical assignment or an eligible pending invitation.
-
-Common local fixes:
-
-- bootstrap the first CL Admin with `INITIAL_CL_ADMIN_EMAIL` for that invocation;
-- use the authorized role-assignment API for subsequent assignments; or
-- use the exact local-only persona gate when testing without an identity provider.
 
 #### 2. Test a Protected Endpoint
 
@@ -454,16 +475,20 @@ from fastapi import APIRouter
 from app.api.v1.login import router as login_router
 from app.api.v1.logout import router as logout_router
 from app.api.v1.posts import router as posts_router
+from app.api.v1.rate_limits import router as rate_limits_router
 from app.api.v1.tasks import router as tasks_router
+from app.api.v1.tiers import router as tiers_router
 from app.api.v1.users import router as users_router
 from app.api.v1.items import router as items_router  # Add this line
 
 router = APIRouter(prefix="/v1")
 router.include_router(login_router, prefix="/login")
-router.include_router(logout_router, prefix="/logout")
+router.include_router(logout_router, prefix="/logout") 
 router.include_router(users_router, prefix="/users")
 router.include_router(posts_router, prefix="/posts")
 router.include_router(tasks_router, prefix="/tasks")
+router.include_router(tiers_router, prefix="/tiers")
+router.include_router(rate_limits_router, prefix="/rate_limits")
 router.include_router(items_router, prefix="/items")  # Add this line
 ```
 
@@ -474,6 +499,8 @@ Import your new model in `src/app/models/__init__.py`:
 ```python
 from .user import User
 from .post import Post
+from .tier import Tier
+from .rate_limit import RateLimit
 from .item import Item  # Add this line
 ```
 
@@ -613,4 +640,4 @@ You've successfully:
 - Run database migrations
 - Tested authentication and CRUD operations
 
-You're now ready to build amazing APIs with FastAPI!
+You're now ready to build amazing APIs with FastAPI! 

@@ -138,8 +138,8 @@ output "ibm_sv_admin_client_secret_arn" {
   value       = aws_secretsmanager_secret.ibm_sv_admin_client_secret.arn
 }
 
-output "secret_key_arn" {
-  description = "Secrets Manager ARN for the application signing key"
+output "session_secret_arn" {
+  description = "Secrets Manager ARN for session secret"
   value       = aws_secretsmanager_secret.session_secret.arn
 }
 

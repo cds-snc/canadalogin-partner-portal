@@ -1,15 +1,16 @@
-from functools import lru_cache
-from inspect import isawaitable
 from pathlib import Path
-from typing import Annotated, Any
+from typing import Annotated
 
-import casbin
 from casbin_fastapi_decorator import PermissionGuard
+from casbin_fastapi_decorator_db import DatabaseEnforcerProvider
 from fastapi import Depends
+from sqlalchemy import select
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from ..api.dependencies import get_current_user
-from ..services.authorization_service import canonical_subjects_for_user
-from .authorization import CanonicalRoleCode
+from ..models.access_policy import AccessPolicy
+from ..models.role import Role
+from .db.database import async_get_db, local_session
 from .exceptions.http_exceptions import ForbiddenException
 
 CASBIN_MODEL_PATH = Path(__file__).with_name("casbin_model.conf")
@@ -17,72 +18,41 @@ CASBIN_MODEL_PATH = Path(__file__).with_name("casbin_model.conf")
 
 async def get_casbin_subject(
     current_user: Annotated[dict, Depends(get_current_user)],
-) -> list[str]:
-    return list(canonical_subjects_for_user(current_user))
+    db: Annotated[AsyncSession, Depends(async_get_db)],
+) -> str:
+    if current_user.get("is_superuser"):
+        return "admin"
 
+    role_ids = current_user.get("role_ids")
+    if role_ids is not None and len(role_ids) > 0:
+        result = await db.execute(select(Role.name).where(Role.id.in_(role_ids)))
+        role_names = result.scalars().all()
+        if len(role_names) > 0:
+            return str(role_names[0])
 
-class MultiSubjectEnforcer:
-    def __init__(self, enforcer: Any) -> None:
-        self._enforcer = enforcer
-
-    async def enforce(self, user: str | list[str], *rvals: Any) -> bool:
-        subjects = [user] if isinstance(user, str) else [subject for subject in user if subject]
-        canonical_subjects = {role.value for role in CanonicalRoleCode}
-
-        for subject in subjects:
-            if subject not in canonical_subjects:
-                continue
-            result = self._enforcer.enforce(subject, *rvals)
-            if isawaitable(result):
-                result = await result
-            if result:
-                return True
-
-        return False
-
-    def __getattr__(self, name: str) -> Any:
-        return getattr(self._enforcer, name)
+    # fall back to 'username' key if present, otherwise use 'id' or a default
+    username = current_user.get("username")
+    if username:
+        return str(username)
+    if "id" in current_user:
+        return str(current_user["id"])
+    return "anonymous"
 
 
 def casbin_error_factory(_user: str, *_args) -> Exception:
     return ForbiddenException("You do not have enough privileges.")
 
 
-CANONICAL_CASBIN_POLICIES = (
-    (CanonicalRoleCode.CL_ADMIN.value, "roles", "read"),
-    (CanonicalRoleCode.CL_ADMIN.value, "rp_applications", "read"),
-    (CanonicalRoleCode.CL_ADMIN.value, "tasks", "read|write"),
-    (CanonicalRoleCode.CL_ADMIN.value, "users_admin", "read|write"),
-    (CanonicalRoleCode.CL_ADMIN.value, "workspace", "read|write"),
+database_enforcer_provider = DatabaseEnforcerProvider(
+    model_path=CASBIN_MODEL_PATH,
+    session_factory=local_session,
+    policy_model=AccessPolicy,
+    policy_mapper=lambda policy: (policy.subject, policy.resource, policy.action),
+    default_policies=[("admin", "*", ".*")],
 )
-
-
-@lru_cache(maxsize=1)
-def _build_canonical_enforcer() -> casbin.Enforcer:
-    enforcer = casbin.Enforcer(str(CASBIN_MODEL_PATH))
-    enforcer.add_policies(list(CANONICAL_CASBIN_POLICIES))
-    return enforcer
-
-
-def canonical_enforcer_provider() -> MultiSubjectEnforcer:
-    """Build the code-owned policy boundary; no database policy is loaded."""
-
-    return MultiSubjectEnforcer(_build_canonical_enforcer())
-
-
-# Compatibility name for dependency overrides during the additive cutover.
-# The provider is intentionally no longer database-backed.
-database_enforcer_provider = canonical_enforcer_provider
-
-
-async def get_casbin_enforcer(
-    enforcer: Annotated[MultiSubjectEnforcer, Depends(canonical_enforcer_provider)],
-) -> MultiSubjectEnforcer:
-    return enforcer
-
 
 casbin_guard = PermissionGuard(
     user_provider=get_casbin_subject,
-    enforcer_provider=get_casbin_enforcer,
+    enforcer_provider=database_enforcer_provider,
     error_factory=casbin_error_factory,
 )

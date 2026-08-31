@@ -9,7 +9,7 @@ from fastapi.testclient import TestClient
 from pydantic import BaseModel
 from starsessions import InMemoryStore
 
-from src.app.api.dependencies import get_current_cl_admin, get_current_user
+from src.app.api.dependencies import get_current_superuser, get_current_user
 from src.app.core.access_control import CASBIN_MODEL_PATH, casbin_guard, database_enforcer_provider
 from src.app.core.config import settings
 from src.app.core.db.database import async_get_db
@@ -60,8 +60,8 @@ def build_router() -> APIRouter:
     async def auth_route(current_user: Annotated[dict[str, Any], Depends(get_current_user)]) -> dict[str, Any]:
         return current_user
 
-    @router.get("/cl-admin")
-    async def cl_admin_route(current_user: Annotated[dict[str, Any], Depends(get_current_cl_admin)]) -> dict[str, Any]:
+    @router.get("/superuser")
+    async def superuser_route(current_user: Annotated[dict[str, Any], Depends(get_current_superuser)]) -> dict[str, Any]:
         return current_user
 
     @router.get("/casbin")
@@ -87,7 +87,9 @@ def build_router() -> APIRouter:
     return router
 
 
-def assert_unified_error_response(payload: dict[str, Any], *, expected_code: str, expected_message: str, expected_request_id: str) -> dict[str, Any]:
+def assert_unified_error_response(
+    payload: dict[str, Any], *, expected_code: str, expected_message: str, expected_request_id: str
+) -> dict[str, Any]:
     assert payload["error"]["code"] == expected_code
     assert payload["error"]["message"] == expected_message
     assert payload["error"]["requestId"] == expected_request_id
@@ -125,28 +127,23 @@ def test_auth_dependency_errors_return_unified_error_envelope() -> None:
     )
 
 
-def test_cl_admin_permission_errors_return_unified_error_envelope() -> None:
+def test_superuser_permission_errors_return_unified_error_envelope() -> None:
     client = build_test_client(
         build_router(),
         dependency_overrides={
-            get_current_user: lambda: {
-                "authorization_context": {
-                    "globalRole": None,
-                    "partnerAccess": [],
-                }
-            },
+            get_current_user: lambda: {"is_superuser": False, "username": "member"},
         },
     )
 
     with client:
-        response = client.get("/cl-admin", headers={"X-Request-ID": "cl-admin-test"})
+        response = client.get("/superuser", headers={"X-Request-ID": "superuser-test"})
 
     assert response.status_code == 403
     assert_unified_error_response(
         response.json(),
         expected_code="forbidden",
         expected_message="You do not have enough privileges.",
-        expected_request_id="cl-admin-test",
+        expected_request_id="superuser-test",
     )
 
 

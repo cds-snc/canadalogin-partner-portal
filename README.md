@@ -3,41 +3,28 @@
 
 Monorepo for the CanadaLogin Partner Portal - a FastAPI backend and Vite + React frontend.
 
-**Just need to run the application locally?** Use the short
-[Local Development command sheet](LOCAL_DEVELOPMENT.md).
 
-
-This root README summarizes the repository, quick-start commands, and where to
-find detailed docs for each part. Start with the
-[documentation index](docs/README.md) for current solution architecture,
-architecture decisions, and development conventions.
+This root README summarizes the repository, quick-start commands, and where to find detailed docs for each part.
 
 ## Makefile Usage (Recommended)
 
 This repository provides a top-level `Makefile` to simplify common developer tasks for both backend and frontend. **Use `make` targets instead of running commands directly.**
 
 Backend `make` targets pin `uv` to the repo-root `.venv`, which avoids accidentally creating or using a separate `backend/.venv`.
-They also default `UV_CACHE_DIR` to a writable local path so sandboxed shells do not fail on `~/.cache/uv` permissions.
-
-For local host-run backend development, start your local container runtime first, for example `colima start` on macOS or Docker Desktop. The backend expects PostgreSQL on `localhost:5432` and Redis on `localhost:6379`; `make dev`, `make bk-dev`, and `make start-dev` now bring those dependency services up and apply migrations automatically before launching the app.
 
 Key targets:
 
-| Task | Backend | Frontend | Composite |
-|---|---|---|---|
-| Install dependencies | `make install` | `make frontend-install` | `make all-install` |
-| Start Postgres and Redis | `make db-up` | — | — |
-| Reset local DB and reseed local access | `make db-reset-local` | — | — |
-| Build | — | `make frontend-build` | `make all-build` (frontend only) |
-| Development server | `make dev` or `make bk-dev` | `make frontend-dev` | `make start-dev` |
-| Test | `make test` | `make frontend-test` (unit) | `make all-test` (backend + frontend unit) |
-| Lint | `make lint` | `make frontend-lint` | `make all-lint` |
-| Autofix or format | `make format` (Ruff autofix) | `make frontend-format` | `make all-format` |
-| Typecheck | `make typecheck` | Included in frontend build | — |
+| Task                | Backend         | Frontend         | Both (composite) |
+|---------------------|----------------|------------------|------------------|
+| Install deps        | `make install` | `make frontend-install` | `make all-install` |
+| Build               | —              | `make frontend-build`   | `make all-build`   |
+| Dev server          | —              | `make frontend-dev`     | —                |
+| Test                | `make test`    | `make frontend-test`    | `make all-test`    |
+| Lint                | `make lint`    | `make frontend-lint`    | `make all-lint`    |
+| Format              | `make format`  | `make frontend-format`  | `make all-format`  |
+| Typecheck           | `make typecheck` | —                | —                |
 
 Shortcuts: `make bk-*` for backend, `make ft-*` for frontend (e.g., `make bk-test`, `make ft-lint`).
-
-Common local service helpers: `make db-up`, `make db-logs`, `make db-down`, and `make db-reset-local`.
 
 Run `make help` for a full list of available targets.
 
@@ -47,14 +34,12 @@ Run `make help` for a full list of available targets.
   - `src/` — Python package and app code
   - `tests/` — pytest test suite and helpers
   - `docker-compose.yml`, `Dockerfile` — container/dev orchestration
-  - `docs/`, `mkdocs.yml` — inherited backend reference material; validate it
-    against the current solution docs and code
+  - `docs/`, `mkdocs.yml` — backend documentation site (rich guides and examples)
 - `frontend/` — Vite + React (TypeScript) frontend (TanStack Router/Query, Tailwind, Vitest, Playwright)
   - `src/` — React source, routes, components
   - `public/` — static assets
   - `package.json`, `pnpm-lock.yaml` — frontend tooling and scripts
-- `backend/tests/` — backend pytest suite
-- `frontend/tests/unit/`, `frontend/e2e/` — frontend unit and browser tests
+- `test-results/`, `tests/` — test artifacts and e2e reports
 
 ## Backend (FastAPI) — Highlights
 
@@ -62,13 +47,12 @@ Run `make help` for a full list of available targets.
 - Unified `repositories/` data-access layer for both database `FastCRUD` adapters and IBM Security Verify API clients
 - Centralized exception handling with a shared `ErrorResponse` envelope and reusable OpenAPI error response docs
 - Pydantic v2 models, OIDC via Authlib, Redis-backed server sessions, JWT fallback for tests
+- GC Notify-backed RP application developer invitations with app-scoped access for invited users
 - Casbin authorization decorators, rate limiting, ARQ background jobs, caching helpers
 - Multiple deployment modes: local (uvicorn), staging (gunicorn + uvicorn workers), production (nginx)
 - MAU (Monthly Active User) data loading from AWS S3 via IAM role assumption (cross-account ARQ cron job), cached in Redis with query-by-app and date-range support
 
-For current repository conventions and architecture, use `docs/`. The
-`backend/README.md` and `backend/docs/` tree remain useful reference material
-but include inherited boilerplate that may not match the current portal.
+For full backend docs and configuration, see `backend/README.md` and the site at `backend/docs/`.
 
 ### Backend Error Contract
 
@@ -81,61 +65,41 @@ Backend API errors are standardized through `backend/src/app/core/exceptions/han
 
 When extending backend behavior, prefer project exceptions from `backend/src/app/core/exceptions/http_exceptions.py` over raw `HTTPException` or `ValueError` in route and service code.
 
+docker compose up --build
+
 Quick local backend start (minimal):
 
 ```
-# 1. Install backend dependencies
-make bk-install
+# 1. (First time) Setup backend environment
+make install
 
-# 2. Create local configuration on first use, then fill in safe local values
-cp backend/.env.sample backend/.env
+# 2. (Optional) Run backend setup script for environment selection
+cd backend && ./setup.py  # choose local/staging/production or run './setup.py local'
 
-# 3. Start your container runtime if needed
-# macOS example: colima start
-
-# 4. Start the backend development server
-make bk-dev
+# 3. Start backend development server
+cd backend && UV_PROJECT_ENVIRONMENT=../.venv uv run uvicorn src.app.main:app --reload --host 127.0.0.1 --port 8000
 ```
-
-`make bk-dev` runs the backend on the host, not in Docker. It now starts Postgres and Redis and applies migrations automatically before launching, but your container runtime still needs to be available.
 
 Common backend tasks (via Makefile):
 
 ```
-# Start dependency services used by the host-run backend
-make db-up
-
-# Tail dependency service logs
-make db-logs
-
-# Stop dependency services
-make db-down
-
-# Rebuild the local Postgres/Redis state, apply migrations, and rerun
-# the initial canonical CL Admin bootstrap
-make db-reset-local
-
 # Run backend tests
 make test
 
 # Lint backend
 make lint
 
-# Apply Ruff lint autofixes
+# Format backend
 make format
 
 # Typecheck backend
 make typecheck
 
-# Apply migrations
-make bk-migration
+# Run migrations (no Makefile target)
+cd backend/src && UV_PROJECT_ENVIRONMENT=../../.venv uv run alembic upgrade head
 
 # Start with docker compose (local)
 cd backend && docker compose up --build
-
-# Or seed deterministic fake role personas and run the loopback-only selector
-make seed-local-personas
-make start-local-personas
 ```
 
 ## Frontend (Vite + React) — Highlights
@@ -165,7 +129,7 @@ make frontend-lint
 # Format frontend
 make frontend-format
 
-# Run frontend unit tests
+# Run all frontend tests (unit + e2e)
 make frontend-test
 
 # Build frontend for production
@@ -173,16 +137,11 @@ make frontend-build
 
 # Preview production build
 make frontend-preview
-
-# Run Playwright browser tests separately
-cd frontend && pnpm run test:e2e
 ```
 
 ## Full stack with Docker
 
 The `backend/docker-compose.yml` can run the backend and required services (Postgres, Redis). The frontend can be built and served by a static server or included in a multi-service compose stack.
-
-For the common mixed local workflow, run `make bk-dev` or `make start-dev` from the repo root after your container runtime is available. Those targets now ensure Postgres and Redis are up and migrate the local database before the host-run backend starts. You can still use `make db-up` when you only want the dependency services. This compose file publishes PostgreSQL on `localhost:5432` and Redis on `localhost:6379` so the host-run backend can connect.
 
 Example (from `backend/`):
 
@@ -193,8 +152,8 @@ docker compose up --build
 
 ## Configuration & environment
 
-- Backend: create `backend/.env` from `backend/.env.sample` and set
-  `ENVIRONMENT`, DB, Redis, OIDC, and session variables.
+- Backend: create `backend/src/.env` (or copy from examples) and set `ENVIRONMENT`, DB, Redis, OIDC, and session variables.
+- Backend invitation flow also requires GC Notify and invite-link settings: `GC_NOTIFY_API_KEY`, `GC_NOTIFY_RP_APPLICATION_INVITE_TEMPLATE_ID`, `GC_NOTIFY_EMAIL_REPLY_TO_ID` (optional), `RP_APPLICATION_INVITE_URL_BASE`, `RP_APPLICATION_INVITATION_EXPIRE_DAYS`, and `OIDC_ACCESS_DENIED_REDIRECT`.
 - Frontend: environment variables for API base URLs can be set via Vite's `import.meta.env` or `.env` files in `frontend/`.
 
 Do NOT commit secrets or `.env` files to source control.
@@ -203,9 +162,8 @@ Do NOT commit secrets or `.env` files to source control.
 ## Testing
 
 - **Backend tests:** `make test` (runs all backend tests)
-- **Frontend unit tests:** `make frontend-test`
-- **All default tests:** `make all-test` (backend and frontend unit tests)
-- **Frontend browser tests:** `cd frontend && pnpm run test:e2e`
+- **Frontend tests:** `make frontend-test` (runs all frontend tests)
+- **All tests:** `make all-test` (runs backend and frontend tests)
 - **Frontend E2E reports:** Playwright reports are stored under `frontend/playwright-report/`.
 
 
@@ -220,11 +178,6 @@ See the backend contribution and code-of-conduct files in `backend/CONTRIBUTING.
 
 ## Where to find more details
 
-- [Local Development command sheet](LOCAL_DEVELOPMENT.md): the shortest path
-  for starting, updating, stopping, and resetting the local application.
-- [Documentation index](docs/README.md).
-- [Current solution architecture and ADRs](docs/architecture/README.md).
-- [Repository-specific development and verification conventions](docs/repo-guidance/development-conventions.md).
-- Backend reference material: `backend/docs/` and `backend/README.md`; validate
-  inherited boilerplate guidance against the current solution docs and code.
-- Frontend setup and package reference: `frontend/README.md`.
+- Backend full docs and guides: `backend/docs/` and `backend/README.md`.
+- Frontend detailed README and package list: `frontend/README.md`.
+

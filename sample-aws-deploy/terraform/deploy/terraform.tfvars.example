@@ -35,7 +35,7 @@ cloudwatch_log_group_worker          = "/ecs/cl-pp-worker-dev"
 db_password_secret_arn               = "arn:aws:secretsmanager:ca-central-1:1234567890:secret:cl-pp-db-password-dev-12234"
 oidc_client_secret_arn               = "arn:aws:secretsmanager:ca-central-1:1234567890:secret:cl-pp-oidc-client-secret-123456"
 ibm_sv_admin_client_secret_arn       = "arn:aws:secretsmanager:ca-central-1:1234567890:secret:cl-pp-ibm-sv-secret-dev-123456"
-secret_key_arn                       = "arn:aws:secretsmanager:ca-central-1:1234567890:secret:cl-pp-session-secret-dev-3xgqCu"
+session_secret_arn                   = "arn:aws:secretsmanager:ca-central-1:1234567890:secret:cl-pp-session-secret-dev-3xgqCu"
 redis_password_secret_arn            = "arn:aws:secretsmanager:ca-central-1:1234567890:secret:cl-pp-redis-password-dev-dSgvrI"
 
 redis_session_ssl                    = true
@@ -50,8 +50,12 @@ oidc_provider_name         = "CanadaLogin"
 oidc_server_metadata_url  = "https://tenant.ibm.com/auth2/.well-known/openid-configuration"
 oidc_client_id            = "1234567890"
 oidc_scopes               = "openid profile email"
-partner_access_allowed_email_domains = ["department.example.gc.ca"]
 oidc_access_denied_redirect = "https://test.cloudfront.net/access-denied"
+oidc_admin_group_name = "admin"
+oidc_application_owners_group_name = "application owners"
+oidc_group_claim_key = "groupIds"
+clpp_admin_role_name = "admin"
+clpp_application_owners_role_name= "application owners"
 oidc_post_login_redirect = "/auth-complete"
 oidc_redirect_path ="/api/v1/auth/oidc/callback"
 oidc_redirect_url="https://test.cloudfront.net/api/v1/auth/oidc/callback"
@@ -71,8 +75,8 @@ session_cookie_domain = "test.cloudfront.net"
 
 # ----- CORS -----
 cors_origins = "[\"https://test.cloudfront.net\"]"
-cors_methods = "[\"GET\",\"POST\",\"PUT\",\"PATCH\",\"DELETE\",\"OPTIONS\"]"
-cors_headers = "[\"Accept\",\"Content-Type\",\"X-Request-ID\"]"
+cors_methods = "[\"*\"]"
+cors_headers = "[\"*\"]"
 
 # ----- S3 MAU (optional — local bucket auto-created) -----
 # aws_s3_role_arn = "arn:aws:iam::123456789012:role/cl-pp-mau-s3-read"

@@ -12,7 +12,7 @@ services:
       - ./src/.env
     # -------- replace with expose if you are using nginx --------
     ports:
-       - "127.0.0.1:8000:8000"
+       - "8000:8000"
     # expose:
     #    - "8000"
     depends_on:
@@ -56,14 +56,14 @@ services:
   # nginx:
   #   image: nginx:latest
   #   ports:
-  #     - "127.0.0.1:80:80"
+  #     - "80:80"
   #   volumes:
   #     - ./default.conf:/etc/nginx/conf.d/default.conf
   #   depends_on:
   #     - web
 
-  #-------- create the initial CL Admin assignment --------
-  create_initial_cl_admin:
+  #-------- uncomment to create first superuser --------
+  create_superuser:
     build: 
       context: .
       dockerfile: Dockerfile
@@ -72,7 +72,7 @@ services:
     depends_on:
       - db
       - web
-    command: python -m src.scripts.create_initial_cl_admin
+    command: python -m src.scripts.create_first_superuser
     volumes:
       - ./src:/code/src
 
@@ -85,12 +85,28 @@ services:
   #     - ./src/.env
   #   depends_on:
   #     - db
-  #     - create_initial_cl_admin
+  #     - create_superuser
   #     - redis
   #   command: python -m pytest ./tests
   #   volumes:
   #     - .:/code
 
+  #-------- uncomment to create first tier --------
+  # create_tier:
+  #   build: 
+  #     context: .
+  #     dockerfile: Dockerfile
+  #   env_file:
+  #     - ./src/.env
+  #   depends_on:
+  #     - create_superuser
+  #     - db
+  #     - web
+  #   command: python -m src.scripts.create_first_tier
+  #   volumes:
+  #     - ./src:/code/src
+
 volumes:
   postgres-data:
   redis-data:
+ 

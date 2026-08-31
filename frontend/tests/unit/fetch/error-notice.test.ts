@@ -1,7 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
 	BadRequestError,
-	ConflictRequestError,
 	ForbiddenRequestError,
 	ServerRequestError,
 	UnauthorizedRequestError,
@@ -56,27 +55,6 @@ describe("getRequestErrorNotice", () => {
 			bodyKey: "errors.serverBody",
 			noticeRole: "danger",
 			titleKey: "errors.serverTitle",
-		});
-	});
-
-	it("maps conflict errors to a warning notice with backend detail", () => {
-		expect(
-			getRequestErrorNotice(
-				new ConflictRequestError({
-					detail:
-						"Linked RP applications must be unlinked or removed before deleting application information",
-				}),
-				{
-					bodyKey: "roles.errorBody",
-					titleKey: "roles.errorTitle",
-				},
-			),
-		).toEqual({
-			bodyText:
-				"Linked RP applications must be unlinked or removed before deleting application information",
-			bodyKey: "errors.conflictBody",
-			noticeRole: "warning",
-			titleKey: "errors.conflictTitle",
 		});
 	});
 

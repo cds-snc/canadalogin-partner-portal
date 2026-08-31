@@ -72,9 +72,8 @@ sequenceDiagram
     alt missing sub or email claim
         BE-->>U: 401 ForbiddenException (access denied)
     else claims valid
-        BE->>BE: Treat OIDC claims as identity/account linkage only; map no groups to roles
-        BE->>DB: Upsert User identity fields (auth_provider, auth_subject, email, last_login_at)
-        BE->>DB: Resolve active canonical assignment/grant or eligible pending invitation
+        BE->>BE: Map group claims → portal roles (admin / application owners)
+        BE->>DB: Upsert User (auth_provider, auth_subject, email, role_ids, last_login_at)
         BE->>BE: regenerate_session_id(request) — prevent session fixation
         BE->>R: Store session (user_uuid, tokens, oidc_logout{sid, sub, issuer, id_token})
         BE->>R: Map OIDC SID → local session_id (for backchannel logout)
@@ -84,11 +83,8 @@ sequenceDiagram
 ```
 
 Edge cases:
-
 - Missing `sub` claim → 401; missing `email` claim → 401 ForbiddenException.
-- No active canonical assignment/grant and no eligible pending invitation →
-  user is denied access before an authenticated session is created; group
-  claims do not change that result.
+- Absent group claim → user receives default (non-admin) role.
 - PKCE `state` mismatch → authlib raises an error before token exchange.
 
 ## DFD-2: Department Selection And Terms Acceptance
@@ -151,16 +147,14 @@ sequenceDiagram
     participant BE as Backend API
     participant DB as PostgreSQL
 
-    FE->>BE: GET /api/v1/rp-applications/accessible
-    BE->>DB: Resolve active canonical workspace grants and RPApplication rows
-    BE-->>FE: Grant-accessible RP applications with workspace UUID and role
+    FE->>BE: GET /api/v1/rp-applications/mine
+    BE->>DB: Read RPApplication rows for current user
+    BE-->>FE: List of RP apps
 
-    U->>FE: Open an accessible RP configuration
-    FE->>BE: GET /api/v1/rp-applications/accessible/{uuid}
-    BE->>DB: Resolve the RP configuration's Workspace and inherited Department
-    BE-->>FE: Scoped RP configuration context
-
-    Note over FE,BE: RP-configuration Department cannot be assigned directly.<br/>Profile setup and Workspace creation own supported Department selection.
+    U->>FE: Assign department to an RP application
+    FE->>BE: PATCH /api/v1/rp-applications/{uuid} {department_id}
+    BE->>DB: UPDATE rp_application SET department_id = ?
+    BE-->>FE: 200 OK
 ```
 
 ## DFD-4: View Client Credentials
@@ -176,7 +170,7 @@ sequenceDiagram
     participant DB as PostgreSQL
 
     U->>FE: Navigate to client credentials page
-    FE->>BE: GET /api/v1/rp-applications/accessible/{uuid}/client
+    FE->>BE: GET /api/v1/rp-applications/mine/{uuid}/client
     BE->>C: enforce(user, rp_client_secret:read)
     alt unauthorized
         C-->>BE: deny
@@ -207,7 +201,7 @@ sequenceDiagram
 
     U->>FE: Provide rotation description (name) and confirm
     FE->>FE: Compute rotatedSecretExpiredAt = now + 30 days (epoch s)
-    FE->>BE: POST /api/v1/rp-applications/accessible/{uuid}/client/rotated-secrets
+    FE->>BE: POST /api/v1/rp-applications/mine/{uuid}/client/rotated-secrets
     Note right of FE: {description, rotatedSecretExpiredAt}
     BE->>C: enforce(user, rp_client_secret:write)
     alt unauthorized
@@ -238,7 +232,7 @@ sequenceDiagram
     participant DB as PostgreSQL
 
     U->>FE: Confirm destructive regenerate (no description or expiry)
-    FE->>BE: POST /api/v1/rp-applications/accessible/{uuid}/client/rotate-secret
+    FE->>BE: POST /api/v1/rp-applications/mine/{uuid}/client/rotate-secret
     Note right of FE: {deleteRotatedSecrets:false, description:"", rotatedSecretExpiredAt:0}
     BE->>C: enforce(user, rp_client_secret:write)
     alt unauthorized
@@ -299,7 +293,7 @@ sequenceDiagram
     participant C as Casbin Guard
     participant R as Redis
 
-    FE->>BE: GET /api/v1/rp-applications/accessible/{uuid}/mau-report?start_date=&end_date=
+    FE->>BE: GET /api/v1/rp-applications/mine/{uuid}/mau-report?start_date=&end_date=
     BE->>C: enforce(user, mau_report:read)
     alt unauthorized
         C-->>BE: deny
@@ -315,7 +309,6 @@ sequenceDiagram
 ```
 
 Edge cases:
-
 - Redis miss for a date (load job has not run yet, or S3 key absent) → that date returns null; UI renders empty slot.
 - Invalid date range → `BadRequestException`.
 
@@ -397,14 +390,14 @@ sequenceDiagram
         BE-->>FE: 200 OK
     else view client credentials
         U->>FE: Navigate to client credentials page
-        FE->>BE: GET /api/v1/rp-applications/accessible/{uuid}/client
+        FE->>BE: GET /api/v1/rp-applications/mine/{uuid}/client
         BE->>C: enforce(user, rp_client_secret:read)
         BE->>V: get_client_secret(client_id)
         V-->>BE: clientId, clientSecret, clientSecretId
         BE->>DB: INSERT AuditLog (target=rp_application, operation=REVEAL_SECRET, user_uuid, target_uuid)
         BE-->>FE: RPApplicationClientCredentialsRead
     else rotate secret with description (old expires in 30 days)
-        FE->>BE: POST /api/v1/rp-applications/accessible/{uuid}/client/rotated-secrets
+        FE->>BE: POST /api/v1/rp-applications/mine/{uuid}/client/rotated-secrets
         Note right of FE: {description, rotatedSecretExpiredAt=now+30d}
         BE->>C: enforce(user, rp_client_secret:write)
         BE->>V: update_client_secret(client_id, {description, rotatedSecretExpiredAt})
@@ -412,7 +405,7 @@ sequenceDiagram
         BE->>DB: INSERT AuditLog (target=rp_application, operation=ROTATE_SECRET, user_uuid, target_uuid)
         BE-->>FE: Rotated secrets list (new secret value included)
     else regenerate primary secret immediately
-        FE->>BE: POST /api/v1/rp-applications/accessible/{uuid}/client/rotate-secret
+        FE->>BE: POST /api/v1/rp-applications/mine/{uuid}/client/rotate-secret
         Note right of FE: {description:"", rotatedSecretExpiredAt:0}
         BE->>C: enforce(user, rp_client_secret:write)
         BE->>V: update_client_secret(client_id, {description:"", rotatedSecretExpiredAt:0})

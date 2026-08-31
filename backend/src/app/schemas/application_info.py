@@ -1,6 +1,7 @@
+
 import uuid as uuid_pkg
 from datetime import datetime
-from enum import StrEnum
+from enum import Enum
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 from pydantic.alias_generators import to_camel
@@ -8,21 +9,21 @@ from pydantic.alias_generators import to_camel
 from ..core.schemas import PersistentDeletion, UUIDSchema
 
 
-class AuthenticationProtocol(StrEnum):
+class AuthenticationProtocol(str, Enum):
     OIDC = "OIDC"
     SAML = "SAML"
     BOTH_OIDC_AND_SAML = "BOTH_OIDC_AND_SAML"
     NONE = "NONE"
 
 
-class IdentityProofingMethod(StrEnum):
+class IdentityProofingMethod(str, Enum):
     NONE = "NONE"
     EXTERNAL_ID_PROVIDER = "EXTERNAL_ID_PROVIDER"
     IN_PERSON_ID_PROVIDER = "IN_PERSON_ID_PROVIDER"
     OTHER = "OTHER"
 
 
-class ConsolidatorUsed(StrEnum):
+class ConsolidatorUsed(str, Enum):
     NONE = "NONE"
     GCCF_GCKEY_INTERAC_SAML = "GCCF_GCKEY_INTERAC_SAML"
     GCCF_CONSOLIDATOR_OIDC = "GCCF_CONSOLIDATOR_OIDC"
@@ -30,7 +31,7 @@ class ConsolidatorUsed(StrEnum):
     ECAS = "ECAS"
 
 
-class CurrentMfaOption(StrEnum):
+class CurrentMfaOption(str, Enum):
     NONE = "NONE"
     MFAAS_1 = "MFAAS_1"
     MFAAS_2 = "MFAAS_2"
@@ -38,7 +39,7 @@ class CurrentMfaOption(StrEnum):
     CUSTOM_INTERNAL = "CUSTOM_INTERNAL"
 
 
-class CurrentSignInOption(StrEnum):
+class CurrentSignInOption(str, Enum):
     GC_KEY = "GC_KEY"
     INTERAC_SIGN_IN = "INTERAC_SIGN_IN"
     ALBERTA_CA_ACCOUNT = "ALBERTA_CA_ACCOUNT"
@@ -47,13 +48,13 @@ class CurrentSignInOption(StrEnum):
     OTHER = "OTHER"
 
 
-class UserType(StrEnum):
+class UserType(str, Enum):
     PUBLIC = "PUBLIC"
     ORGANIZATIONS_AND_BUSINESSES = "ORGANIZATIONS_AND_BUSINESSES"
     OFFICIAL_REPRESENTATIVES = "OFFICIAL_REPRESENTATIVES"
 
 
-class PersonalInformationType(StrEnum):
+class PersonalInformationType(str, Enum):
     FIRST_NAME = "FIRST_NAME"
     LAST_NAME = "LAST_NAME"
     EMAIL_ADDRESS = "EMAIL_ADDRESS"

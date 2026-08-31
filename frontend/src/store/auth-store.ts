@@ -10,7 +10,7 @@ type AuthStoreState = {
 	isAuthenticated: boolean;
 	isLoading: boolean;
 	hydrateSession: () => Promise<UserRead | null>;
-	login: (redirect?: string) => void;
+	login: () => void;
 	logout: () => Promise<void>;
 	refreshSession: () => Promise<UserRead | null>;
 	reset: () => void;
@@ -88,9 +88,9 @@ const authStore = createStore<AuthStoreState>()((set, get) => {
 	return {
 		...initialSnapshot,
 		hydrateSession: (): Promise<UserRead | null> => runHydration(false),
-		login: (redirect?: string): void => {
+		login: (): void => {
 			const { language } = appPreferencesStore.getState();
-			window.location.assign(getOidcLoginUrl(language, redirect));
+			window.location.assign(getOidcLoginUrl(language));
 		},
 		logout: (): Promise<void> => {
 			sessionVersion += 1;

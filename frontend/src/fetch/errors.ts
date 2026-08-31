@@ -71,23 +71,6 @@ export class ForbiddenRequestError extends HttpRequestError {
 	}
 }
 
-export class ConflictRequestError extends HttpRequestError {
-	public constructor(
-		options: Partial<Omit<HttpRequestErrorOptions, "status">> = {}
-	) {
-		super({
-			code: options.code,
-			detail: options.detail,
-			details: options.details,
-			message: options.message ?? options.detail ?? "Request conflict",
-			requestId: options.requestId,
-			responseData: options.responseData,
-			status: 409,
-		});
-		this.name = "ConflictRequestError";
-	}
-}
-
 export class ServerRequestError extends HttpRequestError {
 	public constructor(options: HttpRequestErrorOptions) {
 		super(options);
@@ -103,10 +86,6 @@ export const isUnauthorizedRequestError = (
 export const isForbiddenRequestError = (
 	error: Error | null | undefined
 ): error is ForbiddenRequestError => error instanceof ForbiddenRequestError;
-
-export const isConflictRequestError = (
-	error: Error | null | undefined
-): error is ConflictRequestError => error instanceof ConflictRequestError;
 
 export const isBadRequestError = (
 	error: Error | null | undefined

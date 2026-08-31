@@ -1,7 +1,7 @@
 import { Outlet, createFileRoute } from "@tanstack/react-router";
-import { requirePartnerAccess } from "../features/auth/auth-routing";
+import { requireAuthenticatedUser } from "../features/auth/auth-routing";
 
 export const Route = createFileRoute("/your-applications")({
-	beforeLoad: async () => requirePartnerAccess("/your-applications"),
+	beforeLoad: async () => requireAuthenticatedUser("/your-applications"),
 	component: Outlet,
 });

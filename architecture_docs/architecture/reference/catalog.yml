@@ -1,7 +1,0 @@
-catalog_version: 1
-scope: reference_architectures
-description: >
-  Machine-readable registry for reference architectures. Add entries when REF
-  documents are published under docs/architecture/reference.
-
-reference_architectures: []

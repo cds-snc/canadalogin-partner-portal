@@ -1,25 +1,10 @@
 # CanadaLogin Partner Portal PRD
 
-> **Historical, non-authoritative document.** This file was generated from a
-> broader implemented-repository snapshot and contains product ideas that are
-> not approved for the current Partner Portal scope. Do not use it to create
-> OpenSpec requirements or implementation work. Current product requirements
-> come first from explicit approved decisions recorded in
-> [`align-partner-portal-to-approved-product-scope`](../../openspec/changes/align-partner-portal-to-approved-product-scope/).
-> Those decisions and the confirmed expansions in
-> [the Partner Portal Onboarding PRD](partner-portal-onboarding-prd.md) take
-> precedence, with [the Partner Portal MVP PRD](partner-portal-mvp.md) as the
-> fallback source.
-> The content below is retained only as historical context.
-
 ## Document Status
 
-- Status: Historical and non-authoritative; originally generated from
-  implemented repository state as of 2026-05-13
+- Status: Draft generated from implemented repository state as of 2026-05-13
 - Product: CanadaLogin Partner Portal
-- Original drafting inputs (historical only): frontend routes, feature pages,
-  backend API surface, repository docs, and tests present in the monorepo at
-  the time
+- Source of truth for this draft: current frontend routes, frontend feature pages, backend API surface, repository docs, and tests present in this monorepo
 - Intended audience: product, engineering, platform operations, delivery, design, and policy stakeholders
 
 ## 1. Executive Summary

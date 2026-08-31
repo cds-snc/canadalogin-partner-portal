@@ -1,29 +1,21 @@
 from typing import Annotated, Any
 
-from fastapi import Depends, Request, Security
-from fastapi.security import APIKeyCookie
+from fastapi import Depends, HTTPException, Request
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from ..core.config import settings
 from ..core.db.database import async_get_db
 from ..core.exceptions.http_exceptions import ForbiddenException, RateLimitException, UnauthorizedException
-from ..core.identity import (
-    AUTHENTICATED_EMAIL_KEY,
-    AUTHENTICATED_EMAIL_VERIFIED_KEY,
-    AUTHENTICATION_PROVIDER_KEY,
-    SESSION_AUTHENTICATED_EMAIL_KEY,
-    SESSION_AUTHENTICATED_EMAIL_VERIFIED_KEY,
-    SESSION_AUTHENTICATION_PROVIDER_KEY,
-)
 from ..core.logger import logging
-from ..core.logging_privacy import hash_log_value
-from ..core.utils.rate_limit import rate_limiter, sanitize_path
+from ..core.security import TokenType, optional_oauth2_scheme, verify_token
+from ..core.utils.rate_limit import rate_limiter
+from ..repositories.crud_rate_limit import crud_rate_limits
+from ..repositories.crud_tier import crud_tiers
 from ..repositories.crud_users import crud_users
-from ..repositories.dependencies import get_ibm_sv_admin_client, get_ibm_sv_user_client
-from ..repositories.ibm_sv_admin import IBMVerifyAdminClient
+from ..repositories.dependencies import get_ibm_sv_user_client
+from ..schemas.rate_limit import sanitize_path
 from ..services import (
     AuditService,
-    AuthorizationService,
     AuthService,
     DepartmentService,
     HealthService,
@@ -31,23 +23,13 @@ from ..services import (
     MAUService,
     OidcLogoutService,
     OidcService,
-    OnboardingOversightService,
-    RPApplicationDeveloperInvitationService,
+    PolicyService,
+    RateLimitService,
+    RoleService,
     RPApplicationService,
     TaskService,
+    TierService,
     UserService,
-    WorkspaceService,
-)
-from ..services.authorization_service import (
-    AUTHORIZATION_CONTEXT_KEY,
-    AUTHORIZATION_STATE_KEY,
-    AuthorizationResolutionError,
-    ResolvedAuthorizationState,
-    get_resolved_authorization_state,
-)
-from ..services.rp_application_adoption_metadata_provider import (
-    RPApplicationAdoptionMetadataProvider,
-    UnavailableRPApplicationAdoptionMetadataProvider,
 )
 
 logger = logging.getLogger(__name__)
@@ -55,40 +37,33 @@ logger = logging.getLogger(__name__)
 DEFAULT_LIMIT = settings.DEFAULT_RATE_LIMIT_LIMIT
 DEFAULT_PERIOD = settings.DEFAULT_RATE_LIMIT_PERIOD
 
-session_cookie_scheme = APIKeyCookie(
-    name=settings.SESSION_COOKIE_NAME,
-    scheme_name="SessionCookie",
-    description="Opaque server-side session cookie established by the OIDC flow.",
-    auto_error=False,
-)
-
 
 def get_audit_service() -> AuditService:
     return AuditService()
-
-
-def get_authorization_service() -> AuthorizationService:
-    return AuthorizationService()
 
 
 def get_user_service() -> UserService:
     return UserService()
 
 
+def get_role_service() -> RoleService:
+    return RoleService()
+
+
 def get_department_service() -> DepartmentService:
     return DepartmentService()
 
 
-def get_workspace_service() -> WorkspaceService:
-    return WorkspaceService()
+def get_tier_service() -> TierService:
+    return TierService()
 
 
-async def get_ibm_sv_admin_service(
-    client: Annotated[IBMVerifyAdminClient, Depends(get_ibm_sv_admin_client)],
-):
-    from ..services.ibm_sv_admin_service import IBMVerifyAdminService
+def get_policy_service() -> PolicyService:
+    return PolicyService()
 
-    return IBMVerifyAdminService(client=client)
+
+def get_rate_limit_service() -> RateLimitService:
+    return RateLimitService()
 
 
 def get_ibm_sv_user_service(request: Request) -> IBMVerifyUserService:
@@ -97,14 +72,6 @@ def get_ibm_sv_user_service(request: Request) -> IBMVerifyUserService:
 
 def get_rp_application_service() -> RPApplicationService:
     return RPApplicationService()
-
-
-def get_rp_application_adoption_metadata_provider() -> RPApplicationAdoptionMetadataProvider:
-    return UnavailableRPApplicationAdoptionMetadataProvider()
-
-
-def get_rp_application_developer_invitation_service() -> RPApplicationDeveloperInvitationService:
-    return RPApplicationDeveloperInvitationService()
 
 
 def get_auth_service() -> AuthService:
@@ -131,10 +98,6 @@ def get_mau_service() -> MAUService:
     return MAUService()
 
 
-def get_onboarding_oversight_service() -> OnboardingOversightService:
-    return OnboardingOversightService()
-
-
 async def get_user_from_session(request: Request, db: AsyncSession) -> dict[str, Any] | None:
     try:
         user_uuid = request.session.get("user_uuid")
@@ -144,72 +107,63 @@ async def get_user_from_session(request: Request, db: AsyncSession) -> dict[str,
     if user_uuid is None:
         return None
 
-    return await crud_users.get(
-        db=db,
-        uuid=user_uuid,
-        is_deleted=False,
-        enabled=True,
-    )
+    return await crud_users.get(db=db, uuid=user_uuid, is_deleted=False)
+
+
+async def get_user_from_bearer_token(token: str | None, db: AsyncSession) -> dict[str, Any] | None:
+    if not token:
+        return None
+
+    token_data = await verify_token(token, TokenType.ACCESS, db)
+    if token_data is None:
+        return None
+
+    return await crud_users.get(db=db, uuid=token_data.subject, is_deleted=False)
 
 
 async def get_current_user(
     request: Request,
     db: Annotated[AsyncSession, Depends(async_get_db)],
-    _session_cookie: Annotated[str | None, Security(session_cookie_scheme)] = None,
+    token: Annotated[str | None, Depends(optional_oauth2_scheme)] = None,
 ) -> dict[str, Any]:
     user = await get_user_from_session(request, db)
+    if user is None:
+        user = await get_user_from_bearer_token(token, db)
 
     if user:
-        user_id = user.get("id")
-        if not isinstance(user_id, int) or isinstance(user_id, bool):
-            raise ForbiddenException("Authorization state could not be resolved.")
-
-        try:
-            authorization_state = await get_authorization_service().resolve_for_user(
-                db,
-                user_id=user_id,
-            )
-        except AuthorizationResolutionError:
-            logger.warning(
-                "Rejected request with invalid authorization state for user %s",
-                hash_log_value(user.get("uuid", "unknown")),
-            )
-            raise ForbiddenException("Authorization state could not be resolved.") from None
-
-        resolved_user = dict(user)
-        resolved_user[AUTHORIZATION_STATE_KEY] = authorization_state
-        resolved_user[AUTHORIZATION_CONTEXT_KEY] = authorization_state.to_api_context()
-        try:
-            session = request.session
-        except AssertionError:
-            session = {}
-        if session.get(SESSION_AUTHENTICATED_EMAIL_VERIFIED_KEY) is True:
-            resolved_user[AUTHENTICATED_EMAIL_KEY] = session.get(SESSION_AUTHENTICATED_EMAIL_KEY)
-            resolved_user[AUTHENTICATED_EMAIL_VERIFIED_KEY] = True
-            resolved_user[AUTHENTICATION_PROVIDER_KEY] = session.get(SESSION_AUTHENTICATION_PROVIDER_KEY)
-        return resolved_user
+        return user
 
     raise UnauthorizedException("User not authenticated.")
 
 
 async def get_optional_user(request: Request, db: AsyncSession = Depends(async_get_db)) -> dict | None:
-    return await get_user_from_session(request, db)
+    user = await get_user_from_session(request, db)
+    if user is not None:
+        return user
+
+    token = request.headers.get("Authorization")
+    if not token:
+        return None
+
+    try:
+        token_type, _, token_value = token.partition(" ")
+        if token_type.lower() != "bearer" or not token_value:
+            return None
+
+        return await get_user_from_bearer_token(token_value, db)
+
+    except HTTPException as http_exc:
+        if http_exc.status_code != 401:
+            logger.error(f"Unexpected HTTPException in get_optional_user: {http_exc.detail}")
+        return None
+
+    except Exception as exc:
+        logger.error(f"Unexpected error in get_optional_user: {exc}")
+        return None
 
 
-async def get_current_authorization_state(
-    current_user: Annotated[dict[str, Any], Depends(get_current_user)],
-) -> ResolvedAuthorizationState:
-    state = get_resolved_authorization_state(current_user)
-    if state is None:
-        raise ForbiddenException("Authorization state could not be resolved.")
-    return state
-
-
-async def get_current_cl_admin(
-    current_user: Annotated[dict[str, Any], Depends(get_current_user)],
-) -> dict[str, Any]:
-    state = get_resolved_authorization_state(current_user)
-    if state is None or not state.is_cl_admin:
+async def get_current_superuser(current_user: Annotated[dict, Depends(get_current_user)]) -> dict:
+    if not current_user["is_superuser"]:
         raise ForbiddenException("You do not have enough privileges.")
 
     return current_user
@@ -224,7 +178,22 @@ async def rate_limiter_dependency(
     path = sanitize_path(request.url.path)
     if user:
         user_id = user["id"]
-        limit, period = DEFAULT_LIMIT, DEFAULT_PERIOD
+        tier = await crud_tiers.get(db, id=user["tier_id"])
+        if tier:
+            rate_limit = await crud_rate_limits.get(
+                db=db, tier_id=tier["id"], path=path
+            )
+            if rate_limit:
+                limit, period = rate_limit["limit"], rate_limit["period"]
+            else:
+                logger.warning(
+                    f"User {user_id} with tier '{tier['name']}' has no specific rate limit for path '{path}'. \
+                        Applying default rate limit."
+                )
+                limit, period = DEFAULT_LIMIT, DEFAULT_PERIOD
+        else:
+            logger.warning(f"User {user_id} has no assigned tier. Applying default rate limit.")
+            limit, period = DEFAULT_LIMIT, DEFAULT_PERIOD
     else:
         user_id = request.client.host if request.client else "unknown"
         limit, period = DEFAULT_LIMIT, DEFAULT_PERIOD

@@ -1,41 +1,13 @@
 {
-  "chat.tools.terminal.autoApprove": {
-    "/^pwd$/": true,
-    "/^cd\\b[^>|;&]*$/": true,
-    "/^ls\\b[^>|;&]*$/": true,
-    "/^rg\\b[^>|;&]*$/": true,
-    "/^(cat|head|tail|nl|wc|stat|file)\\b[^>|;&]*$/": true,
-    "/^sed -n\\b[^>|;&]*$/": true,
-    "/^find \\. -type f -print$/": true,
-    "/^find \\. -maxdepth [0-9]+ -type f -print$/": true,
-    "/^git (status|diff|log|show|rev-parse|ls-files|grep|blame)\\b[^>|;&]*$/": true,
-    "/^bash -n (getting-started\\/scaffold-solution-repo\\.sh|scripts\\/delorean\\/[a-z0-9._-]+\\.sh|agent-configs\\/shared\\/hooks\\/install\\.sh)$/": true,
-    "/^scripts\\/delorean\\/doctor\\.sh$/": true,
-    "/^scripts\\/delorean\\/select-openspec-change\\.sh( --(list|print|validate))?( --change-id [a-z0-9][a-z0-9._-]*)?$/": true,
-    "/^scripts\\/delorean\\/run-(structure-checks|delorean-state-checks|format-checks|markdown-checks|shellcheck|lint|secret-checks|fast-tests|openapi-checks|frontend-standards-checks|ui-page-shell-checks|local-verification)\\.sh$/": true,
-    "/^make (help|doctor|check-node|check-openspec-cli|pick-openspec-change|validate-active-openspec-change|fmt-ci-python|lint-python|run-pytest|pytest|check-openapi)$/": true,
-    "/^make\\s+validate-openspec-change\\s+CHANGE_ID=(\"[a-z0-9][a-z0-9._-]*\"|'[a-z0-9][a-z0-9._-]*'|[a-z0-9][a-z0-9._-]*)\\s*$/": true,
-    "/^make\\s+-C\\s+(\"[^\"]+\"|'[^']+'|[^\\s>|;&]+)\\s+validate-openspec-change\\s+CHANGE_ID=(\"[a-z0-9][a-z0-9._-]*\"|'[a-z0-9][a-z0-9._-]*'|[a-z0-9][a-z0-9._-]*)\\s*$/": true,
-    "/^source\\s+\\.venv\\/bin\\/activate\\s*$/": true,
-    "/^\\.\\s+\\.venv\\/bin\\/activate\\s*$/": true,
-    "/^(\\.venv\\/bin\\/python3?|python3?)\\s+-m\\s+pytest\\b[^>|;&]*$/": true,
-    "/^source\\s+\\.venv\\/bin\\/activate\\s+&&\\s+(\\.venv\\/bin\\/python3?|python3?)\\s+-m\\s+pytest\\b[^>|;&]*$/": true,
-    "/^make (update-from-template-dry-run|update-architecture-docs-dry-run|update-agent-configs-dry-run)$/": true,
-    "/^npm (run (lint|typecheck|format:check|test)|test)( --prefix frontend)?$/": true,
-    "/^npm --prefix frontend (run (lint|typecheck|format:check|test)|test)$/": true,
-    "rm": false,
-    "rmdir": false,
-    "del": false,
-    "curl": false,
-    "wget": false,
-    "kill": false,
-    "chmod": false,
-    "chown": false,
-    "docker": false,
-    "gh": false,
-    "/^git (add|commit|push|pull|fetch|clone|reset|clean|checkout|switch|merge|rebase|restore)\\b.*$/": false,
-    "/^make (setup|setup-delorean|install-node|setup-python-venv|install-python|install-dev-python|install-frontend-deps|install-backend-deps|install-openspec-cli|dev|start|start-dev|start-frontend|start-backend|update-from-template|update-architecture-docs|update-agent-configs|new-openspec-change|collect-agent-run|fix|autofix|format-fix|fmt-python|format-python|export-openapi|container-checks|build-backend-container|run-backend-container|stop-backend-container|test-backend-container|scan-backend-container|setup-hooks|uninstall-hooks)( .*)?$/": false,
-    "/^npm publish\\b.*$/": false,
-    "/^(deploy|publish|release)\\b.*$/": false
-  }
+    "chat.tools.terminal.autoApprove": {
+        "pytest": true,
+        "uv": true,
+        ".venv/bin/python": true,
+        "pnpm": true,
+        "/^node --input-type=module -e \"import \\{ redirect \\} from '@tanstack/react-router'; const value = redirect\\(\\{ to: '/login', search: \\{ redirect: '/users' \\}, replace: true \\}\\); console\\.log\\(JSON\\.stringify\\(value, null, 2\\)\\);\"$/": {
+            "approve": true,
+            "matchCommandLine": true
+        },
+        "./node_modules/.bin/eslint": true
+    }
 }

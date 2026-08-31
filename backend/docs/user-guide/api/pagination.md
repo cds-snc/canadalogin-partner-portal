@@ -68,6 +68,7 @@ async def get_users(
     # Add filter parameters
     search: str | None = None,
     is_active: bool | None = None,
+    tier_id: int | None = None,
     db: Annotated[AsyncSession, Depends(async_get_db)]
 ):
     # Build filters
@@ -76,6 +77,8 @@ async def get_users(
         filters["name__icontains"] = search  # Search by name
     if is_active is not None:
         filters["is_active"] = is_active
+    if tier_id:
+        filters["tier_id"] = tier_id
     
     users = await crud_users.get_multi(
         db=db,
@@ -98,6 +101,7 @@ Now you can call:
 
 - `/users/?search=john` - Find users with "john" in their name
 - `/users/?is_active=true` - Only active users
+- `/users/?tier_id=1&page=2` - Users in tier 1, page 2
 
 ## Adding Sorting
 
@@ -166,6 +170,7 @@ async def get_users(
     # Filtering
     search: Annotated[str | None, Query(max_length=100)] = None,
     is_active: bool | None = None,
+    tier_id: int | None = None,
     
     # Sorting
     sort_by: str = "created_at",
@@ -180,6 +185,8 @@ async def get_users(
     
     if is_active is not None:
         filters["is_active"] = is_active
+    if tier_id:
+        filters["tier_id"] = tier_id
     
     # Handle search
     search_criteria = []
@@ -306,4 +313,4 @@ Now that you understand pagination:
 - **[Database Schemas](../database/schemas.md)** - Create schemas for your data
 - **[Authentication](../authentication/index.md)** - Add user authentication to your endpoints
 
-The boilerplate makes pagination simple - just use these patterns!
+The boilerplate makes pagination simple - just use these patterns! 

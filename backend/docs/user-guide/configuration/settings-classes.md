@@ -117,11 +117,11 @@ class DefaultRateLimitSettings(BaseSettings):
 
 ### Admin User Settings
 
-Initial CL Admin assignment bootstrap:
+First superuser account creation:
 
 ```python
 class FirstUserSettings(BaseSettings):
-    INITIAL_CL_ADMIN_EMAIL: str | None = None
+    SUPERUSER: str | None = None
 ```
 
 ## Creating Custom Settings

@@ -3,13 +3,10 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { act, renderHook, waitFor } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { useSession } from "@/features/auth/hooks/use-session";
-import { resetAuthStore } from "@/store";
 
 vi.mock("@/fetch/auth", () => ({
 	getCurrentUser: vi.fn(),
-	getOidcLoginUrl: vi.fn(
-		(): string => "http://localhost:8000/api/v1/auth/oidc/login"
-	),
+	getOidcLoginUrl: vi.fn((): string => "http://localhost:8000/api/v1/auth/oidc/login"),
 }));
 
 type DeferredPromise<T> = {
@@ -34,22 +31,26 @@ describe("useSession", () => {
 	let getCurrentUser: typeof import("@/fetch/auth").getCurrentUser;
 
 	beforeEach(async () => {
-		resetAuthStore();
 		({ getCurrentUser } = await import("@/fetch/auth"));
 	});
 
 	afterEach(() => {
-		resetAuthStore();
 		vi.clearAllMocks();
 	});
 
 	it("keeps the user signed out when a stale current-user request resolves after logout", async () => {
-		const deferredCurrentUser =
-			createDeferred<NonNullable<Awaited<ReturnType<typeof getCurrentUser>>>>();
+		const deferredCurrentUser = createDeferred<{
+			name: string;
+			email: string;
+			profileImageUrl: string;
+			authProvider: string | null;
+			authSubject: string | null;
+			roleUuids: string[] | null;
+			tierUuid: string | null;
+			uuid: string;
+		}>();
 
-		vi.mocked(getCurrentUser).mockImplementation(
-			() => deferredCurrentUser.promise
-		);
+		vi.mocked(getCurrentUser).mockImplementation(() => deferredCurrentUser.promise);
 
 		const queryClient = new QueryClient();
 		const wrapper = ({ children }: PropsWithChildren): ReactElement => (
@@ -66,21 +67,14 @@ describe("useSession", () => {
 		expect(result.current.isAuthenticated).toBe(false);
 
 		deferredCurrentUser.resolve({
-			acceptedTermsAt: "2026-06-11T12:00:00Z",
-			authorizationContext: {
-				globalRole: null,
-				partnerAccess: [
-					{ role: "rp_admin", workspaceUuid: "workspace-uuid-1" },
-				],
-			},
-			departmentAbbreviation: "TBS",
-			departmentUuid: "department-uuid-1",
+			authProvider: "gc-sso",
+			authSubject: "subject-123",
 			email: "jane@example.com",
 			name: "Jane Doe",
 			profileImageUrl: "https://example.com/jane.png",
-			termsVersion: "2026-01",
+			roleUuids: ["role-uuid-2"],
+			tierUuid: "tier-uuid-3",
 			uuid: "user-uuid-7",
-			username: "jane@example.com",
 		});
 
 		await waitFor(() => {
@@ -89,7 +83,7 @@ describe("useSession", () => {
 		});
 	});
 
-	it("keeps TanStack Query ownership internal to the session abstraction", async () => {
+	it("does not expose a React Query result for auth session state", async () => {
 		vi.mocked(getCurrentUser).mockResolvedValue(null);
 
 		const queryClient = new QueryClient();

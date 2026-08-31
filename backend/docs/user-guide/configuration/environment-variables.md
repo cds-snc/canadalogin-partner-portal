@@ -86,15 +86,14 @@ REFRESH_TOKEN_EXPIRE_DAYS=7
 
 **Variables Explained:**
 
-- `SECRET_KEY`: Application signing key (generate with `openssl rand -hex 32`)
+- `SECRET_KEY`: Used for JWT token signing (generate with `openssl rand -hex 32`)
 - `ALGORITHM`: JWT signing algorithm (HS256 recommended)
 - `ACCESS_TOKEN_EXPIRE_MINUTES`: How long access tokens remain valid
 - `REFRESH_TOKEN_EXPIRE_DAYS`: How long refresh tokens remain valid
 
 !!! danger "Security Warning"
-`SECRET_KEY` must contain at least 32 bytes. `dev`, `staging`, and
-`production` reject the local/test default and require an explicitly injected
-runtime secret: `openssl rand -hex 32`.
+Never use default values in production. Generate a strong secret key:
+`bash     openssl rand -hex 32     `
 
 ### Redis Configuration
 
@@ -137,9 +136,7 @@ CLIENT_CACHE_MAX_AGE=30  # seconds
 
 **Variables Explained:**
 
-- `CLIENT_CACHE_MAX_AGE`: Public max age for explicitly opted-in static asset
-  paths. API, authenticated, JSON, secret, and PII-bearing responses are always
-  emitted as `private, no-store`.
+- `CLIENT_CACHE_MAX_AGE`: How long browsers should cache responses
 
 ### Rate Limiting
 
@@ -158,11 +155,11 @@ DEFAULT_RATE_LIMIT_PERIOD=3600   # period in seconds (1 hour)
 
 ### Admin User
 
-Initial CL Admin bootstrap configuration:
+First superuser account configuration:
 
 ```env
-# Set only while explicitly running create_initial_cl_admin.
-INITIAL_CL_ADMIN_EMAIL="admin@example.test"
+# The first superuser bootstrap script uses built-in defaults.
+# Update backend/src/scripts/create_first_superuser.py if you need different values.
 ```
 
 ### CORS Configuration
@@ -170,36 +167,47 @@ INITIAL_CL_ADMIN_EMAIL="admin@example.test"
 Cross-Origin Resource Sharing (CORS) settings for frontend integration:
 
 ```env
-# ------------- credentialed CORS -------------
-CORS_ORIGINS=["http://127.0.0.1:3000","http://localhost:3000"]
-CORS_METHODS=["GET","POST","PUT","PATCH","DELETE","OPTIONS"]
-CORS_HEADERS=["Accept","Content-Type","Idempotency-Key","X-Request-ID"]
+# ------------- CORS -------------
+CORS_ORIGINS=["*"]
+CORS_METHODS=["*"]
+CORS_HEADERS=["*"]
 ```
 
 **Variables Explained:**
 
-- `CORS_ORIGINS`: Exact allowed origins (e.g., `["https://app.com"]`)
-- `CORS_METHODS`: Explicit allowed HTTP methods
-- `CORS_HEADERS`: Explicit allowed request headers
+- `CORS_ORIGINS`: Comma-separated list of allowed origins (e.g., `["https://app.com","https://www.app.com"]`)
+- `CORS_METHODS`: Comma-separated list of allowed HTTP methods (e.g., `["GET","POST","PUT","DELETE"]`)
+- `CORS_HEADERS`: Comma-separated list of allowed headers (e.g., `["Authorization","Content-Type"]`)
 
 **Environment-Specific Values:**
 
 ```env
-# Local development - exact frontend origins
-CORS_ORIGINS=["http://127.0.0.1:3000","http://localhost:3000"]
-CORS_METHODS=["GET","POST","PUT","PATCH","DELETE","OPTIONS"]
-CORS_HEADERS=["Accept","Content-Type","Idempotency-Key","X-Request-ID"]
+# Development - Allow all origins
+CORS_ORIGINS=["*"]
+CORS_METHODS=["*"]
+CORS_HEADERS=["*"]
 
 # Production - Specific domains only
 CORS_ORIGINS=["https://yourapp.com","https://www.yourapp.com"]
-CORS_METHODS=["GET","POST","PUT","PATCH","DELETE","OPTIONS"]
-CORS_HEADERS=["Accept","Content-Type","Idempotency-Key","X-Request-ID"]
+CORS_METHODS=["GET","POST","PUT","DELETE","PATCH"]
+CORS_HEADERS=["Authorization","Content-Type","X-Requested-With"]
 ```
 
 !!! danger "Security Warning"
-Wildcards are rejected for credentialed origins, methods, and headers in every
-environment. Cookie-authenticated state changes also enforce `Origin`,
-`Referer`, and browser Fetch Metadata checks.
+Never use wildcard (`*`) for `CORS_ORIGINS` in production environments. Always specify exact allowed domains to prevent unauthorized cross-origin requests.
+
+### User Tiers
+
+Initial tier configuration:
+
+```env
+# ------------- first tier -------------
+TIER_NAME="free"
+```
+
+**Variables Explained:**
+
+- `TIER_NAME`: Name of the default user tier
 
 ### Environment Type
 
@@ -226,7 +234,8 @@ Docker Compose automatically loads the `.env` file:
 # In docker-compose.yml
 services:
   web:
-# The initial CL Admin bootstrap is a separate, explicitly invoked service.
+# The first superuser bootstrap script uses built-in defaults.
+# Update backend/src/scripts/create_first_superuser.py if you need different values.
 Understanding each Docker service:
   nginx:        # Reverse proxy (optional)
 ```

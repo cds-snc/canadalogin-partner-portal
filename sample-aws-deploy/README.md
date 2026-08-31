@@ -240,7 +240,7 @@ S3_BUCKET=$(cd ../sample-aws-deploy/terraform/infra && terraform output -raw fro
 # VITE_API_BASE_URL is intentionally unset — same-origin calls work without it
 VITE_APP_ENVIRONMENT=development \
 VITE_APP_TITLE="CanadaLogin Partner Portal" \
-VITE_AUTH_POST_LOGIN_PATH=/ \
+VITE_AUTH_POST_LOGIN_PATH=/dashboard \
 VITE_SESSION_WARNING_AFTER_MINUTES=25 \
 VITE_SESSION_COUNTDOWN_MINUTES=5 \
   pnpm build

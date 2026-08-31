@@ -21,14 +21,11 @@ class TestExternalIdentitySchemas:
     def test_access_policy_out_uses_pydantic_v2_from_attributes(self):
         assert AccessPolicyOut.model_config.get("from_attributes") is True
 
-    def test_user_read_exposes_no_legacy_or_oidc_authorization_fields(self):
-        assert "tier_uuid" not in UserRead.model_fields
-        assert "role_uuids" not in UserRead.model_fields
+    def test_user_read_exposes_public_role_and_tier_uuids_only(self):
+        assert "role_uuids" in UserRead.model_fields
+        assert "tier_uuid" in UserRead.model_fields
         assert "role_ids" not in UserRead.model_fields
         assert "tier_id" not in UserRead.model_fields
-        assert "is_superuser" not in UserRead.model_fields
-        assert "has_partner_access_grant" not in UserRead.model_fields
-        assert "auth_subject" not in UserRead.model_fields
 
     def test_access_control_tables_include_timestamps_and_soft_delete_columns(self):
         required_columns = {"created_at", "updated_at", "deleted_at", "is_deleted"}
