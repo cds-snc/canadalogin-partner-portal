@@ -1,15 +1,24 @@
-from typing import Annotated
 from urllib.parse import urlencode
 
 from fastapi import APIRouter, Depends, Request
 from starlette.responses import RedirectResponse
 
-from ...api.dependencies import get_auth_service, get_current_user
+from ...api.dependencies import get_auth_service
 from ...core.config import settings
 from ...schemas.auth import LogoutOidcResponse, LogoutResponse
 from ...services.auth_service import AuthService
 
 router = APIRouter(tags=["login"])
+
+
+def clear_session_cookie(response: RedirectResponse) -> None:
+    response.delete_cookie(
+        key=settings.SESSION_COOKIE_NAME,
+        domain=settings.SESSION_COOKIE_DOMAIN or None,
+        secure=settings.SESSION_COOKIE_SECURE,
+        httponly=True,
+        samesite=settings.SESSION_COOKIE_SAMESITE,
+    )
 
 
 @router.post("/logout", response_model=LogoutResponse)
@@ -35,7 +44,6 @@ async def logout(
 @router.get("/logout", include_in_schema=False)
 async def logout_get(
     request: Request,
-    current_user: Annotated[dict, Depends(get_current_user)],
     service: AuthService = Depends(get_auth_service),
 ) -> RedirectResponse:
 
@@ -58,6 +66,14 @@ async def logout_get(
         else:
             redirect_url = end_session_endpoint
 
-        return RedirectResponse(url=redirect_url)
+        response = RedirectResponse(url=redirect_url)
+        #clear_session_cookie(response)
+        request.session.clear()
+        return response
 
-    return RedirectResponse(url=settings.OIDC_POST_LOGOUT_REDIRECT_URI)
+
+    response = RedirectResponse(url=settings.OIDC_POST_LOGOUT_REDIRECT_URI)
+    # Ensure the session cookie is cleared before redirecting
+    #clear_session_cookie(response)
+    request.session.clear()
+    return response

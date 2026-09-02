@@ -86,6 +86,9 @@
 	"accessDenied": {
 		"action": "Fermer la session",
 		"body": "L'accès est réservé aux utilisateurs appartenant aux groupes d'autorisation requis. Si vous pensez que c'est une erreur, communiquez avec l'administrateur CanadaLogin.",
+		"concurrentSessionBody": "Fermez la session dans un autre navigateur ou sur un autre appareil avant de réessayer. Communiquez avec votre administrateur CanadaLogin si vous avez besoin d'aide.",
+		"concurrentSessionNoticeTitle": "Limite de sessions atteinte",
+		"concurrentSessionSummary": "Vous avez atteint le nombre maximal de sessions actives du portail partenaire.",
 		"countdown": "Fermeture de session dans {{seconds}} secondes.",
 		"noticeTitle": "Vous n'avez pas accès à ce site",
 		"summary": "Votre compte est connecté, mais il n'appartient pas à un groupe autorisé pour le portail partenaire.",

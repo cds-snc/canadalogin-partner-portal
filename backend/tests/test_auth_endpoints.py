@@ -86,6 +86,25 @@ def build_logout_app(store: TrackingInMemoryStore) -> TestClient:
         request.session["user_uuid"] = "019cfc22-bff2-7168-ae43-387a301d8fcb"
         return {"message": "logged in"}
 
+    @router.post("/session-denied")
+    async def session_denied(request: Request) -> dict[str, str]:
+        request.session["ui_locales"] = "en"
+        return {"message": "denied"}
+
+    @router.post("/session-pre-auth")
+    async def session_pre_auth(request: Request) -> dict[str, str]:
+        request.session["_state_oidc_pending"] = {
+            "data": {"nonce": "pending-nonce"},
+            "exp": 0,
+        }
+        request.session["nonce"] = "pending-nonce"
+        return {"message": "pre-authentication state created"}
+
+    @router.post("/session-denied-oidc")
+    async def session_denied_oidc(request: Request) -> dict[str, str]:
+        request.session["oidc_logout"] = {"id_token": "id-token-value"}
+        return {"message": "denied OIDC session created"}
+
     router.include_router(logout_router)
 
     @asynccontextmanager
@@ -103,6 +122,57 @@ def build_logout_app(store: TrackingInMemoryStore) -> TestClient:
 
 
 class TestLogoutSessionStoreInvalidation:
+    def test_get_logout_clears_cookie_before_redirecting_to_oidc_provider(self) -> None:
+        store = TrackingInMemoryStore()
+        client = Mock()
+        client.load_server_metadata = AsyncMock(
+            return_value={"end_session_endpoint": "https://example.verify.ibm.com/logout"}
+        )
+
+        with build_logout_app(store) as test_client:
+            denied_response = test_client.post("/session-denied-oidc")
+
+            assert denied_response.status_code == 200
+
+            with patch("src.app.services.auth_service.get_oidc_client", return_value=client):
+                logout_response = test_client.get("/logout", follow_redirects=False)
+
+        assert logout_response.status_code == 307
+        assert logout_response.headers["location"].startswith("https://example.verify.ibm.com/logout?")
+        assert store.data == {}
+        assert any(settings.SESSION_COOKIE_NAME in cookie for cookie in logout_response.headers.get_list("set-cookie"))
+
+    def test_get_logout_clears_pre_authentication_oauth_state(self) -> None:
+        store = TrackingInMemoryStore()
+
+        with build_logout_app(store) as client:
+            pre_auth_response = client.post("/session-pre-auth")
+
+            assert pre_auth_response.status_code == 200
+            assert len(store.data) == 1
+
+            logout_response = client.get("/logout", follow_redirects=False)
+
+        assert logout_response.status_code == 307
+        assert store.data == {}
+        assert any(settings.SESSION_COOKIE_NAME in cookie for cookie in logout_response.headers.get_list("set-cookie"))
+
+    def test_get_logout_clears_unauthenticated_browser_session(self) -> None:
+        store = TrackingInMemoryStore()
+
+        with build_logout_app(store) as client:
+            denied_response = client.post("/session-denied")
+
+            assert denied_response.status_code == 200
+            assert len(store.data) == 1
+
+            logout_response = client.get("/logout", follow_redirects=False)
+
+        assert logout_response.status_code == 307
+        assert logout_response.headers["location"] == settings.OIDC_POST_LOGOUT_REDIRECT_URI
+        assert store.data == {}
+        assert any(settings.SESSION_COOKIE_NAME in cookie for cookie in logout_response.headers.get_list("set-cookie"))
+
     def test_logout_removes_server_side_session_from_store(self) -> None:
         store = TrackingInMemoryStore()
 

@@ -8,6 +8,36 @@ from src.app.services.auth_service import AuthService
 
 class TestAuthService:
     @pytest.mark.asyncio
+    async def test_logout_returns_oidc_logout_details_for_access_denied_session(self) -> None:
+        service = AuthService()
+        request = Mock(
+            session={
+                "oidc_logout": {
+                    "sid": "sid-123",
+                    "id_token": "id-token-value",
+                }
+            }
+        )
+        client = Mock()
+        client.load_server_metadata = AsyncMock(
+            return_value={"end_session_endpoint": "https://example.verify.ibm.com/logout"}
+        )
+
+        with patch("src.app.services.auth_service.get_oidc_client", return_value=client):
+            result = await service.logout(request=request)
+
+        assert result == {
+            "message": "Logged out successfully",
+            "clear_cookies": True,
+            "oidc_logout": {
+                "end_session_endpoint": "https://example.verify.ibm.com/logout",
+                "id_token_hint": "id-token-value",
+                "post_logout_redirect_uri": settings.OIDC_POST_LOGOUT_REDIRECT_URI,
+            },
+        }
+        assert request.session == {}
+
+    @pytest.mark.asyncio
     async def test_logout_returns_basic_payload_with_empty_session(self) -> None:
         service = AuthService()
         request = Mock(session={})
@@ -20,7 +50,9 @@ class TestAuthService:
     async def test_logout_returns_oidc_logout_details_and_clears_session(self) -> None:
         logout_service = Mock()
         logout_service.remove_local_session = AsyncMock()
-        service = AuthService(logout_service=logout_service)
+        session_service = Mock()
+        session_service.remove_session = AsyncMock()
+        service = AuthService(logout_service=logout_service, session_service=session_service)
         request = Mock(
             session={
                 "user_uuid": "019cfc22-bff2-7168-ae43-387a301d8fcb",
@@ -38,7 +70,8 @@ class TestAuthService:
         )
 
         with patch("src.app.services.auth_service.get_oidc_client", return_value=client):
-            result = await service.logout(request=request)
+            with patch("src.app.services.auth_service.get_session_id", return_value="local-session-123"):
+                result = await service.logout(request=request)
 
         assert result == {
             "message": "Logged out successfully",
@@ -49,7 +82,8 @@ class TestAuthService:
                 "post_logout_redirect_uri": settings.OIDC_POST_LOGOUT_REDIRECT_URI,
             },
         }
-        logout_service.remove_local_session.assert_awaited_once_with("sid-123")
+        session_service.remove_session.assert_awaited_once_with("local-session-123")
+        logout_service.remove_local_session.assert_not_awaited()
 
     @pytest.mark.asyncio
     async def test_logout_logs_successful_user_logout(self) -> None:

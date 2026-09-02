@@ -1,5 +1,6 @@
 from .audit_service import AuditService
 from .auth_service import AuthService
+from .concurrent_session_service import ConcurrentSessionService
 from .department_service import DepartmentService
 from .gc_notify_service import GCNotifyService
 from .health_service import HealthService
@@ -18,6 +19,7 @@ from .user_service import UserService
 __all__ = [
     "AuditService",
     "AuthService",
+    "ConcurrentSessionService",
     "DepartmentService",
     "GCNotifyService",
     "HealthService",

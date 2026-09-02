@@ -3,6 +3,7 @@ from typing import Any
 from jwt import PyJWTError
 from sqlalchemy.ext.asyncio import AsyncSession
 from starlette.requests import Request
+from starsessions import get_session_id
 
 from ..core.config import settings
 from ..core.exceptions.http_exceptions import UnauthorizedException
@@ -13,14 +14,20 @@ from ..core.security import (
     create_access_token,
     verify_token,
 )
+from .concurrent_session_service import ConcurrentSessionService
 from .oidc_logout_service import OidcLogoutService
 
 logger = logging.getLogger(__name__)
 
 
 class AuthService:
-    def __init__(self, logout_service: OidcLogoutService | None = None) -> None:
+    def __init__(
+        self,
+        logout_service: OidcLogoutService | None = None,
+        session_service: ConcurrentSessionService | None = None,
+    ) -> None:
         self.logout_service = logout_service or OidcLogoutService()
+        self.session_service = session_service or ConcurrentSessionService()
 
     async def refresh_access_token(self, request: Request, db: AsyncSession) -> dict[str, str]:
         refresh_token = request.cookies.get("refresh_token")
@@ -41,17 +48,20 @@ class AuthService:
         try:
             oidc_logout = None
             user_uuid = None
+            session_id = None
             try:
                 oidc_logout = request.session.get("oidc_logout")
                 user_uuid = request.session.get("user_uuid")
+                session_id = get_session_id(request)
+            except (AssertionError, KeyError, TypeError):
+                pass
+            try:
                 request.session.clear()
             except AssertionError:
                 pass
 
-            if oidc_logout:
-                sid = oidc_logout.get("sid")
-                if sid:
-                    await self.logout_service.remove_local_session(sid)
+            if user_uuid and session_id:
+                await self.session_service.remove_session(session_id)
 
             payload = {
                 "message": "Logged out successfully",
