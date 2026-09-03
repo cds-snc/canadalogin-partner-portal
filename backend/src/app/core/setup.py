@@ -129,6 +129,12 @@ def get_redis_session_store() -> RedisStore:
     return redis_session_store
 
 
+def get_redis_session_client() -> redis.Redis:
+    get_redis_session_store()
+    assert redis_session_client is not None
+    return redis_session_client
+
+
 async def create_redis_session_pool() -> None:
     get_redis_session_store()
 

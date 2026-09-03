@@ -1,6 +1,5 @@
 import os
 from enum import Enum
-from typing import Optional
 
 from pydantic import SecretStr, computed_field, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
@@ -30,6 +29,8 @@ class SessionSettings(BaseSettings):
     SESSION_COOKIE_SAMESITE: str = "lax"
     SESSION_MAX_AGE: int = 60 * 60 * 8
     SESSION_ROLLING: bool = False
+    CONCURRENT_SESSION_LIMIT_PRIVILEGED: int = 3
+    CONCURRENT_SESSION_LOCK_TTL: int = 5
 
 
 class RedisSessionSettings(BaseSettings):
@@ -159,11 +160,11 @@ class TestSettings(BaseSettings): ...
 
 
 class RedisCacheSettings(BaseSettings):
-    REDIS_CACHE_HOST: Optional[str] = None
-    REDIS_CACHE_PORT: Optional[int] = None
-    REDIS_CACHE_DB: Optional[int] = None
-    REDIS_CACHE_PASSWORD: Optional[SecretStr] = None
-    REDIS_CACHE_SSL: Optional[bool] = None
+    REDIS_CACHE_HOST: str | None = None
+    REDIS_CACHE_PORT: int | None = None
+    REDIS_CACHE_DB: int | None = None
+    REDIS_CACHE_PASSWORD: SecretStr | None = None
+    REDIS_CACHE_SSL: bool | None = None
 
     @computed_field  # type: ignore[prop-decorator]
     @property
@@ -183,11 +184,11 @@ class ClientSideCacheSettings(BaseSettings):
 
 
 class RedisQueueSettings(BaseSettings):
-    REDIS_QUEUE_HOST: Optional[str] = None
-    REDIS_QUEUE_PORT: Optional[int] = None
-    REDIS_QUEUE_DB: Optional[int] = None
-    REDIS_QUEUE_PASSWORD: Optional[SecretStr] = None
-    REDIS_QUEUE_SSL: Optional[bool] = None
+    REDIS_QUEUE_HOST: str | None = None
+    REDIS_QUEUE_PORT: int | None = None
+    REDIS_QUEUE_DB: int | None = None
+    REDIS_QUEUE_PASSWORD: SecretStr | None = None
+    REDIS_QUEUE_SSL: bool | None = None
 
     @computed_field  # type: ignore[prop-decorator]
     @property
@@ -203,11 +204,11 @@ class RedisQueueSettings(BaseSettings):
 
 
 class RedisRateLimiterSettings(BaseSettings):
-    REDIS_RATE_LIMIT_HOST: Optional[str] = None
-    REDIS_RATE_LIMIT_PORT: Optional[int] = None
-    REDIS_RATE_LIMIT_DB: Optional[int] = None
-    REDIS_RATE_LIMIT_PASSWORD: Optional[SecretStr] = None
-    REDIS_RATE_LIMIT_SSL: Optional[bool] = None
+    REDIS_RATE_LIMIT_HOST: str | None = None
+    REDIS_RATE_LIMIT_PORT: int | None = None
+    REDIS_RATE_LIMIT_DB: int | None = None
+    REDIS_RATE_LIMIT_PASSWORD: SecretStr | None = None
+    REDIS_RATE_LIMIT_SSL: bool | None = None
 
     @computed_field  # type: ignore[prop-decorator]
     @property

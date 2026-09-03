@@ -2,6 +2,7 @@ from typing import Annotated, Any
 
 from fastapi import Depends, HTTPException, Request
 from sqlalchemy.ext.asyncio import AsyncSession
+from starsessions import get_session_id
 
 from ..core.config import settings
 from ..core.db.database import async_get_db
@@ -17,6 +18,7 @@ from ..schemas.rate_limit import sanitize_path
 from ..services import (
     AuditService,
     AuthService,
+    ConcurrentSessionService,
     DepartmentService,
     HealthService,
     IBMVerifyUserService,
@@ -101,10 +103,15 @@ def get_mau_service() -> MAUService:
 async def get_user_from_session(request: Request, db: AsyncSession) -> dict[str, Any] | None:
     try:
         user_uuid = request.session.get("user_uuid")
-    except AssertionError:
+        session_id = get_session_id(request)
+    except (AssertionError, KeyError):
         return None
 
-    if user_uuid is None:
+    if user_uuid is None or session_id is None:
+        return None
+
+    if not await ConcurrentSessionService().is_active(user_uuid, session_id):
+        request.session.clear()
         return None
 
     return await crud_users.get(db=db, uuid=user_uuid, is_deleted=False)
@@ -128,6 +135,8 @@ async def get_current_user(
 ) -> dict[str, Any]:
     user = await get_user_from_session(request, db)
     if user is None:
+        if request.cookies.get(settings.SESSION_COOKIE_NAME) is not None:
+            raise UnauthorizedException("User not authenticated.")
         user = await get_user_from_bearer_token(token, db)
 
     if user:
@@ -140,6 +149,9 @@ async def get_optional_user(request: Request, db: AsyncSession = Depends(async_g
     user = await get_user_from_session(request, db)
     if user is not None:
         return user
+
+    if request.cookies.get(settings.SESSION_COOKIE_NAME) is not None:
+        return None
 
     token = request.headers.get("Authorization")
     if not token:

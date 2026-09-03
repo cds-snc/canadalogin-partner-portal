@@ -2,11 +2,30 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import type { FunctionComponent } from "@/common/types";
 import { Button, Heading, Notice, Text } from "@/components/ui";
+import { buildApiUrl } from "@/fetch/base-url";
+import { useAuthStore } from "@/store";
 
-export const AccessDeniedPage = (): FunctionComponent => {
+type AccessDeniedReason = "concurrent-session-limit";
+
+type AccessDeniedPageProps = {
+	reason?: AccessDeniedReason;
+};
+
+export const AccessDeniedPage = ({ reason }: AccessDeniedPageProps): FunctionComponent => {
 	const { t } = useTranslation();
+	const reset = useAuthStore((state) => state.reset);
 	const [secondsRemaining, setSecondsRemaining] = useState(10);
 	const hasSignedOut = useRef(false);
+	const isConcurrentSessionLimit = reason === "concurrent-session-limit";
+	const noticeTitle = isConcurrentSessionLimit
+		? t("accessDenied.concurrentSessionNoticeTitle")
+		: t("accessDenied.noticeTitle");
+	const summary = isConcurrentSessionLimit
+		? t("accessDenied.concurrentSessionSummary")
+		: t("accessDenied.summary");
+	const body = isConcurrentSessionLimit
+		? t("accessDenied.concurrentSessionBody")
+		: t("accessDenied.body");
 
 	const triggerSignOut = useCallback((): void => {
 		if (hasSignedOut.current) {
@@ -14,8 +33,9 @@ export const AccessDeniedPage = (): FunctionComponent => {
 		}
 
 		hasSignedOut.current = true;
-		window.location.href = "/logout";
-	}, []);
+		reset();
+		window.location.href = buildApiUrl("/api/v1/logout");
+	}, [reset]);
 
 	useEffect((): (() => void) => {
 		const countdownInterval = globalThis.setInterval(() => {
@@ -51,12 +71,12 @@ export const AccessDeniedPage = (): FunctionComponent => {
 			<Heading tag="h1">{t("accessDenied.title")}</Heading>
 			<Notice
 				noticeRole="warning"
-				noticeTitle={t("accessDenied.noticeTitle")}
+				noticeTitle={noticeTitle}
 				noticeTitleTag="h2"
 			>
-				<Text>{t("accessDenied.summary")}</Text>
+				<Text>{summary}</Text>
 			</Notice>
-			<Text>{t("accessDenied.body")}</Text>
+			<Text>{body}</Text>
 			<Text>{t("accessDenied.countdown", { seconds: secondsRemaining })}</Text>
 			<div>
 				<Button buttonRole="primary" type="button" onGcdsClick={onSignOutClick}>
