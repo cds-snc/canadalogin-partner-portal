@@ -1,0 +1,67 @@
+name: Unit tests
+
+on:
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  backend:
+    name: Backend unit tests
+    runs-on: ubuntu-latest
+    env:
+      LICENSE_NAME: MIT
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_PASSWORD: postgres
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 5432:5432
+    steps:
+      - name: Checkout
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+
+      - name: Set up Python
+        uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5.6.0
+        with:
+          python-version: "3.11"
+
+      - name: Set up uv
+        uses: astral-sh/setup-uv@d0cc045d04ccac9d8b7881df0226f9e82c39688e # v6
+
+      - name: Run backend unit tests
+        run: |
+          cd backend/src
+          uv run --locked --group dev --extra dev alembic upgrade head
+          cd ..
+          uv run --locked --group dev --extra dev pytest -q
+
+  frontend:
+    name: Frontend unit tests
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+
+      - name: Set up Node.js
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version: "22"
+
+      - name: Enable Corepack
+        run: |
+          corepack enable
+          corepack prepare pnpm@9.15.4 --activate
+
+      - name: Install frontend dependencies
+        run: pnpm --dir frontend --ignore-workspace install --frozen-lockfile
+
+      - name: Run frontend unit tests
+        run: pnpm --dir frontend --ignore-workspace test

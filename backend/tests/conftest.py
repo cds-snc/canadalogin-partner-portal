@@ -45,6 +45,8 @@ def mock_redis_services() -> Generator[None, Any, None]:
         stack.enter_context(patch("src.app.core.setup.create_redis_session_pool", new=AsyncMock()))
         stack.enter_context(patch("src.app.core.setup.close_redis_session_pool", new=AsyncMock()))
         stack.enter_context(patch("src.app.core.setup.get_redis_session_store", return_value=InMemoryStore()))
+        stack.enter_context(patch("src.app.core.setup.create_ibm_sv_admin_client", new=AsyncMock()))
+        stack.enter_context(patch.object(settings, "IBM_SV_ADMIN_BASE_URL", "https://example.com"))
         yield
 
 
