@@ -88,7 +88,7 @@
 		"@typescript-eslint/eslint-plugin": "^8.58.0",
 		"@typescript-eslint/parser": "^8.58.0",
 		"@vitejs/plugin-react": "^6.0.1",
-		"@vitest/coverage-v8": "4.1.3",
+		"@vitest/coverage-v8": "4.1.11",
 		"autoprefixer": "^10.4.27",
 		"commitizen": "^4.3.1",
 		"cz-conventional-changelog": "^3.3.0",
@@ -113,7 +113,7 @@
 		"typescript-eslint": "^8.58.0",
 		"vite": "8.0.16",
 		"vite-plugin-static-copy": "^4.0.1",
-		"vitest": "4.1.3"
+		"vitest": "4.1.11"
 	},
 	"config": {
 		"commitizen": {
