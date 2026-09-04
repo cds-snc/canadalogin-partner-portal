@@ -1,5 +1,37 @@
 # Changelog
 
+## [1.3.0](https://github.com/cds-snc/canadalogin-partner-portal/compare/v1.2.1...v1.3.0) (2026-09-04)
+
+
+### Features
+
+* concurrent session with bug on logout page ([#180](https://github.com/cds-snc/canadalogin-partner-portal/issues/180)) ([3f15891](https://github.com/cds-snc/canadalogin-partner-portal/commit/3f158912be6152aaee5aa8f315e0dfe94ffb394f))
+* **portal:** deliver MVP2 onboarding, RP configuration, and invitation workflows ([#160](https://github.com/cds-snc/canadalogin-partner-portal/issues/160)) ([9eae2c7](https://github.com/cds-snc/canadalogin-partner-portal/commit/9eae2c78403361064ee08636ba6c9d9eabb0d7f8))
+
+
+### Bug Fixes
+
+* add login logout logging and session doc ([#163](https://github.com/cds-snc/canadalogin-partner-portal/issues/163)) ([93cc63c](https://github.com/cds-snc/canadalogin-partner-portal/commit/93cc63c5aded03cf90ad6d69e1cab0cd29209a91))
+* remove fast-uri overrides ([#182](https://github.com/cds-snc/canadalogin-partner-portal/issues/182)) ([2af4b3c](https://github.com/cds-snc/canadalogin-partner-portal/commit/2af4b3c03755818defb375451057f70b3971cafc))
+
+
+### Miscellaneous Chores
+
+* **deps:** bump cryptography from 48.0.1 to 50.0.0 in /backend ([#147](https://github.com/cds-snc/canadalogin-partner-portal/issues/147)) ([4a182b0](https://github.com/cds-snc/canadalogin-partner-portal/commit/4a182b0ff59b0ac21cc32fdd55f40f4521994190))
+* **deps:** lock file maintenance ([#153](https://github.com/cds-snc/canadalogin-partner-portal/issues/153)) ([a3fb714](https://github.com/cds-snc/canadalogin-partner-portal/commit/a3fb7148f1a2e714b4f6f6dac36aec4438975d28))
+* **deps:** update aws-actions/amazon-ecr-login action to v2.1.7 ([#167](https://github.com/cds-snc/canadalogin-partner-portal/issues/167)) ([556cb40](https://github.com/cds-snc/canadalogin-partner-portal/commit/556cb406c4de0a95d655c93e4e5fbad392f3ca53))
+* **portal:** undo changes from [#160](https://github.com/cds-snc/canadalogin-partner-portal/issues/160) ([#168](https://github.com/cds-snc/canadalogin-partner-portal/issues/168)) ([aaa5331](https://github.com/cds-snc/canadalogin-partner-portal/commit/aaa53310bf71f0e6605e7e1d10ef3d5a27230f58))
+
+
+### Continuous Integration
+
+* **tests:** Run backend and frontend unit tests on pull requests ([#177](https://github.com/cds-snc/canadalogin-partner-portal/issues/177)) ([35d2539](https://github.com/cds-snc/canadalogin-partner-portal/commit/35d2539b656237b2bd3960db7e63d851358d6d1c))
+
+
+### Documentation
+
+* **security:** document partner portal trust boundaries ([#166](https://github.com/cds-snc/canadalogin-partner-portal/issues/166)) ([2c3531f](https://github.com/cds-snc/canadalogin-partner-portal/commit/2c3531fcd783eb60d028292db16367b31ab1e698))
+
 ## [1.2.1](https://github.com/cds-snc/canadalogin-partner-portal/compare/v1.2.0...v1.2.1) (2026-08-11)
 
 
