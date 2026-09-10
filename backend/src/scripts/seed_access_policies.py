@@ -11,26 +11,7 @@ from ..app.models.access_policy import AccessPolicy
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-DEFAULT_POLICIES = [
-    ("admin", "departments", "read"),
-    ("admin", "departments", "write"),
-    ("admin", "tasks", "read"),
-    ("admin", "tasks", "write"),
-    ("admin", "tiers", "read"),
-    ("admin", "tiers", "write"),
-    ("admin", "rate_limits", "read"),
-    ("admin", "rate_limits", "write"),
-    ("admin", "roles", "read"),
-    ("admin", "roles", "write"),
-    ("admin", "rp_applications", "read"),
-    ("admin", "rp_applications", "write"),
-    ("application owners", "rp_applications", "read"),
-    ("application owners", "rp_applications", "write"),
-    ("admin", "users_admin", "read"),
-    ("admin", "users_admin", "write"),
-    ("admin", "workspace", "read"),
-    ("admin", "workspace", "write"),
-]
+DEFAULT_POLICIES: list[tuple[str, str, str]] = []
 
 
 async def seed_access_policies(session: AsyncSession) -> None:

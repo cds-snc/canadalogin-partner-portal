@@ -1,6 +1,5 @@
 import uuid as uuid_pkg
 from datetime import datetime
-from typing import Optional
 
 from pydantic import BaseModel, ConfigDict, Field
 from pydantic.alias_generators import to_camel
@@ -78,8 +77,8 @@ class RPApplicationCurrentUserOAuthSetupRead(BaseModel):
     status: str
     application_url: str | None = None
     discovery_endpoint: str | None = None
-    department_name: Optional[str] = None
-    department_name_fr: Optional[str] = None
+    department_name: str | None = None
+    department_name_fr: str | None = None
     pkce_enabled: bool | None = None
     redirect_uris: list[str] = Field(default_factory=list)
     logout_uri: str | None = None
@@ -214,7 +213,7 @@ class CurrentUserRPApplicationSummaryRead(BaseModel):
     id: int
     uuid: uuid_pkg.UUID
     dnr_app_name: str
-    department_id: Optional[int] = None
+    department_id: int | None = None
 
 
 class CurrentUserRPApplicationDepartmentAssignRequest(BaseModel):

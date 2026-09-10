@@ -5,9 +5,7 @@ from typing import Any
 from authlib.integrations.starlette_client import OAuth
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from ..repositories.crud_roles import crud_roles
 from ..repositories.crud_users import crud_users
-from ..schemas.role import RoleRead
 from ..schemas.user import UserCreateInternal, UserReadInternal
 from .config import settings
 from .exceptions.http_exceptions import ForbiddenException, UnauthorizedException
@@ -72,72 +70,6 @@ def normalize_username_candidate(value: str) -> str:
     return normalized[:20] or "user"
 
 
-def _normalize_claim_values(value: Any) -> set[str]:
-    if value is None:
-        return set()
-
-    if isinstance(value, str):
-        raw_values = value.split(",") if "," in value else [value]
-    elif isinstance(value, list | tuple | set):
-        raw_values = [str(item) for item in value]
-    else:
-        raw_values = [str(value)]
-
-    normalized = {
-        item.strip().lower()
-        for item in raw_values
-        if isinstance(item, str) and item.strip()
-    }
-    return normalized
-
-
-def _resolve_group_membership(claims: dict[str, Any]) -> tuple[bool, bool]:
-    group_claim_key = settings.OIDC_GROUP_CLAIM_KEY
-    claim_values = _normalize_claim_values(claims.get(group_claim_key))
-
-    admin_group = settings.OIDC_ADMIN_GROUP_NAME.strip().lower()
-    application_owners_group = settings.OIDC_APPLICATION_OWNERS_GROUP_NAME.strip().lower()
-
-    is_admin_member = admin_group in claim_values
-    is_application_owners_member = application_owners_group in claim_values
-
-    return is_admin_member, is_application_owners_member
-
-
-async def _resolve_role_ids_from_membership(
-    db: AsyncSession,
-    *,
-    is_admin_member: bool,
-    is_application_owners_member: bool,
-) -> list[int]:
-    role_ids: list[int] = []
-
-    if is_admin_member:
-        admin_role = await crud_roles.get(
-            db=db,
-            name=settings.CLPP_ADMIN_ROLE_NAME,
-            is_deleted=False,
-            schema_to_select=RoleRead,
-        )
-        if admin_role is None:
-            raise ForbiddenException("User is not allowed to access this site")
-        role_ids.append(admin_role["id"])
-
-    if is_application_owners_member:
-        application_owners_role = await crud_roles.get(
-            db=db,
-            name=settings.CLPP_APPLICATION_OWNERS_ROLE_NAME,
-            is_deleted=False,
-            schema_to_select=RoleRead,
-        )
-        if application_owners_role is None:
-            raise ForbiddenException("User is not allowed to access this site")
-        if application_owners_role["id"] not in role_ids:
-            role_ids.append(application_owners_role["id"])
-
-    return role_ids
-
-
 async def generate_unique_username(db: AsyncSession, claims: dict[str, Any]) -> str:
     candidates = [
         claims.get("preferred_username"),
@@ -159,7 +91,7 @@ async def generate_unique_username(db: AsyncSession, claims: dict[str, Any]) -> 
     raise UnauthorizedException("Unable to allocate a username for the OIDC user.")
 
 
-async def sync_oidc_user(db: AsyncSession, claims: dict[str, Any]) -> dict[str, Any]:
+async def sync_oidc_user(db: AsyncSession, claims: dict[str, object]) -> dict[str, object]:
     subject = claims.get("sub")
     if not subject:
         raise UnauthorizedException("OIDC subject claim is missing.")
@@ -167,16 +99,6 @@ async def sync_oidc_user(db: AsyncSession, claims: dict[str, Any]) -> dict[str, 
     email = claims.get("email")
     if not email:
         raise ForbiddenException("User is not allowed to access this site")
-
-    is_admin_member, is_application_owners_member = _resolve_group_membership(claims)
-    if not is_admin_member and not is_application_owners_member:
-        raise ForbiddenException("User is not allowed to access this site")
-
-    mapped_role_ids = await _resolve_role_ids_from_membership(
-        db,
-        is_admin_member=is_admin_member,
-        is_application_owners_member=is_application_owners_member,
-    )
 
     normalized_email = str(email).strip().lower()
     provider = settings.OIDC_PROVIDER_NAME
@@ -195,7 +117,6 @@ async def sync_oidc_user(db: AsyncSession, claims: dict[str, Any]) -> dict[str, 
                 "last_login_at": datetime.now(UTC),
                 "email": normalized_email,
                 "username": normalized_email,
-                "role_ids": mapped_role_ids,
             },
             uuid=existing_user["uuid"],
         )
@@ -220,7 +141,6 @@ async def sync_oidc_user(db: AsyncSession, claims: dict[str, Any]) -> dict[str, 
                     "last_login_at": datetime.now(UTC),
                     "username": normalized_email,
                     "email": normalized_email,
-                    "role_ids": mapped_role_ids,
                 },
                 uuid=email_user["uuid"],
             )
@@ -252,7 +172,6 @@ async def sync_oidc_user(db: AsyncSession, claims: dict[str, Any]) -> dict[str, 
         db=db,
         object={
             "last_login_at": datetime.now(UTC),
-            "role_ids": mapped_role_ids,
         },
         uuid=created_user["uuid"],
     )
