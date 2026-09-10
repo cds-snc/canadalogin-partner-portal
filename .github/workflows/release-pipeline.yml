@@ -182,7 +182,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        environment: [dev]
+        environment: [dev, test]
     environment: ${{ matrix.environment }}
     needs: [notify-slack-about-deploy, detect-release-tag]
     steps:
@@ -241,7 +241,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        environment: [dev]
+        environment: [dev, test]
     environment: ${{ matrix.environment }}
     needs:
       - release-please
@@ -301,7 +301,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        environment: [dev]
+        environment: [dev, test]
     environment: ${{ matrix.environment }}
     needs:
       - release-please
