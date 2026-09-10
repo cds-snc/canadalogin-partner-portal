@@ -1,7 +1,7 @@
 import uuid as uuid_pkg
 from datetime import UTC, datetime
 
-from sqlalchemy import JSON, DateTime, ForeignKey, String
+from sqlalchemy import DateTime, ForeignKey, String
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.orm import Mapped, mapped_column
 from uuid6 import uuid7
@@ -35,4 +35,3 @@ class User(Base):
 
     department_id: Mapped[int | None] = mapped_column(ForeignKey("department.id"), index=True, default=None, init=False)
     tier_id: Mapped[int | None] = mapped_column(ForeignKey("tier.id"), index=True, default=None, init=False)
-    role_ids: Mapped[list[int] | None] = mapped_column(JSON, default=None, nullable=True)

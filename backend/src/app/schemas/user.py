@@ -28,7 +28,6 @@ class User(TimestampSchema, UserBase, UUIDSchema, PersistentDeletion):
     is_superuser: bool = False
     enabled: bool = False
     department_id: int | None = None
-    role_ids: list[int] | None = None
     tier_id: int | None = None
     accepted_terms_at: datetime | None = None
     terms_version: str | None = None
@@ -56,7 +55,6 @@ class UserReadInternal(UserRead):
 
     id: int
     department_id: int | None = None
-    role_ids: list[int] | None = None
     tier_id: int | None = None
 
 

@@ -64,11 +64,6 @@ class OIDCSettings(BaseSettings):
     OIDC_POST_LOGIN_REDIRECT: str = "/auth-complete"
     OIDC_POST_LOGOUT_REDIRECT_URI: str = "/"
     OIDC_ACCESS_DENIED_REDIRECT: str = "/access-denied"
-    OIDC_GROUP_CLAIM_KEY: str = "groupIds"
-    OIDC_ADMIN_GROUP_NAME: str = "admin"
-    OIDC_APPLICATION_OWNERS_GROUP_NAME: str = "application owners"
-    CLPP_ADMIN_ROLE_NAME: str = "admin"
-    CLPP_APPLICATION_OWNERS_ROLE_NAME: str = "application owners"
 
 
 class GCNotifySettings(BaseSettings):

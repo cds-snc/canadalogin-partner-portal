@@ -14,6 +14,7 @@ from ..repositories.crud_departments import crud_departments
 from ..repositories.crud_rate_limit import crud_rate_limits
 from ..repositories.crud_roles import crud_roles
 from ..repositories.crud_tier import crud_tiers
+from ..repositories.crud_user_roles import crud_user_roles
 from ..repositories.crud_users import crud_users
 from ..schemas.audit_log import AuditLogCreateInternal
 from ..schemas.department import DepartmentRead
@@ -30,6 +31,7 @@ from ..schemas.user import (
     UserTierUpdate,
     UserUpdate,
 )
+from ..schemas.user_role import UserRoleCreateInternal, UserRoleRead
 
 
 class UserService:
@@ -206,15 +208,20 @@ class UserService:
         user_dict["tier_created_at"] = db_tier["created_at"]
         return user_dict
 
-    async def get_user_role(self, db: AsyncSession, user_uuid: uuid_pkg.UUID | str) -> dict[str, Any] | None:
+    async def get_user_roles(self, db: AsyncSession, user_uuid: uuid_pkg.UUID | str) -> list[dict[str, Any]]:
         db_user = await self._get_user(db=db, user_uuid=user_uuid, include_deleted=False)
-        if db_user.get("role_id") is None:
-            return None
-
-        db_role = await crud_roles.get(db=db, id=db_user["role_id"], is_deleted=False, schema_to_select=RoleRead)
-        if db_role is None:
-            raise NotFoundException("Role not found")
-        return dict(db_role)
+        user_roles = await crud_user_roles.get_multi(
+            db=db,
+            user_id=db_user["id"],
+            is_deleted=False,
+            schema_to_select=UserRoleRead,
+        )
+        roles: list[dict[str, Any]] = []
+        for user_role in user_roles["data"]:
+            db_role = await crud_roles.get(db=db, id=user_role["role_id"], is_deleted=False, schema_to_select=RoleRead)
+            if db_role is not None:
+                roles.append(dict(db_role))
+        return roles
 
     async def get_user_department(self, db: AsyncSession, user_uuid: uuid_pkg.UUID | str) -> dict[str, Any] | None:
         db_user = await self._get_user(db=db, user_uuid=user_uuid, include_deleted=False)
@@ -244,12 +251,27 @@ class UserService:
         if db_role is None:
             raise NotFoundException("Role not found")
 
-        user_role_ids = db_user.get("role_ids") or []
-        if db_role["id"] in user_role_ids:
+        if await crud_user_roles.exists(db=db, user_id=db_user["id"], role_id=db_role["id"], is_deleted=False):
             raise DuplicateValueException("User already has this role")
 
-        user_role_ids.append(db_role["id"])
-        await crud_users.update(db=db, object={"role_ids": user_role_ids}, uuid=user_uuid)
+        existing_mapping = await crud_user_roles.get(
+            db=db,
+            user_id=db_user["id"],
+            role_id=db_role["id"],
+            schema_to_select=UserRoleRead,
+        )
+        if existing_mapping is not None:
+            await crud_user_roles.update(
+                db=db,
+                object={"is_deleted": False, "deleted_at": None, "updated_at": datetime.now(UTC)},
+                id=existing_mapping["id"],
+            )
+            return {"message": "Role added to user"}
+
+        await crud_user_roles.create(
+            db=db,
+            object=UserRoleCreateInternal(user_id=db_user["id"], role_id=db_role["id"]),
+        )
         return {"message": "Role added to user"}
 
     async def remove_role_from_user(self, db: AsyncSession, user_uuid: uuid_pkg.UUID | str, values: UserRemoveRole) -> dict[str, str]:
@@ -258,12 +280,21 @@ class UserService:
         if db_role is None:
             raise NotFoundException("Role not found")
 
-        user_role_ids = db_user.get("role_ids") or []
-        if db_role["id"] not in user_role_ids:
+        user_role = await crud_user_roles.get(
+            db=db,
+            user_id=db_user["id"],
+            role_id=db_role["id"],
+            is_deleted=False,
+            schema_to_select=UserRoleRead,
+        )
+        if user_role is None:
             raise NotFoundException("User does not have this role")
 
-        user_role_ids.remove(db_role["id"])
-        await crud_users.update(db=db, object={"role_ids": user_role_ids}, uuid=user_uuid)
+        await crud_user_roles.update(
+            db=db,
+            object={"is_deleted": True, "deleted_at": datetime.now(UTC), "updated_at": datetime.now(UTC)},
+            id=user_role["id"],
+        )
         return {"message": "Role removed from user"}
 
     async def update_user_tier(self, db: AsyncSession, user_uuid: uuid_pkg.UUID | str, values: UserTierUpdate) -> dict[str, str]:
@@ -320,7 +351,6 @@ class UserService:
             "username": user["username"],
         }
         department_id = user.get("department_id")
-        role_ids = user.get("role_ids")
         tier_id = user.get("tier_id")
 
         if department_id is None:
@@ -336,15 +366,19 @@ class UserService:
             public_user["department_abbreviation"] = None if db_department is None else db_department["abbreviation"]
             public_user["department_uuid"] = None if db_department is None else db_department["uuid"]
 
-        if role_ids is None or len(role_ids) == 0:
-            public_user["role_uuids"] = []
-        else:
-            role_uuids = []
-            for role_id in role_ids:
-                db_role = await crud_roles.get(db=db, id=role_id, is_deleted=False, schema_to_select=RoleRead)
+        role_uuids = []
+        if user.get("id") is not None:
+            user_roles = await crud_user_roles.get_multi(
+                db=db,
+                user_id=user["id"],
+                is_deleted=False,
+                schema_to_select=UserRoleRead,
+            )
+            for user_role in user_roles["data"]:
+                db_role = await crud_roles.get(db=db, id=user_role["role_id"], is_deleted=False, schema_to_select=RoleRead)
                 if db_role is not None:
                     role_uuids.append(db_role["uuid"])
-            public_user["role_uuids"] = role_uuids
+        public_user["role_uuids"] = role_uuids
 
         if tier_id is None:
             public_user["tier_uuid"] = None
