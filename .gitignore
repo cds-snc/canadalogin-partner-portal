@@ -26,6 +26,8 @@ celerybeat-schedule
 
 # Alembic / migrations local artifacts
 src/migrations/versions/*.pyc
+# User roles configuration file
+user_roles.yaml
 
 ### IDEs / editors
 .idea/

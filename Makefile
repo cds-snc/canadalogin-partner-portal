@@ -28,6 +28,7 @@ help:
 	@echo "  typecheck         - run mypy over backend sources"
 	@echo "  dev               - run backend API with uvicorn (reload)"
 	@echo "  worker            - run backend ARQ background worker"
+	@echo "  bk-sync-user-roles - create local users and add roles from USER_ROLES_FILE YAML"
 	@echo "  backend-image     - build backend Docker image"
 	@echo "  frontend-image    - build frontend Docker image"
 	@echo "  bk-image          - shortcut for backend-image"
@@ -152,6 +153,12 @@ bk-format: format
 bk-typecheck: typecheck
 bk-dev: dev
 bk-worker: worker
+
+.PHONY: bk-sync-user-roles
+USER_ROLES_FILE ?= $(ROOT_DIR)/$(BACKEND_DIR)/src/scripts/user_roles.yaml
+bk-sync-user-roles:
+	@echo "Synchronizing user roles from $(USER_ROLES_FILE)"
+	$(BACKEND_CMD) python -m src.scripts.sync_user_roles $(USER_ROLES_FILE)
 
 # Backend migration shortcut
 .PHONY: bk-migration

@@ -1,5 +1,4 @@
 from datetime import date, timedelta
-from typing import Optional
 
 from fastapi import APIRouter, Depends, Query
 
@@ -15,8 +14,8 @@ router = APIRouter(prefix="/mau", tags=["MAU"])
 @casbin_guard.require_permission("mau_report", "read")
 async def get_mau_report(
     application_name: str = Query(..., description="Application name to query"),
-    start_date: Optional[date] = Query(None, description="Start date (YYYY-MM-DD), defaults to 30 days ago"),
-    end_date: Optional[date] = Query(None, description="End date (YYYY-MM-DD), defaults to today"),
+    start_date: date | None = Query(None, description="Start date (YYYY-MM-DD), defaults to 30 days ago"),
+    end_date: date | None = Query(None, description="End date (YYYY-MM-DD), defaults to today"),
     service: MAUService = Depends(get_mau_service),
 ) -> MAUReportResponse:
     resolved_end = end_date or date.today()

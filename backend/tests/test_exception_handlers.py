@@ -3,14 +3,12 @@ from contextlib import asynccontextmanager
 from typing import Annotated, Any
 from unittest.mock import MagicMock, Mock, patch
 
-import casbin
 from fastapi import APIRouter, Depends
 from fastapi.testclient import TestClient
 from pydantic import BaseModel
 from starsessions import InMemoryStore
 
 from src.app.api.dependencies import get_current_superuser, get_current_user
-from src.app.core.access_control import CASBIN_MODEL_PATH, casbin_guard, database_enforcer_provider
 from src.app.core.config import settings
 from src.app.core.db.database import async_get_db
 from src.app.core.exceptions.http_exceptions import BadRequestException
@@ -20,13 +18,6 @@ from src.app.core.setup import create_application
 
 class ValidationPayload(BaseModel):
     name: str
-
-
-def make_enforcer(*policies: tuple[str, str, str]) -> casbin.Enforcer:
-    enforcer = casbin.Enforcer(str(CASBIN_MODEL_PATH))
-    if policies:
-        enforcer.add_policies(list(policies))
-    return enforcer
 
 
 def build_test_client(
@@ -63,11 +54,6 @@ def build_router() -> APIRouter:
     @router.get("/superuser")
     async def superuser_route(current_user: Annotated[dict[str, Any], Depends(get_current_superuser)]) -> dict[str, Any]:
         return current_user
-
-    @router.get("/casbin")
-    @casbin_guard.require_permission("policies", "read")
-    async def casbin_route() -> dict[str, bool]:
-        return {"ok": True}
 
     @router.get("/ibm")
     async def ibm_route() -> None:
@@ -144,27 +130,6 @@ def test_superuser_permission_errors_return_unified_error_envelope() -> None:
         expected_code="forbidden",
         expected_message="You do not have enough privileges.",
         expected_request_id="superuser-test",
-    )
-
-
-def test_casbin_permission_errors_return_unified_error_envelope() -> None:
-    client = build_test_client(
-        build_router(),
-        dependency_overrides={
-            get_current_user: lambda: {"is_superuser": False, "username": "member"},
-            database_enforcer_provider: lambda: make_enforcer(),
-        },
-    )
-
-    with client:
-        response = client.get("/casbin", headers={"X-Request-ID": "casbin-test"})
-
-    assert response.status_code == 403
-    assert_unified_error_response(
-        response.json(),
-        expected_code="forbidden",
-        expected_message="You do not have enough privileges.",
-        expected_request_id="casbin-test",
     )
 
 

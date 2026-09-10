@@ -6,3 +6,4 @@ from .role import Role
 from .rp_application import RPApplication
 from .tier import Tier
 from .user import User
+from .user_role import UserRole

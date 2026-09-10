@@ -10,10 +10,13 @@ from starsessions import InMemoryStore
 
 from src.app.api.v1.logout import logout
 from src.app.api.v1.logout import router as logout_router
+from src.app.api.dependencies import get_auth_service
 from src.app.core.config import settings
 from src.app.core.db.database import async_get_db
 from src.app.core.setup import create_application
 from src.app.schemas.auth import LogoutOidcResponse, LogoutResponse
+from src.app.services.auth_service import AuthService
+from src.app.services.oidc_logout_service import OidcLogoutService
 
 
 def make_request(session: dict | None = None) -> Request:
@@ -78,6 +81,14 @@ class TrackingInMemoryStore(InMemoryStore):
         await super().remove(session_id)
 
 
+class FakeConcurrentSessionService:
+    def __init__(self, store: TrackingInMemoryStore) -> None:
+        self.store = store
+
+    async def remove_session(self, session_id: str) -> None:
+        await self.store.remove(session_id)
+
+
 def build_logout_app(store: TrackingInMemoryStore) -> TestClient:
     router = APIRouter()
 
@@ -117,6 +128,10 @@ def build_logout_app(store: TrackingInMemoryStore) -> TestClient:
     ):
         app = create_application(router, settings=settings, create_tables_on_start=False, lifespan=noop_lifespan)
 
+    app.dependency_overrides[get_auth_service] = lambda: AuthService(
+        logout_service=OidcLogoutService(store=store),
+        session_service=FakeConcurrentSessionService(store),
+    )
     app.dependency_overrides[async_get_db] = lambda: Mock()
     return TestClient(app)
 
@@ -186,7 +201,8 @@ class TestLogoutSessionStoreInvalidation:
 
             assert logout_response.status_code == 200
             assert store.data == {}
-            assert len(store.removed_session_ids) == 1
+            assert len(store.removed_session_ids) == 2
+            assert store.removed_session_ids[0] == store.removed_session_ids[1]
             assert any(
                 settings.SESSION_COOKIE_NAME in cookie for cookie in logout_response.headers.get_list("set-cookie")
             )
