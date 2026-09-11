@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.3.1](https://github.com/cds-snc/canadalogin-partner-portal/compare/v1.3.0...v1.3.1) (2026-09-11)
+
+
+### Miscellaneous Chores
+
+* **deps:** update dependency vitest to v4.1.11 [security] ([#184](https://github.com/cds-snc/canadalogin-partner-portal/issues/184)) ([d2e36cf](https://github.com/cds-snc/canadalogin-partner-portal/commit/d2e36cfaf0d4f447008d53eb1948018af7c5b832))
+
 ## [1.3.0](https://github.com/cds-snc/canadalogin-partner-portal/compare/v1.2.1...v1.3.0) (2026-09-10)
 
 
