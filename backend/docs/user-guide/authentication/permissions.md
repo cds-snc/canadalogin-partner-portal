@@ -2,6 +2,54 @@
 
 Authorization determines what authenticated users can do within your application. While authentication answers "who are you?", authorization answers "what can you do?". This section covers the permission system, access control patterns, and how to implement secure authorization in your endpoints.
 
+## Application Partner-Group Scope
+
+Application access has two independent checks:
+
+1. Casbin grants the role a global resource-action permission.
+2. The role must be associated with the target application's partner group.
+
+The scoped relationship is:
+
+```text
+User -> UserRole -> Role -> PartnerGroupRole -> PartnerGroup -> Application
+```
+
+`PartnerGroupRoleService` centrally resolves every active role a user holds for a partner group or application. It ignores soft-deleted users, roles, mappings, groups, and applications. A missing or soft-deleted user, partner group, or application raises `NotFoundException`; a valid user with no matching scoped role resolves to an empty list or `False`.
+
+The service deliberately does not grant a superuser a scoped role. Any future superuser exception must be an explicit endpoint policy decision.
+
+### Seeded Application Permissions
+
+The `0011_partner_group_roles` migration restores the Casbin policy data removed during user-role normalization and seeds the following global permissions:
+
+| Role | Resource | Actions |
+| --- | --- | --- |
+| Partner Developer | `applications` | `read` |
+| Partner Production Administrator | `applications` | `read`, `write` |
+| CanadaLogin Administrators | `roles` | `read`, `write` |
+| CanadaLogin Administrators | `applications` | `read` |
+
+Casbin is default-deny. A role must have an active matching `access_policy` record for every decorated resource-action pair; routes that already have other decorators remain denied until their policies are explicitly seeded or created.
+
+### Future API Usage
+
+The partner-group check is not wired into API routes yet. When adding an application endpoint, apply both checks before accessing the target resource:
+
+```python
+@router.patch("/applications/{application_uuid}")
+@casbin_guard.require_application_permission("applications", "write")
+async def update_application(
+    application_uuid: UUID,
+    current_user: Annotated[dict, Depends(get_current_user)],
+    db: Annotated[AsyncSession, Depends(async_get_db)],
+    service: Annotated[ApplicationService, Depends(get_application_service)],
+) -> ApplicationRead:
+    return await service.update_application(...)
+```
+
+For application list endpoints, apply the same relationship as a database filter rather than retrieving every application and filtering in Python.
+
 ## Understanding Authorization
 
 Authorization is a multi-layered security concept that protects resources and operations based on user identity, roles, and contextual information. The boilerplate implements several authorization patterns to handle different security requirements.

@@ -9,7 +9,7 @@ from ..schemas.rate_limit import RateLimitRead
 
 
 class UserBase(BaseModel):
-    name: str = Field(..., min_length=2, max_length=30, examples=["User Userson"])
+    name: str = Field(..., min_length=2, max_length=255, examples=["User Userson"])
     email: EmailStr = Field(..., examples=["user.userson@example.com"])
 
 

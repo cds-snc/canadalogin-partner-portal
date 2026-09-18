@@ -12,6 +12,7 @@ from .encryption_content_algorithm import EncryptionContentAlgorithm
 from .encryption_key_algorithm import EncryptionKeyAlgorithm
 from .logout_method import LogoutMethod
 from .partner_group import PartnerGroup
+from .partner_group_role import PartnerGroupRole
 from .rate_limit import RateLimit
 from .role import Role
 from .rp_application import RPApplication
