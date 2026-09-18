@@ -1,5 +1,13 @@
 # Changelog
 
+## [1.4.0](https://github.com/cds-snc/canadalogin-partner-portal/compare/v1.3.1...v1.4.0) (2026-09-18)
+
+
+### Features
+
+* **application-erd:** add application configuration data model ([#211](https://github.com/cds-snc/canadalogin-partner-portal/issues/211)) ([46db667](https://github.com/cds-snc/canadalogin-partner-portal/commit/46db667d2224957e48bf95026ca5854ecf42482b))
+* partner group role mapping ([#214](https://github.com/cds-snc/canadalogin-partner-portal/issues/214)) ([5f7a826](https://github.com/cds-snc/canadalogin-partner-portal/commit/5f7a826cf1fb045288708d9aaa38e96ff0e4ebe6))
+
 ## [1.3.1](https://github.com/cds-snc/canadalogin-partner-portal/compare/v1.3.0...v1.3.1) (2026-09-11)
 
 
