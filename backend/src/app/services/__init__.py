@@ -8,6 +8,7 @@ from .ibm_sv_user_service import IBMVerifyUserService
 from .mau_service import MAUService
 from .oidc_logout_service import OidcLogoutService
 from .oidc_service import OidcService
+from .partner_group_role_service import PartnerGroupRoleService
 from .policy_service import PolicyService
 from .rate_limit_service import RateLimitService
 from .role_service import RoleService
@@ -26,6 +27,7 @@ __all__ = [
     "MAUService",
     "OidcService",
     "OidcLogoutService",
+    "PartnerGroupRoleService",
     "PolicyService",
     "RateLimitService",
     "RoleService",
