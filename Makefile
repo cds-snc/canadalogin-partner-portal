@@ -144,7 +144,7 @@ all-format:
 	cd $(FRONTEND_DIR) && $(PNPM) run format
 
 # Backend shortcuts (bk-*)
-.PHONY: bk-install bk-test bk-lint bk-format bk-typecheck bk-dev bk-worker
+.PHONY: bk-install bk-test bk-lint bk-format bk-typecheck bk-dev bk-worker bk-seed-local
 bk-install: install
 bk-test: test
 bk-lint: lint
@@ -153,6 +153,10 @@ bk-format: format
 bk-typecheck: typecheck
 bk-dev: dev
 bk-worker: worker
+
+bk-seed-local:
+	@echo "Seeding local application ERD demo data"
+	$(BACKEND_CMD) python -m src.scripts.seed_local_application_erd
 
 .PHONY: bk-sync-user-roles
 USER_ROLES_FILE ?= $(ROOT_DIR)/$(BACKEND_DIR)/src/scripts/user_roles.yaml
