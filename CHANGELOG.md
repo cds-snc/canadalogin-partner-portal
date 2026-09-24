@@ -1,5 +1,19 @@
 # Changelog
 
+## [1.4.0](https://github.com/cds-snc/canadalogin-partner-portal/compare/v1.3.1...v1.4.0) (2026-09-24)
+
+
+### Features
+
+* add application environments page and update shared shell ([#218](https://github.com/cds-snc/canadalogin-partner-portal/issues/218)) ([be0e6ae](https://github.com/cds-snc/canadalogin-partner-portal/commit/be0e6aecdb781c8690bd2b4b40636a82fd3f6d6f))
+* **application-erd:** add application configuration data model ([#211](https://github.com/cds-snc/canadalogin-partner-portal/issues/211)) ([46db667](https://github.com/cds-snc/canadalogin-partner-portal/commit/46db667d2224957e48bf95026ca5854ecf42482b))
+* partner group role mapping ([#214](https://github.com/cds-snc/canadalogin-partner-portal/issues/214)) ([5f7a826](https://github.com/cds-snc/canadalogin-partner-portal/commit/5f7a826cf1fb045288708d9aaa38e96ff0e4ebe6))
+
+
+### Continuous Integration
+
+* migrate partner portal to central release pipeline ([#215](https://github.com/cds-snc/canadalogin-partner-portal/issues/215)) ([328ea7a](https://github.com/cds-snc/canadalogin-partner-portal/commit/328ea7af3d019ff762df67b719b816826ebe6cd1))
+
 ## [1.3.1](https://github.com/cds-snc/canadalogin-partner-portal/compare/v1.3.0...v1.3.1) (2026-09-11)
 
 
