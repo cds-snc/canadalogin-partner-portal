@@ -11,6 +11,10 @@ vi.mock("react-i18next", () => ({
 	} => ({
 		t: (key: string): string => {
 			const translations: Record<string, string> = {
+					"nav.account": "Your account",
+				"nav.apiDocumentation": "API Documentation",
+				"nav.applications": "Applications",
+				"nav.backTo": "Back to",
 				"nav.dashboard": "Dashboard",
 				"nav.health": "Health",
 				"home.title": "CanadaLogin Partner Portal",
@@ -18,6 +22,8 @@ vi.mock("react-i18next", () => ({
 				"nav.label": "Primary navigation",
 				"nav.login": "Sign in",
 				"nav.logout": "Sign out",
+					"nav.manageProfile": "Manage profile",
+					"nav.organization": "Organization",
 				"nav.policies": "Policies",
 				"nav.roles": "Roles",
 				"nav.tiers": "Tiers",
@@ -39,10 +45,11 @@ vi.mock("@tanstack/react-router", () => ({
 			location: { pathname: string };
 			matches: Array<{
 				context?: {
-					breadcrumbs?: Array<{
+					backLink?: {
 						href: string;
 						label: string;
-					}>;
+						showBackLabel?: boolean;
+					};
 				};
 			}>;
 		}) => unknown;
@@ -52,10 +59,11 @@ vi.mock("@tanstack/react-router", () => ({
 			matches: [
 				{
 					context: {
-						breadcrumbs: [
-							{ href: "/", label: "Home" },
-							{ href: "/users", label: "Users" },
-						],
+						backLink: {
+							href: "#",
+							label: "Applications",
+							showBackLabel: false,
+						},
 					},
 				},
 			],
@@ -76,11 +84,23 @@ vi.mock("@tanstack/react-query", async () => {
 });
 
 vi.mock("@gcds-core/components-react", () => ({
-	GcdsBreadcrumbs: ({ children }: { children: ReactNode }): ReactElement => (
-		<div>{children}</div>
+	GcdsBreadcrumbs: ({
+		children,
+		slot,
+	}: {
+		children: ReactNode;
+		slot?: string;
+	}): ReactElement => (
+		<nav data-slot={slot}>{children}</nav>
 	),
-	GcdsBreadcrumbsItem: ({ children }: { children: ReactNode }): ReactElement => (
-		<span>{children}</span>
+	GcdsBreadcrumbsItem: ({
+		children,
+		href,
+	}: {
+		children: ReactNode;
+		href: string;
+	}): ReactElement => (
+		<a href={href}>{children}</a>
 	),
 	GcdsHeader: ({ children }: { children: ReactNode }): ReactElement => (
 		<header>{children}</header>
@@ -154,6 +174,25 @@ describe("Header", () => {
 		expect(
 			document.querySelector("nav[aria-label='Primary navigation']")
 		).toBeTruthy();
+		expect(document.querySelector("nav[data-slot='breadcrumb']")).toBeTruthy();
+		expect(document.querySelector("a[data-href='/your-applications']")?.textContent).toBe(
+			"Applications"
+		);
+		expect(document.querySelector("a[data-href='#']")?.textContent).toBe(
+			"API Documentation"
+		);
+		expect(document.querySelector("a[href='#']")?.textContent).toBe("Applications");
+		expect(
+			document.querySelector(
+				"nav[aria-label='Primary navigation'] > a[data-href='/logout']"
+			)
+		).toBeNull();
+		expect(document.querySelector("a[data-href='/profile/setup']")?.textContent).toBe(
+			"Manage profile"
+		);
+		expect(document.querySelector("a[data-href='/logout']")?.textContent).toBe(
+			"Sign out"
+		);
 	});
 
 	it("renders public sign-in link when no session exists", () => {

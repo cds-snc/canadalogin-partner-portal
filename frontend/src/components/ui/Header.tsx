@@ -3,11 +3,11 @@ import { useTranslation } from "react-i18next";
 import {
 	GcdsHeader,
 	GcdsLangToggle,
-	GcdsLink,
 	GcdsNavLink,
 	GcdsTopNav,
 } from "@gcds-core/components-react";
 import type { FunctionComponent } from "@/common/types";
+import Breadcrumbs from "@/components/layout/Breadcrumbs";
 import { useSession } from "@/hooks";
 import { getOidcLoginUrl } from "@/fetch/auth";
 import type { RouteBackLink } from "@/types/route-breadcrumbs";
@@ -57,7 +57,7 @@ const selectBackLink = (
 const Header = (): FunctionComponent => {
 	const { t, i18n } = useTranslation();
 	const navigate = useNavigate();
-	const { currentUser, isAuthenticated, isLoading } = useSession();
+	const { isAuthenticated, isLoading } = useSession();
 	const pathname = useRouterState({
 		select: (state) => state.location.pathname,
 	});
@@ -84,14 +84,8 @@ const Header = (): FunctionComponent => {
 	};
 
 	const authItems: Array<NavigationItem> = [
-		{ href: "/your-applications", label: t("nav.dashboard") },
-	];
-
-	const superuserItems: Array<NavigationItem> = [
-		{ href: "/users", label: t("nav.users") },
-		{ href: "/departments", label: t("nav.departments") },
-		{ href: "/roles", label: t("nav.roles") },
-		{ href: "/audit-logs", label: t("nav.auditLogs") },
+		{ href: "/your-applications", label: t("nav.applications") },
+		{ href: "#", label: t("nav.apiDocumentation") },
 	];
 
 	const publicItems: Array<NavigationItem> = [
@@ -102,11 +96,7 @@ const Header = (): FunctionComponent => {
 	if (isLoading) {
 		items = [...commonItems];
 	} else if (isAuthenticated) {
-		items = [
-			...authItems,
-			...(currentUser?.isSuperuser ? superuserItems : []),
-			supportItem,
-		];
+		items = [...authItems, supportItem];
 	} else {
 		items = [...commonItems, supportItem, ...publicItems];
 	}
@@ -120,13 +110,20 @@ const Header = (): FunctionComponent => {
 				onClick={handleLangToggle}
 			/>
 			{backLink ? (
-				<div slot="breadcrumb">
-					<GcdsLink href={backLink.href}>
-						{`← ${t("nav.backTo")} ${backLink.label}`}
-					</GcdsLink>
-				</div>
+				<Breadcrumbs
+					slot="breadcrumb"
+					items={[
+						{
+							href: backLink.href,
+							label:
+								backLink.showBackLabel === false
+									? backLink.label
+									: `← ${t("nav.backTo")} ${backLink.label}`,
+						},
+					]}
+				/>
 			) : null}
-			<GcdsTopNav alignment="end" label={t("nav.label")} slot="menu">
+			<GcdsTopNav alignment="start" label={t("nav.label")} slot="menu">
 				<GcdsNavLink href="/" slot="home">
 					{serviceName}
 				</GcdsNavLink>
@@ -140,9 +137,6 @@ const Header = (): FunctionComponent => {
 						{item.label}
 					</GcdsNavLink>
 				))}
-				{isAuthenticated && !isLoading ? (
-					<GcdsNavLink href="/logout">{t("nav.logout")}</GcdsNavLink>
-				) : null}
 				{isAuthenticated && !isLoading ? <UserNavGroup /> : null}
 			</GcdsTopNav>
 		</GcdsHeader>

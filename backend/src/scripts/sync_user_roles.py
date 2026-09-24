@@ -1,14 +1,13 @@
 import argparse
 import asyncio
 from pathlib import Path
-from typing import Any
 
 import yaml
 
 from ..app.core.db.database import local_session
 from ..app.repositories.crud_roles import crud_roles
-from ..app.repositories.crud_users import crud_users
 from ..app.repositories.crud_user_roles import crud_user_roles
+from ..app.repositories.crud_users import crud_users
 from ..app.schemas.role import RoleRead
 from ..app.schemas.user import UserCreateInternal, UserReadInternal
 from ..app.schemas.user_role import UserRoleCreateInternal
@@ -61,6 +60,7 @@ async def sync_assignments(assignments: dict[str, list[str]]) -> tuple[int, int]
                         user = await crud_users.create(
                             db=session,
                             object=UserCreateInternal(name=email, email=email, username=email),
+                            commit=False,
                             schema_to_select=UserReadInternal,
                         )
                         created_users += 1
@@ -69,6 +69,7 @@ async def sync_assignments(assignments: dict[str, list[str]]) -> tuple[int, int]
                         await crud_user_roles.create(
                             db=session,
                             object=UserRoleCreateInternal(user_id=user["id"], role_id=role["id"]),
+                            commit=False,
                         )
                         added_assignments += 1
     return created_users, added_assignments

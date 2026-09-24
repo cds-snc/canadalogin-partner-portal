@@ -1,0 +1,48 @@
+Environments Page Visual Comparison
+
+Compared:
+- images/design.png
+- images/after_first_run.png
+
+1. Missing breadcrumb
+The reference begins with an Applications link. The implementation starts directly with Local Application.
+
+2. Application switcher lacks link treatment
+The reference shows a bold application name, swap icon, and underlined Switch application link. The implementation renders both as plain text with no icon or visual hierarchy.
+
+3. Getting started is not a link
+The reference underlines only getting started with CanadaLogin. The implementation renders the entire sentence as plain text.
+
+4. Environment names are not links
+Reference card titles are blue, underlined links. The implementation renders large black headings. This is the biggest per-row visual difference.
+
+5. Cards are too tall and flat
+The reference cards are compact with a subtle drop shadow. The implementation cards have large vertical padding, thin gray borders, and little visible elevation. This makes the list longer and less scannable.
+
+6. Card typography is oversized
+Local Partner Application 11 is much larger and heavier than the reference environment title treatment.
+
+7. Production badge styling is incomplete
+The reference distinguishes Submitted in blue and In production in green. The current code applies the same blue background to every possible badge, so a production row would not match.
+
+8. Reference status states are not represented by seed data
+All current records are draft/test configurations, so the screenshot cannot demonstrate the Submitted or In production states from the design.
+
+9. Spacing is too loose on desktop
+The implementation has larger gaps between intro text, button, section title, disclosure, and cards. The reference is materially denser.
+
+10. Pagination differs in content and presentation
+The reference shows Previous, pages 1-5, and Next. The implementation correctly shows only two pages from the current seed data, but its first-page pagination lacks the visible Previous control and has a different visual treatment.
+
+11. Extra Date modified appears below pagination
+Date modified: 2026-03-16 is absent from the reference and likely comes from a shared layout or footer rather than the Environments feature.
+
+12. Decorative floating icon differs
+The reference has a blue accessibility-style control. The implementation screenshot has a tropical circular icon, likely from a browser extension or local tooling rather than page content.
+
+Priority improvements
+- Add breadcrumbs and proper link treatments.
+- Make environment titles compact, blue, and underlined.
+- Tighten card/page spacing and restore a subtle card shadow.
+- Use distinct blue Submitted and green In production badges.
+- Add local seed records that show the intended status variants.

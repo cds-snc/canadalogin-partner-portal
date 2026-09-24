@@ -1,5 +1,6 @@
 from fastapi import APIRouter
 
+from .application_environments import router as application_environments_router
 from .audit_logs import router as audit_logs_router
 from .departments import router as departments_router
 from .health import router as health_router
@@ -16,6 +17,7 @@ from .tiers import router as tiers_router
 from .users import router as users_router
 
 router = APIRouter(prefix="/v1")
+router.include_router(application_environments_router)
 router.include_router(audit_logs_router)
 router.include_router(departments_router)
 router.include_router(health_router)

@@ -12,11 +12,12 @@ export interface BreadcrumbItem {
 interface BreadcrumbsProps {
 	items: Array<BreadcrumbItem>;
 	className?: string;
+	slot?: string;
 }
 
 const Breadcrumbs: React.FC<BreadcrumbsProps> = React.memo(
-	({ items, className = "" }) => (
-		<GcdsBreadcrumbs className={className}>
+	({ items, className = "", slot }) => (
+		<GcdsBreadcrumbs className={className} slot={slot}>
 			{items.map((item) => (
 				<GcdsBreadcrumbsItem key={item.href} href={item.href}>
 					{item.label}
