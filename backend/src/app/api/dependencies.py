@@ -16,6 +16,7 @@ from ..repositories.crud_users import crud_users
 from ..repositories.dependencies import get_ibm_sv_user_client
 from ..schemas.rate_limit import sanitize_path
 from ..services import (
+    ApplicationEnvironmentService,
     AuditService,
     AuthService,
     ConcurrentSessionService,
@@ -38,6 +39,10 @@ logger = logging.getLogger(__name__)
 
 DEFAULT_LIMIT = settings.DEFAULT_RATE_LIMIT_LIMIT
 DEFAULT_PERIOD = settings.DEFAULT_RATE_LIMIT_PERIOD
+
+
+def get_application_environment_service() -> ApplicationEnvironmentService:
+    return ApplicationEnvironmentService()
 
 
 def get_audit_service() -> AuditService:

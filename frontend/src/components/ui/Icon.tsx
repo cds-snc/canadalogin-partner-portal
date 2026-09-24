@@ -5,6 +5,7 @@ import type { SpacingValues } from "../../utils/constants";
 interface IconProps {
 	name:
 		| "checkmark-circle"
+		| "arrow-up-down"
 		| "chevron-down"
 		| "chevron-left"
 		| "chevron-right"

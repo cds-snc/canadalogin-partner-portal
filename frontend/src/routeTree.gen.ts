@@ -12,6 +12,7 @@ import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as AcceptTermsRouteImport } from './routes/accept-terms'
 import { Route as AccessDeniedRouteImport } from './routes/access-denied'
+import { Route as ApplicationsRouteImport } from './routes/applications'
 import { Route as AuditLogsRouteImport } from './routes/audit-logs'
 import { Route as AuthCompleteRouteImport } from './routes/auth-complete'
 import { Route as DepartmentsRouteImport } from './routes/departments'
@@ -24,9 +25,11 @@ import { Route as TermsAndConditionsRouteImport } from './routes/terms-and-condi
 import { Route as TiersRouteImport } from './routes/tiers'
 import { Route as UsersRouteImport } from './routes/users'
 import { Route as YourApplicationsRouteImport } from './routes/your-applications'
+import { Route as ApplicationsApplicationUuidRouteImport } from './routes/applications/$applicationUuid'
 import { Route as ProfileSetupRouteImport } from './routes/profile/setup'
 import { Route as YourApplicationsIndexRouteImport } from './routes/your-applications/index'
 import { Route as YourApplicationsRpApplicationUuidRouteImport } from './routes/your-applications/$rpApplicationUuid'
+import { Route as ApplicationsApplicationUuidEnvironmentsRouteImport } from './routes/applications/$applicationUuid/environments'
 import { Route as YourApplicationsRpApplicationUuidIndexRouteImport } from './routes/your-applications/$rpApplicationUuid/index'
 import { Route as YourApplicationsRpApplicationUuidDepartmentSetupRouteImport } from './routes/your-applications/$rpApplicationUuid/department-setup'
 import { Route as YourApplicationsRpApplicationUuidManageCredentialsRouteImport } from './routes/your-applications/$rpApplicationUuid/manage-credentials'
@@ -45,6 +48,11 @@ const AcceptTermsRoute = AcceptTermsRouteImport.update({
 const AccessDeniedRoute = AccessDeniedRouteImport.update({
   id: '/access-denied',
   path: '/access-denied',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApplicationsRoute = ApplicationsRouteImport.update({
+  id: '/applications',
+  path: '/applications',
   getParentRoute: () => rootRouteImport,
 } as any)
 const AuditLogsRoute = AuditLogsRouteImport.update({
@@ -107,6 +115,12 @@ const YourApplicationsRoute = YourApplicationsRouteImport.update({
   path: '/your-applications',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApplicationsApplicationUuidRoute =
+  ApplicationsApplicationUuidRouteImport.update({
+    id: '/$applicationUuid',
+    path: '/$applicationUuid',
+    getParentRoute: () => ApplicationsRoute,
+  } as any)
 const ProfileSetupRoute = ProfileSetupRouteImport.update({
   id: '/profile/setup',
   path: '/profile/setup',
@@ -122,6 +136,12 @@ const YourApplicationsRpApplicationUuidRoute =
     id: '/$rpApplicationUuid',
     path: '/$rpApplicationUuid',
     getParentRoute: () => YourApplicationsRoute,
+  } as any)
+const ApplicationsApplicationUuidEnvironmentsRoute =
+  ApplicationsApplicationUuidEnvironmentsRouteImport.update({
+    id: '/environments',
+    path: '/environments',
+    getParentRoute: () => ApplicationsApplicationUuidRoute,
   } as any)
 const YourApplicationsRpApplicationUuidIndexRoute =
   YourApplicationsRpApplicationUuidIndexRouteImport.update({
@@ -152,6 +172,7 @@ export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/accept-terms': typeof AcceptTermsRoute
   '/access-denied': typeof AccessDeniedRoute
+  '/applications': typeof ApplicationsRouteWithChildren
   '/audit-logs': typeof AuditLogsRoute
   '/auth-complete': typeof AuthCompleteRoute
   '/departments': typeof DepartmentsRoute
@@ -164,9 +185,11 @@ export interface FileRoutesByFullPath {
   '/tiers': typeof TiersRoute
   '/users': typeof UsersRoute
   '/your-applications': typeof YourApplicationsRouteWithChildren
+  '/applications/$applicationUuid': typeof ApplicationsApplicationUuidRouteWithChildren
   '/profile/setup': typeof ProfileSetupRoute
   '/your-applications/$rpApplicationUuid': typeof YourApplicationsRpApplicationUuidRouteWithChildren
   '/your-applications/': typeof YourApplicationsIndexRoute
+  '/applications/$applicationUuid/environments': typeof ApplicationsApplicationUuidEnvironmentsRoute
   '/your-applications/$rpApplicationUuid/department-setup': typeof YourApplicationsRpApplicationUuidDepartmentSetupRoute
   '/your-applications/$rpApplicationUuid/manage-credentials': typeof YourApplicationsRpApplicationUuidManageCredentialsRoute
   '/your-applications/$rpApplicationUuid/mau-report': typeof YourApplicationsRpApplicationUuidMauReportRoute
@@ -176,6 +199,7 @@ export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/accept-terms': typeof AcceptTermsRoute
   '/access-denied': typeof AccessDeniedRoute
+  '/applications': typeof ApplicationsRouteWithChildren
   '/audit-logs': typeof AuditLogsRoute
   '/auth-complete': typeof AuthCompleteRoute
   '/departments': typeof DepartmentsRoute
@@ -187,8 +211,10 @@ export interface FileRoutesByTo {
   '/terms-and-conditions': typeof TermsAndConditionsRoute
   '/tiers': typeof TiersRoute
   '/users': typeof UsersRoute
+  '/applications/$applicationUuid': typeof ApplicationsApplicationUuidRouteWithChildren
   '/profile/setup': typeof ProfileSetupRoute
   '/your-applications': typeof YourApplicationsIndexRoute
+  '/applications/$applicationUuid/environments': typeof ApplicationsApplicationUuidEnvironmentsRoute
   '/your-applications/$rpApplicationUuid/department-setup': typeof YourApplicationsRpApplicationUuidDepartmentSetupRoute
   '/your-applications/$rpApplicationUuid/manage-credentials': typeof YourApplicationsRpApplicationUuidManageCredentialsRoute
   '/your-applications/$rpApplicationUuid/mau-report': typeof YourApplicationsRpApplicationUuidMauReportRoute
@@ -199,6 +225,7 @@ export interface FileRoutesById {
   '/': typeof IndexRoute
   '/accept-terms': typeof AcceptTermsRoute
   '/access-denied': typeof AccessDeniedRoute
+  '/applications': typeof ApplicationsRouteWithChildren
   '/audit-logs': typeof AuditLogsRoute
   '/auth-complete': typeof AuthCompleteRoute
   '/departments': typeof DepartmentsRoute
@@ -211,9 +238,11 @@ export interface FileRoutesById {
   '/tiers': typeof TiersRoute
   '/users': typeof UsersRoute
   '/your-applications': typeof YourApplicationsRouteWithChildren
+  '/applications/$applicationUuid': typeof ApplicationsApplicationUuidRouteWithChildren
   '/profile/setup': typeof ProfileSetupRoute
   '/your-applications/$rpApplicationUuid': typeof YourApplicationsRpApplicationUuidRouteWithChildren
   '/your-applications/': typeof YourApplicationsIndexRoute
+  '/applications/$applicationUuid/environments': typeof ApplicationsApplicationUuidEnvironmentsRoute
   '/your-applications/$rpApplicationUuid/department-setup': typeof YourApplicationsRpApplicationUuidDepartmentSetupRoute
   '/your-applications/$rpApplicationUuid/manage-credentials': typeof YourApplicationsRpApplicationUuidManageCredentialsRoute
   '/your-applications/$rpApplicationUuid/mau-report': typeof YourApplicationsRpApplicationUuidMauReportRoute
@@ -225,6 +254,7 @@ export interface FileRouteTypes {
     | '/'
     | '/accept-terms'
     | '/access-denied'
+    | '/applications'
     | '/audit-logs'
     | '/auth-complete'
     | '/departments'
@@ -237,9 +267,11 @@ export interface FileRouteTypes {
     | '/tiers'
     | '/users'
     | '/your-applications'
+    | '/applications/$applicationUuid'
     | '/profile/setup'
     | '/your-applications/$rpApplicationUuid'
     | '/your-applications/'
+    | '/applications/$applicationUuid/environments'
     | '/your-applications/$rpApplicationUuid/department-setup'
     | '/your-applications/$rpApplicationUuid/manage-credentials'
     | '/your-applications/$rpApplicationUuid/mau-report'
@@ -249,6 +281,7 @@ export interface FileRouteTypes {
     | '/'
     | '/accept-terms'
     | '/access-denied'
+    | '/applications'
     | '/audit-logs'
     | '/auth-complete'
     | '/departments'
@@ -260,8 +293,10 @@ export interface FileRouteTypes {
     | '/terms-and-conditions'
     | '/tiers'
     | '/users'
+    | '/applications/$applicationUuid'
     | '/profile/setup'
     | '/your-applications'
+    | '/applications/$applicationUuid/environments'
     | '/your-applications/$rpApplicationUuid/department-setup'
     | '/your-applications/$rpApplicationUuid/manage-credentials'
     | '/your-applications/$rpApplicationUuid/mau-report'
@@ -271,6 +306,7 @@ export interface FileRouteTypes {
     | '/'
     | '/accept-terms'
     | '/access-denied'
+    | '/applications'
     | '/audit-logs'
     | '/auth-complete'
     | '/departments'
@@ -283,9 +319,11 @@ export interface FileRouteTypes {
     | '/tiers'
     | '/users'
     | '/your-applications'
+    | '/applications/$applicationUuid'
     | '/profile/setup'
     | '/your-applications/$rpApplicationUuid'
     | '/your-applications/'
+    | '/applications/$applicationUuid/environments'
     | '/your-applications/$rpApplicationUuid/department-setup'
     | '/your-applications/$rpApplicationUuid/manage-credentials'
     | '/your-applications/$rpApplicationUuid/mau-report'
@@ -296,6 +334,7 @@ export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AcceptTermsRoute: typeof AcceptTermsRoute
   AccessDeniedRoute: typeof AccessDeniedRoute
+  ApplicationsRoute: typeof ApplicationsRouteWithChildren
   AuditLogsRoute: typeof AuditLogsRoute
   AuthCompleteRoute: typeof AuthCompleteRoute
   DepartmentsRoute: typeof DepartmentsRoute
@@ -332,6 +371,13 @@ declare module '@tanstack/react-router' {
       path: '/access-denied'
       fullPath: '/access-denied'
       preLoaderRoute: typeof AccessDeniedRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/applications': {
+      id: '/applications'
+      path: '/applications'
+      fullPath: '/applications'
+      preLoaderRoute: typeof ApplicationsRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/audit-logs': {
@@ -418,6 +464,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof YourApplicationsRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/applications/$applicationUuid': {
+      id: '/applications/$applicationUuid'
+      path: '/$applicationUuid'
+      fullPath: '/applications/$applicationUuid'
+      preLoaderRoute: typeof ApplicationsApplicationUuidRouteImport
+      parentRoute: typeof ApplicationsRoute
+    }
     '/profile/setup': {
       id: '/profile/setup'
       path: '/profile/setup'
@@ -438,6 +491,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/your-applications/$rpApplicationUuid'
       preLoaderRoute: typeof YourApplicationsRpApplicationUuidRouteImport
       parentRoute: typeof YourApplicationsRoute
+    }
+    '/applications/$applicationUuid/environments': {
+      id: '/applications/$applicationUuid/environments'
+      path: '/environments'
+      fullPath: '/applications/$applicationUuid/environments'
+      preLoaderRoute: typeof ApplicationsApplicationUuidEnvironmentsRouteImport
+      parentRoute: typeof ApplicationsApplicationUuidRoute
     }
     '/your-applications/$rpApplicationUuid/': {
       id: '/your-applications/$rpApplicationUuid/'
@@ -469,6 +529,34 @@ declare module '@tanstack/react-router' {
     }
   }
 }
+
+interface ApplicationsApplicationUuidRouteChildren {
+  ApplicationsApplicationUuidEnvironmentsRoute: typeof ApplicationsApplicationUuidEnvironmentsRoute
+}
+
+const ApplicationsApplicationUuidRouteChildren: ApplicationsApplicationUuidRouteChildren =
+  {
+    ApplicationsApplicationUuidEnvironmentsRoute:
+      ApplicationsApplicationUuidEnvironmentsRoute,
+  }
+
+const ApplicationsApplicationUuidRouteWithChildren =
+  ApplicationsApplicationUuidRoute._addFileChildren(
+    ApplicationsApplicationUuidRouteChildren,
+  )
+
+interface ApplicationsRouteChildren {
+  ApplicationsApplicationUuidRoute: typeof ApplicationsApplicationUuidRouteWithChildren
+}
+
+const ApplicationsRouteChildren: ApplicationsRouteChildren = {
+  ApplicationsApplicationUuidRoute:
+    ApplicationsApplicationUuidRouteWithChildren,
+}
+
+const ApplicationsRouteWithChildren = ApplicationsRoute._addFileChildren(
+  ApplicationsRouteChildren,
+)
 
 interface YourApplicationsRpApplicationUuidRouteChildren {
   YourApplicationsRpApplicationUuidDepartmentSetupRoute: typeof YourApplicationsRpApplicationUuidDepartmentSetupRoute
@@ -512,6 +600,7 @@ const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AcceptTermsRoute: AcceptTermsRoute,
   AccessDeniedRoute: AccessDeniedRoute,
+  ApplicationsRoute: ApplicationsRouteWithChildren,
   AuditLogsRoute: AuditLogsRoute,
   AuthCompleteRoute: AuthCompleteRoute,
   DepartmentsRoute: DepartmentsRoute,

@@ -171,7 +171,11 @@
 		"serverTitle": "Service temporarily unavailable"
 	},
 	"nav": {
+		"account": "Your account",
+		"applications": "Applications",
+		"apiDocumentation": "API Documentation",
 		"backTo": "Back to",
+		"manageProfile": "Manage profile",
 		"organization": "Organization",
 		"roles": "Roles",
 		"dashboard": "Your applications",
@@ -199,6 +203,28 @@
 		"summary": "Select an application to manage.",
 		"title": "Your applications",
 		"unknownApplication": "Unknown application"
+	},
+	"applicationEnvironments": {
+		"applications": "Applications",
+		"connectAction": "Connect an environment",
+		"empty": "You have not created any application environments.",
+		"errorBody": "The application environments could not be loaded.",
+		"errorTitle": "Unable to load application environments",
+		"gettingStartedLink": "getting started with CanadaLogin.",
+		"gettingStartedPrefix": "Learn more about ",
+		"inProductionDescription": "Your production environment is live and available for use.",
+		"lastModified": "Last modified",
+		"loadingBody": "Loading application environments.",
+		"loadingTitle": "Loading application environments",
+		"paginationLabel": "Application environment pages",
+		"productionStatuses": "Production environment statuses",
+		"sectionTitle": "Application environments",
+		"statusInProduction": "In production",
+		"statusSubmitted": "Submitted",
+		"submittedDescription": "Your production environment request has been submitted to CanadaLogin for review.",
+		"summary": "View and manage environments for this application.",
+		"switchApplication": "Switch application",
+		"title": "Environments"
 	},
 	"mauReport": {
 		"dailyListTitle": "Usage report metrics",
@@ -254,6 +280,14 @@
 	"header": {
 		"switchLanguageEnglish": "English",
 		"switchLanguageFrench": "Français"
+	},
+	"footer": {
+		"apiDocumentation": "API Documentation",
+		"contextualHeading": "Canadian Digital Service",
+		"privacy": "Privacy",
+		"support": "Support",
+		"systemStatus": "System status",
+		"terms": "Terms of use"
 	},
 	"health": {
 		"cardTitle": "Health endpoint",

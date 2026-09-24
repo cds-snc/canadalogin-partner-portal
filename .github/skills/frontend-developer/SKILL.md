@@ -181,6 +181,8 @@ Follow these rules:
 - export broadly shared primitives through `src/components/index.ts` only when that matches the existing pattern
 - verify dependencies of legacy shared components before assuming a new feature broke the build
 
+**Component priority:** Prefer existing shared GCDS wrappers, then native GCDS components exposed through shared wrappers, before writing custom markup or styling. Consult the `gc-design` skill's component catalogue before styling a new UI surface. Use Tailwind only when no appropriate component can preserve the required semantics or behavior; retain those uses as deliberate, documented exceptions.
+
 This repo has existing wrapper and barrel dependencies, so avoid casually deleting or bypassing them.
 
 ### 9. Keep API origin and cookie behavior aligned with local auth

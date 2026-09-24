@@ -3,25 +3,32 @@ import { useTranslation } from "react-i18next";
 import { GcdsFooter } from "@gcds-core/components-react";
 
 const FooterComponent: React.FC = () => {
-	const { i18n } = useTranslation();
+	const { i18n, t } = useTranslation();
 	const lang = i18n.language?.startsWith("fr") ? "fr" : "en";
 
-	const subLinks =
-		lang === "fr"
-			? {
-					"À propos de Canada.ca":
-						"https://www.canada.ca/fr/gouvernement/a-propos.html",
-					Avis: "https://www.canada.ca/fr/transparence/avis.html",
-					Confidentialité:
-						"https://www.canada.ca/fr/transparence/confidentialite.html",
-				}
-			: {
-					"About Canada.ca": "https://www.canada.ca/en/government/about.html",
-					"Terms and conditions": "/terms-and-conditions",
-					Privacy: "https://www.canada.ca/en/transparency/privacy.html",
-				};
+	const contextualLinks = {
+		[t("footer.apiDocumentation")]: "#",
+		[t("footer.support")]: "/support",
+		[t("footer.systemStatus")]: "#",
+	};
 
-	return <GcdsFooter lang={lang} subLinks={subLinks} />;
+	const subLinks = {
+		[t("footer.terms")]: "/terms-and-conditions",
+		[t("footer.privacy")]:
+			lang === "fr"
+				? "https://www.canada.ca/fr/transparence/confidentialite.html"
+				: "https://www.canada.ca/en/transparency/privacy.html",
+	};
+
+	return (
+		<GcdsFooter
+			contextualHeading={t("footer.contextualHeading")}
+			contextualLinks={contextualLinks}
+			display="compact"
+			lang={lang}
+			subLinks={subLinks}
+		/>
+	);
 };
 
 const Footer = React.memo(FooterComponent);

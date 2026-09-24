@@ -171,7 +171,11 @@
 		"serverTitle": "Service temporairement indisponible"
 	},
 	"nav": {
+		"account": "Votre compte",
+		"applications": "Applications",
+		"apiDocumentation": "Documentation de l’API",
 		"backTo": "Retour à",
+		"manageProfile": "Gérer le profil",
 		"organization": "Organisation",
 		"roles": "Roles",
 		"dashboard": "Vos applications",
@@ -199,6 +203,28 @@
 		"summary": "Sélectionnez une application à gérer.",
 		"title": "Vos applications",
 		"unknownApplication": "Application inconnue"
+	},
+	"applicationEnvironments": {
+		"applications": "Applications",
+		"connectAction": "Connecter un environnement",
+		"empty": "Vous n’avez créé aucun environnement d’application.",
+		"errorBody": "Les environnements d’application n’ont pas pu être chargés.",
+		"errorTitle": "Impossible de charger les environnements d’application",
+		"gettingStartedLink": "commencer avec CanadaLogin.",
+		"gettingStartedPrefix": "En savoir plus sur la façon de ",
+		"inProductionDescription": "Votre environnement de production est actif et disponible.",
+		"lastModified": "Dernière modification",
+		"loadingBody": "Chargement des environnements d’application.",
+		"loadingTitle": "Chargement des environnements d’application",
+		"paginationLabel": "Pages des environnements d’application",
+		"productionStatuses": "États des environnements de production",
+		"sectionTitle": "Environnements d’application",
+		"statusInProduction": "En production",
+		"statusSubmitted": "Soumis",
+		"submittedDescription": "Votre demande d’environnement de production a été soumise à CanadaLogin aux fins d’examen.",
+		"summary": "Affichez et gérez les environnements de cette application.",
+		"switchApplication": "Changer d’application",
+		"title": "Environnements"
 	},
 	"mauReport": {
 		"dailyListTitle": "Mesures du rapport d'utilisation",
@@ -254,6 +280,14 @@
 	"header": {
 		"switchLanguageEnglish": "English",
 		"switchLanguageFrench": "Français"
+	},
+	"footer": {
+		"apiDocumentation": "Documentation de l’API",
+		"contextualHeading": "Service numérique canadien",
+		"privacy": "Confidentialité",
+		"support": "Soutien",
+		"systemStatus": "État du système",
+		"terms": "Conditions d'utilisation"
 	},
 	"health": {
 		"cardTitle": "Point de terminaison de santé",

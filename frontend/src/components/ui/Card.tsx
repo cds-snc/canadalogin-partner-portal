@@ -6,6 +6,7 @@ interface CardProps {
 	cardTitle: string;
 	cardTitleTag: "h3" | "h4" | "h5" | "h6";
 	className?: string;
+	style?: React.CSSProperties;
 	href: string;
 	description?: string;
 	badge?: string;
