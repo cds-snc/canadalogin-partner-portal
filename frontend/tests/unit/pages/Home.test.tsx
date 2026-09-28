@@ -13,8 +13,12 @@ vi.mock("react-i18next", () => ({
 				"home.featureSectionTitle": "Manage RP applications",
 				"home.heroEyebrow": "Partner portal",
 				"home.heroTitle": "Manage your relying party applications in one place.",
+				"home.accessRequestPrefix": "If you do not have access, ",
+				"home.accessRequestLink": "request access from the CanadaLogin team",
+				"home.accessRequestSuffix": ".",
+				"home.eligibility": "You need a Government of Canada email address and approval from the CanadaLogin team to use this portal.",
 				"home.signInAction": "Sign in with CanadaLogin",
-				"home.summary": "Use your Government of Canada email address to sign in.",
+				"home.summary": "Use the CanadaLogin Partner Portal to manage your organization's environments connected to CanadaLogin.",
 				"home.title": "CanadaLogin Partner Portal",
 				"home.supportCardTitle": "Support",
 				"home.supportCardDescription": "Get help with the CanadaLogin Partner Portal.",
@@ -72,6 +76,18 @@ describe("Home", () => {
 		expect(
 			screen.getByRole("heading", { name: /canadalogin partner portal/i }),
 		).toBeTruthy();
+		expect(
+			screen.getByText(
+				/you need a government of canada email address and approval/i,
+			),
+		).toBeTruthy();
+		expect(
+			screen
+				.getByRole("link", {
+					name: /request access from the canadalogin team/i,
+				})
+				.getAttribute("href"),
+		).toBe("/support");
 		expect(
 			screen.getByRole("button", { name: /sign in with canadalogin/i }),
 		).toBeTruthy();
