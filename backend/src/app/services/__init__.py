@@ -1,4 +1,5 @@
 from .application_environment_service import ApplicationEnvironmentService
+from .application_service import ApplicationService
 from .audit_service import AuditService
 from .auth_service import AuthService
 from .concurrent_session_service import ConcurrentSessionService
@@ -20,6 +21,7 @@ from .user_service import UserService
 
 __all__ = [
     "ApplicationEnvironmentService",
+    "ApplicationService",
     "AuditService",
     "AuthService",
     "ConcurrentSessionService",

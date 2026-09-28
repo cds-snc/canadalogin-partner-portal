@@ -16,16 +16,16 @@ const departmentSetupSearchSchema = z.object({
 });
 
 export const Route = createFileRoute(
-	"/your-applications/$rpApplicationUuid/department-setup"
+	"/applications/$applicationUuid/department-setup"
 )({
 	validateSearch: departmentSetupSearchSchema,
 	beforeLoad: async ({ params }) => {
 		await requireAuthenticatedUser(
-			`/your-applications/${params.rpApplicationUuid}/department-setup`
+			`/applications/${params.applicationUuid}/department-setup`
 		);
 
 		return {
-			backLink: { href: "/your-applications", label: i18n.t("nav.dashboard") },
+			backLink: { href: "/applications", label: i18n.t("nav.applications") },
 		} satisfies RouteBackLinkContext;
 	},
 	component: RPApplicationDepartmentSetupPage,

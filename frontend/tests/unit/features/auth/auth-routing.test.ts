@@ -65,7 +65,7 @@ describe("auth-routing", () => {
 	it("navigates to OIDC when session revalidation fails before route entry", async () => {
 		vi.mocked(revalidateCurrentUser).mockRejectedValue(new TypeError("Failed to fetch"));
 
-		await expect(requireAuthenticatedUser("/your-applications")).rejects.toThrow("Redirecting to OIDC login");
+		await expect(requireAuthenticatedUser("/applications")).rejects.toThrow("Redirecting to OIDC login");
 		expect(assignMock).toHaveBeenCalledWith("http://localhost:8000/api/v1/auth/oidc/login");
 	});
 
@@ -104,10 +104,10 @@ describe("auth-routing", () => {
 			acceptedTermsAt: null,
 		});
 
-		await expect(requireAuthenticatedUser("/your-applications")).rejects.toMatchObject({
+		await expect(requireAuthenticatedUser("/applications")).rejects.toMatchObject({
 			options: {
 				replace: true,
-				search: { redirect: "/your-applications" },
+				search: { redirect: "/applications" },
 				to: "/accept-terms",
 			},
 		});
@@ -116,7 +116,7 @@ describe("auth-routing", () => {
 	it("passes terms check when acceptedTermsAt is set", async () => {
 		vi.mocked(revalidateCurrentUser).mockResolvedValue(sampleUser);
 
-		await expect(requireAuthenticatedUser("/your-applications")).resolves.toEqual(sampleUser);
+		await expect(requireAuthenticatedUser("/applications")).resolves.toEqual(sampleUser);
 	});
 
 	it("passes terms check when already on the accept-terms page", async () => {

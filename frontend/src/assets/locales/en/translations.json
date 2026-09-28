@@ -204,6 +204,22 @@
 		"title": "Your applications",
 		"unknownApplication": "Unknown application"
 	},
+	"applications": {
+		"emptyContactPrefix": "Contact ",
+		"emptyContactSuffix": " to request access to an application.",
+		"emptyTitle": "You do not have access to any applications.",
+		"environmentCount_one": "{{count}} environment",
+		"environmentCount_other": "{{count}} environments",
+		"errorBody": "Your applications could not be loaded for this session.",
+		"errorTitle": "Unable to load your applications",
+		"loadingBody": "Loading your applications.",
+		"loadingTitle": "Loading your applications",
+		"paginationLabel": "Application pages",
+		"summary": "Select an application to manage its environments.",
+		"title": "Applications",
+		"unknownApplication": "Unknown application",
+		"supportLink": "support"
+	},
 	"applicationEnvironments": {
 		"applications": "Applications",
 		"connectAction": "Connect an environment",

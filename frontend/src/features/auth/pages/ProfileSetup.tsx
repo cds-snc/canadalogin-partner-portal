@@ -42,7 +42,7 @@ export const ProfileSetup = (): ReactElement => {
 			await setMyDepartment(selected);
 			toast.success(t("profile.departmentSavedSuccess"));
 			await refreshSession();
-			await navigate({ replace: true, to: "/your-applications" });
+			await navigate({ replace: true, to: "/applications" });
 		} catch (err) {
 			console.error(err);
 			setSubmitError(t("profile.errorSaving"));

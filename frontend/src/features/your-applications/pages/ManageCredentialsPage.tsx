@@ -77,8 +77,8 @@ const formatEpochForDisplay = (
 };
 
 export const ManageCredentialsPage = (): FunctionComponent => {
-	const { rpApplicationUuid } = useParams({
-		from: "/your-applications/$rpApplicationUuid/manage-credentials",
+	const { applicationUuid: rpApplicationUuid } = useParams({
+		from: "/applications/$applicationUuid/manage-credentials",
 	});
 	const { i18n, t } = useTranslation();
 	const toast = useToast();

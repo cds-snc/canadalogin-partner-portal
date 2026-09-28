@@ -168,7 +168,7 @@ const mockedUseParams = vi.mocked(useParams);
 describe("MAUReportPage", () => {
 	beforeEach(() => {
 		mockedUseParams.mockReturnValue({
-			rpApplicationUuid: "application-uuid-1",
+			applicationUuid: "application-uuid-1",
 		});
 		mockUseQuery.mockReset();
 		mockMAUDailyTrendLineChart.mockReset();
@@ -416,7 +416,7 @@ describe("MAUReportPage", () => {
 		Object.defineProperty(globalThis, "location", {
 			configurable: true,
 			value: {
-				pathname: "/your-applications/application-uuid-1/mau-report",
+				pathname: "/applications/application-uuid-1/mau-report",
 				replace: replaceMock,
 			} as Pick<Location, "pathname" | "replace">,
 		});
@@ -436,7 +436,7 @@ describe("MAUReportPage", () => {
 
 		await waitFor(() => {
 			expect(replaceMock).toHaveBeenCalledWith(
-					"/your-applications/application-uuid-1/department-setup"
+					"/applications/application-uuid-1/department-setup"
 			);
 		});
 

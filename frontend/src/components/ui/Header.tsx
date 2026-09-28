@@ -84,7 +84,7 @@ const Header = (): FunctionComponent => {
 	};
 
 	const authItems: Array<NavigationItem> = [
-		{ href: "/your-applications", label: t("nav.applications") },
+		{ href: "/applications", label: t("nav.applications") },
 		{ href: "#", label: t("nav.apiDocumentation") },
 	];
 

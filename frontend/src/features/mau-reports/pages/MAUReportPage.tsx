@@ -77,8 +77,8 @@ const exportToCSV = (
 
 export const MAUReportPage = (): FunctionComponent => {
 	const { i18n, t } = useTranslation();
-	const { rpApplicationUuid } = useParams({
-		from: "/your-applications/$rpApplicationUuid/mau-report",
+	const { applicationUuid: rpApplicationUuid } = useParams({
+		from: "/applications/$applicationUuid/mau-report",
 	});
 	const rpApplicationUuidValue = String(rpApplicationUuid);
 	const defaultDateRange = useMemo(() => buildDefaultDateRange(), []);
@@ -104,7 +104,7 @@ export const MAUReportPage = (): FunctionComponent => {
 			error.code === "rp_application_department_required"
 		) {
 			globalThis.location.replace(
-				`/your-applications/${rpApplicationUuidValue}/department-setup`
+				`/applications/${rpApplicationUuidValue}/department-setup`
 			);
 		}
 	}, [error, rpApplicationUuidValue]);

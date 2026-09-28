@@ -12,8 +12,8 @@ const replaceMock = vi.fn();
 const originalLocation = globalThis.location;
 
 vi.mock("@tanstack/react-router", () => ({
-	useParams: (): { rpApplicationUuid: string } => ({
-		rpApplicationUuid: "application-uuid-1",
+	useParams: (): { applicationUuid: string } => ({
+		applicationUuid: "application-uuid-1",
 	}),
 	useSearch: (): { redirect?: string } => ({}),
 	useNavigate: (): (() => Promise<void>) => vi.fn().mockResolvedValue(undefined),
@@ -95,7 +95,7 @@ describe("YourApplicationsDepartmentSetupPage", () => {
 			configurable: true,
 			value: {
 				pathname:
-					"/your-applications/application-uuid-1/department-setup",
+					"/applications/application-uuid-1/department-setup",
 				replace: replaceMock,
 			} as Pick<Location, "pathname" | "replace">,
 		});
@@ -194,8 +194,8 @@ describe("YourApplicationsDepartmentSetupPage", () => {
 		const navigateMock = vi.fn().mockResolvedValue(undefined);
 
 		vi.doMock("@tanstack/react-router", () => ({
-			useParams: (): { rpApplicationUuid: string } => ({
-				rpApplicationUuid: "application-uuid-1",
+			useParams: (): { applicationUuid: string } => ({
+				applicationUuid: "application-uuid-1",
 			}),
 			useSearch: (): { redirect?: string } => ({}),
 			useNavigate: (): typeof navigateMock => navigateMock,

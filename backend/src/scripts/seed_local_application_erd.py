@@ -63,8 +63,95 @@ LOCAL_PARTNER_GROUP = LocalPartnerGroupSeed(
 LOCAL_APPLICATION = LocalApplicationSeed(
     uuid=LOCAL_APPLICATION_UUID,
     partner_group_uuid=LOCAL_PARTNER_GROUP_UUID,
-    name_en="Local Application",
-    name_fr="Application locale",
+    name_en="Claims Service",
+    name_fr="Service de demandes",
+)
+LOCAL_APPLICATIONS = (
+    LOCAL_APPLICATION,
+    LocalApplicationSeed(
+        uuid=UUID("00000000-0000-7000-8000-000000000014"),
+        partner_group_uuid=LOCAL_PARTNER_GROUP_UUID,
+        name_en="Proof of Eligibility",
+        name_fr="Preuve d'admissibilite",
+    ),
+    LocalApplicationSeed(
+        uuid=UUID("00000000-0000-7000-8000-000000000015"),
+        partner_group_uuid=LOCAL_PARTNER_GROUP_UUID,
+        name_en="Appeal Portal",
+        name_fr="Portail des appels",
+    ),
+    LocalApplicationSeed(
+        uuid=UUID("00000000-0000-7000-8000-000000000016"),
+        partner_group_uuid=LOCAL_PARTNER_GROUP_UUID,
+        name_en="Benefit Calculator",
+        name_fr="Calculateur de prestations",
+    ),
+    LocalApplicationSeed(
+        uuid=UUID("00000000-0000-7000-8000-000000000017"),
+        partner_group_uuid=LOCAL_PARTNER_GROUP_UUID,
+        name_en="Documentation Hub",
+        name_fr="Centre de documentation",
+    ),
+    LocalApplicationSeed(
+        uuid=UUID("00000000-0000-7000-8000-000000000018"),
+        partner_group_uuid=LOCAL_PARTNER_GROUP_UUID,
+        name_en="Payment Dashboard",
+        name_fr="Tableau de bord des paiements",
+    ),
+    LocalApplicationSeed(
+        uuid=UUID("00000000-0000-7000-8000-000000000019"),
+        partner_group_uuid=LOCAL_PARTNER_GROUP_UUID,
+        name_en="Status Tracker",
+        name_fr="Suivi du statut",
+    ),
+    LocalApplicationSeed(
+        uuid=UUID("00000000-0000-7000-8000-000000000020"),
+        partner_group_uuid=LOCAL_PARTNER_GROUP_UUID,
+        name_en="Notification Center",
+        name_fr="Centre de notifications",
+    ),
+    LocalApplicationSeed(
+        uuid=UUID("00000000-0000-7000-8000-000000000021"),
+        partner_group_uuid=LOCAL_PARTNER_GROUP_UUID,
+        name_en="Accessibility Tools",
+        name_fr="Outils d'accessibilite",
+    ),
+    LocalApplicationSeed(
+        uuid=UUID("00000000-0000-7000-8000-000000000022"),
+        partner_group_uuid=LOCAL_PARTNER_GROUP_UUID,
+        name_en="Report Generator",
+        name_fr="Generateur de rapports",
+    ),
+    LocalApplicationSeed(
+        uuid=UUID("00000000-0000-7000-8000-000000000023"),
+        partner_group_uuid=LOCAL_PARTNER_GROUP_UUID,
+        name_en="Data Export Tool",
+        name_fr="Outil d'exportation de donnees",
+    ),
+    LocalApplicationSeed(
+        uuid=UUID("00000000-0000-7000-8000-000000000024"),
+        partner_group_uuid=LOCAL_PARTNER_GROUP_UUID,
+        name_en="User Profile Manager",
+        name_fr="Gestionnaire de profil utilisateur",
+    ),
+    LocalApplicationSeed(
+        uuid=UUID("00000000-0000-7000-8000-000000000025"),
+        partner_group_uuid=LOCAL_PARTNER_GROUP_UUID,
+        name_en="Audit Log Viewer",
+        name_fr="Visionneuse du journal d'audit",
+    ),
+    LocalApplicationSeed(
+        uuid=UUID("00000000-0000-7000-8000-000000000026"),
+        partner_group_uuid=LOCAL_PARTNER_GROUP_UUID,
+        name_en="Configuration Panel",
+        name_fr="Panneau de configuration",
+    ),
+    LocalApplicationSeed(
+        uuid=UUID("00000000-0000-7000-8000-000000000027"),
+        partner_group_uuid=LOCAL_PARTNER_GROUP_UUID,
+        name_en="Compliance Checker",
+        name_fr="Verificateur de conformite",
+    ),
 )
 LOCAL_APPLICATION_CONFIGURATIONS = tuple(
     LocalApplicationConfigurationSeed(
@@ -136,21 +223,25 @@ async def _upsert_partner_group(session: AsyncSession, department_id: int) -> Pa
     return partner_group
 
 
-async def _upsert_application(session: AsyncSession, partner_group_id: int) -> Application:
-    result = await session.execute(select(Application).where(Application.uuid == LOCAL_APPLICATION.uuid))
+async def _upsert_application(
+    session: AsyncSession,
+    partner_group_id: int,
+    seed: LocalApplicationSeed,
+) -> Application:
+    result = await session.execute(select(Application).where(Application.uuid == seed.uuid))
     application = result.scalar_one_or_none()
     if application is None:
         application = Application(
             partner_group_id=partner_group_id,
-            name_en=LOCAL_APPLICATION.name_en,
-            name_fr=LOCAL_APPLICATION.name_fr,
-            uuid=LOCAL_APPLICATION.uuid,
+            name_en=seed.name_en,
+            name_fr=seed.name_fr,
+            uuid=seed.uuid,
         )
         session.add(application)
     else:
         application.partner_group_id = partner_group_id
-        application.name_en = LOCAL_APPLICATION.name_en
-        application.name_fr = LOCAL_APPLICATION.name_fr
+        application.name_en = seed.name_en
+        application.name_fr = seed.name_fr
         application.deleted_at = None
         application.is_deleted = False
 
@@ -264,14 +355,20 @@ async def seed_local_application_erd(session: AsyncSession, environment: Environ
     ensure_local_environment(environment)
     department = await _get_local_department(session)
     partner_group = await _upsert_partner_group(session, department.id)
-    application = await _upsert_application(session, partner_group.id)
     await _upsert_partner_developer_role(session, partner_group.id)
-    for configuration_seed in LOCAL_APPLICATION_CONFIGURATIONS:
-        await _upsert_application_configuration(
+    for application_seed in LOCAL_APPLICATIONS:
+        application = await _upsert_application(
             session,
-            application.id,
-            configuration_seed,
+            partner_group.id,
+            application_seed,
         )
+        if application_seed.uuid == LOCAL_APPLICATION.uuid:
+            for configuration_seed in LOCAL_APPLICATION_CONFIGURATIONS:
+                await _upsert_application_configuration(
+                    session,
+                    application.id,
+                    configuration_seed,
+                )
 
 
 async def main() -> None:

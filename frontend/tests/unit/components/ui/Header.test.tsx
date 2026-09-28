@@ -60,7 +60,7 @@ vi.mock("@tanstack/react-router", () => ({
 				{
 					context: {
 						backLink: {
-							href: "#",
+							href: "/applications",
 							label: "Applications",
 							showBackLabel: false,
 						},
@@ -175,13 +175,15 @@ describe("Header", () => {
 			document.querySelector("nav[aria-label='Primary navigation']")
 		).toBeTruthy();
 		expect(document.querySelector("nav[data-slot='breadcrumb']")).toBeTruthy();
-		expect(document.querySelector("a[data-href='/your-applications']")?.textContent).toBe(
+		expect(document.querySelector("a[data-href='/applications']")?.textContent).toBe(
 			"Applications"
 		);
 		expect(document.querySelector("a[data-href='#']")?.textContent).toBe(
 			"API Documentation"
 		);
-		expect(document.querySelector("a[href='#']")?.textContent).toBe("Applications");
+		expect(document.querySelector("a[href='/applications']")?.textContent).toBe(
+			"Applications"
+		);
 		expect(
 			document.querySelector(
 				"nav[aria-label='Primary navigation'] > a[data-href='/logout']"

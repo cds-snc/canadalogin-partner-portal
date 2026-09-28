@@ -16,6 +16,7 @@ import {
 } from "@/components/ui";
 import { getRequestErrorNotice } from "@/fetch";
 import { useApplicationEnvironments } from "../hooks/use-application-environments";
+import "./environments-page.css";
 
 const ITEMS_PER_PAGE = 10;
 
@@ -92,15 +93,15 @@ export const EnvironmentsPage = (): FunctionComponent => {
 
 	return (
 		<Grid columns="1fr" tag="div">
-			<div className="flex items-center gap-100">
+			<Grid alignItems="center" columns="auto auto 1fr" tag="div">
 				<Text marginBottom="0">
 					<strong>{applicationName}</strong>
 				</Text>
-				<span className="inline-flex rotate-90">
+				<div className="application-switch-icon">
 					<Icon name="arrow-up-down" size="text" />
-				</span>
-				<Link href="#">{t("applicationEnvironments.switchApplication")}</Link>
-			</div>
+				</div>
+				<Link href="/applications">{t("applicationEnvironments.switchApplication")}</Link>
+			</Grid>
 			<Heading tag="h1">{t("applicationEnvironments.title")}</Heading>
 			<Text>{t("applicationEnvironments.summary")}</Text>
 			<Text>
@@ -145,10 +146,10 @@ export const EnvironmentsPage = (): FunctionComponent => {
 							const modifiedAt =
 								environment.updatedAt ?? environment.createdAt;
 							const cardStyle: CSSProperties | undefined = isInProduction
-								? {
-									"--gcds-card-badge-background-color":
-										"var(--gcds-color-green-700)",
-								}
+								? ({
+										"--gcds-card-badge-background-color":
+											"var(--gcds-color-green-700)",
+									} as CSSProperties)
 								: undefined;
 							return (
 								<Card
