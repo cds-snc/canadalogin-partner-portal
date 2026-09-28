@@ -204,6 +204,22 @@
 		"title": "Vos applications",
 		"unknownApplication": "Application inconnue"
 	},
+	"applications": {
+		"emptyContactPrefix": "Communiquez avec le ",
+		"emptyContactSuffix": " pour demander l’accès à une application.",
+		"emptyTitle": "Vous n’avez accès à aucune application.",
+		"environmentCount_one": "{{count}} environnement",
+		"environmentCount_other": "{{count}} environnements",
+		"errorBody": "Vos applications n'ont pas pu être chargées pour cette session.",
+		"errorTitle": "Impossible de charger vos applications",
+		"loadingBody": "Chargement de vos applications.",
+		"loadingTitle": "Chargement de vos applications",
+		"paginationLabel": "Pages des applications",
+		"summary": "Sélectionnez une application pour gérer ses environnements.",
+		"title": "Applications",
+		"unknownApplication": "Application inconnue",
+		"supportLink": "soutien"
+	},
 	"applicationEnvironments": {
 		"applications": "Applications",
 		"connectAction": "Connecter un environnement",

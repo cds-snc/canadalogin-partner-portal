@@ -31,8 +31,8 @@ const StatusBadge = ({ status }: { status: string }): ReactNode => {
 };
 
 export const OAuthSetupPage = (): FunctionComponent => {
-	const { rpApplicationUuid } = useParams({
-		from: "/your-applications/$rpApplicationUuid",
+	const { applicationUuid: rpApplicationUuid } = useParams({
+		from: "/applications/$applicationUuid",
 	});
 	const { i18n, t } = useTranslation();
 
@@ -70,7 +70,7 @@ export const OAuthSetupPage = (): FunctionComponent => {
 					error.code === "rp_application_department_required"
 				) {
 					globalThis.location.replace(
-						`/your-applications/${rpApplicationUuid}/department-setup`
+						`/applications/${rpApplicationUuid}/department-setup`
 					);
 					return;
 				}
@@ -211,12 +211,12 @@ export const OAuthSetupPage = (): FunctionComponent => {
 			<Card
 				cardTitle={t("rpOAuthSetup.usageReportAction")}
 				cardTitleTag="h3"
-				href={`/your-applications/${rpApplicationUuid}/mau-report`}
+				href={`/applications/${rpApplicationUuid}/mau-report`}
 			/>
 			<Card
 				cardTitle={t("workspaces.manageCredentials")}
 				cardTitleTag="h3"
-				href={`/your-applications/${rpApplicationUuid}/manage-credentials`}
+				href={`/applications/${rpApplicationUuid}/manage-credentials`}
 			/>
 		</Grid>
 	);

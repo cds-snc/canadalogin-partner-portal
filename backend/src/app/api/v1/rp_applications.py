@@ -75,7 +75,11 @@ async def read_rp_applications(
     )
 
 
-@router.get("/rp-applications/mine", response_model=list[RPApplicationCurrentUserRead])
+@router.get(
+    "/rp-applications/mine",
+    response_model=list[RPApplicationCurrentUserRead],
+    deprecated=True,
+)
 # @casbin_guard.require_permission("rp_applications", "read")
 async def read_current_user_rp_applications(
     request: Request,

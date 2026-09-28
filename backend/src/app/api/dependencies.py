@@ -17,6 +17,7 @@ from ..repositories.dependencies import get_ibm_sv_user_client
 from ..schemas.rate_limit import sanitize_path
 from ..services import (
     ApplicationEnvironmentService,
+    ApplicationService,
     AuditService,
     AuthService,
     ConcurrentSessionService,
@@ -43,6 +44,10 @@ DEFAULT_PERIOD = settings.DEFAULT_RATE_LIMIT_PERIOD
 
 def get_application_environment_service() -> ApplicationEnvironmentService:
     return ApplicationEnvironmentService()
+
+
+def get_application_service() -> ApplicationService:
+    return ApplicationService()
 
 
 def get_audit_service() -> AuditService:

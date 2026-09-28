@@ -194,7 +194,7 @@ describe("EnvironmentsPage", () => {
 		expect(screen.getAllByText(/^Last modified:/)).toHaveLength(3);
 	});
 
-	it("renders page-level and environment links as placeholders", () => {
+	it("links back to the applications list and keeps other links as placeholders", () => {
 		mockedUseApplicationEnvironments.mockReturnValue({
 			data: {
 				application: {
@@ -225,7 +225,7 @@ describe("EnvironmentsPage", () => {
 
 		expect(
 			screen.getByRole("link", { name: "Switch application" }).getAttribute("href")
-		).toBe("#");
+		).toBe("/applications");
 		expect(
 			screen
 				.getByRole("link", { name: "getting started with CanadaLogin." })

@@ -11,17 +11,17 @@ const RPApplicationClientSecretsPage = lazy(async () => ({
 }));
 
 export const Route = createFileRoute(
-	"/your-applications/$rpApplicationUuid/manage-credentials"
+	"/applications/$applicationUuid/manage-credentials"
 )({
 	beforeLoad: async ({ params, context }) => {
 		await requireAuthenticatedUser(
-			`/your-applications/${params.rpApplicationUuid}/manage-credentials`
+			`/applications/${params.applicationUuid}/manage-credentials`
 		);
 
 		const appName =
 			(context as { rpApplicationName?: string | null }).rpApplicationName ??
-			i18n.t("nav.dashboard");
-		const appHref = `/your-applications/${params.rpApplicationUuid}`;
+			i18n.t("nav.applications");
+		const appHref = `/applications/${params.applicationUuid}`;
 
 		return {
 			backLink: { href: appHref, label: appName },

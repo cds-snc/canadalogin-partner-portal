@@ -5,7 +5,7 @@ import { appPreferencesStore } from "@/store/app-preferences-store";
 import { revalidateCurrentUser } from "./session-queries";
 import { sanitizeAppPath } from "./login-search";
 
-const defaultPostLoginPath = "/your-applications";
+const defaultPostLoginPath = "/applications";
 
 export const getPostLoginPath = (): string =>
 	sanitizeAppPath(
@@ -67,7 +67,7 @@ export const requireSuperuser = async (
 	if (!currentUser.isSuperuser) {
 		throw redirect({
 			replace: true,
-			to: "/your-applications",
+			to: "/applications",
 		}) as unknown as Error;
 	}
 

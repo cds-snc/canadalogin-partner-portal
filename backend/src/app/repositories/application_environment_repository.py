@@ -11,6 +11,42 @@ from ..models.tenant import Tenant
 
 
 class ApplicationEnvironmentRepository:
+    async def get_application_metadata_by_ibm_application_ids(
+        self,
+        db: AsyncSession,
+        ibm_application_ids: set[str],
+    ) -> dict[str, dict[str, Any]]:
+        if not ibm_application_ids:
+            return {}
+
+        statement = (
+            select(
+                ApplicationConfiguration.ibm_application_id,
+                Application.uuid.label("application_uuid"),
+                func.count(ApplicationConfiguration.id).label("environment_count"),
+            )
+            .select_from(ApplicationConfiguration)
+            .join(Application, Application.id == ApplicationConfiguration.application_id)
+            .where(
+                ApplicationConfiguration.ibm_application_id.in_(ibm_application_ids),
+                ApplicationConfiguration.is_deleted.is_(False),
+                Application.is_deleted.is_(False),
+            )
+            .group_by(
+                ApplicationConfiguration.ibm_application_id,
+                Application.uuid,
+            )
+        )
+        metadata_rows = (await db.execute(statement)).mappings().all()
+        return {
+            str(row["ibm_application_id"]): {
+                "application_uuid": row["application_uuid"],
+                "environment_count": int(row["environment_count"]),
+            }
+            for row in metadata_rows
+            if row["ibm_application_id"] is not None
+        }
+
     async def get_application_summary(
         self,
         db: AsyncSession,

@@ -36,7 +36,7 @@ const AcceptTermsPage = (): ReactElement => {
 			await refreshSession();
 			await navigate({
 				replace: true,
-				to: search.redirect ?? "/your-applications",
+				to: search.redirect ?? "/applications",
 			});
 		} catch (err) {
 			console.error(err);

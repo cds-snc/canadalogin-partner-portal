@@ -9,7 +9,7 @@ export type LoginRedirectSearch = {
 	uiLocales?: string;
 };
 
-const defaultPostLoginPath = "/your-applications";
+const defaultPostLoginPath = "/applications";
 
 export const sanitizeAppPath = (
 	path: string | null | undefined,

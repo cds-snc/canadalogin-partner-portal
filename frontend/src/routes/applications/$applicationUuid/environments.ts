@@ -24,7 +24,7 @@ export const Route = createFileRoute(
 
 		return {
 			backLink: {
-				href: "#",
+				href: "/applications",
 				label: i18n.t("applicationEnvironments.applications"),
 				showBackLabel: false,
 			},

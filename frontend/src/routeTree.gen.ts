@@ -24,16 +24,14 @@ import { Route as SupportRouteImport } from './routes/support'
 import { Route as TermsAndConditionsRouteImport } from './routes/terms-and-conditions'
 import { Route as TiersRouteImport } from './routes/tiers'
 import { Route as UsersRouteImport } from './routes/users'
-import { Route as YourApplicationsRouteImport } from './routes/your-applications'
+import { Route as ApplicationsIndexRouteImport } from './routes/applications/index'
 import { Route as ApplicationsApplicationUuidRouteImport } from './routes/applications/$applicationUuid'
 import { Route as ProfileSetupRouteImport } from './routes/profile/setup'
-import { Route as YourApplicationsIndexRouteImport } from './routes/your-applications/index'
-import { Route as YourApplicationsRpApplicationUuidRouteImport } from './routes/your-applications/$rpApplicationUuid'
+import { Route as ApplicationsApplicationUuidIndexRouteImport } from './routes/applications/$applicationUuid/index'
+import { Route as ApplicationsApplicationUuidDepartmentSetupRouteImport } from './routes/applications/$applicationUuid/department-setup'
 import { Route as ApplicationsApplicationUuidEnvironmentsRouteImport } from './routes/applications/$applicationUuid/environments'
-import { Route as YourApplicationsRpApplicationUuidIndexRouteImport } from './routes/your-applications/$rpApplicationUuid/index'
-import { Route as YourApplicationsRpApplicationUuidDepartmentSetupRouteImport } from './routes/your-applications/$rpApplicationUuid/department-setup'
-import { Route as YourApplicationsRpApplicationUuidManageCredentialsRouteImport } from './routes/your-applications/$rpApplicationUuid/manage-credentials'
-import { Route as YourApplicationsRpApplicationUuidMauReportRouteImport } from './routes/your-applications/$rpApplicationUuid/mau-report'
+import { Route as ApplicationsApplicationUuidManageCredentialsRouteImport } from './routes/applications/$applicationUuid/manage-credentials'
+import { Route as ApplicationsApplicationUuidMauReportRouteImport } from './routes/applications/$applicationUuid/mau-report'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
@@ -110,10 +108,10 @@ const UsersRoute = UsersRouteImport.update({
   path: '/users',
   getParentRoute: () => rootRouteImport,
 } as any)
-const YourApplicationsRoute = YourApplicationsRouteImport.update({
-  id: '/your-applications',
-  path: '/your-applications',
-  getParentRoute: () => rootRouteImport,
+const ApplicationsIndexRoute = ApplicationsIndexRouteImport.update({
+  id: '/',
+  path: '/',
+  getParentRoute: () => ApplicationsRoute,
 } as any)
 const ApplicationsApplicationUuidRoute =
   ApplicationsApplicationUuidRouteImport.update({
@@ -126,16 +124,17 @@ const ProfileSetupRoute = ProfileSetupRouteImport.update({
   path: '/profile/setup',
   getParentRoute: () => rootRouteImport,
 } as any)
-const YourApplicationsIndexRoute = YourApplicationsIndexRouteImport.update({
-  id: '/',
-  path: '/',
-  getParentRoute: () => YourApplicationsRoute,
-} as any)
-const YourApplicationsRpApplicationUuidRoute =
-  YourApplicationsRpApplicationUuidRouteImport.update({
-    id: '/$rpApplicationUuid',
-    path: '/$rpApplicationUuid',
-    getParentRoute: () => YourApplicationsRoute,
+const ApplicationsApplicationUuidIndexRoute =
+  ApplicationsApplicationUuidIndexRouteImport.update({
+    id: '/',
+    path: '/',
+    getParentRoute: () => ApplicationsApplicationUuidRoute,
+  } as any)
+const ApplicationsApplicationUuidDepartmentSetupRoute =
+  ApplicationsApplicationUuidDepartmentSetupRouteImport.update({
+    id: '/department-setup',
+    path: '/department-setup',
+    getParentRoute: () => ApplicationsApplicationUuidRoute,
   } as any)
 const ApplicationsApplicationUuidEnvironmentsRoute =
   ApplicationsApplicationUuidEnvironmentsRouteImport.update({
@@ -143,29 +142,17 @@ const ApplicationsApplicationUuidEnvironmentsRoute =
     path: '/environments',
     getParentRoute: () => ApplicationsApplicationUuidRoute,
   } as any)
-const YourApplicationsRpApplicationUuidIndexRoute =
-  YourApplicationsRpApplicationUuidIndexRouteImport.update({
-    id: '/',
-    path: '/',
-    getParentRoute: () => YourApplicationsRpApplicationUuidRoute,
-  } as any)
-const YourApplicationsRpApplicationUuidDepartmentSetupRoute =
-  YourApplicationsRpApplicationUuidDepartmentSetupRouteImport.update({
-    id: '/department-setup',
-    path: '/department-setup',
-    getParentRoute: () => YourApplicationsRpApplicationUuidRoute,
-  } as any)
-const YourApplicationsRpApplicationUuidManageCredentialsRoute =
-  YourApplicationsRpApplicationUuidManageCredentialsRouteImport.update({
+const ApplicationsApplicationUuidManageCredentialsRoute =
+  ApplicationsApplicationUuidManageCredentialsRouteImport.update({
     id: '/manage-credentials',
     path: '/manage-credentials',
-    getParentRoute: () => YourApplicationsRpApplicationUuidRoute,
+    getParentRoute: () => ApplicationsApplicationUuidRoute,
   } as any)
-const YourApplicationsRpApplicationUuidMauReportRoute =
-  YourApplicationsRpApplicationUuidMauReportRouteImport.update({
+const ApplicationsApplicationUuidMauReportRoute =
+  ApplicationsApplicationUuidMauReportRouteImport.update({
     id: '/mau-report',
     path: '/mau-report',
-    getParentRoute: () => YourApplicationsRpApplicationUuidRoute,
+    getParentRoute: () => ApplicationsApplicationUuidRoute,
   } as any)
 
 export interface FileRoutesByFullPath {
@@ -184,22 +171,19 @@ export interface FileRoutesByFullPath {
   '/terms-and-conditions': typeof TermsAndConditionsRoute
   '/tiers': typeof TiersRoute
   '/users': typeof UsersRoute
-  '/your-applications': typeof YourApplicationsRouteWithChildren
   '/applications/$applicationUuid': typeof ApplicationsApplicationUuidRouteWithChildren
   '/profile/setup': typeof ProfileSetupRoute
-  '/your-applications/$rpApplicationUuid': typeof YourApplicationsRpApplicationUuidRouteWithChildren
-  '/your-applications/': typeof YourApplicationsIndexRoute
+  '/applications/': typeof ApplicationsIndexRoute
+  '/applications/$applicationUuid/department-setup': typeof ApplicationsApplicationUuidDepartmentSetupRoute
   '/applications/$applicationUuid/environments': typeof ApplicationsApplicationUuidEnvironmentsRoute
-  '/your-applications/$rpApplicationUuid/department-setup': typeof YourApplicationsRpApplicationUuidDepartmentSetupRoute
-  '/your-applications/$rpApplicationUuid/manage-credentials': typeof YourApplicationsRpApplicationUuidManageCredentialsRoute
-  '/your-applications/$rpApplicationUuid/mau-report': typeof YourApplicationsRpApplicationUuidMauReportRoute
-  '/your-applications/$rpApplicationUuid/': typeof YourApplicationsRpApplicationUuidIndexRoute
+  '/applications/$applicationUuid/manage-credentials': typeof ApplicationsApplicationUuidManageCredentialsRoute
+  '/applications/$applicationUuid/mau-report': typeof ApplicationsApplicationUuidMauReportRoute
+  '/applications/$applicationUuid/': typeof ApplicationsApplicationUuidIndexRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/accept-terms': typeof AcceptTermsRoute
   '/access-denied': typeof AccessDeniedRoute
-  '/applications': typeof ApplicationsRouteWithChildren
   '/audit-logs': typeof AuditLogsRoute
   '/auth-complete': typeof AuthCompleteRoute
   '/departments': typeof DepartmentsRoute
@@ -211,14 +195,13 @@ export interface FileRoutesByTo {
   '/terms-and-conditions': typeof TermsAndConditionsRoute
   '/tiers': typeof TiersRoute
   '/users': typeof UsersRoute
-  '/applications/$applicationUuid': typeof ApplicationsApplicationUuidRouteWithChildren
   '/profile/setup': typeof ProfileSetupRoute
-  '/your-applications': typeof YourApplicationsIndexRoute
+  '/applications': typeof ApplicationsIndexRoute
+  '/applications/$applicationUuid/department-setup': typeof ApplicationsApplicationUuidDepartmentSetupRoute
   '/applications/$applicationUuid/environments': typeof ApplicationsApplicationUuidEnvironmentsRoute
-  '/your-applications/$rpApplicationUuid/department-setup': typeof YourApplicationsRpApplicationUuidDepartmentSetupRoute
-  '/your-applications/$rpApplicationUuid/manage-credentials': typeof YourApplicationsRpApplicationUuidManageCredentialsRoute
-  '/your-applications/$rpApplicationUuid/mau-report': typeof YourApplicationsRpApplicationUuidMauReportRoute
-  '/your-applications/$rpApplicationUuid': typeof YourApplicationsRpApplicationUuidIndexRoute
+  '/applications/$applicationUuid/manage-credentials': typeof ApplicationsApplicationUuidManageCredentialsRoute
+  '/applications/$applicationUuid/mau-report': typeof ApplicationsApplicationUuidMauReportRoute
+  '/applications/$applicationUuid': typeof ApplicationsApplicationUuidIndexRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -237,16 +220,14 @@ export interface FileRoutesById {
   '/terms-and-conditions': typeof TermsAndConditionsRoute
   '/tiers': typeof TiersRoute
   '/users': typeof UsersRoute
-  '/your-applications': typeof YourApplicationsRouteWithChildren
   '/applications/$applicationUuid': typeof ApplicationsApplicationUuidRouteWithChildren
   '/profile/setup': typeof ProfileSetupRoute
-  '/your-applications/$rpApplicationUuid': typeof YourApplicationsRpApplicationUuidRouteWithChildren
-  '/your-applications/': typeof YourApplicationsIndexRoute
+  '/applications/': typeof ApplicationsIndexRoute
+  '/applications/$applicationUuid/department-setup': typeof ApplicationsApplicationUuidDepartmentSetupRoute
   '/applications/$applicationUuid/environments': typeof ApplicationsApplicationUuidEnvironmentsRoute
-  '/your-applications/$rpApplicationUuid/department-setup': typeof YourApplicationsRpApplicationUuidDepartmentSetupRoute
-  '/your-applications/$rpApplicationUuid/manage-credentials': typeof YourApplicationsRpApplicationUuidManageCredentialsRoute
-  '/your-applications/$rpApplicationUuid/mau-report': typeof YourApplicationsRpApplicationUuidMauReportRoute
-  '/your-applications/$rpApplicationUuid/': typeof YourApplicationsRpApplicationUuidIndexRoute
+  '/applications/$applicationUuid/manage-credentials': typeof ApplicationsApplicationUuidManageCredentialsRoute
+  '/applications/$applicationUuid/mau-report': typeof ApplicationsApplicationUuidMauReportRoute
+  '/applications/$applicationUuid/': typeof ApplicationsApplicationUuidIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -266,22 +247,19 @@ export interface FileRouteTypes {
     | '/terms-and-conditions'
     | '/tiers'
     | '/users'
-    | '/your-applications'
     | '/applications/$applicationUuid'
     | '/profile/setup'
-    | '/your-applications/$rpApplicationUuid'
-    | '/your-applications/'
+    | '/applications/'
+    | '/applications/$applicationUuid/department-setup'
     | '/applications/$applicationUuid/environments'
-    | '/your-applications/$rpApplicationUuid/department-setup'
-    | '/your-applications/$rpApplicationUuid/manage-credentials'
-    | '/your-applications/$rpApplicationUuid/mau-report'
-    | '/your-applications/$rpApplicationUuid/'
+    | '/applications/$applicationUuid/manage-credentials'
+    | '/applications/$applicationUuid/mau-report'
+    | '/applications/$applicationUuid/'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
     | '/accept-terms'
     | '/access-denied'
-    | '/applications'
     | '/audit-logs'
     | '/auth-complete'
     | '/departments'
@@ -293,14 +271,13 @@ export interface FileRouteTypes {
     | '/terms-and-conditions'
     | '/tiers'
     | '/users'
-    | '/applications/$applicationUuid'
     | '/profile/setup'
-    | '/your-applications'
+    | '/applications'
+    | '/applications/$applicationUuid/department-setup'
     | '/applications/$applicationUuid/environments'
-    | '/your-applications/$rpApplicationUuid/department-setup'
-    | '/your-applications/$rpApplicationUuid/manage-credentials'
-    | '/your-applications/$rpApplicationUuid/mau-report'
-    | '/your-applications/$rpApplicationUuid'
+    | '/applications/$applicationUuid/manage-credentials'
+    | '/applications/$applicationUuid/mau-report'
+    | '/applications/$applicationUuid'
   id:
     | '__root__'
     | '/'
@@ -318,16 +295,14 @@ export interface FileRouteTypes {
     | '/terms-and-conditions'
     | '/tiers'
     | '/users'
-    | '/your-applications'
     | '/applications/$applicationUuid'
     | '/profile/setup'
-    | '/your-applications/$rpApplicationUuid'
-    | '/your-applications/'
+    | '/applications/'
+    | '/applications/$applicationUuid/department-setup'
     | '/applications/$applicationUuid/environments'
-    | '/your-applications/$rpApplicationUuid/department-setup'
-    | '/your-applications/$rpApplicationUuid/manage-credentials'
-    | '/your-applications/$rpApplicationUuid/mau-report'
-    | '/your-applications/$rpApplicationUuid/'
+    | '/applications/$applicationUuid/manage-credentials'
+    | '/applications/$applicationUuid/mau-report'
+    | '/applications/$applicationUuid/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -346,7 +321,6 @@ export interface RootRouteChildren {
   TermsAndConditionsRoute: typeof TermsAndConditionsRoute
   TiersRoute: typeof TiersRoute
   UsersRoute: typeof UsersRoute
-  YourApplicationsRoute: typeof YourApplicationsRouteWithChildren
   ProfileSetupRoute: typeof ProfileSetupRoute
 }
 
@@ -457,12 +431,12 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof UsersRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/your-applications': {
-      id: '/your-applications'
-      path: '/your-applications'
-      fullPath: '/your-applications'
-      preLoaderRoute: typeof YourApplicationsRouteImport
-      parentRoute: typeof rootRouteImport
+    '/applications/': {
+      id: '/applications/'
+      path: '/'
+      fullPath: '/applications/'
+      preLoaderRoute: typeof ApplicationsIndexRouteImport
+      parentRoute: typeof ApplicationsRoute
     }
     '/applications/$applicationUuid': {
       id: '/applications/$applicationUuid'
@@ -478,19 +452,19 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ProfileSetupRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/your-applications/': {
-      id: '/your-applications/'
+    '/applications/$applicationUuid/': {
+      id: '/applications/$applicationUuid/'
       path: '/'
-      fullPath: '/your-applications/'
-      preLoaderRoute: typeof YourApplicationsIndexRouteImport
-      parentRoute: typeof YourApplicationsRoute
+      fullPath: '/applications/$applicationUuid/'
+      preLoaderRoute: typeof ApplicationsApplicationUuidIndexRouteImport
+      parentRoute: typeof ApplicationsApplicationUuidRoute
     }
-    '/your-applications/$rpApplicationUuid': {
-      id: '/your-applications/$rpApplicationUuid'
-      path: '/$rpApplicationUuid'
-      fullPath: '/your-applications/$rpApplicationUuid'
-      preLoaderRoute: typeof YourApplicationsRpApplicationUuidRouteImport
-      parentRoute: typeof YourApplicationsRoute
+    '/applications/$applicationUuid/department-setup': {
+      id: '/applications/$applicationUuid/department-setup'
+      path: '/department-setup'
+      fullPath: '/applications/$applicationUuid/department-setup'
+      preLoaderRoute: typeof ApplicationsApplicationUuidDepartmentSetupRouteImport
+      parentRoute: typeof ApplicationsApplicationUuidRoute
     }
     '/applications/$applicationUuid/environments': {
       id: '/applications/$applicationUuid/environments'
@@ -499,45 +473,43 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApplicationsApplicationUuidEnvironmentsRouteImport
       parentRoute: typeof ApplicationsApplicationUuidRoute
     }
-    '/your-applications/$rpApplicationUuid/': {
-      id: '/your-applications/$rpApplicationUuid/'
-      path: '/'
-      fullPath: '/your-applications/$rpApplicationUuid/'
-      preLoaderRoute: typeof YourApplicationsRpApplicationUuidIndexRouteImport
-      parentRoute: typeof YourApplicationsRpApplicationUuidRoute
-    }
-    '/your-applications/$rpApplicationUuid/department-setup': {
-      id: '/your-applications/$rpApplicationUuid/department-setup'
-      path: '/department-setup'
-      fullPath: '/your-applications/$rpApplicationUuid/department-setup'
-      preLoaderRoute: typeof YourApplicationsRpApplicationUuidDepartmentSetupRouteImport
-      parentRoute: typeof YourApplicationsRpApplicationUuidRoute
-    }
-    '/your-applications/$rpApplicationUuid/manage-credentials': {
-      id: '/your-applications/$rpApplicationUuid/manage-credentials'
+    '/applications/$applicationUuid/manage-credentials': {
+      id: '/applications/$applicationUuid/manage-credentials'
       path: '/manage-credentials'
-      fullPath: '/your-applications/$rpApplicationUuid/manage-credentials'
-      preLoaderRoute: typeof YourApplicationsRpApplicationUuidManageCredentialsRouteImport
-      parentRoute: typeof YourApplicationsRpApplicationUuidRoute
+      fullPath: '/applications/$applicationUuid/manage-credentials'
+      preLoaderRoute: typeof ApplicationsApplicationUuidManageCredentialsRouteImport
+      parentRoute: typeof ApplicationsApplicationUuidRoute
     }
-    '/your-applications/$rpApplicationUuid/mau-report': {
-      id: '/your-applications/$rpApplicationUuid/mau-report'
+    '/applications/$applicationUuid/mau-report': {
+      id: '/applications/$applicationUuid/mau-report'
       path: '/mau-report'
-      fullPath: '/your-applications/$rpApplicationUuid/mau-report'
-      preLoaderRoute: typeof YourApplicationsRpApplicationUuidMauReportRouteImport
-      parentRoute: typeof YourApplicationsRpApplicationUuidRoute
+      fullPath: '/applications/$applicationUuid/mau-report'
+      preLoaderRoute: typeof ApplicationsApplicationUuidMauReportRouteImport
+      parentRoute: typeof ApplicationsApplicationUuidRoute
     }
   }
 }
 
 interface ApplicationsApplicationUuidRouteChildren {
+  ApplicationsApplicationUuidDepartmentSetupRoute: typeof ApplicationsApplicationUuidDepartmentSetupRoute
   ApplicationsApplicationUuidEnvironmentsRoute: typeof ApplicationsApplicationUuidEnvironmentsRoute
+  ApplicationsApplicationUuidManageCredentialsRoute: typeof ApplicationsApplicationUuidManageCredentialsRoute
+  ApplicationsApplicationUuidMauReportRoute: typeof ApplicationsApplicationUuidMauReportRoute
+  ApplicationsApplicationUuidIndexRoute: typeof ApplicationsApplicationUuidIndexRoute
 }
 
 const ApplicationsApplicationUuidRouteChildren: ApplicationsApplicationUuidRouteChildren =
   {
+    ApplicationsApplicationUuidDepartmentSetupRoute:
+      ApplicationsApplicationUuidDepartmentSetupRoute,
     ApplicationsApplicationUuidEnvironmentsRoute:
       ApplicationsApplicationUuidEnvironmentsRoute,
+    ApplicationsApplicationUuidManageCredentialsRoute:
+      ApplicationsApplicationUuidManageCredentialsRoute,
+    ApplicationsApplicationUuidMauReportRoute:
+      ApplicationsApplicationUuidMauReportRoute,
+    ApplicationsApplicationUuidIndexRoute:
+      ApplicationsApplicationUuidIndexRoute,
   }
 
 const ApplicationsApplicationUuidRouteWithChildren =
@@ -547,54 +519,18 @@ const ApplicationsApplicationUuidRouteWithChildren =
 
 interface ApplicationsRouteChildren {
   ApplicationsApplicationUuidRoute: typeof ApplicationsApplicationUuidRouteWithChildren
+  ApplicationsIndexRoute: typeof ApplicationsIndexRoute
 }
 
 const ApplicationsRouteChildren: ApplicationsRouteChildren = {
   ApplicationsApplicationUuidRoute:
     ApplicationsApplicationUuidRouteWithChildren,
+  ApplicationsIndexRoute: ApplicationsIndexRoute,
 }
 
 const ApplicationsRouteWithChildren = ApplicationsRoute._addFileChildren(
   ApplicationsRouteChildren,
 )
-
-interface YourApplicationsRpApplicationUuidRouteChildren {
-  YourApplicationsRpApplicationUuidDepartmentSetupRoute: typeof YourApplicationsRpApplicationUuidDepartmentSetupRoute
-  YourApplicationsRpApplicationUuidManageCredentialsRoute: typeof YourApplicationsRpApplicationUuidManageCredentialsRoute
-  YourApplicationsRpApplicationUuidMauReportRoute: typeof YourApplicationsRpApplicationUuidMauReportRoute
-  YourApplicationsRpApplicationUuidIndexRoute: typeof YourApplicationsRpApplicationUuidIndexRoute
-}
-
-const YourApplicationsRpApplicationUuidRouteChildren: YourApplicationsRpApplicationUuidRouteChildren =
-  {
-    YourApplicationsRpApplicationUuidDepartmentSetupRoute:
-      YourApplicationsRpApplicationUuidDepartmentSetupRoute,
-    YourApplicationsRpApplicationUuidManageCredentialsRoute:
-      YourApplicationsRpApplicationUuidManageCredentialsRoute,
-    YourApplicationsRpApplicationUuidMauReportRoute:
-      YourApplicationsRpApplicationUuidMauReportRoute,
-    YourApplicationsRpApplicationUuidIndexRoute:
-      YourApplicationsRpApplicationUuidIndexRoute,
-  }
-
-const YourApplicationsRpApplicationUuidRouteWithChildren =
-  YourApplicationsRpApplicationUuidRoute._addFileChildren(
-    YourApplicationsRpApplicationUuidRouteChildren,
-  )
-
-interface YourApplicationsRouteChildren {
-  YourApplicationsRpApplicationUuidRoute: typeof YourApplicationsRpApplicationUuidRouteWithChildren
-  YourApplicationsIndexRoute: typeof YourApplicationsIndexRoute
-}
-
-const YourApplicationsRouteChildren: YourApplicationsRouteChildren = {
-  YourApplicationsRpApplicationUuidRoute:
-    YourApplicationsRpApplicationUuidRouteWithChildren,
-  YourApplicationsIndexRoute: YourApplicationsIndexRoute,
-}
-
-const YourApplicationsRouteWithChildren =
-  YourApplicationsRoute._addFileChildren(YourApplicationsRouteChildren)
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
@@ -612,7 +548,6 @@ const rootRouteChildren: RootRouteChildren = {
   TermsAndConditionsRoute: TermsAndConditionsRoute,
   TiersRoute: TiersRoute,
   UsersRoute: UsersRoute,
-  YourApplicationsRoute: YourApplicationsRouteWithChildren,
   ProfileSetupRoute: ProfileSetupRoute,
 }
 export const routeTree = rootRouteImport

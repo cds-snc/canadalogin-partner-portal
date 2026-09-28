@@ -63,6 +63,8 @@ class RPApplicationCurrentUserRead(BaseModel):
     ibm_sv_application_id: str | None = None
     department_id: int | None
     application_owner: RPApplicationOwnerSnapshotRead | None = None
+    application_uuid: uuid_pkg.UUID | None = None
+    environment_count: int = 0
 
 
 class RPApplicationCurrentUserOAuthSetupRead(BaseModel):

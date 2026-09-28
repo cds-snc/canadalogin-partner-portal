@@ -16,11 +16,11 @@ export const DepartmentSetupPage = (): ReactElement => {
 			options?: Record<string, unknown>
 		) => string;
 	};
-	const { rpApplicationUuid } = useParams({
-		from: "/your-applications/$rpApplicationUuid/department-setup",
+	const { applicationUuid: rpApplicationUuid } = useParams({
+		from: "/applications/$applicationUuid/department-setup",
 	});
 	const search = useSearch({
-		from: "/your-applications/$rpApplicationUuid/department-setup",
+		from: "/applications/$applicationUuid/department-setup",
 	});
 	const navigate = useNavigate();
 
@@ -80,14 +80,14 @@ export const DepartmentSetupPage = (): ReactElement => {
 				departmentUuid: selected,
 			});
 			const redirectTarget =
-				search.redirect ?? `/your-applications/${rpApplicationUuid}`;
+				search.redirect ?? `/applications/${rpApplicationUuid}`;
 			await navigate({ to: redirectTarget, replace: true });
 		} catch (error) {
 			if (error instanceof HttpRequestError && error.status === 409) {
 				// Already assigned — precondition satisfied, navigate to details
 				await navigate({
-					to: "/your-applications/$rpApplicationUuid",
-					params: { rpApplicationUuid },
+					to: "/applications/$applicationUuid",
+					params: { applicationUuid: rpApplicationUuid },
 					replace: true,
 				});
 				return;

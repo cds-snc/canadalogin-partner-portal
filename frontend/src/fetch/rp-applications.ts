@@ -52,6 +52,8 @@ export type RPApplicationRead = {
 export type CurrentUserRPApplicationRead = {
 	id: number;
 	uuid: string;
+	applicationUuid?: string | null;
+	environmentCount?: number;
 	dnrAppName?: string;
 	name?: string;
 	status?: string;
@@ -170,6 +172,7 @@ const toUsageSelectedDateTimestamp = (selectedDate: string): string => {
 	return String(timestamp);
 };
 
+/** @deprecated Use getCurrentUserApplications from applications.ts. */
 export const getCurrentUserRPApplications = async (): Promise<
 	Array<CurrentUserRPApplicationRead>
 > => {

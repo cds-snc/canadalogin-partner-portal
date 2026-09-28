@@ -16,8 +16,10 @@ from src.app.models.partner_group_role import PartnerGroupRole
 from src.app.models.role import Role
 from src.app.models.tenant import Tenant
 from src.scripts.seed_local_application_erd import (
+    LOCAL_APPLICATION,
     LOCAL_APPLICATION_CONFIGURATION,
     LOCAL_APPLICATION_CONFIGURATIONS,
+    LOCAL_APPLICATIONS,
     LOCAL_DEPARTMENT_GC_ORG_ID,
     LOCAL_PARTNER_DEVELOPER_ROLE_NAME,
     ensure_local_environment,
@@ -40,6 +42,7 @@ class _SeedSession:
         self.partner_group: PartnerGroup | None = None
         self.partner_group_role: PartnerGroupRole | None = None
         self.application: Application | None = None
+        self.applications: dict[UUID, Application] = {}
         self.application_configurations: dict[UUID, ApplicationConfiguration] = {}
         self.partner_developer_role = Role(
             name=LOCAL_PARTNER_DEVELOPER_ROLE_NAME,
@@ -81,7 +84,12 @@ class _SeedSession:
         if entity is PartnerGroup:
             return _ScalarResult(self.partner_group)
         if entity is Application:
-            return _ScalarResult(self.application)
+            application_uuid = next(
+                value
+                for value in statement.compile().params.values()
+                if isinstance(value, UUID)
+            )
+            return _ScalarResult(self.applications.get(application_uuid))
         if entity is Role:
             return _ScalarResult(self.partner_developer_role)
         if entity is PartnerGroupRole:
@@ -110,8 +118,10 @@ class _SeedSession:
             value.id = 12
             self.partner_group_role = value
         elif isinstance(value, Application):
-            value.id = 22
-            self.application = value
+            value.id = 22 + len(self.applications)
+            self.applications[value.uuid] = value
+            if self.application is None:
+                self.application = value
         elif isinstance(value, ApplicationConfiguration):
             value.id = 33 + len(self.application_configurations)
             self.application_configurations[value.uuid] = value
@@ -133,23 +143,38 @@ async def test_local_seed_is_repeatable() -> None:
 
     await seed_local_application_erd(session, EnvironmentOption.LOCAL)
     first_partner_group = session.partner_group
-    first_application = session.application
+    first_applications = dict(session.applications)
 
     await seed_local_application_erd(session, EnvironmentOption.LOCAL)
 
     assert session.partner_group is first_partner_group
-    assert session.application is first_application
     assert session.partner_group is not None
     assert session.partner_group_role is not None
     assert session.application is not None
+    assert len(session.applications) == len(LOCAL_APPLICATIONS) == 15
+    assert session.applications == first_applications
     assert len(session.application_configurations) == 11
     assert session.partner_group.department_id == session.department.id
-    assert session.application.partner_group_id == session.partner_group.id
     assert session.partner_group_role.partner_group_id == session.partner_group.id
     assert session.partner_group_role.role_id == session.partner_developer_role.id
+    for application_seed in LOCAL_APPLICATIONS:
+        application = session.applications[application_seed.uuid]
+        assert application.name_en == application_seed.name_en
+        assert application.name_fr == application_seed.name_fr
+        assert application.partner_group_id == session.partner_group.id
+
+    seeded_application = session.applications[LOCAL_APPLICATION.uuid]
+    added_application_ids = {
+        session.applications[application_seed.uuid].id
+        for application_seed in LOCAL_APPLICATIONS[1:]
+    }
+    assert all(
+        configuration.application_id not in added_application_ids
+        for configuration in session.application_configurations.values()
+    )
     for configuration_seed in LOCAL_APPLICATION_CONFIGURATIONS:
         configuration = session.application_configurations[configuration_seed.uuid]
-        assert configuration.application_id == session.application.id
+        assert configuration.application_id == seeded_application.id
         assert configuration.application_configuration_status_id == (
             session.lookup_rows[ApplicationConfigurationStatus][
                 configuration_seed.status_code

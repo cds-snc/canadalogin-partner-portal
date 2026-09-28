@@ -103,10 +103,21 @@ class TestRPApplicationServiceCurrentUserSync:
             },
         }
 
-        with patch("src.app.services.rp_application_service.crud_rp_applications") as mock_crud:
+        with (
+            patch("src.app.services.rp_application_service.crud_rp_applications") as mock_crud,
+            patch("src.app.services.rp_application_service.application_environment_repository") as mock_environment_repository,
+        ):
             mock_crud.get_multi = AsyncMock(return_value={"data": [owner_matched_row, non_matched_row]})
             mock_crud.update = AsyncMock(return_value=None)
             mock_crud.create = AsyncMock(return_value=None)
+            mock_environment_repository.get_application_metadata_by_ibm_application_ids = AsyncMock(
+                return_value={
+                    "app-owner-match": {
+                        "application_uuid": "018f6f83-0000-0000-0000-000000000203",
+                        "environment_count": 2,
+                    }
+                }
+            )
 
             result = await service.list_current_user_rp_applications(
                 db=mock_db,
@@ -116,5 +127,7 @@ class TestRPApplicationServiceCurrentUserSync:
 
         assert len(result) == 1
         assert result[0]["ibm_sv_application_id"] == "app-owner-match"
+        assert result[0]["application_uuid"] == "018f6f83-0000-0000-0000-000000000203"
+        assert result[0]["environment_count"] == 2
         mock_crud.create.assert_not_awaited()
         ibm_user_service.get_applications.assert_not_awaited()

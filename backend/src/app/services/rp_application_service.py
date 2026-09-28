@@ -11,6 +11,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from ..core.config import settings
 from ..core.exceptions.http_exceptions import ForbiddenException, NotFoundException, RPApplicationDepartmentRequiredException
+from ..repositories.application_environment_repository import application_environment_repository
 from ..repositories.crud_departments import crud_departments
 from ..repositories.crud_rp_applications import crud_rp_applications
 from ..repositories.ibm_sv_admin import IBMVerifyAdminClient
@@ -465,6 +466,20 @@ class RPApplicationService:
             application_data = application if isinstance(application, dict) else dict(application)
             if self._is_owner_email_match(application_data.get("application_owner"), current_user_email):
                 matched_applications.append(RPApplicationCurrentUserRead.model_validate(application_data).model_dump())
+
+        ibm_application_ids = {
+            application["ibm_sv_application_id"]
+            for application in matched_applications
+            if application.get("ibm_sv_application_id")
+        }
+        application_metadata = await application_environment_repository.get_application_metadata_by_ibm_application_ids(
+            db=db,
+            ibm_application_ids=ibm_application_ids,
+        )
+        for application in matched_applications:
+            metadata = application_metadata.get(application.get("ibm_sv_application_id"))
+            if metadata is not None:
+                application.update(metadata)
 
         return matched_applications
 

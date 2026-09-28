@@ -9,8 +9,8 @@ const replaceMock = vi.fn();
 const originalLocation = globalThis.location;
 
 vi.mock("@tanstack/react-router", () => ({
-	useParams: (): { rpApplicationUuid: string } => ({
-		rpApplicationUuid: "application-uuid-1",
+	useParams: (): { applicationUuid: string } => ({
+		applicationUuid: "application-uuid-1",
 	}),
 }));
 
@@ -114,7 +114,7 @@ describe("YourApplicationsOAuthSetupPage", () => {
 		Object.defineProperty(globalThis, "location", {
 			configurable: true,
 			value: {
-					pathname: "/your-applications/application-uuid-1",
+					pathname: "/applications/application-uuid-1",
 				replace: replaceMock,
 			} as Pick<Location, "pathname" | "replace">,
 		});
@@ -212,7 +212,7 @@ describe("YourApplicationsOAuthSetupPage", () => {
 
 		await waitFor(() => {
 			expect(replaceMock).toHaveBeenCalledWith(
-					"/your-applications/application-uuid-1/department-setup"
+					"/applications/application-uuid-1/department-setup"
 			);
 		});
 	});
