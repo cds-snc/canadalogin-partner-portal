@@ -50,6 +50,12 @@ class UserRead(UserBase):
     terms_version: str | None = None
 
 
+class UserCurrentSessionRead(UserRead):
+    model_config = ConfigDict(validate_by_name=True, validate_by_alias=True, alias_generator=to_camel, populate_by_name=True)
+
+    terms_accepted: bool
+
+
 class UserReadInternal(UserRead):
     model_config = ConfigDict(validate_by_name=True, validate_by_alias=True, alias_generator=to_camel, populate_by_name=True)
 

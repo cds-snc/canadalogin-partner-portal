@@ -10,6 +10,7 @@ def test_openapi_documents_unified_error_schema_for_selected_endpoints() -> None
 
     user_me_responses = openapi_schema["paths"]["/api/v1/user/me/"]["get"]["responses"]
     assert user_me_responses["401"]["content"]["application/json"]["schema"] == error_response_schema_ref
+    assert user_me_responses["403"]["content"]["application/json"]["schema"] == error_response_schema_ref
     assert user_me_responses["422"]["content"]["application/json"]["schema"] == error_response_schema_ref
 
     assert "/api/v1/workspaces" not in openapi_schema["paths"]

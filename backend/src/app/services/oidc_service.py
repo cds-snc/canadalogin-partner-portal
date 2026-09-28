@@ -80,6 +80,7 @@ class OidcService:
             await self.session_service.session_store.remove(pre_auth_session_id)
 
         request.session["user_uuid"] = str(oidc_user["uuid"])
+        request.session["terms_accepted"] = False
         request.session["tokens"] = token
         request.session["oidc_logout"] = {
             "sid": claims.get("sid"),

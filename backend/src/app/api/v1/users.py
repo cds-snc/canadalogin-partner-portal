@@ -14,6 +14,7 @@ from ...schemas.role import RoleRead
 from ...schemas.user import (
     UserAddRole,
     UserCreate,
+    UserCurrentSessionRead,
     UserDepartmentRead,
     UserDepartmentUpdate,
     UserRateLimitsRead,
@@ -71,14 +72,16 @@ async def read_users(
 from ...core.exceptions.openapi import error_responses
 
 
-@router.get("/user/me/", response_model=UserRead, responses=error_responses(401, 422))
+@router.get("/user/me/", response_model=UserCurrentSessionRead, responses=error_responses(401, 403, 422))
 async def read_users_me(
     request: Request,
     current_user: Annotated[dict, Depends(get_current_user)],
     db: Annotated[AsyncSession, Depends(async_get_db)],
     service: Annotated[UserService, Depends(get_user_service)],
 ) -> dict[str, Any]:
-    return await service._build_public_user(db=db, user=current_user)
+    user = await service._build_public_user(db=db, user=current_user)
+    user["terms_accepted"] = request.session.get("terms_accepted") is True
+    return user
 
 
 @router.get("/user/{user_uuid}", response_model=UserRead)
@@ -112,7 +115,9 @@ async def accept_terms_me(
     db: Annotated[AsyncSession, Depends(async_get_db)],
     service: Annotated[UserServiceClass, Depends(get_user_service)],
 ):
-    return await service.accept_terms(db=db, current_user=current_user)
+    response = await service.accept_terms(db=db, current_user=current_user)
+    request.session["terms_accepted"] = True
+    return response
 
 
 

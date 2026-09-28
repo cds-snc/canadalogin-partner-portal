@@ -5,13 +5,14 @@ from starlette.requests import Request
 
 from src.app.api.dependencies import get_current_user, get_optional_user
 from src.app.core.config import settings
-from src.app.core.exceptions.http_exceptions import UnauthorizedException
+from src.app.core.exceptions.http_exceptions import ForbiddenException, UnauthorizedException
 
 
 def make_request(
     session: dict | None = None,
     authorization: str | None = None,
     session_cookie: str | None = None,
+    path: str = "/api/v1/user/me/",
 ) -> Request:
     headers: list[tuple[bytes, bytes]] = []
     if authorization is not None:
@@ -22,7 +23,7 @@ def make_request(
     scope = {
         "type": "http",
         "method": "GET",
-        "path": "/api/v1/user/me/",
+        "path": path,
         "headers": headers,
         "session": session or {},
     }
@@ -30,6 +31,26 @@ def make_request(
 
 
 class TestCurrentUserDependency:
+
+    @pytest.mark.asyncio
+    async def test_get_current_user_rejects_pending_terms_session_on_protected_route(
+        self, mock_db, current_user_dict, monkeypatch
+    ):
+        request = make_request(
+            session={"user_uuid": str(current_user_dict["uuid"]), "terms_accepted": False},
+            path="/api/v1/applications",
+        )
+        session_service = Mock()
+        session_service.is_active = AsyncMock(return_value=True)
+        monkeypatch.setattr("src.app.api.dependencies.get_session_id", lambda request: "local-session")
+        monkeypatch.setattr("src.app.api.dependencies.ConcurrentSessionService", lambda: session_service)
+
+        with patch("src.app.api.dependencies.crud_users") as mock_crud:
+            mock_crud.get = AsyncMock(return_value=current_user_dict)
+
+            with pytest.raises(ForbiddenException, match="accept the terms"):
+                await get_current_user(request, mock_db, None)
+
     @pytest.mark.asyncio
     async def test_get_current_user_uses_session_first(self, mock_db, current_user_dict, monkeypatch):
         request = make_request(session={"user_uuid": str(current_user_dict["uuid"])})
