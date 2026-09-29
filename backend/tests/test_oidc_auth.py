@@ -4,7 +4,8 @@ import pytest
 from starlette.requests import Request
 
 from src.app.api.v1.oidc import oidc_callback, oidc_login
-from src.app.core.config import settings
+from src.app.core.config import OIDCSettings, settings
+from src.app.core.exceptions.http_exceptions import AccountNotFoundException
 from src.app.core.oidc import build_oidc_redirect_uri, sync_oidc_user
 
 
@@ -70,6 +71,19 @@ class TestSyncOidcUser:
         update_values = mock_crud.update.await_args.kwargs["object"]
         assert set(update_values) == {"auth_provider", "auth_subject", "last_login_at", "username", "email"}
 
+    @pytest.mark.asyncio
+    async def test_sync_oidc_user_rejects_an_unknown_local_user_without_creating_one(self, mock_db):
+        claims = {"sub": "subject-123", "email": "unknown.user@example.com"}
+
+        with patch("src.app.core.oidc.crud_users") as mock_crud:
+            mock_crud.get = AsyncMock(side_effect=[None, None])
+            mock_crud.create = AsyncMock()
+
+            with pytest.raises(AccountNotFoundException):
+                await sync_oidc_user(mock_db, claims)
+
+        mock_crud.create.assert_not_awaited()
+
 
 class TestOidcCallback:
     @pytest.mark.asyncio
@@ -97,6 +111,11 @@ class TestOidcCallback:
 
 
 class TestBuildOidcRedirectUri:
+    def test_account_not_found_redirect_defaults_to_the_local_frontend_origin(self):
+        oidc_settings = OIDCSettings.model_construct()
+
+        assert oidc_settings.OIDC_ACCOUNT_NOT_FOUND_REDIRECT == "/account-not-found"
+
     def test_uses_explicit_redirect_uri_when_configured(self):
         request = make_request()
 

@@ -64,6 +64,7 @@ class OIDCSettings(BaseSettings):
     OIDC_POST_LOGIN_REDIRECT: str = "/auth-complete"
     OIDC_POST_LOGOUT_REDIRECT_URI: str = "/"
     OIDC_ACCESS_DENIED_REDIRECT: str = "/access-denied"
+    OIDC_ACCOUNT_NOT_FOUND_REDIRECT: str = "/account-not-found"
 
 
 class GCNotifySettings(BaseSettings):

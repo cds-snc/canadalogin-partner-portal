@@ -12,6 +12,7 @@ import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as AcceptTermsRouteImport } from './routes/accept-terms'
 import { Route as AccessDeniedRouteImport } from './routes/access-denied'
+import { Route as AccountNotFoundRouteImport } from './routes/account-not-found'
 import { Route as ApplicationsRouteImport } from './routes/applications'
 import { Route as AuditLogsRouteImport } from './routes/audit-logs'
 import { Route as AuthCompleteRouteImport } from './routes/auth-complete'
@@ -46,6 +47,11 @@ const AcceptTermsRoute = AcceptTermsRouteImport.update({
 const AccessDeniedRoute = AccessDeniedRouteImport.update({
   id: '/access-denied',
   path: '/access-denied',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AccountNotFoundRoute = AccountNotFoundRouteImport.update({
+  id: '/account-not-found',
+  path: '/account-not-found',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ApplicationsRoute = ApplicationsRouteImport.update({
@@ -159,6 +165,7 @@ export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/accept-terms': typeof AcceptTermsRoute
   '/access-denied': typeof AccessDeniedRoute
+  '/account-not-found': typeof AccountNotFoundRoute
   '/applications': typeof ApplicationsRouteWithChildren
   '/audit-logs': typeof AuditLogsRoute
   '/auth-complete': typeof AuthCompleteRoute
@@ -184,6 +191,7 @@ export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/accept-terms': typeof AcceptTermsRoute
   '/access-denied': typeof AccessDeniedRoute
+  '/account-not-found': typeof AccountNotFoundRoute
   '/audit-logs': typeof AuditLogsRoute
   '/auth-complete': typeof AuthCompleteRoute
   '/departments': typeof DepartmentsRoute
@@ -208,6 +216,7 @@ export interface FileRoutesById {
   '/': typeof IndexRoute
   '/accept-terms': typeof AcceptTermsRoute
   '/access-denied': typeof AccessDeniedRoute
+  '/account-not-found': typeof AccountNotFoundRoute
   '/applications': typeof ApplicationsRouteWithChildren
   '/audit-logs': typeof AuditLogsRoute
   '/auth-complete': typeof AuthCompleteRoute
@@ -235,6 +244,7 @@ export interface FileRouteTypes {
     | '/'
     | '/accept-terms'
     | '/access-denied'
+    | '/account-not-found'
     | '/applications'
     | '/audit-logs'
     | '/auth-complete'
@@ -260,6 +270,7 @@ export interface FileRouteTypes {
     | '/'
     | '/accept-terms'
     | '/access-denied'
+    | '/account-not-found'
     | '/audit-logs'
     | '/auth-complete'
     | '/departments'
@@ -283,6 +294,7 @@ export interface FileRouteTypes {
     | '/'
     | '/accept-terms'
     | '/access-denied'
+    | '/account-not-found'
     | '/applications'
     | '/audit-logs'
     | '/auth-complete'
@@ -309,6 +321,7 @@ export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AcceptTermsRoute: typeof AcceptTermsRoute
   AccessDeniedRoute: typeof AccessDeniedRoute
+  AccountNotFoundRoute: typeof AccountNotFoundRoute
   ApplicationsRoute: typeof ApplicationsRouteWithChildren
   AuditLogsRoute: typeof AuditLogsRoute
   AuthCompleteRoute: typeof AuthCompleteRoute
@@ -345,6 +358,13 @@ declare module '@tanstack/react-router' {
       path: '/access-denied'
       fullPath: '/access-denied'
       preLoaderRoute: typeof AccessDeniedRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/account-not-found': {
+      id: '/account-not-found'
+      path: '/account-not-found'
+      fullPath: '/account-not-found'
+      preLoaderRoute: typeof AccountNotFoundRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/applications': {
@@ -536,6 +556,7 @@ const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AcceptTermsRoute: AcceptTermsRoute,
   AccessDeniedRoute: AccessDeniedRoute,
+  AccountNotFoundRoute: AccountNotFoundRoute,
   ApplicationsRoute: ApplicationsRouteWithChildren,
   AuditLogsRoute: AuditLogsRoute,
   AuthCompleteRoute: AuthCompleteRoute,

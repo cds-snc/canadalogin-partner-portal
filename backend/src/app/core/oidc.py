@@ -6,9 +6,13 @@ from authlib.integrations.starlette_client import OAuth
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from ..repositories.crud_users import crud_users
-from ..schemas.user import UserCreateInternal, UserReadInternal
+from ..schemas.user import UserReadInternal
 from .config import settings
-from .exceptions.http_exceptions import ForbiddenException, UnauthorizedException
+from .exceptions.http_exceptions import (
+    AccountNotFoundException,
+    ForbiddenException,
+    UnauthorizedException,
+)
 
 oauth = OAuth()
 _client_registered = False
@@ -154,36 +158,5 @@ async def sync_oidc_user(db: AsyncSession, claims: dict[str, object]) -> dict[st
                 raise UnauthorizedException("Failed to refresh email-linked user")
             return refreshed
 
-    created_user = await crud_users.create(
-        db=db,
-        object=UserCreateInternal(
-            name=normalized_email,
-            email=normalized_email,
-            username=normalized_email,
-            auth_provider=provider,
-            auth_subject=subject,
-        ),
-        schema_to_select=UserReadInternal,
-    )
-    if created_user is None:
-        raise UnauthorizedException("Failed to create OIDC user")
-
-    await crud_users.update(
-        db=db,
-        object={
-            "last_login_at": datetime.now(UTC),
-        },
-        uuid=created_user["uuid"],
-    )
-
-    refreshed = await crud_users.get(
-        db=db,
-        uuid=created_user["uuid"],
-        is_deleted=False,
-        schema_to_select=UserReadInternal,
-    )
-    if refreshed is None:
-        raise UnauthorizedException("Failed to refresh created user")
-
-    return refreshed
+    raise AccountNotFoundException()
 

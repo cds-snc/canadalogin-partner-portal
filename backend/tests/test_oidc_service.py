@@ -4,7 +4,11 @@ from urllib.parse import parse_qs, urlparse
 import pytest
 from authlib.integrations.base_client.errors import MismatchingStateError
 
-from src.app.core.exceptions.http_exceptions import ForbiddenException, UnauthorizedException
+from src.app.core.exceptions.http_exceptions import (
+    AccountNotFoundException,
+    ForbiddenException,
+    UnauthorizedException,
+)
 from src.app.services.oidc_service import OidcService
 
 
@@ -201,6 +205,44 @@ class TestOidcService:
         }
         assert response.status_code == 307
         assert response.headers["location"] == "/access-denied"
+
+    @pytest.mark.asyncio
+    async def test_callback_redirects_to_account_not_found_without_creating_a_session(
+        self, mock_db
+    ):
+        service = OidcService(session_service=make_session_service())
+        request = Mock(session={})
+        claims = {
+            "sub": "subject-123",
+            "email": "unknown.user@example.com",
+            "sid": "sid-123",
+        }
+        client = Mock()
+        client.authorize_access_token = AsyncMock(
+            return_value={"userinfo": claims, "id_token": "id-token-value"}
+        )
+        client.server_metadata = {"issuer": "https://example.verify.ibm.com/oauth2"}
+
+        with patch("src.app.services.oidc_service.get_oidc_client", return_value=client):
+            with patch("src.app.services.oidc_service.sync_oidc_user", new_callable=AsyncMock) as mock_sync:
+                with patch("src.app.services.oidc_service.regenerate_session_id") as mock_regenerate:
+                    with patch("src.app.services.oidc_service.settings") as mock_settings:
+                        mock_settings.OIDC_ACCOUNT_NOT_FOUND_REDIRECT = "https://partner-portal.example.test/account-not-found"
+                        mock_sync.side_effect = AccountNotFoundException()
+
+                        response = await service.callback(request=request, db=mock_db)
+
+        mock_regenerate.assert_not_called()
+        assert request.session == {
+            "oidc_logout": {
+                "sid": "sid-123",
+                "sub": "subject-123",
+                "issuer": "https://example.verify.ibm.com/oauth2",
+                "id_token": "id-token-value",
+            }
+        }
+        assert response.status_code == 307
+        assert response.headers["location"] == "https://partner-portal.example.test/account-not-found"
 
     @pytest.mark.asyncio
     async def test_callback_stores_logout_context_in_session(self, mock_db):

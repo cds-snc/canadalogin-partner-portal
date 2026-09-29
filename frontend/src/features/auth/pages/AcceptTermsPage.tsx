@@ -4,7 +4,6 @@ import { useNavigate, useSearch } from "@tanstack/react-router";
 import { Button, Text } from "@/components/ui";
 import { useSession } from "@/hooks";
 import { acceptTerms } from "@/fetch/user-terms";
-import { useToast } from "@/components/ui/Toast";
 import TermsAndConditionsContent from "./TermsAndConditionsContent";
 import "./TermsAndConditions.css";
 
@@ -18,7 +17,6 @@ const AcceptTermsPage = (): ReactElement => {
 	const navigate = useNavigate();
 	const search = useSearch({ from: "/accept-terms" });
 	const { refreshSession } = useSession();
-	const toast = useToast();
 
 	const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
 	const [submitError, setSubmitError] = useState<string | null>(null);
@@ -28,7 +26,6 @@ const AcceptTermsPage = (): ReactElement => {
 		try {
 			setIsSubmitting(true);
 			await acceptTerms();
-			toast.success(t("termsAndConditions.success"));
 			await refreshSession();
 			await navigate({
 				replace: true,
