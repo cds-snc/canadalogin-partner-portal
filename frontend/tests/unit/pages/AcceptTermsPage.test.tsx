@@ -91,6 +91,7 @@ describe("AcceptTermsPage", () => {
 				replace: true,
 				to: "/applications",
 			});
+			expect(toastSuccessMock).not.toHaveBeenCalled();
 		});
 	});
 });

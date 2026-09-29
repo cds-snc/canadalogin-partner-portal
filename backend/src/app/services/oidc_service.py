@@ -6,7 +6,11 @@ from starlette.requests import Request
 from starsessions import get_session_id, regenerate_session_id
 
 from ..core.config import settings
-from ..core.exceptions.http_exceptions import ForbiddenException, UnauthorizedException
+from ..core.exceptions.http_exceptions import (
+    AccountNotFoundException,
+    ForbiddenException,
+    UnauthorizedException,
+)
 from ..core.logger import logging
 from ..core.oidc import build_oidc_redirect_uri, get_oidc_client, sync_oidc_user
 from .concurrent_session_service import ConcurrentSessionService
@@ -52,6 +56,9 @@ class OidcService:
         claims = token.get("userinfo", {})
         try:
             oidc_user = await sync_oidc_user(db, claims)
+        except AccountNotFoundException:
+            self._store_oidc_logout_context(request, client, token, claims)
+            return RedirectResponse(url=settings.OIDC_ACCOUNT_NOT_FOUND_REDIRECT)
         except ForbiddenException:
             self._store_oidc_logout_context(request, client, token, claims)
             return RedirectResponse(url=settings.OIDC_ACCESS_DENIED_REDIRECT)

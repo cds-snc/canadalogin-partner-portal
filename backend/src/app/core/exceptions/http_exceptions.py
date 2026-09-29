@@ -11,6 +11,16 @@ from fastcrud.exceptions.http_exceptions import (
 )
 
 
+class AccountNotFoundException(ForbiddenException):
+    """Raised when an OIDC identity has no matching local portal account."""
+
+    def __init__(
+        self,
+        message: str = "We could not find your CanadaLogin Partner Portal account.",
+    ) -> None:
+        super().__init__(message)
+
+
 class RPApplicationDepartmentRequiredException(Exception):
     """Raised when a protected RP application owner route requires a department
     assignment that is not yet set. Emits HTTP 409 with code

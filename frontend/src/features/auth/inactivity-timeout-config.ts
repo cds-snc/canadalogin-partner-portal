@@ -1,4 +1,4 @@
-const DEFAULT_WARNING_MINUTES = 25;
+const DEFAULT_WARNING_MINUTES = 20;
 const DEFAULT_COUNTDOWN_MINUTES = 5;
 
 const parseDurationMinutes = (

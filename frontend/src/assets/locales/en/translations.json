@@ -98,6 +98,18 @@
 		"summary": "Your account is signed in, but it is not in an allowed group for the Partner Portal.",
 		"title": "Access denied"
 	},
+	"accountNotFound": {
+		"title": "We could not find your account",
+		"summary": "You signed in successfully, but we could not find a CanadaLogin Partner Portal account associated with this email address.",
+		"reasonIntro": "This may happen if:",
+		"reasonDifferentEmail": "you used a different Government of Canada email address when your portal access was set up",
+		"reasonAccessNotSetUp": "your portal access has not been set up yet",
+		"existingAccessTitle": "If you already have access to the portal",
+		"existingAccessBody": "You may have signed in with a different Government of Canada email address from the one associated with your portal account.",
+		"signOutAction": "Sign out and try again",
+		"noAccessTitle": "If you have not been given access yet",
+		"requestAccess": "Request access from the CanadaLogin team."
+	},
 	"genericError": {
 		"dashboardAction": "Go to dashboard",
 		"homeAction": "Go to home",
@@ -285,7 +297,7 @@
 		"unknownApplication": "unknown application"
 	},
 	"logout": {
-		"summary": "Waiting... Closing the current session from CanadaLogin.",
+		"summary": "Please wait while we securely sign you out of the CanadaLogin Partner Portal.",
 		"title": "Signing you out"
 	},
 	"sessionTimeout": {

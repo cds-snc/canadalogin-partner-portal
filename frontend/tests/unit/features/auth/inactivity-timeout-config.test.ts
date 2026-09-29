@@ -13,8 +13,8 @@ describe("getInactivityTimeoutConfig", () => {
 		expect(getInactivityTimeoutConfig()).toMatchObject({
 			countdownMinutes: 5,
 			countdownMs: 5 * 60 * 1000,
-			warningAfterMinutes: 25,
-			warningAfterMs: 25 * 60 * 1000,
+			warningAfterMinutes: 20,
+			warningAfterMs: 20 * 60 * 1000,
 		});
 	});
 
@@ -37,8 +37,8 @@ describe("getInactivityTimeoutConfig", () => {
 		expect(getInactivityTimeoutConfig()).toMatchObject({
 			countdownMinutes: 5,
 			countdownMs: 5 * 60 * 1000,
-			warningAfterMinutes: 25,
-			warningAfterMs: 25 * 60 * 1000,
+			warningAfterMinutes: 20,
+			warningAfterMs: 20 * 60 * 1000,
 		});
 	});
 });

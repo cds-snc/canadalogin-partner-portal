@@ -98,6 +98,18 @@
 		"summary": "Votre compte est connecté, mais il n'appartient pas à un groupe autorisé pour le portail partenaire.",
 		"title": "Accès refusé"
 	},
+	"accountNotFound": {
+		"title": "Nous n'avons pas trouvé votre compte",
+		"summary": "Vous avez ouvert une session avec succès, mais nous n'avons pas trouvé de compte du Portail partenaire CanadaLogin associé à cette adresse courriel.",
+		"reasonIntro": "Cela peut se produire si :",
+		"reasonDifferentEmail": "vous avez utilisé une autre adresse courriel du gouvernement du Canada lorsque votre accès au portail a été configuré",
+		"reasonAccessNotSetUp": "votre accès au portail n'a pas encore été configuré",
+		"existingAccessTitle": "Si vous avez déjà accès au portail",
+		"existingAccessBody": "Vous avez peut-être ouvert une session avec une adresse courriel du gouvernement du Canada différente de celle associée à votre compte du portail.",
+		"signOutAction": "Fermer la session et réessayer",
+		"noAccessTitle": "Si vous n'avez pas encore reçu l'accès",
+		"requestAccess": "Demander l'accès à l'équipe CanadaLogin."
+	},
 	"genericError": {
 		"dashboardAction": "Aller au tableau de bord",
 		"homeAction": "Aller à l'accueil",
@@ -285,7 +297,7 @@
 		"unknownApplication": "application inconnue"
 	},
 	"logout": {
-		"summary": "En attente... Fermeture de la session depuis CanadaLogin.",
+		"summary": "Veuillez patienter pendant que nous vous déconnectons en toute sécurité du Portail partenaire de CanadaLogin.",
 		"title": "Fermeture de votre session"
 	},
 	"sessionTimeout": {
