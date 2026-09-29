@@ -58,9 +58,17 @@
 }
 
 .government-modal__title {
-	font: var(--gcds-font-heading-m-desktop);
+	font: var(--gcds-heading-h3-desktop);
 	margin: 0;
 	padding-inline-end: var(--gcds-spacing-200);
+}
+
+.government-modal__title--small {
+	font: var(--gcds-heading-h4-desktop);
+}
+
+.government-modal__title--large {
+	font: var(--gcds-heading-h2-desktop);
 }
 
 .government-modal__description {
