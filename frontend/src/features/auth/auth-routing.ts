@@ -36,7 +36,7 @@ export const requireAuthenticatedUser = async (
 	const isOnboardingPath =
 		targetPath.startsWith("/accept-terms") || targetPath.startsWith("/profile");
 
-	if (!isOnboardingPath && currentUser.acceptedTermsAt == null) {
+	if (!isOnboardingPath && currentUser.termsAccepted !== true) {
 		throw redirect({
 			replace: true,
 			to: "/accept-terms",
@@ -104,6 +104,14 @@ export const completeLoginRedirect = async (
 		await appPreferencesStore
 			.getState()
 			.setLanguage(normalizeLanguageCode(uiLocales));
+	}
+
+	if (currentUser.termsAccepted !== true) {
+		throw redirect({
+			replace: true,
+			to: "/accept-terms",
+			search: { redirect: targetPath },
+		}) as unknown as Error;
 	}
 
 	throw redirect({

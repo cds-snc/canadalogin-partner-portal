@@ -17,6 +17,7 @@ vi.mock("@/fetch/auth", () => ({
 
 const sampleUser = {
 	acceptedTermsAt: "2026-06-11T12:00:00Z",
+	termsAccepted: true,
 	"authProvider": "gc-sso",
 	"authSubject": "subject-123",
 	email: "jane@example.com",
@@ -91,6 +92,21 @@ describe("auth-routing", () => {
 		});
 	});
 
+	it("redirects a pending session to accept terms after login", async () => {
+		vi.mocked(revalidateCurrentUser).mockResolvedValue({
+			...sampleUser,
+			termsAccepted: false,
+		});
+
+		await expect(completeLoginRedirect("/users")).rejects.toMatchObject({
+			options: {
+				replace: true,
+				search: { redirect: "/users" },
+				to: "/accept-terms",
+			},
+		});
+	});
+
 	it("navigates to OIDC when post-login revalidation finds no session", async () => {
 		vi.mocked(revalidateCurrentUser).mockResolvedValue(null);
 
@@ -101,7 +117,7 @@ describe("auth-routing", () => {
 	it("redirects to accept-terms when terms have not been accepted", async () => {
 		vi.mocked(revalidateCurrentUser).mockResolvedValue({
 			...sampleUser,
-			acceptedTermsAt: null,
+			termsAccepted: false,
 		});
 
 		await expect(requireAuthenticatedUser("/applications")).rejects.toMatchObject({
@@ -113,7 +129,7 @@ describe("auth-routing", () => {
 		});
 	});
 
-	it("passes terms check when acceptedTermsAt is set", async () => {
+	it("passes terms check when the active session accepted terms", async () => {
 		vi.mocked(revalidateCurrentUser).mockResolvedValue(sampleUser);
 
 		await expect(requireAuthenticatedUser("/applications")).resolves.toEqual(sampleUser);
@@ -122,12 +138,12 @@ describe("auth-routing", () => {
 	it("passes terms check when already on the accept-terms page", async () => {
 		vi.mocked(revalidateCurrentUser).mockResolvedValue({
 			...sampleUser,
-			acceptedTermsAt: null,
+			termsAccepted: false,
 		});
 
 		await expect(requireAuthenticatedUser("/accept-terms")).resolves.toEqual({
 			...sampleUser,
-			acceptedTermsAt: null,
+			termsAccepted: false,
 		});
 	});
 });

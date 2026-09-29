@@ -4,6 +4,7 @@ import { requestJson } from "./request-json";
 
 export type UserRead = {
 	acceptedTermsAt?: string | null;
+	termsAccepted?: boolean;
 	termsVersion?: string | null;
 	authProvider: string | null;
 	authSubject: string | null;

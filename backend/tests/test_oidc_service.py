@@ -63,6 +63,7 @@ class TestOidcService:
 
         mock_regenerate.assert_called_once_with(request)
         assert request.session["user_uuid"] == oidc_user["uuid"]
+        assert request.session["terms_accepted"] is False
         assert response.status_code == 307
         assert response.headers["location"] == "/app"
 

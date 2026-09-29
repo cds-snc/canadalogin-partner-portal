@@ -6,6 +6,7 @@ from unittest.mock import AsyncMock, Mock
 import pytest
 
 from src.app.api.v1.users import (
+    accept_terms_me,
     add_role_to_user,
     erase_db_user,
     erase_user,
@@ -18,6 +19,7 @@ from src.app.api.v1.users import (
     read_user_roles,
     read_user_tier,
     read_users,
+    read_users_me,
     remove_role_from_user,
     write_user,
 )
@@ -68,6 +70,31 @@ class TestReadUser:
 
         assert result == sample_user_read.model_dump()
         mock_service.get_user_by_uuid.assert_awaited_once_with(db=mock_db, user_uuid=user_uuid)
+
+
+class TestReadCurrentUser:
+    @pytest.mark.asyncio
+    async def test_read_users_me_includes_active_session_terms_status(self, mock_db, current_user_dict):
+        request = Mock(session={"terms_accepted": False})
+        mock_service = Mock()
+        mock_service._build_public_user = AsyncMock(return_value=current_user_dict)
+
+        result = await unwrap_endpoint(read_users_me)(request, current_user_dict, mock_db, mock_service)
+
+        assert result["terms_accepted"] is False
+
+
+class TestAcceptTerms:
+    @pytest.mark.asyncio
+    async def test_accept_terms_marks_the_active_session_as_accepted(self, mock_db, current_user_dict):
+        request = Mock(session={"terms_accepted": False})
+        mock_service = Mock()
+        mock_service.accept_terms = AsyncMock(return_value={"message": "Terms accepted"})
+
+        result = await unwrap_endpoint(accept_terms_me)(request, current_user_dict, mock_db, mock_service)
+
+        assert result == {"message": "Terms accepted"}
+        assert request.session["terms_accepted"] is True
 
 
 class TestReadUsers:

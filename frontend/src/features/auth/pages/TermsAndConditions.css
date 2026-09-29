@@ -1,0 +1,10 @@
+.terms-and-conditions__responsibilities {
+	margin: 0 0 var(--gcds-spacing-400);
+	padding-left: var(--gcds-spacing-400);
+}
+
+.terms-and-conditions__actions {
+	display: flex;
+	flex-wrap: wrap;
+	gap: var(--gcds-spacing-150);
+}

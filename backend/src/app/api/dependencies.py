@@ -40,6 +40,7 @@ logger = logging.getLogger(__name__)
 
 DEFAULT_LIMIT = settings.DEFAULT_RATE_LIMIT_LIMIT
 DEFAULT_PERIOD = settings.DEFAULT_RATE_LIMIT_PERIOD
+TERMS_PENDING_ALLOWED_PATHS = frozenset({"/api/v1/user/me/", "/api/v1/user/me/accept-terms"})
 
 
 def get_application_environment_service() -> ApplicationEnvironmentService:
@@ -144,6 +145,11 @@ async def get_current_user(
     token: Annotated[str | None, Depends(optional_oauth2_scheme)] = None,
 ) -> dict[str, Any]:
     user = await get_user_from_session(request, db)
+    if user is not None:
+        if request.session.get("terms_accepted") is not True and request.url.path not in TERMS_PENDING_ALLOWED_PATHS:
+            raise ForbiddenException("You must accept the terms before continuing.")
+        return user
+
     if user is None:
         if request.cookies.get(settings.SESSION_COOKIE_NAME) is not None:
             raise UnauthorizedException("User not authenticated.")
