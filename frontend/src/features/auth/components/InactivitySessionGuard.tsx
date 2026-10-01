@@ -152,7 +152,7 @@ export const InactivitySessionGuard = (): FunctionComponent => {
 	const footer = (
 		<>
 			<Button
-				buttonRole="secondary"
+				buttonRole="primary"
 				disabled={isContinuing || isLoggingOut}
 				type="button"
 				onGcdsClick={() => {
@@ -164,7 +164,7 @@ export const InactivitySessionGuard = (): FunctionComponent => {
 					: t("sessionTimeout.continueAction")}
 			</Button>
 			<Button
-				buttonRole="danger"
+				buttonRole="secondary"
 				disabled={isLoggingOut}
 				type="button"
 				onGcdsClick={handleLogout}
@@ -181,7 +181,9 @@ export const InactivitySessionGuard = (): FunctionComponent => {
 			isOpen
 			description={t("sessionTimeout.warningDescription")}
 			footer={footer}
+			showCloseButton={false}
 			title={t("sessionTimeout.warningTitle")}
+			titleSize="regular"
 			onClose={closeDisabled}
 		>
 			<Text ariaLive="polite" marginBottom="0">

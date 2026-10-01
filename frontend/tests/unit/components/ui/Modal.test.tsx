@@ -43,6 +43,55 @@ describe("Modal", () => {
 
 		expect(screen.queryByRole("dialog", { name: /hidden modal/i })).toBeNull();
 	});
+
+	it("does not render the close button when disabled", () => {
+		render(
+			<Modal
+				isOpen
+				onClose={vi.fn()}
+				showCloseButton={false}
+				title="Session timeout warning"
+			/>,
+		);
+
+		expect(screen.queryByRole("button", { name: /close/i })).toBeNull();
+	});
+
+	it("renders a small title when requested", () => {
+		render(
+			<Modal
+				isOpen
+				onClose={vi.fn()}
+				title="Your session is about to end due to inactivity"
+				titleSize="small"
+			/>,
+		);
+
+		expect(
+			screen.getByRole("heading", {
+				name: "Your session is about to end due to inactivity",
+			})
+			.classList.contains("government-modal__title--small")
+		).toBe(true);
+	});
+
+	it("renders a large title when requested", () => {
+		render(
+			<Modal
+				isOpen
+				onClose={vi.fn()}
+				title="Your session is about to end due to inactivity"
+				titleSize="large"
+			/>,
+		);
+
+		expect(
+			screen.getByRole("heading", {
+				name: "Your session is about to end due to inactivity",
+			})
+			.classList.contains("government-modal__title--large")
+		).toBe(true);
+	});
 });
 
 describe("ConfirmDialog", () => {

@@ -301,13 +301,13 @@
 		"title": "Signing you out"
 	},
 	"sessionTimeout": {
-		"continueAction": "Continue session",
-		"continuingAction": "Continuing...",
-		"countdownLabel": "You will be signed out in {{time}}.",
+		"continueAction": "Stay signed in",
+		"continuingAction": "Staying signed in...",
+		"countdownLabel": "Time remaining: {{time}}",
 		"loggingOutAction": "Signing out...",
-		"logoutAction": "Sign out now",
-		"warningDescription": "No successful backend activity was detected recently.",
-		"warningTitle": "Session timeout warning"
+		"logoutAction": "Sign out",
+		"warningDescription": "If you do not continue your session you will be signed out automatically.",
+		"warningTitle": "Your session is about to end due to inactivity"
 	},
 	"header": {
 		"switchLanguageEnglish": "English",

@@ -301,13 +301,13 @@
 		"title": "Fermeture de votre session"
 	},
 	"sessionTimeout": {
-		"continueAction": "Continuer la session",
-		"continuingAction": "Continuation...",
-		"countdownLabel": "Votre session sera fermee dans {{time}}.",
-		"loggingOutAction": "Fermeture...",
-		"logoutAction": "Fermer la session maintenant",
-		"warningDescription": "Aucune activite backend reussie n'a ete detectee recemment.",
-		"warningTitle": "Avertissement d'expiration de session"
+		"continueAction": "Rester connecté",
+		"continuingAction": "Maintien de la session...",
+		"countdownLabel": "Temps restant : {{time}}",
+		"loggingOutAction": "Déconnexion...",
+		"logoutAction": "Se déconnecter",
+		"warningDescription": "Si vous ne poursuivez pas votre session, votre session prendra automatiquement fin.",
+		"warningTitle": "Votre session est sur le point de prendre fin en raison de l’inactivité"
 	},
 	"header": {
 		"switchLanguageEnglish": "English",
