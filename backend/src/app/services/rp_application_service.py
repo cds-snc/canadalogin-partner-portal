@@ -477,7 +477,12 @@ class RPApplicationService:
             ibm_application_ids=ibm_application_ids,
         )
         for application in matched_applications:
-            metadata = application_metadata.get(application.get("ibm_sv_application_id"))
+            ibm_application_id = application.get("ibm_sv_application_id")
+            metadata = (
+                application_metadata.get(ibm_application_id)
+                if isinstance(ibm_application_id, str)
+                else None
+            )
             if metadata is not None:
                 application.update(metadata)
 

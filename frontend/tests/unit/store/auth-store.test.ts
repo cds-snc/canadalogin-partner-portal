@@ -94,7 +94,7 @@ describe("authStore", () => {
 		});
 	});
 
-	it("redirects to the backend logout endpoint", async () => {
+	it("redirects to the backend logout endpoint with manual state", async () => {
 		let locationHref = "";
 
 		Object.defineProperty(window, "location", {
@@ -111,7 +111,7 @@ describe("authStore", () => {
 
 		authStore.getState().logout();
 
-		expect(locationHref).toBe("/api/v1/logout");
+		expect(locationHref).toBe("/api/v1/logout?reason=manual");
 		expect(authStore.getState()).toMatchObject({
 			currentUser: null,
 			hasHydrated: true,

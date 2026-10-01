@@ -300,6 +300,13 @@
 		"summary": "Veuillez patienter pendant que nous vous déconnectons en toute sécurité du Portail partenaire de CanadaLogin.",
 		"title": "Fermeture de votre session"
 	},
+	"signedOut": {
+		"action": "Ouvrir une session de nouveau",
+		"expiredSummary": "Vous avez fermé votre session du Portail partenaire CanadaLogin parce que votre session était inactive.",
+		"securityReminder": "Pour votre sécurité, fermez votre navigateur si vous utilisez un appareil partagé ou public.",
+		"summary": "Vous avez fermé votre session du Portail partenaire CanadaLogin avec succès.",
+		"title": "Vous avez fermé votre session"
+	},
 	"sessionTimeout": {
 		"continueAction": "Rester connecté",
 		"continuingAction": "Maintien de la session...",

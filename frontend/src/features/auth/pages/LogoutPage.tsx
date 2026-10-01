@@ -5,21 +5,30 @@ import { Heading, Text } from "@/components/ui";
 import { buildApiUrl } from "@/fetch/base-url";
 import { useAuthStore } from "@/store";
 
-export const LogoutPage = (): FunctionComponent => {
+type LogoutReason = "session-expired";
+
+type LogoutPageProps = {
+	reason?: LogoutReason;
+};
+
+export const LogoutPage = ({ reason }: LogoutPageProps): FunctionComponent => {
 	const { t } = useTranslation();
 	const reset = useAuthStore((state) => state.reset);
+	const logoutReason = reason ?? "manual";
 
 	useEffect(() => {
 		reset();
 
 		const timer = globalThis.setTimeout(() => {
-			window.location.href = buildApiUrl("/api/v1/logout");
+			window.location.href = buildApiUrl(
+				`/api/v1/logout?reason=${logoutReason}`
+			);
 		}, 1000);
 
 		return (): void => {
 			globalThis.clearTimeout(timer);
 		};
-	}, [reset]);
+	}, [logoutReason, reset]);
 
 	return (
 		<>

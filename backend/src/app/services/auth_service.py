@@ -19,7 +19,6 @@ from .oidc_logout_service import OidcLogoutService
 
 logger = logging.getLogger(__name__)
 
-
 class AuthService:
     def __init__(
         self,
@@ -44,6 +43,7 @@ class AuthService:
     async def logout(
         self,
         request: Request,
+        state: str | None = None,
     ) -> dict[str, Any]:
         try:
             oidc_logout = None
@@ -67,7 +67,9 @@ class AuthService:
                 "message": "Logged out successfully",
                 "clear_cookies": True,
             }
-            oidc_logout_payload = await self._build_oidc_logout_payload(oidc_logout)
+            oidc_logout_payload = await self._build_oidc_logout_payload(
+                oidc_logout, state
+            )
             if oidc_logout_payload is not None:
                 payload["oidc_logout"] = oidc_logout_payload
 
@@ -80,7 +82,11 @@ class AuthService:
         except PyJWTError:
             raise UnauthorizedException("Invalid token.")
 
-    async def _build_oidc_logout_payload(self, oidc_logout: dict[str, Any] | None) -> dict[str, Any] | None:
+    async def _build_oidc_logout_payload(
+        self,
+        oidc_logout: dict[str, Any] | None,
+        state: str | None,
+    ) -> dict[str, Any] | None:
         if not oidc_logout:
             return None
 
@@ -90,8 +96,12 @@ class AuthService:
         if not end_session_endpoint:
             return None
 
-        return {
+        payload = {
             "end_session_endpoint": end_session_endpoint,
             "id_token_hint": oidc_logout.get("id_token"),
             "post_logout_redirect_uri": settings.OIDC_POST_LOGOUT_REDIRECT_URI,
         }
+        if state:
+            payload["state"] = state
+
+        return payload

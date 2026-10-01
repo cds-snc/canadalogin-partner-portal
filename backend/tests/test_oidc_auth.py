@@ -111,6 +111,11 @@ class TestOidcCallback:
 
 
 class TestBuildOidcRedirectUri:
+    def test_post_logout_redirect_defaults_to_the_signed_out_page(self):
+        oidc_settings = OIDCSettings.model_construct()
+
+        assert oidc_settings.OIDC_POST_LOGOUT_REDIRECT_URI == "/signed-out"
+
     def test_account_not_found_redirect_defaults_to_the_local_frontend_origin(self):
         oidc_settings = OIDCSettings.model_construct()
 

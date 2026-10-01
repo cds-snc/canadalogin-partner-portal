@@ -79,12 +79,25 @@ describe("LogoutPage", (): void => {
 		});
 	});
 
-	it("navigates to backend logout after 2 seconds", async (): Promise<void> => {
+	it("navigates to backend logout with manual state after 2 seconds", async (): Promise<void> => {
 		vi.useFakeTimers();
 		render(<LogoutPage />);
 
 		await vi.advanceTimersByTimeAsync(2000);
 
-		expect(locationHref).toBe("http://localhost:8000/api/v1/logout");
+		expect(locationHref).toBe(
+			"http://localhost:8000/api/v1/logout?reason=manual"
+		);
+	});
+
+	it("navigates to backend logout with expired session state", async (): Promise<void> => {
+		vi.useFakeTimers();
+		render(<LogoutPage reason="session-expired" />);
+
+		await vi.advanceTimersByTimeAsync(2000);
+
+		expect(locationHref).toBe(
+			"http://localhost:8000/api/v1/logout?reason=session-expired"
+		);
 	});
 });
