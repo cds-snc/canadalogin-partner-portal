@@ -49,4 +49,10 @@ describe("AppShell", (): void => {
 
 		expect(screen.getByTestId("inactivity-session-guard")).toBeTruthy();
 	});
+
+	it("does not render the date modified component", (): void => {
+		render(<AppShell>Applications</AppShell>);
+
+		expect(screen.queryByTestId("date-modified")).toBeNull();
+	});
 });
