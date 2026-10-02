@@ -21,6 +21,7 @@ import { Route as ErrorRouteImport } from './routes/error'
 import { Route as LogoutRouteImport } from './routes/logout'
 import { Route as PoliciesRouteImport } from './routes/policies'
 import { Route as RolesRouteImport } from './routes/roles'
+import { Route as SignedOutRouteImport } from './routes/signed-out'
 import { Route as SupportRouteImport } from './routes/support'
 import { Route as TermsAndConditionsRouteImport } from './routes/terms-and-conditions'
 import { Route as TiersRouteImport } from './routes/tiers'
@@ -92,6 +93,11 @@ const PoliciesRoute = PoliciesRouteImport.update({
 const RolesRoute = RolesRouteImport.update({
   id: '/roles',
   path: '/roles',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const SignedOutRoute = SignedOutRouteImport.update({
+  id: '/signed-out',
+  path: '/signed-out',
   getParentRoute: () => rootRouteImport,
 } as any)
 const SupportRoute = SupportRouteImport.update({
@@ -174,6 +180,7 @@ export interface FileRoutesByFullPath {
   '/logout': typeof LogoutRoute
   '/policies': typeof PoliciesRoute
   '/roles': typeof RolesRoute
+  '/signed-out': typeof SignedOutRoute
   '/support': typeof SupportRoute
   '/terms-and-conditions': typeof TermsAndConditionsRoute
   '/tiers': typeof TiersRoute
@@ -199,6 +206,7 @@ export interface FileRoutesByTo {
   '/logout': typeof LogoutRoute
   '/policies': typeof PoliciesRoute
   '/roles': typeof RolesRoute
+  '/signed-out': typeof SignedOutRoute
   '/support': typeof SupportRoute
   '/terms-and-conditions': typeof TermsAndConditionsRoute
   '/tiers': typeof TiersRoute
@@ -225,6 +233,7 @@ export interface FileRoutesById {
   '/logout': typeof LogoutRoute
   '/policies': typeof PoliciesRoute
   '/roles': typeof RolesRoute
+  '/signed-out': typeof SignedOutRoute
   '/support': typeof SupportRoute
   '/terms-and-conditions': typeof TermsAndConditionsRoute
   '/tiers': typeof TiersRoute
@@ -253,6 +262,7 @@ export interface FileRouteTypes {
     | '/logout'
     | '/policies'
     | '/roles'
+    | '/signed-out'
     | '/support'
     | '/terms-and-conditions'
     | '/tiers'
@@ -278,6 +288,7 @@ export interface FileRouteTypes {
     | '/logout'
     | '/policies'
     | '/roles'
+    | '/signed-out'
     | '/support'
     | '/terms-and-conditions'
     | '/tiers'
@@ -303,6 +314,7 @@ export interface FileRouteTypes {
     | '/logout'
     | '/policies'
     | '/roles'
+    | '/signed-out'
     | '/support'
     | '/terms-and-conditions'
     | '/tiers'
@@ -330,6 +342,7 @@ export interface RootRouteChildren {
   LogoutRoute: typeof LogoutRoute
   PoliciesRoute: typeof PoliciesRoute
   RolesRoute: typeof RolesRoute
+  SignedOutRoute: typeof SignedOutRoute
   SupportRoute: typeof SupportRoute
   TermsAndConditionsRoute: typeof TermsAndConditionsRoute
   TiersRoute: typeof TiersRoute
@@ -421,6 +434,13 @@ declare module '@tanstack/react-router' {
       path: '/roles'
       fullPath: '/roles'
       preLoaderRoute: typeof RolesRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/signed-out': {
+      id: '/signed-out'
+      path: '/signed-out'
+      fullPath: '/signed-out'
+      preLoaderRoute: typeof SignedOutRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/support': {
@@ -565,6 +585,7 @@ const rootRouteChildren: RootRouteChildren = {
   LogoutRoute: LogoutRoute,
   PoliciesRoute: PoliciesRoute,
   RolesRoute: RolesRoute,
+  SignedOutRoute: SignedOutRoute,
   SupportRoute: SupportRoute,
   TermsAndConditionsRoute: TermsAndConditionsRoute,
   TiersRoute: TiersRoute,

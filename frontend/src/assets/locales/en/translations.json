@@ -300,6 +300,13 @@
 		"summary": "Please wait while we securely sign you out of the CanadaLogin Partner Portal.",
 		"title": "Signing you out"
 	},
+	"signedOut": {
+		"action": "Sign in again",
+		"expiredSummary": "You were signed out of the CanadaLogin Partner Portal because your session was inactive.",
+		"securityReminder": "For your security, close your browser if you're using a shared or public device.",
+		"summary": "You have successfully signed out of the CanadaLogin Partner Portal.",
+		"title": "You have signed out"
+	},
 	"sessionTimeout": {
 		"continueAction": "Stay signed in",
 		"continuingAction": "Staying signed in...",

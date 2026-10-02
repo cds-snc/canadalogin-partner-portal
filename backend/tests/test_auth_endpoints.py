@@ -1,6 +1,7 @@
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
 from unittest.mock import AsyncMock, Mock, patch
+from urllib.parse import parse_qs, urlparse
 
 import pytest
 from fastapi import APIRouter
@@ -8,9 +9,9 @@ from fastapi.testclient import TestClient
 from starlette.requests import Request
 from starsessions import InMemoryStore
 
+from src.app.api.dependencies import get_auth_service
 from src.app.api.v1.logout import logout
 from src.app.api.v1.logout import router as logout_router
-from src.app.api.dependencies import get_auth_service
 from src.app.core.config import settings
 from src.app.core.db.database import async_get_db
 from src.app.core.setup import create_application
@@ -137,6 +138,30 @@ def build_logout_app(store: TrackingInMemoryStore) -> TestClient:
 
 
 class TestLogoutSessionStoreInvalidation:
+    def test_get_logout_passes_state_to_oidc_provider(self) -> None:
+        store = TrackingInMemoryStore()
+        client = Mock()
+        client.load_server_metadata = AsyncMock(
+            return_value={"end_session_endpoint": "https://example.verify.ibm.com/logout"}
+        )
+
+        with build_logout_app(store) as test_client:
+            denied_response = test_client.post("/session-denied-oidc")
+
+            assert denied_response.status_code == 200
+
+            with patch("src.app.services.auth_service.get_oidc_client", return_value=client):
+                logout_response = test_client.get(
+                    "/logout?reason=session-expired", follow_redirects=False
+                )
+
+        assert logout_response.status_code == 307
+        query = parse_qs(urlparse(logout_response.headers["location"]).query)
+        state = query["state"][0]
+        assert state.startswith("session-expired.")
+        assert len(state.removeprefix("session-expired.")) >= 8
+        assert urlparse(query["post_logout_redirect_uri"][0]).query == ""
+
     def test_get_logout_clears_cookie_before_redirecting_to_oidc_provider(self) -> None:
         store = TrackingInMemoryStore()
         client = Mock()

@@ -8,6 +8,27 @@ from src.app.services.auth_service import AuthService
 
 class TestAuthService:
     @pytest.mark.asyncio
+    async def test_logout_preserves_post_logout_state(self) -> None:
+        service = AuthService()
+        request = Mock(session={"oidc_logout": {"id_token": "id-token-value"}})
+        client = Mock()
+        client.load_server_metadata = AsyncMock(
+            return_value={"end_session_endpoint": "https://example.verify.ibm.com/logout"}
+        )
+
+        with patch("src.app.services.auth_service.get_oidc_client", return_value=client):
+            result = await service.logout(
+                request=request, state="session-expired.random-state-token"
+            )
+
+        assert result["oidc_logout"] == {
+            "end_session_endpoint": "https://example.verify.ibm.com/logout",
+            "id_token_hint": "id-token-value",
+            "post_logout_redirect_uri": settings.OIDC_POST_LOGOUT_REDIRECT_URI,
+            "state": "session-expired.random-state-token",
+        }
+
+    @pytest.mark.asyncio
     async def test_logout_returns_oidc_logout_details_for_access_denied_session(self) -> None:
         service = AuthService()
         request = Mock(

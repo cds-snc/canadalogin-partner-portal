@@ -30,7 +30,7 @@ export const InactivitySessionGuard = (): FunctionComponent => {
 	const performLogout = useCallback((): void => {
 		hasTriggeredAutoLogoutRef.current = false;
 		setIsLoggingOut(false);
-		window.location.href = "/logout";
+		window.location.href = "/logout?reason=session-expired";
 	}, []);
 
 	useEffect(() => {

@@ -1,5 +1,6 @@
 import os
 from enum import Enum
+from typing import Literal
 
 from pydantic import SecretStr, computed_field, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
@@ -26,7 +27,7 @@ class SessionSettings(BaseSettings):
     SESSION_COOKIE_NAME: str = "app_session"
     SESSION_COOKIE_SECURE: bool = False
     SESSION_COOKIE_DOMAIN: str = ".canada.ca"
-    SESSION_COOKIE_SAMESITE: str = "lax"
+    SESSION_COOKIE_SAMESITE: Literal["lax", "strict", "none"] = "lax"
     SESSION_MAX_AGE: int = 60 * 60 * 8
     SESSION_ROLLING: bool = False
     CONCURRENT_SESSION_LIMIT_PRIVILEGED: int = 3
@@ -62,7 +63,7 @@ class OIDCSettings(BaseSettings):
     OIDC_REDIRECT_URI: str | None = None
     OIDC_REDIRECT_PATH: str = "/api/v1/auth/oidc/callback"
     OIDC_POST_LOGIN_REDIRECT: str = "/auth-complete"
-    OIDC_POST_LOGOUT_REDIRECT_URI: str = "/"
+    OIDC_POST_LOGOUT_REDIRECT_URI: str = "/signed-out"
     OIDC_ACCESS_DENIED_REDIRECT: str = "/access-denied"
     OIDC_ACCOUNT_NOT_FOUND_REDIRECT: str = "/account-not-found"
 

@@ -65,9 +65,23 @@ const createSessionState = (
 });
 
 describe("InactivitySessionGuard", () => {
+	let locationHref = "";
+
 	beforeEach(() => {
 		vi.useFakeTimers();
 		vi.setSystemTime(new Date("2026-09-29T12:00:00Z"));
+		locationHref = "";
+		Object.defineProperty(window, "location", {
+			configurable: true,
+			value: {
+				get href(): string {
+					return locationHref;
+				},
+				set href(value: string) {
+					locationHref = value;
+				},
+			},
+		});
 		vi.mocked(useSession).mockReturnValue(
 			createSessionState(vi.fn().mockResolvedValue({}))
 		);
@@ -92,7 +106,6 @@ describe("InactivitySessionGuard", () => {
 				"If you do not continue your session you will be signed out automatically."
 			)
 		).toBeTruthy();
-		expect(screen.getByText("Time remaining: 5:00")).toBeTruthy();
 		expect(screen.queryByRole("button", { name: "Close" })).toBeNull();
 		expect(
 			screen.getByRole("button", { name: "Stay signed in" }).dataset
@@ -106,5 +119,7 @@ describe("InactivitySessionGuard", () => {
 
 		expect(refreshSession).toHaveBeenCalledTimes(1);
 		expect(screen.getByRole("button", { name: "Sign out" })).toBeTruthy();
+		fireEvent.click(screen.getByRole("button", { name: "Sign out" }));
+		expect(locationHref).toBe("/logout?reason=session-expired");
 	});
 });

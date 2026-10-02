@@ -97,7 +97,7 @@ const authStore = createStore<AuthStoreState>()((set, get) => {
 			inFlightHydration = null;
 			clearBackendActivity();
 			set((state) => ({ ...state, ...createSessionSnapshot(null) }));
-			window.location.href = "/api/v1/logout";
+			window.location.href = "/api/v1/logout?reason=manual";
 			return Promise.resolve();
 		},
 		refreshSession: (): Promise<UserRead | null> => runHydration(true),
