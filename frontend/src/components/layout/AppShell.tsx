@@ -18,7 +18,13 @@ export const AppShell = ({ children }: AppShellProps): FunctionComponent => {
 		<>
 			{showInactivitySessionGuard && <InactivitySessionGuard />}
 			<LayoutHeader />
-			<Container alignment="center" id="app-shell" layout="page" tag="main">
+			<Container
+				alignment="center"
+				className="mb-600"
+				id="app-shell"
+				layout="page"
+				tag="main"
+			>
 				{children}
 			</Container>
 			<LayoutFooter />

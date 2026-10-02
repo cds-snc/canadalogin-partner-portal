@@ -6,6 +6,7 @@ interface ContainerProps {
 	border?: boolean;
 	children: React.ReactNode;
 	alignment?: "start" | "center" | "end";
+	className?: string;
 	id: string;
 	layout?: "full" | "page";
 	margin?: SpacingValues;
@@ -18,6 +19,7 @@ const Container: React.FC<ContainerProps> = React.memo(
 	({
 		border = false,
 		alignment,
+		className,
 		id,
 		layout,
 		margin,
@@ -29,6 +31,7 @@ const Container: React.FC<ContainerProps> = React.memo(
 		<GcdsContainer
 			alignment={alignment}
 			border={border}
+			className={className}
 			id={id}
 			layout={layout}
 			margin={margin}
