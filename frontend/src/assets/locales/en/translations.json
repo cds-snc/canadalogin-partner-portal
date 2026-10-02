@@ -852,8 +852,8 @@
 	},
 	"termsAndConditions": {
 		"title": "Before you continue",
-		"intro": "To continue to the CanadaLogin Partner Portal, you must accept the terms of use.",
-		"agreementIntro": "By selecting Accept and continue, you agree to:",
+		"intro": "To continue to the CanadaLogin Partner Portal, you must accept the <termsLink>terms of use</termsLink>.",
+		"agreementIntro": "By selecting <acceptAction>Accept and continue</acceptAction>, you agree to:",
 		"responsibility1": "use the portal only for authorized Government of Canada business",
 		"responsibility2": "keep your account and credentials secure",
 		"responsibility3": "protect information you access through the portal",
