@@ -64,6 +64,7 @@ const Header = (): FunctionComponent => {
 	const backLink = useRouterState({
 		select: (state) => selectBackLink(state.matches),
 	});
+	const showNavigation = pathname !== "/logout";
 	const serviceName = t("home.title");
 
 	const lang = i18n.language?.startsWith("fr") ? "fr" : "en";
@@ -127,17 +128,21 @@ const Header = (): FunctionComponent => {
 				<GcdsNavLink href="/" slot="home">
 					{serviceName}
 				</GcdsNavLink>
-				{items.map((item) => (
-					<GcdsNavLink
-						key={item.href}
-						current={isCurrentPath(pathname, item.href)}
-						href={item.href}
-						rel={item.rel}
-					>
-						{item.label}
-					</GcdsNavLink>
-				))}
-				{isAuthenticated && !isLoading ? <UserNavGroup /> : null}
+				{showNavigation ? (
+					<>
+						{items.map((item) => (
+							<GcdsNavLink
+								key={item.href}
+								current={isCurrentPath(pathname, item.href)}
+								href={item.href}
+								rel={item.rel}
+							>
+								{item.label}
+							</GcdsNavLink>
+						))}
+						{isAuthenticated && !isLoading ? <UserNavGroup /> : null}
+					</>
+				) : null}
 			</GcdsTopNav>
 		</GcdsHeader>
 	);

@@ -1,6 +1,8 @@
 import type { ReactElement } from "react";
-import { useTranslation } from "react-i18next";
-import { Heading, Text } from "@/components/ui";
+import { Trans, useTranslation } from "react-i18next";
+import { Heading, Link, Text } from "@/components/ui";
+
+const TERMS_OF_USE_URL = "https://login.canada.ca/en/partners/terms-of-use/";
 
 const TermsAndConditionsContent = (): ReactElement => {
 	const { t } = useTranslation() as unknown as {
@@ -10,9 +12,25 @@ const TermsAndConditionsContent = (): ReactElement => {
 	return (
 		<section className="terms-and-conditions">
 			<Heading tag="h1">{t("termsAndConditions.title")}</Heading>
-			<Text>{t("termsAndConditions.intro")}</Text>
-			<Text>{t("termsAndConditions.agreementIntro")}</Text>
-			<ul className="terms-and-conditions__responsibilities">
+			<Text>
+				<Trans
+					i18nKey="termsAndConditions.intro"
+					components={{
+						termsLink: (
+							<Link external href={TERMS_OF_USE_URL}>
+								{t("terms")}
+							</Link>
+						),
+					}}
+				/>
+			</Text>
+			<Text marginBottom="0">
+				<Trans
+					components={{ acceptAction: <strong /> }}
+					i18nKey="termsAndConditions.agreementIntro"
+				/>
+			</Text>
+			<ul className="list-disc mt-0 mb-300 pl-400">
 				<li>{t("termsAndConditions.responsibility1")}</li>
 				<li>{t("termsAndConditions.responsibility2")}</li>
 				<li>{t("termsAndConditions.responsibility3")}</li>

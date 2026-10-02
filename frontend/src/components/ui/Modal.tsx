@@ -5,9 +5,11 @@ import "./Modal.css";
 export type ModalProps = PropsWithChildren<{
 	description?: string;
 	footer?: ReactNode;
+	footerAlignment?: "start" | "end";
 	isOpen: boolean;
 	onClose: () => void;
 	showCloseButton?: boolean;
+	showFooterDivider?: boolean;
 	size?: "narrow" | "regular" | "wide" | "full-width";
 	title: string;
 	titleSize?: "regular" | "small" | "large";
@@ -17,9 +19,11 @@ const Modal = ({
 	children,
 	description,
 	footer,
+	footerAlignment = "end",
 	isOpen,
 	onClose,
 	showCloseButton = true,
+	showFooterDivider = true,
 	size = "regular",
 	title,
 	titleSize = "regular",
@@ -38,7 +42,7 @@ const Modal = ({
 				className={`government-modal__panel government-modal__panel--${size} government-modal__panel--animated`}
 			>
 				<div className="government-modal__header">
-					<div>
+					<div className="government-modal__header-content">
 						<DialogTitle
 							as="h2"
 							className={`government-modal__title government-modal__title--${titleSize}`}
@@ -67,7 +71,11 @@ const Modal = ({
 				</div>
 				<div className="government-modal__body">{children}</div>
 				{footer ? (
-					<div className="government-modal__footer">{footer}</div>
+					<div
+						className={`government-modal__footer${footerAlignment === "start" ? " government-modal__footer--start" : ""}${showFooterDivider ? "" : " government-modal__footer--no-divider"}`}
+					>
+						{footer}
+					</div>
 				) : null}
 			</DialogPanel>
 		</Dialog>

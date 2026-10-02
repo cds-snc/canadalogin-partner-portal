@@ -42,7 +42,12 @@ vi.mock("@/components/ui", () => ({
 	Link: ({ children, href }: PropsWithChildren<{ href: string }>): ReactElement => (
 		<a href={href}>{children}</a>
 	),
-	Text: ({ children }: PropsWithChildren): ReactElement => <p>{children}</p>,
+	Text: ({
+		children,
+		marginBottom = "300",
+	}: PropsWithChildren<{ marginBottom?: string }>): ReactElement => (
+		<p data-margin-bottom={marginBottom}>{children}</p>
+	),
 }));
 
 vi.mock("@/fetch/base-url", () => ({
@@ -69,7 +74,10 @@ describe("AccountNotFoundPage", () => {
 
 		expect(screen.getByRole("heading", { name: "We could not find your account" })).toBeTruthy();
 		expect(screen.getByText(/You signed in successfully/)).toBeTruthy();
-		expect(screen.getByText("This may happen if:")).toBeTruthy();
+		const reasonIntro = screen.getByText("This may happen if:");
+		expect(reasonIntro.getAttribute("data-margin-bottom")).toBe("0");
+		expect(screen.getByRole("list").className).toContain("list-disc");
+		expect(screen.getByRole("list").className).toContain("mt-0");
 		expect(
 			screen.getByText(
 				"you used a different Government of Canada email address when your portal access was set up"
