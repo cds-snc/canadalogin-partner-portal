@@ -3,7 +3,9 @@ import { GcdsSelect } from "@gcds-core/components-react";
 
 interface SelectProps {
 	children: React.ReactNode;
+	errorMessage?: string;
 	hint?: string;
+	id?: string;
 	label: string;
 	hideLabel?: boolean;
 	name: string;
@@ -18,7 +20,9 @@ interface SelectProps {
 const Select: React.FC<SelectProps> = React.memo(
 	({
 		children,
+		errorMessage,
 		hint,
+		id,
 		label,
 		hideLabel,
 		name,
@@ -31,8 +35,10 @@ const Select: React.FC<SelectProps> = React.memo(
 	}) => (
 		<GcdsSelect
 			defaultValue={defaultValue}
+			errorMessage={errorMessage}
 			hideLabel={hideLabel}
 			hint={hint}
+			id={id}
 			label={label}
 			name={name}
 			required={required}

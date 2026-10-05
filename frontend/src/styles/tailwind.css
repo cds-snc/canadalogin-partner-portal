@@ -11,6 +11,14 @@
 		margin: var(--gcds-breadcrumbs-item-arrow-margin);
 	}
 
+	.environment-name-label .gcds-label {
+		font-weight: var(--gcds-font-weights-bold) !important;
+	}
+
+	.environment-name-input {
+		--gcds-input-margin: 0;
+	}
+
 	body {
 		background: var(--gcds-bg-white);
 		color: var(--gcds-text-primary);

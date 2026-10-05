@@ -6,11 +6,13 @@ import { requireAuthenticatedUser } from "../../../features/auth/auth-routing";
 import type { RouteBackLinkContext } from "../../../types/route-breadcrumbs";
 
 const EnvironmentsPage = lazy(async () => ({
-	default: (await import("../../../features/application-environments/pages/EnvironmentsPage"))
-		.EnvironmentsPage,
+	default: (
+		await import("../../../features/application-environments/pages/EnvironmentsPage")
+	).EnvironmentsPage,
 }));
 
 const searchSchema = z.object({
+	connect: z.coerce.boolean().optional(),
 	page: z.coerce.number().int().positive().optional(),
 });
 

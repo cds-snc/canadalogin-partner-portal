@@ -16,6 +16,7 @@ import {
 } from "@/components/ui";
 import { getRequestErrorNotice } from "@/fetch";
 import { useApplicationEnvironments } from "../hooks/use-application-environments";
+import { ConnectEnvironmentPage } from "./ConnectEnvironmentPage";
 import "./environments-page.css";
 
 const ITEMS_PER_PAGE = 10;
@@ -28,7 +29,7 @@ export const EnvironmentsPage = (): FunctionComponent => {
 	const { applicationUuid } = useParams({
 		from: "/applications/$applicationUuid/environments",
 	});
-	const { page = 1 } = useSearch({
+	const { connect = false, page = 1 } = useSearch({
 		from: "/applications/$applicationUuid/environments",
 	});
 	const { data, error, isLoading } = useApplicationEnvironments(
@@ -71,12 +72,16 @@ export const EnvironmentsPage = (): FunctionComponent => {
 				>
 					<Text>
 						{errorNotice
-							? errorNotice.bodyText ?? t(errorNotice.bodyKey as never)
+							? (errorNotice.bodyText ?? t(errorNotice.bodyKey as never))
 							: t("applicationEnvironments.errorBody")}
 					</Text>
 				</Notice>
 			</Grid>
 		);
+	}
+
+	if (connect) {
+		return <ConnectEnvironmentPage />;
 	}
 
 	const applicationName =
@@ -100,7 +105,9 @@ export const EnvironmentsPage = (): FunctionComponent => {
 				<div className="application-switch-icon">
 					<Icon name="arrow-up-down" size="text" />
 				</div>
-				<Link href="/applications">{t("applicationEnvironments.switchApplication")}</Link>
+				<Link href="/applications">
+					{t("applicationEnvironments.switchApplication")}
+				</Link>
 			</Grid>
 			<Heading tag="h1">{t("applicationEnvironments.title")}</Heading>
 			<Text>{t("applicationEnvironments.summary")}</Text>
@@ -109,13 +116,16 @@ export const EnvironmentsPage = (): FunctionComponent => {
 				<Link href="#">{t("applicationEnvironments.gettingStartedLink")}</Link>
 			</Text>
 			<div>
-				<Button type="button">
+				<Button
+					type="button"
+					onGcdsClick={() => {
+						void navigate({ search: { connect: true, page } });
+					}}
+				>
 					{t("applicationEnvironments.connectAction")}
 				</Button>
 			</div>
-			<Heading tag="h2">
-				{t("applicationEnvironments.sectionTitle")}
-			</Heading>
+			<Heading tag="h2">{t("applicationEnvironments.sectionTitle")}</Heading>
 
 			{hasEnvironments ? (
 				<>
@@ -128,7 +138,9 @@ export const EnvironmentsPage = (): FunctionComponent => {
 							{t("applicationEnvironments.submittedDescription")}
 						</Text>
 						<Text>
-							<strong>{t("applicationEnvironments.statusInProduction")}:</strong>{" "}
+							<strong>
+								{t("applicationEnvironments.statusInProduction")}:
+							</strong>{" "}
 							{t("applicationEnvironments.inProductionDescription")}
 						</Text>
 					</Details>
@@ -143,8 +155,7 @@ export const EnvironmentsPage = (): FunctionComponent => {
 								: isInProduction
 									? t("applicationEnvironments.statusInProduction")
 									: null;
-							const modifiedAt =
-								environment.updatedAt ?? environment.createdAt;
+							const modifiedAt = environment.updatedAt ?? environment.createdAt;
 							const cardStyle: CSSProperties | undefined = isInProduction
 								? ({
 										"--gcds-card-badge-background-color":

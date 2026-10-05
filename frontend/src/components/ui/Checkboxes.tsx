@@ -17,7 +17,9 @@ export type CheckboxInputEvent = {
 };
 
 interface CheckboxProps {
+	errorMessage?: string;
 	hint?: string;
+	id?: string;
 	legend?: string;
 	hideLabel?: boolean;
 	hideLegend?: boolean;
@@ -32,7 +34,9 @@ interface CheckboxProps {
 
 const Checkboxes: React.FC<CheckboxProps> = React.memo(
 	({
+		errorMessage,
 		hint,
+		id,
 		legend,
 		hideLabel,
 		hideLegend,
@@ -46,9 +50,11 @@ const Checkboxes: React.FC<CheckboxProps> = React.memo(
 	}) => (
 		<GcdsCheckboxes
 			className={className}
+			errorMessage={errorMessage}
 			hideLabel={hideLabel}
 			hideLegend={hideLegend}
 			hint={hint}
+			id={id}
 			legend={legend}
 			name={name}
 			options={options}

@@ -2,21 +2,65 @@ import type { PropsWithChildren, ReactElement } from "react";
 import { render, screen } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 import ErrorSummary from "@/components/ui/ErrorSummary";
+import Input from "@/components/ui/Input";
 import LangToggle from "@/components/ui/LangToggle";
 import Link from "@/components/ui/Link";
 import Notice from "@/components/ui/Notice";
+import Radios from "@/components/ui/Radios";
+import Select from "@/components/ui/Select";
 import Stepper from "@/components/ui/Stepper";
 import Table from "@/components/ui/Table";
 import TopicMenu from "@/components/ui/TopicMenu";
 
 vi.mock("@gcds-core/components-react", () => ({
 	GcdsErrorSummary: ({
+			errorLinks,
 		listen,
 	}: {
+			errorLinks?: Record<string, string>;
 		listen?: boolean;
 	}): ReactElement => (
-		<div data-listen={listen ? "true" : "false"}>Error summary</div>
+			<div
+				data-error-links={JSON.stringify(errorLinks ?? {})}
+				data-listen={listen ? "true" : "false"}
+			>
+				Error summary
+			</div>
 	),
+		GcdsInput: ({
+			errorMessage,
+			id,
+		}: {
+			errorMessage?: string;
+			id?: string;
+		}): ReactElement => (
+			<div data-error={errorMessage} data-id={id} data-testid="gcds-input" />
+		),
+		GcdsRadios: ({
+			errorMessage,
+			id,
+		}: {
+			errorMessage?: string;
+			id?: string;
+		}): ReactElement => (
+			<div data-error={errorMessage} data-id={id} data-testid="gcds-radios" />
+		),
+		GcdsSelect: ({
+			children,
+			errorMessage,
+			id,
+		}: PropsWithChildren<{
+			errorMessage?: string;
+			id?: string;
+		}>): ReactElement => (
+			<div
+				data-error={errorMessage}
+				data-id={id}
+				data-testid="gcds-select"
+			>
+				{children}
+			</div>
+		),
 	GcdsLink: ({
 		children,
 		href,
@@ -101,10 +145,67 @@ describe("GCDS UI wrappers", () => {
 	});
 
 	it("renders an error summary through the shared wrapper", () => {
-		render(<ErrorSummary listen />);
+		render(
+			<ErrorSummary
+				errorLinks={{ "#environment-name-control": "Environment name" }}
+				listen={false}
+			/>
+		);
 
 		expect(screen.getByText("Error summary").getAttribute("data-listen")).toBe(
-			"true"
+			"false"
+		);
+		expect(
+			screen.getByText("Error summary").getAttribute("data-error-links")
+		).toBe(JSON.stringify({ "#environment-name-control": "Environment name" }));
+	});
+
+	it("forwards GCDS field IDs and error messages", () => {
+		render(
+			<>
+				<Input
+					errorMessage="Enter a name."
+					id="environment-name-control"
+					inputId="environment-name"
+					label="Environment name"
+					name="environmentName"
+				/>
+				<Select
+					errorMessage="Select a source."
+					id="source-environment-control"
+					label="Source environment"
+					name="sourceEnvironmentUuid"
+					selectId="source-environment"
+				>
+					<option value="">Select one</option>
+				</Select>
+				<Radios
+					errorMessage="Select an environment."
+					id="tenant-code-control"
+					legend="Environment"
+					name="tenantCode"
+					options={[]}
+				/>
+			</>
+		);
+
+		expect(screen.getByTestId("gcds-input").getAttribute("data-id")).toBe(
+			"environment-name-control"
+		);
+		expect(screen.getByTestId("gcds-input").getAttribute("data-error")).toBe(
+			"Enter a name."
+		);
+		expect(screen.getByTestId("gcds-select").getAttribute("data-id")).toBe(
+			"source-environment-control"
+		);
+		expect(screen.getByTestId("gcds-select").getAttribute("data-error")).toBe(
+			"Select a source."
+		);
+		expect(screen.getByTestId("gcds-radios").getAttribute("data-id")).toBe(
+			"tenant-code-control"
+		);
+		expect(screen.getByTestId("gcds-radios").getAttribute("data-error")).toBe(
+			"Select an environment."
 		);
 	});
 
