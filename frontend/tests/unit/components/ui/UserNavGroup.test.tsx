@@ -56,6 +56,7 @@ describe("UserNavGroup", () => {
 				uuid: "user-uuid-7",
 				isSuperuser: false,
 			},
+			hasHydrated: true,
 			isAuthenticated: true,
 			isLoading: false,
 			login: vi.fn(),

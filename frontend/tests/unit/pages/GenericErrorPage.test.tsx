@@ -46,24 +46,6 @@ vi.mock("@/components/ui", () => ({
 }));
 
 describe("GenericErrorPage", () => {
-	it("renders not-found variant and recovery actions", () => {
-		render(<GenericErrorPage kind="not_found" />);
-
-		expect(screen.getByRole("heading", { name: "Something went wrong" })).toBeTruthy();
-		expect(
-			screen.getByRole("heading", { name: "We could not find that page" })
-		).toBeTruthy();
-		expect(
-			screen.getByText(/The page or resource you requested could not be found/i)
-		).toBeTruthy();
-		expect(
-			screen.getByRole("link", { name: "Go to dashboard" }).getAttribute("href")
-		).toBe("/applications");
-		expect(
-			screen.getByRole("link", { name: "Go to home" }).getAttribute("href")
-		).toBe("/");
-	});
-
 	it("renders unexpected variant", () => {
 		render(<GenericErrorPage kind="unexpected" />);
 

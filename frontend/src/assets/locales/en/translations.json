@@ -113,8 +113,12 @@
 	"genericError": {
 		"dashboardAction": "Go to dashboard",
 		"homeAction": "Go to home",
-		"notFoundBody": "The page or resource you requested could not be found.",
-		"notFoundTitle": "We could not find that page",
+		"notFoundApplicationsAction": "Go to Applications",
+		"notFoundBody": "The page you're looking for may have moved, been removed, or the address may be incorrect.",
+		"notFoundPartnerPortalAction": "Go to Partner Portal",
+		"notFoundSupportLink": "CanadaLogin support",
+		"notFoundSupportPrefix": "If the problem continues, contact",
+		"notFoundTitle": "We cannot find that page",
 		"title": "Something went wrong",
 		"unexpectedBody": "An unexpected error occurred while loading this page. Try again from the dashboard.",
 		"unexpectedTitle": "Unexpected error"

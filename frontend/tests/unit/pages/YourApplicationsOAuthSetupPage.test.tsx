@@ -177,7 +177,7 @@ describe("YourApplicationsOAuthSetupPage", () => {
 		});
 	});
 
-	it("redirects 404 to not-found generic error route", async () => {
+	it("redirects 404 to the canonical not-found route", async () => {
 		mockedGetCurrentUserRPOAuthSetup.mockRejectedValue(
 			new HttpRequestError({ status: 404 })
 		);
@@ -185,7 +185,7 @@ describe("YourApplicationsOAuthSetupPage", () => {
 		render(<OAuthSetupPage />);
 
 		await waitFor(() => {
-			expect(replaceMock).toHaveBeenCalledWith("/error?kind=not_found");
+			expect(replaceMock).toHaveBeenCalledWith("/404");
 		});
 	});
 

@@ -10,6 +10,8 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as SplatRouteImport } from './routes/$'
+import { Route as R404RouteImport } from './routes/404'
 import { Route as AcceptTermsRouteImport } from './routes/accept-terms'
 import { Route as AccessDeniedRouteImport } from './routes/access-denied'
 import { Route as AccountNotFoundRouteImport } from './routes/account-not-found'
@@ -38,6 +40,16 @@ import { Route as ApplicationsApplicationUuidMauReportRouteImport } from './rout
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const SplatRoute = SplatRouteImport.update({
+  id: '/$',
+  path: '/$',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const R404Route = R404RouteImport.update({
+  id: '/404',
+  path: '/404',
   getParentRoute: () => rootRouteImport,
 } as any)
 const AcceptTermsRoute = AcceptTermsRouteImport.update({
@@ -169,6 +181,8 @@ const ApplicationsApplicationUuidMauReportRoute =
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/$': typeof SplatRoute
+  '/404': typeof R404Route
   '/accept-terms': typeof AcceptTermsRoute
   '/access-denied': typeof AccessDeniedRoute
   '/account-not-found': typeof AccountNotFoundRoute
@@ -196,6 +210,8 @@ export interface FileRoutesByFullPath {
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/$': typeof SplatRoute
+  '/404': typeof R404Route
   '/accept-terms': typeof AcceptTermsRoute
   '/access-denied': typeof AccessDeniedRoute
   '/account-not-found': typeof AccountNotFoundRoute
@@ -222,6 +238,8 @@ export interface FileRoutesByTo {
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/$': typeof SplatRoute
+  '/404': typeof R404Route
   '/accept-terms': typeof AcceptTermsRoute
   '/access-denied': typeof AccessDeniedRoute
   '/account-not-found': typeof AccountNotFoundRoute
@@ -251,6 +269,8 @@ export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
     | '/'
+    | '/$'
+    | '/404'
     | '/accept-terms'
     | '/access-denied'
     | '/account-not-found'
@@ -278,6 +298,8 @@ export interface FileRouteTypes {
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
+    | '/$'
+    | '/404'
     | '/accept-terms'
     | '/access-denied'
     | '/account-not-found'
@@ -303,6 +325,8 @@ export interface FileRouteTypes {
   id:
     | '__root__'
     | '/'
+    | '/$'
+    | '/404'
     | '/accept-terms'
     | '/access-denied'
     | '/account-not-found'
@@ -331,6 +355,8 @@ export interface FileRouteTypes {
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  SplatRoute: typeof SplatRoute
+  R404Route: typeof R404Route
   AcceptTermsRoute: typeof AcceptTermsRoute
   AccessDeniedRoute: typeof AccessDeniedRoute
   AccountNotFoundRoute: typeof AccountNotFoundRoute
@@ -357,6 +383,20 @@ declare module '@tanstack/react-router' {
       path: '/'
       fullPath: '/'
       preLoaderRoute: typeof IndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/$': {
+      id: '/$'
+      path: '/$'
+      fullPath: '/$'
+      preLoaderRoute: typeof SplatRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/404': {
+      id: '/404'
+      path: '/404'
+      fullPath: '/404'
+      preLoaderRoute: typeof R404RouteImport
       parentRoute: typeof rootRouteImport
     }
     '/accept-terms': {
@@ -574,6 +614,8 @@ const ApplicationsRouteWithChildren = ApplicationsRoute._addFileChildren(
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  SplatRoute: SplatRoute,
+  R404Route: R404Route,
   AcceptTermsRoute: AcceptTermsRoute,
   AccessDeniedRoute: AccessDeniedRoute,
   AccountNotFoundRoute: AccountNotFoundRoute,

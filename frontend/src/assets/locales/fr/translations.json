@@ -113,8 +113,12 @@
 	"genericError": {
 		"dashboardAction": "Aller au tableau de bord",
 		"homeAction": "Aller à l'accueil",
-		"notFoundBody": "La page ou la ressource demandée est introuvable.",
-		"notFoundTitle": "Nous n'avons pas trouvé cette page",
+		"notFoundApplicationsAction": "Aller aux applications",
+		"notFoundBody": "La page que vous cherchez a peut-être été déplacée ou supprimée, ou l'adresse est incorrecte.",
+		"notFoundPartnerPortalAction": "Aller au portail des partenaires",
+		"notFoundSupportLink": "l'équipe de soutien CanadaLogin",
+		"notFoundSupportPrefix": "Si le problème persiste, communiquez avec",
+		"notFoundTitle": "Nous ne trouvons pas cette page",
 		"title": "Une erreur est survenue",
 		"unexpectedBody": "Une erreur inattendue est survenue lors du chargement de cette page. Réessayez à partir du tableau de bord.",
 		"unexpectedTitle": "Erreur inattendue"
