@@ -17,7 +17,7 @@ interface BreadcrumbsProps {
 
 const Breadcrumbs: React.FC<BreadcrumbsProps> = React.memo(
 	({ items, className = "", slot }) => (
-		<GcdsBreadcrumbs className={className} slot={slot}>
+		<GcdsBreadcrumbs hideCanadaLink className={className} slot={slot}>
 			{items.map((item) => (
 				<GcdsBreadcrumbsItem key={item.href} href={item.href}>
 					{item.label}

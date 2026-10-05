@@ -250,7 +250,7 @@
 		"loadingTitle": "Chargement des environnements d’application",
 		"paginationLabel": "Pages des environnements d’application",
 		"productionStatuses": "États des environnements de production",
-		"sectionTitle": "Environnements d’application",
+		"sectionTitle": "Environnements connectés",
 		"statusInProduction": "En production",
 		"statusSubmitted": "Soumis",
 		"submittedDescription": "Votre demande d’environnement de production a été soumise à CanadaLogin aux fins d’examen.",

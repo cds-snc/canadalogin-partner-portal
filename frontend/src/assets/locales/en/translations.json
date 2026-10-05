@@ -250,7 +250,7 @@
 		"loadingTitle": "Loading application environments",
 		"paginationLabel": "Application environment pages",
 		"productionStatuses": "Production environment statuses",
-		"sectionTitle": "Application environments",
+		"sectionTitle": "Connected environments",
 		"statusInProduction": "In production",
 		"statusSubmitted": "Submitted",
 		"submittedDescription": "Your production environment request has been submitted to CanadaLogin for review.",

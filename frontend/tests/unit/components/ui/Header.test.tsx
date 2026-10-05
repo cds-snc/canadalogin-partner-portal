@@ -88,12 +88,16 @@ vi.mock("@tanstack/react-query", async () => {
 vi.mock("@gcds-core/components-react", () => ({
 	GcdsBreadcrumbs: ({
 		children,
+		hideCanadaLink,
 		slot,
 	}: {
 		children: ReactNode;
+		hideCanadaLink?: boolean;
 		slot?: string;
 	}): ReactElement => (
-		<nav data-slot={slot}>{children}</nav>
+		<nav data-hide-canada-link={hideCanadaLink} data-slot={slot}>
+			{children}
+		</nav>
 	),
 	GcdsBreadcrumbsItem: ({
 		children,
@@ -200,6 +204,11 @@ describe("Header", () => {
 			document.querySelector("nav[aria-label='Primary navigation']")
 		).toBeTruthy();
 		expect(document.querySelector("nav[data-slot='breadcrumb']")).toBeTruthy();
+		expect(
+			document
+				.querySelector("nav[data-slot='breadcrumb']")
+				?.getAttribute("data-hide-canada-link")
+		).toBe("true");
 		expect(document.querySelector("a[data-href='/applications']")?.textContent).toBe(
 			"Applications"
 		);
@@ -238,5 +247,35 @@ describe("Header", () => {
 		expect(
 			document.querySelector("nav[aria-label='Primary navigation']")
 		).toBeTruthy();
+	});
+
+	it("does not mark applications active on an environment route", () => {
+		pathname = "/applications/00000000-0000-7000-8000-000000000021/environments";
+		vi.mocked(useSession).mockReturnValue({
+			currentUser: {
+				name: "Jane Doe",
+				email: "jane@example.com",
+				profileImageUrl: "https://example.com/jane.png",
+				authProvider: "gc-sso",
+				authSubject: "subject-123",
+				roleUuids: ["role-uuid-3"],
+				tierUuid: "tier-uuid-2",
+				uuid: "user-uuid-7",
+				isSuperuser: true,
+			},
+			isAuthenticated: true,
+			isLoading: false,
+			login: vi.fn(),
+			logout: vi.fn((): Promise<void> => Promise.resolve()),
+			refreshSession: vi.fn((): Promise<null> => Promise.resolve(null)),
+		});
+
+		render(<Header />);
+
+		expect(
+			document.querySelector("a[data-href='/applications']")?.getAttribute(
+				"aria-current"
+			)
+		).toBeNull();
 	});
 });
