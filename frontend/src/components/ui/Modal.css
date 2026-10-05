@@ -57,6 +57,11 @@
 	justify-content: space-between;
 }
 
+.government-modal__header-content {
+	display: grid;
+	gap: var(--gcds-spacing-200);
+}
+
 .government-modal__title {
 	font: var(--gcds-heading-h3-desktop);
 	margin: 0;
@@ -101,6 +106,15 @@
 	gap: var(--gcds-spacing-150);
 	justify-content: end;
 	padding-top: var(--gcds-spacing-250);
+}
+
+.government-modal__footer--start {
+	justify-content: start;
+}
+
+.government-modal__footer--no-divider {
+	border-top: 0;
+	padding-top: 0;
 }
 
 @media (max-width: 48rem) {

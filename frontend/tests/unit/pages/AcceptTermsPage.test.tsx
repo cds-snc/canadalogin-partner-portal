@@ -12,6 +12,7 @@ const { acceptTermsMock, navigateMock, refreshSessionMock, toastSuccessMock } =
 	}));
 
 vi.mock("react-i18next", () => ({
+	Trans: ({ i18nKey }: { i18nKey: string }): ReactElement => <>{i18nKey}</>,
 	useTranslation: (): { t: (key: string) => string } => ({
 		t: (key: string): string =>
 			({
@@ -47,6 +48,9 @@ vi.mock("@/components/ui", () => ({
 		),
 	Heading: ({ children, tag }: PropsWithChildren<{ tag: "h1" | "h2" }>): ReactElement =>
 		tag === "h1" ? <h1>{children}</h1> : <h2>{children}</h2>,
+	Link: ({ children, href }: PropsWithChildren<{ href: string }>): ReactElement => (
+		<a href={href}>{children}</a>
+	),
 	Text: ({ children }: PropsWithChildren): ReactElement => <p>{children}</p>,
 }));
 

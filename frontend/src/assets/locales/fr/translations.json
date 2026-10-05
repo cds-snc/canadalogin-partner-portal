@@ -310,7 +310,7 @@
 	"sessionTimeout": {
 		"continueAction": "Rester connecté",
 		"continuingAction": "Maintien de la session...",
-		"countdownLabel": "Temps restant : {{time}}",
+		"countdownLabel": "Temps restant :",
 		"loggingOutAction": "Déconnexion...",
 		"logoutAction": "Se déconnecter",
 		"warningDescription": "Si vous ne poursuivez pas votre session, votre session prendra automatiquement fin.",
@@ -852,8 +852,8 @@
 	},
 	"termsAndConditions": {
 		"title": "Avant de continuer",
-		"intro": "Pour continuer à utiliser le Portail des partenaires CanadaLogin, vous devez accepter les conditions d'utilisation.",
-		"agreementIntro": "En sélectionnant Accepter et continuer, vous acceptez de :",
+		"intro": "Pour continuer à utiliser le Portail des partenaires CanadaLogin, vous devez accepter les <termsLink>conditions d'utilisation</termsLink>.",
+		"agreementIntro": "En sélectionnant <acceptAction>Accepter et continuer</acceptAction>, vous acceptez de :",
 		"responsibility1": "utiliser le portail uniquement pour les activités autorisées du gouvernement du Canada",
 		"responsibility2": "protéger votre compte et vos identifiants",
 		"responsibility3": "protéger les renseignements auxquels vous accédez au moyen du portail",

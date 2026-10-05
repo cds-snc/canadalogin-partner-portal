@@ -17,8 +17,8 @@ export const AccountNotFoundPage = (): FunctionComponent => {
 		<>
 			<Heading tag="h1">{t("accountNotFound.title")}</Heading>
 			<Text>{t("accountNotFound.summary")}</Text>
-			<Text>{t("accountNotFound.reasonIntro")}</Text>
-			<ul>
+			<Text marginBottom="0">{t("accountNotFound.reasonIntro")}</Text>
+			<ul className="list-disc mt-0 mb-300 pl-400">
 				<li>{t("accountNotFound.reasonDifferentEmail")}</li>
 				<li>{t("accountNotFound.reasonAccessNotSetUp")}</li>
 			</ul>

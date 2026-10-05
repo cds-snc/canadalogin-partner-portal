@@ -18,13 +18,13 @@ vi.mock("@/lib/backend-activity", () => ({
 
 vi.mock("react-i18next", () => ({
 	useTranslation: (): {
-		t: (key: string, values?: Record<string, string>) => string;
+			t: (key: string) => string;
 	} => ({
-		t: (key: string, values?: Record<string, string>): string => {
+			t: (key: string): string => {
 			const translations: Record<string, string> = {
 				"sessionTimeout.continueAction": "Stay signed in",
 				"sessionTimeout.continuingAction": "Staying signed in...",
-				"sessionTimeout.countdownLabel": `Time remaining: ${values?.["time"] ?? ""}`,
+				"sessionTimeout.countdownLabel": "Time remaining:",
 				"sessionTimeout.loggingOutAction": "Signing out...",
 				"sessionTimeout.logoutAction": "Sign out",
 				"sessionTimeout.warningDescription":
@@ -42,8 +42,8 @@ vi.mock("@/components/ui", () => ({
 	Button: ({ buttonRole = "primary", children, onGcdsClick }: PropsWithChildren<{ buttonRole?: "primary" | "secondary" | "danger" | "start"; onGcdsClick: () => void }>): ReactElement => (
 		<button data-button-role={buttonRole} type="button" onClick={onGcdsClick}>{children}</button>
 	),
-	Modal: ({ children, description, footer, showCloseButton = true, title }: PropsWithChildren<{ description?: string; footer?: ReactNode; showCloseButton?: boolean; title: string }>): ReactElement => (
-		<div role="dialog" aria-label={title}>
+	Modal: ({ children, description, footer, footerAlignment = "end", showCloseButton = true, showFooterDivider = true, title }: PropsWithChildren<{ description?: string; footer?: ReactNode; footerAlignment?: "start" | "end"; showCloseButton?: boolean; showFooterDivider?: boolean; title: string }>): ReactElement => (
+		<div role="dialog" aria-label={title} data-footer-alignment={footerAlignment} data-footer-divider={showFooterDivider}>
 			{showCloseButton ? <button type="button">Close</button> : null}
 			{description ? <p>{description}</p> : null}
 			{children}
@@ -106,6 +106,9 @@ describe("InactivitySessionGuard", () => {
 				"If you do not continue your session you will be signed out automatically."
 			)
 		).toBeTruthy();
+		expect(screen.getByText("5:00").tagName).toBe("STRONG");
+		expect(screen.getByRole("dialog").dataset["footerAlignment"]).toBe("start");
+		expect(screen.getByRole("dialog").dataset["footerDivider"]).toBe("false");
 		expect(screen.queryByRole("button", { name: "Close" })).toBeNull();
 		expect(
 			screen.getByRole("button", { name: "Stay signed in" }).dataset

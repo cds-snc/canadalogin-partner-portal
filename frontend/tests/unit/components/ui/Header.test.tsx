@@ -4,6 +4,8 @@ import { describe, expect, it, vi } from "vitest";
 import Header from "@/components/ui/Header";
 import { useSession } from "@/hooks";
 
+let pathname = "/users";
+
 vi.mock("react-i18next", () => ({
 	useTranslation: (): {
 		t: (key: string) => string;
@@ -55,7 +57,7 @@ vi.mock("@tanstack/react-router", () => ({
 		}) => unknown;
 	}): unknown =>
 		select({
-			location: { pathname: "/users" },
+			location: { pathname },
 			matches: [
 				{
 					context: {
@@ -149,7 +151,30 @@ vi.mock("@gcds-core/components-react", () => ({
 }));
 
 describe("Header", () => {
+	it("keeps only the home navigation item on the signing-out page", () => {
+		pathname = "/logout";
+		vi.mocked(useSession).mockReturnValue({
+			currentUser: null,
+			isAuthenticated: false,
+			isLoading: false,
+			login: vi.fn(),
+			logout: vi.fn((): Promise<void> => Promise.resolve()),
+			refreshSession: vi.fn((): Promise<null> => Promise.resolve(null)),
+		});
+
+		const { container } = render(<Header />);
+
+		expect(container.querySelector("header")).toBeTruthy();
+		expect(container.textContent).toContain("Lang:en");
+		const navigation = container.querySelector(
+			"nav[aria-label='Primary navigation']"
+		);
+		expect(navigation?.firstElementChild?.getAttribute("href")).toBe("/");
+		expect(navigation?.querySelectorAll("a")).toHaveLength(1);
+	});
+
 	it("renders navigation for authenticated superuser", () => {
+		pathname = "/users";
 		vi.mocked(useSession).mockReturnValue({
 			currentUser: {
 				name: "Jane Doe",
@@ -198,6 +223,7 @@ describe("Header", () => {
 	});
 
 	it("renders public sign-in link when no session exists", () => {
+		pathname = "/users";
 		vi.mocked(useSession).mockReturnValue({
 			currentUser: null,
 			isAuthenticated: false,

@@ -181,15 +181,16 @@ export const InactivitySessionGuard = (): FunctionComponent => {
 			isOpen
 			description={t("sessionTimeout.warningDescription")}
 			footer={footer}
+			footerAlignment="start"
 			showCloseButton={false}
+			showFooterDivider={false}
 			title={t("sessionTimeout.warningTitle")}
 			titleSize="regular"
 			onClose={closeDisabled}
 		>
 			<Text ariaLive="polite" marginBottom="0">
-				{t("sessionTimeout.countdownLabel", {
-					time: formatCountdown(warningState.countdownSeconds),
-				})}
+				{t("sessionTimeout.countdownLabel")} {" "}
+				<strong>{formatCountdown(warningState.countdownSeconds)}</strong>
 			</Text>
 		</Modal>
 	);
