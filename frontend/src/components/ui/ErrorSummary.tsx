@@ -3,12 +3,17 @@ import { GcdsErrorSummary } from "@gcds-core/components-react";
 
 interface ErrorSummaryProps {
 	className?: string;
+	errorLinks?: Record<string, string>;
 	listen?: boolean;
 }
 
 const ErrorSummary: React.FC<ErrorSummaryProps> = React.memo(
-	({ className, listen }) => (
-		<GcdsErrorSummary className={className} listen={listen} />
+	({ className, errorLinks, listen }) => (
+		<GcdsErrorSummary
+			className={className}
+			errorLinks={errorLinks}
+			listen={listen}
+		/>
 	)
 );
 

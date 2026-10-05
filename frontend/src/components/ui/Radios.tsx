@@ -10,7 +10,9 @@ type RadioObject = {
 };
 
 interface RadiosProps {
+	errorMessage?: string;
 	hint?: string;
+	id?: string;
 	legend: string;
 	name: string;
 	onInput?: React.FormEventHandler<Element>;
@@ -23,7 +25,9 @@ interface RadiosProps {
 
 const Radios: React.FC<RadiosProps> = React.memo(
 	({
+		errorMessage,
 		hint,
+		id,
 		legend,
 		name,
 		onInput,
@@ -35,7 +39,9 @@ const Radios: React.FC<RadiosProps> = React.memo(
 	}) => (
 		<GcdsRadios
 			className={className}
+			errorMessage={errorMessage}
 			hint={hint}
+			id={id}
 			legend={legend}
 			name={name}
 			options={options}

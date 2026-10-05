@@ -27,6 +27,14 @@ Relevant shared wrappers include:
 - `Header`, `Footer`, `Breadcrumbs`, `SideNav`, `TopicMenu`, and `LangToggle` for navigation and page chrome
 - `Modal`, `Toast`, and `ConfirmDialog` for existing project interaction patterns
 
+### GCDS form validation
+
+- Render `ErrorSummary` at the top of a validated form step when client-side validation fails.
+- Pass `errorMessage` to each visible GCDS form control that has an RHF error.
+- Build summary links and inline messages from the same RHF error mapping so they cannot diverge.
+- Give wrapped GCDS controls stable host IDs and use selectors such as `#field-control` in `errorLinks`. Link to the wrapper host, not the native input inside its shadow DOM.
+- Keep request and server failures in `Notice`; do not mix them into client-side form validation summaries.
+
 ## Native element restrictions
 
 Do not use raw HTML elements as substitutes for GCDS UI components:

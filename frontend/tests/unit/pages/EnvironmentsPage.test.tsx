@@ -3,15 +3,25 @@ import { render, screen } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 import { EnvironmentsPage } from "@/features/application-environments/pages/EnvironmentsPage";
 
-const { mockedUseApplicationEnvironments } = vi.hoisted(() => ({
+const { mockedUseApplicationEnvironments, mockedUseSearch } = vi.hoisted(() => ({
 	mockedUseApplicationEnvironments: vi.fn(),
+	mockedUseSearch: vi.fn<() => { connect?: boolean; page: number }>(() => ({
+		page: 1,
+	})),
 }));
 
 vi.mock("@tanstack/react-router", () => ({
 	useNavigate: () => vi.fn(),
 	useParams: () => ({ applicationUuid: "application-uuid-1" }),
-	useSearch: () => ({ page: 1 }),
+	useSearch: mockedUseSearch,
 }));
+
+vi.mock(
+	"@/features/application-environments/pages/ConnectEnvironmentPage",
+	() => ({
+		ConnectEnvironmentPage: (): ReactElement => <div>connect environment page</div>,
+	})
+);
 
 vi.mock("react-i18next", () => ({
 	useTranslation: (): {
@@ -235,5 +245,30 @@ describe("EnvironmentsPage", () => {
 			screen.getByRole("link", { name: "Test environment" }).getAttribute("href")
 		).toBe("#");
 		expect(screen.getByTestId("switch-application-icon")).toBeTruthy();
+	});
+
+	it("renders the connection flow when the connect search flag is set", () => {
+		mockedUseSearch.mockReturnValue({ connect: true, page: 1 });
+		mockedUseApplicationEnvironments.mockReturnValue({
+			data: {
+				application: {
+					nameEn: "Benefits portal",
+					nameFr: null,
+					uuid: "application-uuid-1",
+				},
+				data: [],
+				hasMore: false,
+				itemsPerPage: 10,
+				page: 1,
+				totalCount: 0,
+			},
+			error: null,
+			isLoading: false,
+		});
+
+		render(<EnvironmentsPage />);
+
+		expect(screen.getByText("connect environment page")).toBeTruthy();
+		mockedUseSearch.mockReturnValue({ page: 1 });
 	});
 });

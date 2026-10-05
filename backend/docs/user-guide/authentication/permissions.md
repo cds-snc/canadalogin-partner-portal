@@ -25,7 +25,7 @@ The `0011_partner_group_roles` migration restores the Casbin policy data removed
 
 | Role | Resource | Actions |
 | --- | --- | --- |
-| Partner Developer | `applications` | `read` |
+| Partner Developer | `applications` | `read`, `write` |
 | Partner Production Administrator | `applications` | `read`, `write` |
 | CanadaLogin Administrators | `roles` | `read`, `write` |
 | CanadaLogin Administrators | `applications` | `read` |

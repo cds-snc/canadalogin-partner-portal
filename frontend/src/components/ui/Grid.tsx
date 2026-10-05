@@ -39,6 +39,7 @@ interface GridProps {
 const Grid: React.FC<GridProps> = React.memo(
 	({
 		alignment,
+		alignItems,
 		columns,
 		columnsDesktop,
 		columnsTablet,
@@ -54,6 +55,7 @@ const Grid: React.FC<GridProps> = React.memo(
 	}) => (
 		<GcdsGrid
 			alignment={alignment}
+			alignItems={alignItems}
 			columns={columns}
 			columnsDesktop={columnsDesktop}
 			columnsTablet={columnsTablet}

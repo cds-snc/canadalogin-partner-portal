@@ -2,7 +2,11 @@ import React from "react";
 import { GcdsInput } from "@gcds-core/components-react";
 
 interface InputProps {
+	ariaDescribedBy?: string;
+	errorMessage?: string;
+	hideLabel?: boolean;
 	hint?: string;
+	id?: string;
 	label: string;
 	name: string;
 	onInput?: React.FormEventHandler<Element>;
@@ -18,7 +22,11 @@ interface InputProps {
 
 const Input: React.FC<InputProps> = React.memo(
 	({
+		ariaDescribedBy,
+		hideLabel,
+		errorMessage,
 		hint,
+		id,
 		label,
 		name,
 		onInput,
@@ -32,8 +40,12 @@ const Input: React.FC<InputProps> = React.memo(
 		type,
 	}) => (
 		<GcdsInput
+			aria-describedby={ariaDescribedBy}
 			className={className}
+			errorMessage={errorMessage}
+			hideLabel={hideLabel}
 			hint={hint}
+			id={id}
 			inputId={inputId}
 			label={label}
 			name={name}

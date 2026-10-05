@@ -1,5 +1,5 @@
 import uuid as uuid_pkg
-from typing import Annotated
+from typing import Annotated, Any
 
 from fastapi import APIRouter, Depends, Query, Request
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -8,10 +8,39 @@ from ...api.dependencies import get_application_environment_service
 from ...core.access_control import casbin_guard
 from ...core.db.database import async_get_db
 from ...core.exceptions.openapi import error_responses
-from ...schemas.application_environment import ApplicationEnvironmentListRead
+from ...schemas.application_environment import (
+    ApplicationEnvironmentCreate,
+    ApplicationEnvironmentListRead,
+    ApplicationEnvironmentRead,
+)
 from ...services.application_environment_service import ApplicationEnvironmentService
 
 router = APIRouter(tags=["application-environments"])
+
+
+@router.post(
+    "/applications/{application_uuid}/environments",
+    response_model=ApplicationEnvironmentRead,
+    status_code=201,
+    responses=error_responses(400, 403, 404, 500),
+)
+@casbin_guard.require_application_permission("applications", "write")
+async def create_application_environment(
+    request: Request,
+    application_uuid: uuid_pkg.UUID,
+    environment: ApplicationEnvironmentCreate,
+    db: Annotated[AsyncSession, Depends(async_get_db)],
+    service: Annotated[
+        ApplicationEnvironmentService,
+        Depends(get_application_environment_service),
+    ],
+) -> dict[str, Any]:
+    _ = request
+    return await service.create_application_environment(
+        db=db,
+        application_uuid=application_uuid,
+        environment=environment,
+    )
 
 
 @router.get(
