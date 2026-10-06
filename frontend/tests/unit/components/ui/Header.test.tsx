@@ -266,6 +266,7 @@ describe("Header", () => {
 				uuid: "user-uuid-7",
 				isSuperuser: true,
 			},
+			hasHydrated: true,
 			isAuthenticated: true,
 			isLoading: false,
 			login: vi.fn(),

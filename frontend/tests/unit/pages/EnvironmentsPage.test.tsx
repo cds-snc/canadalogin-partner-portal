@@ -1,4 +1,9 @@
-import type { CSSProperties, PropsWithChildren, ReactElement } from "react";
+import type {
+	CSSProperties,
+	PropsWithChildren,
+	ReactElement,
+	ReactNode,
+} from "react";
 import { render, screen } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 import { EnvironmentsPage } from "@/features/application-environments/pages/EnvironmentsPage";
@@ -204,7 +209,7 @@ describe("EnvironmentsPage", () => {
 		expect(screen.getByText("Published test")).toBeTruthy();
 		expect(screen.queryByText("Published")).toBeNull();
 		expect(screen.getAllByText(/^Last modified:/)).toHaveLength(3);
-		expect(screen.getAllByText("Last modified:")[0].tagName).toBe("STRONG");
+		expect(screen.getAllByText("Last modified:")[0]?.tagName).toBe("STRONG");
 	});
 
 	it("links back to the applications list and keeps other links as placeholders", () => {
