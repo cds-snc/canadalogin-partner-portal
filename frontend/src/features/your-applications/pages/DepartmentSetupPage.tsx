@@ -43,7 +43,7 @@ export const DepartmentSetupPage = (): ReactElement => {
 					return;
 				}
 				if (error instanceof HttpRequestError && error.status === 404) {
-					globalThis.location.replace("/error?kind=not_found");
+					globalThis.location.replace("/404");
 					return;
 				}
 				globalThis.location.replace("/error?kind=unexpected");

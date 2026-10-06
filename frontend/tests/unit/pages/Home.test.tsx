@@ -55,6 +55,7 @@ const createSessionState = (overrides: Partial<SessionState>): SessionState => (
 	currentUser: null,
 	isLoading: false,
 	isAuthenticated: false,
+	hasHydrated: true,
 	login: vi.fn(),
 	logout: vi.fn((): Promise<void> => Promise.resolve()),
 	refreshSession: vi.fn((): Promise<null> => Promise.resolve(null)),

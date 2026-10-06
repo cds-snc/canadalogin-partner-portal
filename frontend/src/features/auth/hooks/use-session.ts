@@ -4,6 +4,7 @@ import { useAuthStore } from "@/store";
 
 export type SessionState = {
 	currentUser: UserRead | null;
+	hasHydrated: boolean;
 	isAuthenticated: boolean;
 	isLoading: boolean;
 	login: () => void;
@@ -31,6 +32,7 @@ export const useSession = (): SessionState => {
 
 	return {
 		currentUser,
+		hasHydrated,
 		isAuthenticated,
 		isLoading,
 		login,

@@ -159,6 +159,7 @@ describe("Header", () => {
 		pathname = "/logout";
 		vi.mocked(useSession).mockReturnValue({
 			currentUser: null,
+			hasHydrated: true,
 			isAuthenticated: false,
 			isLoading: false,
 			login: vi.fn(),
@@ -191,6 +192,7 @@ describe("Header", () => {
 				uuid: "user-uuid-7",
 				isSuperuser: true,
 			},
+			hasHydrated: true,
 			isAuthenticated: true,
 			isLoading: false,
 			login: vi.fn(),
@@ -235,6 +237,7 @@ describe("Header", () => {
 		pathname = "/users";
 		vi.mocked(useSession).mockReturnValue({
 			currentUser: null,
+			hasHydrated: true,
 			isAuthenticated: false,
 			isLoading: false,
 			login: vi.fn(),

@@ -57,6 +57,7 @@ const createSessionState = (
 	refreshSession: SessionState["refreshSession"]
 ): SessionState => ({
 	currentUser: null,
+	hasHydrated: true,
 	isAuthenticated: true,
 	isLoading: false,
 	login: vi.fn(),

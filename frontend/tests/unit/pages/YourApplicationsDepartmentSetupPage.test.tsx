@@ -186,7 +186,7 @@ describe("YourApplicationsDepartmentSetupPage", () => {
 		render(<DepartmentSetupPage />);
 
 		await waitFor(() => {
-			expect(replaceMock).toHaveBeenCalledWith("/error?kind=not_found");
+			expect(replaceMock).toHaveBeenCalledWith("/404");
 		});
 	});
 

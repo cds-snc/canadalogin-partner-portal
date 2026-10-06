@@ -54,8 +54,8 @@ const Grid: React.FC<GridProps> = React.memo(
 		children,
 	}) => (
 		<GcdsGrid
-			alignment={alignment}
 			alignItems={alignItems}
+			alignment={alignment}
 			columns={columns}
 			columnsDesktop={columnsDesktop}
 			columnsTablet={columnsTablet}
