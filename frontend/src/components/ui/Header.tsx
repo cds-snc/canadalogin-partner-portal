@@ -25,6 +25,10 @@ const isCurrentPath = (pathname: string, href: string): boolean => {
 		return pathname === "/";
 	}
 
+	if (href === "/applications") {
+		return pathname === href;
+	}
+
 	return pathname === href || pathname.startsWith(`${href}/`);
 };
 

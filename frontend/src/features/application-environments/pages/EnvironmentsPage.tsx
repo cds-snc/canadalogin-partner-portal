@@ -168,10 +168,14 @@ export const EnvironmentsPage = (): FunctionComponent => {
 									badge={statusLabel ?? undefined}
 									cardTitle={environment.partnerLabel}
 									cardTitleTag="h3"
-									description={`${t("applicationEnvironments.lastModified")}: ${dateFormatter.format(new Date(modifiedAt))}`}
 									href="#"
 									style={cardStyle}
-								/>
+								>
+									<Text marginBottom="0">
+										<strong>{t("applicationEnvironments.lastModified")}:</strong>{" "}
+										{dateFormatter.format(new Date(modifiedAt))}
+									</Text>
+								</Card>
 							);
 						})}
 					</Grid>

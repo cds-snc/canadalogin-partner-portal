@@ -65,6 +65,7 @@ vi.mock("@/components/ui", () => ({
 		badge,
 		cardTitle,
 		cardTitleTag,
+		children,
 		description,
 		href,
 		style,
@@ -72,6 +73,7 @@ vi.mock("@/components/ui", () => ({
 		badge?: string;
 		cardTitle: string;
 		cardTitleTag: "h3" | "h4" | "h5" | "h6";
+		children?: ReactNode;
 		description?: string;
 		href: string;
 		style?: CSSProperties;
@@ -83,7 +85,7 @@ vi.mock("@/components/ui", () => ({
 				<CardTitle>
 					<a href={href}>{cardTitle}</a>
 				</CardTitle>
-				{description ? <p>{description}</p> : null}
+				{children ?? (description ? <p>{description}</p> : null)}
 			</article>
 		);
 	},
@@ -202,6 +204,7 @@ describe("EnvironmentsPage", () => {
 		expect(screen.getByText("Published test")).toBeTruthy();
 		expect(screen.queryByText("Published")).toBeNull();
 		expect(screen.getAllByText(/^Last modified:/)).toHaveLength(3);
+		expect(screen.getAllByText("Last modified:")[0].tagName).toBe("STRONG");
 	});
 
 	it("links back to the applications list and keeps other links as placeholders", () => {

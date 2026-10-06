@@ -15,7 +15,7 @@ frontend:
       var: VITE_APP_ENVIRONMENT
     VITE_AUTH_POST_LOGIN_PATH:
       var: VITE_AUTH_POST_LOGIN_PATH
-      default: /your-applications
+      default: /applications
     VITE_SESSION_WARNING_AFTER_MINUTES:
       var: VITE_SESSION_WARNING_AFTER_MINUTES
       default: "25"
