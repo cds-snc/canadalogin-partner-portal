@@ -35,6 +35,16 @@ vi.mock("@/components/ui", () => ({
 			{children}
 		</button>
 	),
+	Container: ({
+		children,
+		alignment,
+		id,
+		size,
+	}: PropsWithChildren<{ alignment?: string; id: string; size?: string }>): ReactElement => (
+		<div data-alignment={alignment} data-size={size} id={id}>
+			{children}
+		</div>
+	),
 	Heading: ({ children, tag = "h1" }: PropsWithChildren<{ tag?: "h1" | "h2" }>): ReactElement => {
 		const Tag = tag;
 		return <Tag>{children}</Tag>;
@@ -72,6 +82,9 @@ describe("AccountNotFoundPage", () => {
 	it("renders the account-not-found guidance from the design", () => {
 		render(<AccountNotFoundPage />);
 
+		const content = document.getElementById("account-not-found-content");
+		expect(content?.getAttribute("data-size")).toBe("md");
+		expect(content?.getAttribute("data-alignment")).toBe("start");
 		expect(screen.getByRole("heading", { name: "We could not find your account" })).toBeTruthy();
 		expect(screen.getByText(/You signed in successfully/)).toBeTruthy();
 		const reasonIntro = screen.getByText("This may happen if:");
