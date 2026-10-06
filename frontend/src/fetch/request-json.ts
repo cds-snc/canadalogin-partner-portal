@@ -12,6 +12,7 @@ import {
 
 const unauthorizedPaths = new Set(["/auth-complete", "/login"]);
 const forbiddenPaths = new Set(["/access-denied"]);
+const errorPath = "/error?kind=unexpected";
 
 type RequestJsonOptions = {
 	redirectOnUnauthorized?: boolean;
@@ -123,6 +124,16 @@ const redirectToAccessDenied = (): void => {
 	location.replace("/access-denied");
 };
 
+const redirectToUnexpectedError = (): void => {
+	const location = globalThis.location;
+
+	if (!location || location.pathname === "/error") {
+		return;
+	}
+
+	location.replace(errorPath);
+};
+
 const toRequestError = (
 	status: number,
 	responseData: unknown
@@ -161,15 +172,24 @@ export const requestJson = async <ResponseType>(
 	requestInit: RequestInit,
 	options: RequestJsonOptions = {}
 ): Promise<ResponseType | null> => {
-	const response = await fetch(buildApiUrl(path), {
-		...requestInit,
-		credentials: requestInit.credentials ?? "include",
-		headers: {
-			Accept: "application/json",
+	let response: Response;
+
+	try {
+		response = await fetch(buildApiUrl(path), {
+			...requestInit,
+			credentials: requestInit.credentials ?? "include",
+			headers: {
+				Accept: "application/json",
 			"Content-Type": "application/json",
-			...(requestInit.headers ?? {}),
-		},
-	});
+				...(requestInit.headers ?? {}),
+			},
+		});
+	} catch (error) {
+		if (!(error instanceof Error && error.name === "AbortError")) {
+			redirectToUnexpectedError();
+		}
+		throw error;
+	}
 
 	if (response.status === 204) {
 		markBackendActivity();
@@ -183,6 +203,10 @@ export const requestJson = async <ResponseType>(
 
 	if (!response.ok) {
 		const requestError = toRequestError(response.status, responseData);
+
+		if (requestError instanceof ServerRequestError) {
+			redirectToUnexpectedError();
+		}
 
 		if (
 			requestError instanceof UnauthorizedRequestError &&

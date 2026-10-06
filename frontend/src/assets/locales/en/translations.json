@@ -115,17 +115,14 @@
 		"requestAccess": "Request access from the CanadaLogin team."
 	},
 	"genericError": {
-		"dashboardAction": "Go to dashboard",
-		"homeAction": "Go to home",
 		"notFoundApplicationsAction": "Go to Applications",
 		"notFoundBody": "The page you're looking for may have moved, been removed, or the address may be incorrect.",
 		"notFoundPartnerPortalAction": "Go to CanadaLogin Partner Portal",
 		"notFoundSupportLink": "CanadaLogin support",
 		"notFoundSupportPrefix": "If the problem continues, contact",
 		"notFoundTitle": "We cannot find that page",
-		"title": "Something went wrong",
-		"unexpectedBody": "An unexpected error occurred while loading this page. Try again from the dashboard.",
-		"unexpectedTitle": "Unexpected error"
+		"unexpectedBody": "There was a problem loading the page. You can return to CanadaLogin or try again later.",
+		"unexpectedTitle": "We’re having trouble loading this page"
 	},
 	"rpDepartmentSetup": {
 		"chooseDepartment": "Choose an organization",
