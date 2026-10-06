@@ -7,7 +7,7 @@ const Support = (): FunctionComponent => {
 	const ticketUrl = "https://jtickets.atlassian.net/servicedesk/customer/portal/140";
 
 	return (
-		<Container alignment="start" id="account-not-found-content" size="md">
+		<Container alignment="start" id="support-page-content" size="md">
 				<Heading tag="h1">{t("support.title")}</Heading>
 				<Text>{t("support.intro")}</Text>
 
