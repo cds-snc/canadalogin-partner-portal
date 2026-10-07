@@ -1,6 +1,6 @@
 import os
 import re
-from enum import Enum
+from enum import StrEnum
 from typing import Literal
 from urllib.parse import quote
 
@@ -270,7 +270,7 @@ class IBMVerifySettings(BaseSettings):
     IBM_SV_ADMIN_CLIENT_SECRET: SecretStr | None = None
 
 
-class EnvironmentOption(str, Enum):
+class EnvironmentOption(StrEnum):
     LOCAL = "local"
     DEVELOPMENT = "dev"
     TESTING = "test"

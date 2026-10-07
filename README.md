@@ -165,7 +165,7 @@ and administrative SQL bootstrap are complete. Bootstrap must create `partner_po
 database/schema grants and ownership needed by startup Alembic migrations. Apply any pending privileged DNR
 role-management migration (`0008_dnr_view_perm`) administratively first; do not give the application role-administration privileges.
 
-For web and worker, set `POSTGRES_IAM_AUTH_ENABLED=true`, `POSTGRES_SERVER` to the exact writer proxy hostname,
+For the backend, set `POSTGRES_IAM_AUTH_ENABLED=true`, `POSTGRES_SERVER` to the exact writer proxy hostname,
 `POSTGRES_USER=partner_portal_app`, `POSTGRES_DB`, `POSTGRES_PORT` (default 5432), and `AWS_REGION`.
 Do not inject `POSTGRES_PASSWORD` or set `POSTGRES_URL`. IAM requires the default `postgresql+asyncpg://` prefix,
 task-role `rds-db:connect` permission, and public/system CA roots for verified TLS and hostname checking.
