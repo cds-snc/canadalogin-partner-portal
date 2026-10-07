@@ -161,9 +161,9 @@ Do NOT commit secrets or `.env` files to source control.
 ### PostgreSQL RDS Proxy IAM authentication
 
 Merge/deploy this support only after [infrastructure PR 606](https://github.com/cds-snc/gc-signin-terraform/pull/606)
-and administrative SQL bootstrap are complete. Bootstrap must create `partner_portal_app` with `rds_iam`, scoped
-database/schema grants and ownership needed by startup Alembic migrations. Apply any pending privileged DNR
-role-management migration (`0008_dnr_view_perm`) administratively first; do not give the application role-administration privileges.
+and administrative SQL bootstrap are complete. Bootstrap creates `partner_portal_app` with `rds_iam` and table
+read/write and sequence access only; ownership and migration privileges are deliberately excluded. Startup Alembic
+may fail on pending DDL until separate migration work is complete. This temporary outage is accepted.
 
 For the backend, set `POSTGRES_IAM_AUTH_ENABLED=true`, `POSTGRES_SERVER` to the exact writer proxy hostname,
 `POSTGRES_USER=partner_portal_app`, `POSTGRES_DB`, `POSTGRES_PORT` (default 5432), and `AWS_REGION`.
