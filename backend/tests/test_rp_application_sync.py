@@ -7,9 +7,7 @@ from ibm_verify_community_sdk.applications.models import (
 )
 
 import src.app.services.rp_application_service as rp_application_sync_module
-from src.app.core.config import settings
-from src.app.core.worker.functions import sync_ibm_verify_rp_applications
-from src.app.core.worker.settings import WorkerSettings
+from src.app.core.worker.settings import WorkerSettings, start_arq_service
 from src.app.services.rp_application_service import RPApplicationService
 
 
@@ -84,39 +82,14 @@ class TestRPApplicationServiceSync:
 
 
 class TestWorkerCronConfiguration:
-    def test_worker_settings_registers_cron_jobs(self) -> None:
-        cron_job_names = [job.name for job in WorkerSettings.cron_jobs]
-        assert "sync_ibm_verify_rp_applications" in cron_job_names
+    def test_worker_skips_startup_without_registered_jobs(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        assert WorkerSettings.functions == []
+        assert WorkerSettings.cron_jobs == []
+        assert callable(WorkerSettings.__dict__["on_startup"])
+        assert callable(WorkerSettings.__dict__["on_shutdown"])
+        assert callable(start_arq_service)
 
-        sync_job = WorkerSettings.cron_jobs[cron_job_names.index("sync_ibm_verify_rp_applications")]
-        assert sync_job.minute == {0, 10, 20, 30, 40, 50}
-        assert sync_job.run_at_startup is True
-
-        if settings.LOAD_MAU_ENABLED:
-            assert "load_mau_data" in cron_job_names
-            mau_job = WorkerSettings.cron_jobs[cron_job_names.index("load_mau_data")]
-            assert mau_job.hour is None
-            assert mau_job.minute == 55
-            assert mau_job.run_at_startup is True
-
-
-class TestWorkerSyncJob:
-    @pytest.mark.asyncio
-    async def test_sync_ibm_verify_rp_applications_uses_shared_service_and_db(self, monkeypatch: pytest.MonkeyPatch) -> None:
-        db = Mock()
-        mock_session = Mock()
-        mock_session.__aenter__ = AsyncMock(return_value=db)
-        mock_session.__aexit__ = AsyncMock(return_value=None)
-
-        mock_client = Mock()
-        mock_service = Mock()
-        mock_service.sync_rp_applications_from_ibm_verify = AsyncMock(return_value={"created": 1, "updated": 0, "skipped": 0, "processed": 1})
-
-        monkeypatch.setattr("src.app.core.worker.functions.get_ibm_sv_admin_client", AsyncMock(return_value=mock_client))
-        monkeypatch.setattr("src.app.core.worker.functions.local_session", Mock(return_value=mock_session))
-        monkeypatch.setattr("src.app.core.worker.functions.get_rp_application_service", Mock(return_value=mock_service))
-
-        result = await sync_ibm_verify_rp_applications({"job_id": "job-1"})
-
-        assert result == {"created": 1, "updated": 0, "skipped": 0, "processed": 1}
-        mock_service.sync_rp_applications_from_ibm_verify.assert_awaited_once_with(db=db, ibm_admin_client=mock_client)
+        run_worker = Mock()
+        monkeypatch.setattr("src.app.core.worker.settings.run_worker", run_worker)
+        start_arq_service()
+        run_worker.assert_not_called()
