@@ -1,5 +1,5 @@
 import os
-from enum import Enum
+from enum import StrEnum
 from typing import Literal
 
 from pydantic import SecretStr, computed_field, model_validator
@@ -236,7 +236,7 @@ class IBMVerifySettings(BaseSettings):
     IBM_SV_ADMIN_CLIENT_SECRET: SecretStr | None = None
 
 
-class EnvironmentOption(str, Enum):
+class EnvironmentOption(StrEnum):
     LOCAL = "local"
     DEVELOPMENT = "dev"
     TESTING = "test"
