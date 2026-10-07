@@ -1,9 +1,12 @@
 import os
+import re
 from enum import StrEnum
 from typing import Literal
+from urllib.parse import quote
 
 from pydantic import SecretStr, computed_field, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
+from sqlalchemy.engine import URL
 
 
 class AppSettings(BaseSettings):
@@ -140,11 +143,42 @@ class PostgresSettings(DatabaseSettings):
     POSTGRES_SYNC_PREFIX: str = "postgresql://"
     POSTGRES_ASYNC_PREFIX: str = "postgresql+asyncpg://"
     POSTGRES_URL: str | None = None
+    POSTGRES_IAM_AUTH_ENABLED: bool = False
+    POSTGRES_READER_SERVER: str | None = None
+    AWS_REGION: str | None = None
+
+    @model_validator(mode="after")
+    def _validate_postgres_iam(self) -> "PostgresSettings":
+        if not self.POSTGRES_IAM_AUTH_ENABLED:
+            return self
+        if self.POSTGRES_URL is not None:
+            raise ValueError("POSTGRES_URL cannot be used with POSTGRES_IAM_AUTH_ENABLED")
+        if self.POSTGRES_ASYNC_PREFIX != "postgresql+asyncpg://":
+            raise ValueError("IAM authentication requires POSTGRES_ASYNC_PREFIX=postgresql+asyncpg://")
+        for field in ("POSTGRES_SERVER", "POSTGRES_USER", "POSTGRES_DB"):
+            value = getattr(self, field)
+            if field not in self.model_fields_set or not value.strip() or value != value.strip():
+                raise ValueError(f"{field} must be explicitly configured and non-empty for IAM authentication")
+        if not re.fullmatch(r"[A-Za-z0-9](?:[A-Za-z0-9.-]*[A-Za-z0-9])?", self.POSTGRES_SERVER):
+            raise ValueError("POSTGRES_SERVER must be a hostname without a scheme or port for IAM authentication")
+        if not 1 <= self.POSTGRES_PORT <= 65535:
+            raise ValueError("POSTGRES_PORT must be between 1 and 65535 for IAM authentication")
+        if not self.AWS_REGION or not re.fullmatch(r"[a-z]{2}(?:-[a-z0-9]+)+-\d+", self.AWS_REGION):
+            raise ValueError("AWS_REGION must be configured with an AWS Region for IAM authentication")
+        return self
 
     @computed_field  # type: ignore[prop-decorator]
     @property
     def POSTGRES_URI(self) -> str:
-        credentials = f"{self.POSTGRES_USER}:{self.POSTGRES_PASSWORD}"
+        if self.POSTGRES_IAM_AUTH_ENABLED:
+            return URL.create(
+                "postgresql+asyncpg",
+                username=self.POSTGRES_USER,
+                host=self.POSTGRES_SERVER,
+                port=self.POSTGRES_PORT,
+                database=self.POSTGRES_DB,
+            ).render_as_string().split("://", 1)[1]
+        credentials = f"{quote(self.POSTGRES_USER, safe='')}:{quote(self.POSTGRES_PASSWORD, safe='')}"
         location = f"{self.POSTGRES_SERVER}:{self.POSTGRES_PORT}/{self.POSTGRES_DB}"
         return f"{credentials}@{location}"
 
