@@ -1,5 +1,41 @@
 # Changelog
 
+## [1.4.0](https://github.com/cds-snc/canadalogin-partner-portal/compare/v1.3.1...v1.4.0) (2026-10-07)
+
+
+### Features
+
+* account not found ([#233](https://github.com/cds-snc/canadalogin-partner-portal/issues/233)) ([620c75f](https://github.com/cds-snc/canadalogin-partner-portal/commit/620c75fc5bc8f1cc1100f89c9c5da353389a25c3))
+* add application environments page and update shared shell ([#218](https://github.com/cds-snc/canadalogin-partner-portal/issues/218)) ([be0e6ae](https://github.com/cds-snc/canadalogin-partner-portal/commit/be0e6aecdb781c8690bd2b4b40636a82fd3f6d6f))
+* **application-environments:** complete environment submission flow ([#246](https://github.com/cds-snc/canadalogin-partner-portal/issues/246)) ([a19c241](https://github.com/cds-snc/canadalogin-partner-portal/commit/a19c241bd532963782a6a835c93d47012d9c89f2))
+* **application-environments:** persist submitted environment configurations ([a19c241](https://github.com/cds-snc/canadalogin-partner-portal/commit/a19c241bd532963782a6a835c93d47012d9c89f2))
+* **application-erd:** add application configuration data model ([#211](https://github.com/cds-snc/canadalogin-partner-portal/issues/211)) ([46db667](https://github.com/cds-snc/canadalogin-partner-portal/commit/46db667d2224957e48bf95026ca5854ecf42482b))
+* **applications:** add role-scoped ERD application catalog ([#223](https://github.com/cds-snc/canadalogin-partner-portal/issues/223)) ([e656494](https://github.com/cds-snc/canadalogin-partner-portal/commit/e6564942bf83556222a87b51b839bfde4eab2d29))
+* authenticate database connections with IAM ([#261](https://github.com/cds-snc/canadalogin-partner-portal/issues/261)) ([9affd1d](https://github.com/cds-snc/canadalogin-partner-portal/commit/9affd1d46bbd587c8386f6a1b3d9443f4b0a3281))
+* new signed out page logic ([#237](https://github.com/cds-snc/canadalogin-partner-portal/issues/237)) ([7664a00](https://github.com/cds-snc/canadalogin-partner-portal/commit/7664a00d866448c452b23522992ddf87edd5cccf))
+* partner group role mapping ([#214](https://github.com/cds-snc/canadalogin-partner-portal/issues/214)) ([5f7a826](https://github.com/cds-snc/canadalogin-partner-portal/commit/5f7a826cf1fb045288708d9aaa38e96ff0e4ebe6))
+
+
+### Bug Fixes
+
+* 244 UI fix for all authentication design ([#245](https://github.com/cds-snc/canadalogin-partner-portal/issues/245)) ([d540ea1](https://github.com/cds-snc/canadalogin-partner-portal/commit/d540ea1d0bd953b3af67cf819183f215231c5edd))
+* 258 remove backend sync job ([#259](https://github.com/cds-snc/canadalogin-partner-portal/issues/259)) ([c6f3ddc](https://github.com/cds-snc/canadalogin-partner-portal/commit/c6f3ddc2931c1e85ef067525db27bc6ce81a5534))
+* account not found width adjustment ([#254](https://github.com/cds-snc/canadalogin-partner-portal/issues/254)) ([66cdeff](https://github.com/cds-snc/canadalogin-partner-portal/commit/66cdeffc5a89ecb2c4127a50da02bb6bae2b1939))
+* **frontend:** refine navigation and environment page presentation ([#247](https://github.com/cds-snc/canadalogin-partner-portal/issues/247)) ([3a84c16](https://github.com/cds-snc/canadalogin-partner-portal/commit/3a84c1677e7970b440421994733bd28e34a85036))
+* home page refine ([#231](https://github.com/cds-snc/canadalogin-partner-portal/issues/231)) ([7b081ec](https://github.com/cds-snc/canadalogin-partner-portal/commit/7b081ec3807c02f92452d02e036c4a9692df9125))
+* new term and condition logic ([#232](https://github.com/cds-snc/canadalogin-partner-portal/issues/232)) ([813e63a](https://github.com/cds-snc/canadalogin-partner-portal/commit/813e63aef75dd5cacfde898db6fee4fbf9dca2f4))
+* quick fix ft-build error ([#252](https://github.com/cds-snc/canadalogin-partner-portal/issues/252)) ([4f23510](https://github.com/cds-snc/canadalogin-partner-portal/commit/4f23510dc4178dda8b1c62545b3f4b44ec3cbf9e))
+* refactor 404 page ([#248](https://github.com/cds-snc/canadalogin-partner-portal/issues/248)) ([74939f5](https://github.com/cds-snc/canadalogin-partner-portal/commit/74939f503d7c6a3de2fa8a37a0bdc3adb3cd7626))
+* remove date modified ([#243](https://github.com/cds-snc/canadalogin-partner-portal/issues/243)) ([89d3792](https://github.com/cds-snc/canadalogin-partner-portal/commit/89d37923901c5891297454872ca9404a2cfea38a))
+* session timeout modal ([#234](https://github.com/cds-snc/canadalogin-partner-portal/issues/234)) ([5605dd3](https://github.com/cds-snc/canadalogin-partner-portal/commit/5605dd3e95c6c8f34abfccc9e7c46be4eff8b3e5))
+* Stop deploying the unused worker service ([#260](https://github.com/cds-snc/canadalogin-partner-portal/issues/260)) ([20e5e41](https://github.com/cds-snc/canadalogin-partner-portal/commit/20e5e41d60cea24cec00733475a379a0982c50d2))
+* support page and generic error page refactor ([#257](https://github.com/cds-snc/canadalogin-partner-portal/issues/257)) ([d3e478f](https://github.com/cds-snc/canadalogin-partner-portal/commit/d3e478f0c121bef54ebf1f935e0158f3e97f6369))
+
+
+### Continuous Integration
+
+* migrate partner portal to central release pipeline ([#215](https://github.com/cds-snc/canadalogin-partner-portal/issues/215)) ([328ea7a](https://github.com/cds-snc/canadalogin-partner-portal/commit/328ea7af3d019ff762df67b719b816826ebe6cd1))
+
 ## [1.3.1](https://github.com/cds-snc/canadalogin-partner-portal/compare/v1.3.0...v1.3.1) (2026-09-11)
 
 
