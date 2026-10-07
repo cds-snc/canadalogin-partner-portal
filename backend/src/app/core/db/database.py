@@ -1,13 +1,13 @@
 import asyncio
 import threading
 from collections.abc import AsyncGenerator
-from typing import Any
 
-from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
+from sqlalchemy.ext.asyncio import AsyncEngine, async_sessionmaker
 from sqlalchemy.ext.asyncio.session import AsyncSession
 from sqlalchemy.orm import DeclarativeBase, MappedAsDataclass
 
 from ..config import settings
+from .connection import build_async_engine, get_database_url
 
 
 class Base(DeclarativeBase, MappedAsDataclass):
@@ -16,19 +16,19 @@ class Base(DeclarativeBase, MappedAsDataclass):
 
 DATABASE_URI = settings.POSTGRES_URI
 DATABASE_PREFIX = settings.POSTGRES_ASYNC_PREFIX
-DATABASE_URL = f"{DATABASE_PREFIX}{DATABASE_URI}"
+DATABASE_URL = get_database_url(settings)
 
 _lock = threading.Lock()
-_engines: dict[int, Any] = {}
+_engines: dict[int, AsyncEngine] = {}
 _sessions: dict[int, async_sessionmaker[AsyncSession]] = {}
 
 
-def get_async_engine():
+def get_async_engine() -> AsyncEngine:
     loop = asyncio.get_running_loop()
     loop_id = id(loop)
     with _lock:
         if loop_id not in _engines:
-            _engines[loop_id] = create_async_engine(DATABASE_URL, echo=False, future=True)
+            _engines[loop_id] = build_async_engine(settings)
         return _engines[loop_id]
 
 

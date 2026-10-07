@@ -158,6 +158,23 @@ docker compose up --build
 
 Do NOT commit secrets or `.env` files to source control.
 
+### PostgreSQL RDS Proxy IAM authentication
+
+Merge/deploy this support only after [infrastructure PR 606](https://github.com/cds-snc/gc-signin-terraform/pull/606)
+and administrative SQL bootstrap are complete. Bootstrap must create `partner_portal_app` with `rds_iam`, scoped
+database/schema grants and ownership needed by startup Alembic migrations. Apply any pending privileged DNR
+role-management migration (`0008_dnr_view_perm`) administratively first; do not give the application role-administration privileges.
+
+For web and worker, set `POSTGRES_IAM_AUTH_ENABLED=true`, `POSTGRES_SERVER` to the exact writer proxy hostname,
+`POSTGRES_USER=partner_portal_app`, `POSTGRES_DB`, `POSTGRES_PORT` (default 5432), and `AWS_REGION`.
+Do not inject `POSTGRES_PASSWORD` or set `POSTGRES_URL`. IAM requires the default `postgresql+asyncpg://` prefix,
+task-role `rds-db:connect` permission, and public/system CA roots for verified TLS and hostname checking.
+Runtime and startup Alembic generate a fresh token per physical connection using SDK-managed credentials;
+tokens are never stored in the database URL. `POSTGRES_READER_SERVER` is optional configuration only, with no reader routing.
+
+Local PostgreSQL password mode remains the default (`POSTGRES_IAM_AUTH_ENABLED=false`). `ALEMBIC_DRY_RUN=1`
+retains its local SQLite behavior, but is rejected when IAM is enabled rather than silently bypassing it.
+
 
 ## Testing
 
