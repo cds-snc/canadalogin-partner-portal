@@ -162,14 +162,14 @@ Do NOT commit secrets or `.env` files to source control.
 
 Merge/deploy this support only after [infrastructure PR 606](https://github.com/cds-snc/gc-signin-terraform/pull/606)
 and administrative SQL bootstrap are complete. Bootstrap creates `partner_portal_app` with `rds_iam` and table
-read/write and sequence access only; ownership and migration privileges are deliberately excluded. Startup Alembic
-may fail on pending DDL until separate migration work is complete. This temporary outage is accepted.
+read/write and sequence access only; ownership and migration privileges are deliberately excluded. Infrastructure PR 606
+starts Gunicorn directly without Alembic. Run migrations separately with an authorized identity; missing schema can still break workloads.
 
 For the backend, set `POSTGRES_IAM_AUTH_ENABLED=true`, `POSTGRES_SERVER` to the exact writer proxy hostname,
 `POSTGRES_USER=partner_portal_app`, `POSTGRES_DB`, `POSTGRES_PORT` (default 5432), and `AWS_REGION`.
 Do not inject `POSTGRES_PASSWORD` or set `POSTGRES_URL`. IAM requires the default `postgresql+asyncpg://` prefix,
 task-role `rds-db:connect` permission, and public/system CA roots for verified TLS and hostname checking.
-Runtime and startup Alembic generate a fresh token per physical connection using SDK-managed credentials;
+Runtime and manually invoked Alembic generate a fresh token per physical connection using SDK-managed credentials;
 tokens are never stored in the database URL. `POSTGRES_READER_SERVER` is optional configuration only, with no reader routing.
 
 Local PostgreSQL password mode remains the default (`POSTGRES_IAM_AUTH_ENABLED=false`). `ALEMBIC_DRY_RUN=1`
