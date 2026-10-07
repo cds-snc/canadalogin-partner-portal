@@ -131,6 +131,9 @@ async def test_tokens_only_for_new_physical_connections_with_verified_tls(monkey
     for _ in range(3):
         physical = Mock()
         physical.set_type_codec = AsyncMock()
+        physical.fetchrow = AsyncMock()
+        physical.transaction.return_value.start = AsyncMock()
+        physical.transaction.return_value.rollback = AsyncMock()
         physical.close = AsyncMock()
         physical.is_closed.return_value = False
         physical_connections.append(physical)
@@ -148,6 +151,12 @@ async def test_tokens_only_for_new_physical_connections_with_verified_tls(monkey
         expected_connections = 2 if poolclass else 1
         assert connect.await_count == expected_connections
         assert rds.generate_db_auth_token.call_count == expected_connections
+        if poolclass:
+            physical_connections[0].fetchrow.assert_not_awaited()
+        else:
+            physical_connections[0].fetchrow.assert_awaited_once_with(";")
+            physical_connections[0].transaction.return_value.start.assert_awaited_once_with()
+            physical_connections[0].transaction.return_value.rollback.assert_awaited_once_with()
 
         # Disposing the pool forces a new physical connection and a fresh token.
         await engine.dispose()
