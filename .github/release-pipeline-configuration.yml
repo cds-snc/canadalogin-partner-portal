@@ -18,7 +18,7 @@ frontend:
       default: /applications
     VITE_SESSION_WARNING_AFTER_MINUTES:
       var: VITE_SESSION_WARNING_AFTER_MINUTES
-      default: "25"
+      default: "20"
     VITE_SESSION_COUNTDOWN_MINUTES:
       var: VITE_SESSION_COUNTDOWN_MINUTES
       default: "5"
