@@ -29,7 +29,7 @@ def build_async_engine(db_settings: PostgresSettings, **engine_options: Any) -> 
         # RDS Proxy uses public certificates, not the direct-RDS-only CA bundle.
         connect_args["ssl"] = ssl.create_default_context()
 
-if db_settings.POSTGRES_IAM_AUTH_ENABLED:
+    if db_settings.POSTGRES_IAM_AUTH_ENABLED:
         engine_options.setdefault("pool_pre_ping", True)
 
     engine = create_async_engine(url, echo=False, future=True, connect_args=connect_args, **engine_options)
