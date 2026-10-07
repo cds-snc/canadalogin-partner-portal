@@ -30,4 +30,4 @@ backend:
   dockerfile: backend/Dockerfile
   build_args:
     APP_VERSION: "{release_version}"
-  services: [web, worker]
+  services: [web]
