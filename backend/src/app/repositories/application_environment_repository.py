@@ -47,11 +47,14 @@ class ApplicationEnvironmentRepository:
             select(ApplicationConfiguration.id)
             .select_from(ApplicationConfiguration)
             .join(Application, Application.id == ApplicationConfiguration.application_id)
+            .join(Tenant, Tenant.id == ApplicationConfiguration.tenant_id)
             .where(
                 Application.uuid == application_uuid,
                 Application.is_deleted.is_(False),
                 ApplicationConfiguration.uuid == source_environment_uuid,
                 ApplicationConfiguration.is_deleted.is_(False),
+                Tenant.code.in_(("test", "staging")),
+                Tenant.is_deleted.is_(False),
             )
         )
         return (await db.execute(statement)).scalar_one_or_none() is not None

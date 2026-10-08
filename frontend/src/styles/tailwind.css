@@ -15,6 +15,37 @@
 		font-weight: var(--gcds-font-weights-bold) !important;
 	}
 
+	.environment-name-label .label--required {
+		font-weight: var(--gcds-font-weights-regular) !important;
+		margin-left: var(--gcds-spacing-100) !important;
+	}
+
+	.endpoint-label .gcds-label {
+		font-weight: var(--gcds-font-weights-bold) !important;
+	}
+
+	.endpoint-label .label--required {
+		font-weight: var(--gcds-font-weights-regular) !important;
+		margin-left: var(--gcds-spacing-100) !important;
+	}
+
+	.endpoint-url-row {
+		--gcds-grid-gap-300: 0;
+	}
+
+	.endpoint-label-row {
+		--gcds-grid-gap-300: var(--gcds-spacing-100);
+	}
+
+	.post-logout-url-row {
+		--gcds-grid-gap: 0 !important;
+		--gcds-grid-gap-300: 0 !important;
+	}
+
+	.connect-environment-actions {
+		padding-top: var(--gcds-spacing-300) !important;
+	}
+
 	.environment-name-input {
 		--gcds-input-margin: 0;
 	}
