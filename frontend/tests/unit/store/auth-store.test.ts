@@ -4,6 +4,7 @@ import { authStore, resetAuthStore } from "@/store";
 vi.mock("@/fetch/auth", () => ({
 	getCurrentUser: vi.fn(),
 	getOidcLoginUrl: vi.fn((): string => "http://localhost:8000/api/v1/auth/oidc/login"),
+	logoutAndRedirect: vi.fn((): Promise<void> => Promise.resolve()),
 }));
 
 type DeferredPromise<T> = {
@@ -94,24 +95,12 @@ describe("authStore", () => {
 		});
 	});
 
-	it("redirects to the backend logout endpoint with manual state", async () => {
-		let locationHref = "";
+	it("requests a manual backend logout after clearing auth state", async () => {
+		const { logoutAndRedirect } = await import("@/fetch/auth");
 
-		Object.defineProperty(window, "location", {
-			configurable: true,
-			value: {
-				get href(): string {
-					return locationHref;
-				},
-				set href(value: string) {
-					locationHref = value;
-				},
-			},
-		});
+		await authStore.getState().logout();
 
-		authStore.getState().logout();
-
-		expect(locationHref).toBe("/api/v1/logout?reason=manual");
+		expect(logoutAndRedirect).toHaveBeenCalledWith("manual");
 		expect(authStore.getState()).toMatchObject({
 			currentUser: null,
 			hasHydrated: true,

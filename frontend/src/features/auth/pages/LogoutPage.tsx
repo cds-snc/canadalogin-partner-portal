@@ -2,7 +2,7 @@ import { useEffect } from "react";
 import { useTranslation } from "react-i18next";
 import type { FunctionComponent } from "@/common/types";
 import { Heading, Text } from "@/components/ui";
-import { buildApiUrl } from "@/fetch/base-url";
+import { logoutAndRedirect } from "@/fetch/auth";
 import { useAuthStore } from "@/store";
 
 type LogoutReason = "session-expired";
@@ -20,9 +20,7 @@ export const LogoutPage = ({ reason }: LogoutPageProps): FunctionComponent => {
 		reset();
 
 		const timer = globalThis.setTimeout(() => {
-			window.location.href = buildApiUrl(
-				`/api/v1/logout?reason=${logoutReason}`
-			);
+			void logoutAndRedirect(logoutReason);
 		}, 1000);
 
 		return (): void => {

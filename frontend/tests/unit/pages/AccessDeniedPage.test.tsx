@@ -1,9 +1,10 @@
 import type { PropsWithChildren, ReactElement } from "react";
-import { act, fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { act, fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { AccessDeniedPage } from "@/features/auth/pages/AccessDeniedPage";
 
-const { resetMock } = vi.hoisted(() => ({
+const { logoutAndRedirectMock, resetMock } = vi.hoisted(() => ({
+	logoutAndRedirectMock: vi.fn((): Promise<void> => Promise.resolve()),
 	resetMock: vi.fn(),
 }));
 
@@ -59,28 +60,18 @@ vi.mock("@/store", () => ({
 		selector({ reset: resetMock }),
 }));
 
+vi.mock("@/fetch/auth", () => ({
+	logoutAndRedirect: logoutAndRedirectMock,
+}));
+
 afterEach(() => {
 	vi.useRealTimers();
 });
 
 describe("AccessDeniedPage", () => {
-	let locationHref = "";
-
 	beforeEach(() => {
-		locationHref = "";
+		logoutAndRedirectMock.mockReset();
 		resetMock.mockReset();
-
-		Object.defineProperty(window, "location", {
-			configurable: true,
-			value: {
-				get href(): string {
-					return locationHref;
-				},
-				set href(value: string) {
-					locationHref = value;
-				},
-			},
-		});
 	});
 
 	it("renders denied content and a sign-out action", async () => {
@@ -103,9 +94,7 @@ describe("AccessDeniedPage", () => {
 		fireEvent.click(signOutButton);
 		expect(resetMock).toHaveBeenCalledTimes(1);
 
-		await waitFor(() => {
-			expect(locationHref).toBe("http://localhost:8000/api/v1/logout");
-		});
+		expect(logoutAndRedirectMock).toHaveBeenCalledWith("manual");
 	});
 
 	it("auto-signs out after 10 seconds and navigates home", async () => {
@@ -118,7 +107,7 @@ describe("AccessDeniedPage", () => {
 		await Promise.resolve();
 		await Promise.resolve();
 
-		expect(locationHref).toBe("http://localhost:8000/api/v1/logout");
+		expect(logoutAndRedirectMock).toHaveBeenCalledWith("manual");
 		expect(resetMock).toHaveBeenCalledTimes(1);
 	});
 

@@ -10,6 +10,7 @@ from starlette.requests import Request
 from starsessions import InMemoryStore
 
 from src.app.api.dependencies import get_auth_service
+from src.app.api.v1 import router as api_v1_router
 from src.app.api.v1.logout import logout
 from src.app.api.v1.logout import router as logout_router
 from src.app.core.config import settings
@@ -41,8 +42,11 @@ class TestLogoutEndpoint:
 
         result = await logout(request, mock_service)
 
-        assert result == LogoutResponse(message="Logged out successfully")
-        mock_service.logout.assert_awaited_once_with(request=request)
+        assert result == LogoutResponse(
+            message="Logged out successfully",
+            redirect_url=settings.OIDC_POST_LOGOUT_REDIRECT_URI,
+        )
+        mock_service.logout.assert_awaited_once_with(request=request, state=None)
 
     @pytest.mark.asyncio
     async def test_logout_returns_oidc_logout_details_when_service_provides_them(self, mock_db):
@@ -56,11 +60,12 @@ class TestLogoutEndpoint:
                     "end_session_endpoint": "https://example.verify.ibm.com/logout",
                     "id_token_hint": "id-token-value",
                     "post_logout_redirect_uri": "https://portal.example.gc.ca/logout-complete",
+                    "state": "manual.opaque-state",
                 },
             }
         )
 
-        result = await logout(request, mock_service)
+        result = await logout(request, mock_service, reason="manual")
 
         assert result == LogoutResponse(
             message="Logged out successfully",
@@ -68,8 +73,17 @@ class TestLogoutEndpoint:
                 end_session_endpoint="https://example.verify.ibm.com/logout",
                 id_token_hint="id-token-value",
                 post_logout_redirect_uri="https://portal.example.gc.ca/logout-complete",
+                state="manual.opaque-state",
+            ),
+            redirect_url=(
+                "https://example.verify.ibm.com/logout?id_token_hint=id-token-value"
+                "&post_logout_redirect_uri=https%3A%2F%2Fportal.example.gc.ca%2Flogout-complete"
+                "&state=manual.opaque-state"
             ),
         )
+        mock_service.logout.assert_awaited_once()
+        service_state = mock_service.logout.await_args.kwargs["state"]
+        assert service_state.startswith("manual.")
 
 
 class TrackingInMemoryStore(InMemoryStore):
@@ -117,6 +131,10 @@ def build_logout_app(store: TrackingInMemoryStore) -> TestClient:
         request.session["oidc_logout"] = {"id_token": "id-token-value"}
         return {"message": "denied OIDC session created"}
 
+    @router.post("/api/v1/auth/oidc/backchannel-logout")
+    async def backchannel_logout() -> dict[str, str]:
+        return {"message": "backchannel logout received"}
+
     router.include_router(logout_router)
 
     @asynccontextmanager
@@ -126,6 +144,7 @@ def build_logout_app(store: TrackingInMemoryStore) -> TestClient:
     with (
         patch("src.app.core.setup.get_redis_session_store", return_value=store),
         patch.object(settings, "SESSION_COOKIE_DOMAIN", None),
+        patch.object(settings, "CORS_ORIGINS", ["https://portal.example.gc.ca"]),
     ):
         app = create_application(router, settings=settings, create_tables_on_start=False, lifespan=noop_lifespan)
 
@@ -137,8 +156,92 @@ def build_logout_app(store: TrackingInMemoryStore) -> TestClient:
     return TestClient(app)
 
 
+def build_csrf_api_app(store: TrackingInMemoryStore) -> TestClient:
+    router = APIRouter(prefix="/api")
+    router.include_router(api_v1_router)
+
+    @asynccontextmanager
+    async def noop_lifespan(_: object) -> AsyncIterator[None]:
+        yield
+
+    with (
+        patch("src.app.core.setup.get_redis_session_store", return_value=store),
+        patch.object(settings, "SESSION_COOKIE_DOMAIN", None),
+        patch.object(settings, "CSRF_COOKIE_DOMAIN", None),
+        patch.object(settings, "CORS_ORIGINS", ["https://portal.example.gc.ca"]),
+    ):
+        app = create_application(router, settings=settings, create_tables_on_start=False, lifespan=noop_lifespan)
+
+    return TestClient(app)
+
+
+def csrf_headers(client: TestClient) -> dict[str, str]:
+    csrf_token = client.cookies.get(settings.CSRF_COOKIE_NAME)
+    assert csrf_token
+    return {"x-csrftoken": csrf_token}
+
+
+class TestCsrfProtection:
+    def test_csrf_endpoint_sets_readable_noncacheable_cookie(self) -> None:
+        with build_csrf_api_app(TrackingInMemoryStore()) as client:
+            response = client.get("/api/v1/csrf")
+
+        assert response.status_code == 204
+        assert response.headers["cache-control"] == "no-store"
+        assert client.cookies.get(settings.CSRF_COOKIE_NAME)
+        assert "httponly" not in response.headers["set-cookie"].lower()
+
+    def test_session_cookie_requests_require_the_matching_csrf_token(self) -> None:
+        store = TrackingInMemoryStore()
+
+        with build_logout_app(store) as client:
+            login_response = client.post("/session-login")
+            csrf_token = client.cookies.get(settings.CSRF_COOKIE_NAME)
+
+            assert login_response.status_code == 200
+            assert csrf_token
+
+            rejected_response = client.post("/session-denied")
+
+            assert rejected_response.status_code == 403
+            assert rejected_response.json()["error"]["code"] == "csrf_error"
+            assert rejected_response.headers["content-type"].startswith("application/json")
+
+            mismatched_response = client.post("/session-denied", headers={"x-csrftoken": "wrong-token"})
+            assert mismatched_response.status_code == 403
+
+            accepted_response = client.post("/session-denied", headers={"x-csrftoken": csrf_token})
+
+        assert accepted_response.status_code == 200
+
+    def test_bearer_only_request_does_not_require_a_csrf_token(self) -> None:
+        with build_logout_app(TrackingInMemoryStore()) as client:
+            response = client.post("/session-denied", headers={"Authorization": "Bearer access-token"})
+
+        assert response.status_code == 200
+
+    def test_oidc_backchannel_logout_is_exempt_with_a_session_cookie(self) -> None:
+        with build_logout_app(TrackingInMemoryStore()) as client:
+            login_response = client.post("/session-login")
+            assert login_response.status_code == 200
+
+            response = client.post("/api/v1/auth/oidc/backchannel-logout")
+
+        assert response.status_code == 200
+
+    def test_csrf_rejection_keeps_cors_headers(self) -> None:
+        with build_logout_app(TrackingInMemoryStore()) as client:
+            login_response = client.post("/session-login")
+            assert login_response.status_code == 200
+
+            response = client.post("/session-denied", headers={"Origin": "https://portal.example.gc.ca"})
+
+        assert response.status_code == 403
+        assert response.headers["access-control-allow-origin"] == "https://portal.example.gc.ca"
+
+
 class TestLogoutSessionStoreInvalidation:
-    def test_get_logout_passes_state_to_oidc_provider(self) -> None:
+    def test_post_logout_passes_state_to_oidc_provider(self) -> None:
         store = TrackingInMemoryStore()
         client = Mock()
         client.load_server_metadata = AsyncMock(
@@ -151,18 +254,18 @@ class TestLogoutSessionStoreInvalidation:
             assert denied_response.status_code == 200
 
             with patch("src.app.services.auth_service.get_oidc_client", return_value=client):
-                logout_response = test_client.get(
-                    "/logout?reason=session-expired", follow_redirects=False
+                logout_response = test_client.post(
+                    "/logout?reason=session-expired", headers=csrf_headers(test_client)
                 )
 
-        assert logout_response.status_code == 307
-        query = parse_qs(urlparse(logout_response.headers["location"]).query)
+        assert logout_response.status_code == 200
+        query = parse_qs(urlparse(logout_response.json()["redirectUrl"]).query)
         state = query["state"][0]
         assert state.startswith("session-expired.")
         assert len(state.removeprefix("session-expired.")) >= 8
         assert urlparse(query["post_logout_redirect_uri"][0]).query == ""
 
-    def test_get_logout_clears_cookie_before_redirecting_to_oidc_provider(self) -> None:
+    def test_post_logout_clears_cookie_and_returns_oidc_redirect(self) -> None:
         store = TrackingInMemoryStore()
         client = Mock()
         client.load_server_metadata = AsyncMock(
@@ -175,14 +278,14 @@ class TestLogoutSessionStoreInvalidation:
             assert denied_response.status_code == 200
 
             with patch("src.app.services.auth_service.get_oidc_client", return_value=client):
-                logout_response = test_client.get("/logout", follow_redirects=False)
+                logout_response = test_client.post("/logout", headers=csrf_headers(test_client))
 
-        assert logout_response.status_code == 307
-        assert logout_response.headers["location"].startswith("https://example.verify.ibm.com/logout?")
+        assert logout_response.status_code == 200
+        assert logout_response.json()["redirectUrl"].startswith("https://example.verify.ibm.com/logout?")
         assert store.data == {}
         assert any(settings.SESSION_COOKIE_NAME in cookie for cookie in logout_response.headers.get_list("set-cookie"))
 
-    def test_get_logout_clears_pre_authentication_oauth_state(self) -> None:
+    def test_post_logout_clears_pre_authentication_oauth_state(self) -> None:
         store = TrackingInMemoryStore()
 
         with build_logout_app(store) as client:
@@ -191,13 +294,13 @@ class TestLogoutSessionStoreInvalidation:
             assert pre_auth_response.status_code == 200
             assert len(store.data) == 1
 
-            logout_response = client.get("/logout", follow_redirects=False)
+            logout_response = client.post("/logout", headers=csrf_headers(client))
 
-        assert logout_response.status_code == 307
+        assert logout_response.status_code == 200
         assert store.data == {}
         assert any(settings.SESSION_COOKIE_NAME in cookie for cookie in logout_response.headers.get_list("set-cookie"))
 
-    def test_get_logout_clears_unauthenticated_browser_session(self) -> None:
+    def test_post_logout_clears_unauthenticated_browser_session(self) -> None:
         store = TrackingInMemoryStore()
 
         with build_logout_app(store) as client:
@@ -206,12 +309,26 @@ class TestLogoutSessionStoreInvalidation:
             assert denied_response.status_code == 200
             assert len(store.data) == 1
 
-            logout_response = client.get("/logout", follow_redirects=False)
+            logout_response = client.post("/logout", headers=csrf_headers(client))
 
-        assert logout_response.status_code == 307
-        assert logout_response.headers["location"] == settings.OIDC_POST_LOGOUT_REDIRECT_URI
+        assert logout_response.status_code == 200
+        assert logout_response.json()["redirectUrl"] == settings.OIDC_POST_LOGOUT_REDIRECT_URI
         assert store.data == {}
         assert any(settings.SESSION_COOKIE_NAME in cookie for cookie in logout_response.headers.get_list("set-cookie"))
+
+    def test_legacy_get_logout_does_not_clear_session(self) -> None:
+        store = TrackingInMemoryStore()
+
+        with build_logout_app(store) as client:
+            denied_response = client.post("/session-denied")
+
+            assert denied_response.status_code == 200
+            assert len(store.data) == 1
+
+            logout_response = client.get("/logout")
+
+        assert logout_response.status_code == 405
+        assert len(store.data) == 1
 
     def test_logout_removes_server_side_session_from_store(self) -> None:
         store = TrackingInMemoryStore()
@@ -222,7 +339,9 @@ class TestLogoutSessionStoreInvalidation:
             assert login_response.status_code == 200
             assert len(store.data) == 1
 
-            logout_response = client.post("/logout")
+            csrf_token = client.cookies.get(settings.CSRF_COOKIE_NAME)
+            assert csrf_token
+            logout_response = client.post("/logout", headers={"x-csrftoken": csrf_token})
 
             assert logout_response.status_code == 200
             assert store.data == {}

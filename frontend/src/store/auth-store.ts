@@ -1,7 +1,12 @@
 import { useStore } from "zustand";
 import { createStore } from "zustand/vanilla";
 import { clearBackendActivity } from "@/lib/backend-activity";
-import { getCurrentUser, getOidcLoginUrl, type UserRead } from "@/fetch/auth";
+import {
+	getCurrentUser,
+	getOidcLoginUrl,
+	logoutAndRedirect,
+	type UserRead,
+} from "@/fetch/auth";
 import { appPreferencesStore } from "@/store/app-preferences-store";
 
 type AuthStoreState = {
@@ -92,13 +97,12 @@ const authStore = createStore<AuthStoreState>()((set, get) => {
 			const { language } = appPreferencesStore.getState();
 			window.location.assign(getOidcLoginUrl(language));
 		},
-		logout: (): Promise<void> => {
+		logout: async (): Promise<void> => {
 			sessionVersion += 1;
 			inFlightHydration = null;
 			clearBackendActivity();
 			set((state) => ({ ...state, ...createSessionSnapshot(null) }));
-			window.location.href = "/api/v1/logout?reason=manual";
-			return Promise.resolve();
+			await logoutAndRedirect("manual");
 		},
 		refreshSession: (): Promise<UserRead | null> => runHydration(true),
 		reset: (): void => {

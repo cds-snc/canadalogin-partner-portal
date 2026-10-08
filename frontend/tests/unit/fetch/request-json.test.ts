@@ -26,11 +26,13 @@ describe("requestJson", () => {
 			replace: vi.fn(),
 			search: "",
 		} satisfies Pick<Location, "href" | "pathname" | "replace" | "search">);
+		document.cookie = "csrftoken=test-token; path=/";
 	});
 
 	afterEach(() => {
 		globalThis.fetch = originalFetch;
 		vi.unstubAllGlobals();
+		document.cookie = "csrftoken=; Max-Age=0; path=/";
 		if (originalLocation) {
 			globalThis.location = originalLocation;
 		}
@@ -217,5 +219,61 @@ describe("requestJson", () => {
 		).resolves.toBeNull();
 
 		expect(markBackendActivity).toHaveBeenCalledTimes(1);
+	});
+
+	it("bootstraps one token and adds it to concurrent unsafe requests", async () => {
+		document.cookie = "csrftoken=; Max-Age=0; path=/";
+		globalThis.fetch = vi.fn().mockImplementation(async (input: RequestInfo | URL) => {
+			if (String(input).endsWith("/api/v1/csrf")) {
+				document.cookie = "csrftoken=bootstrap-token; path=/";
+				return { headers: new Headers(), ok: true, status: 204 } as Response;
+			}
+
+			return {
+				headers: new Headers({ "content-type": "application/json" }),
+				json: () => Promise.resolve({ uuid: "item-1" }),
+				ok: true,
+				status: 200,
+			} as Response;
+		});
+
+		await Promise.all([
+			requestJson("/api/v1/posts", { method: "POST" }),
+			requestJson("/api/v1/roles", { method: "POST" }),
+		]);
+
+		const calls = vi.mocked(globalThis.fetch).mock.calls;
+		const bootstrapCalls = calls.filter(([input]) =>
+			String(input).endsWith("/api/v1/csrf")
+		);
+		expect(bootstrapCalls).toHaveLength(1);
+		for (const [, requestInit] of calls.filter(
+			([input]) => !String(input).endsWith("/api/v1/csrf")
+		)) {
+			expect(new Headers(requestInit?.headers).get("x-csrftoken")).toBe(
+				"bootstrap-token"
+			);
+		}
+	});
+
+	it("does not redirect to access-denied for a CSRF rejection", async () => {
+		globalThis.fetch = vi.fn().mockResolvedValue({
+			headers: new Headers({ "content-type": "application/json" }),
+			json: () =>
+				Promise.resolve({
+					error: {
+						code: "csrf_error",
+						message: "CSRF token verification failed",
+					},
+				}),
+			ok: false,
+			status: 403,
+		} as Response);
+
+		await expect(
+			requestJson("/api/v1/posts", { method: "POST" })
+		).rejects.toBeInstanceOf(ForbiddenRequestError);
+
+		expect(window.location.replace).not.toHaveBeenCalled();
 	});
 });

@@ -2,7 +2,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import type { FunctionComponent } from "@/common/types";
 import { Button, Heading, Notice, Text } from "@/components/ui";
-import { buildApiUrl } from "@/fetch/base-url";
+import { logoutAndRedirect } from "@/fetch/auth";
 import { useAuthStore } from "@/store";
 
 type AccessDeniedReason = "concurrent-session-limit";
@@ -34,7 +34,7 @@ export const AccessDeniedPage = ({ reason }: AccessDeniedPageProps): FunctionCom
 
 		hasSignedOut.current = true;
 		reset();
-		window.location.href = buildApiUrl("/api/v1/logout");
+		void logoutAndRedirect("manual");
 	}, [reset]);
 
 	useEffect((): (() => void) => {
