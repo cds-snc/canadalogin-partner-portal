@@ -1,5 +1,5 @@
 from datetime import UTC, datetime, timedelta
-from enum import Enum
+from enum import StrEnum
 from typing import Any
 
 import jwt
@@ -21,7 +21,7 @@ oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/v1/oidc/login")
 optional_oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/v1/oidc/login", auto_error=False)
 
 
-class TokenType(str, Enum):
+class TokenType(StrEnum):
     ACCESS = "access"
     REFRESH = "refresh"
 

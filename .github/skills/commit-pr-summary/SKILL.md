@@ -1,6 +1,6 @@
 ---
 name: commit-pr-summary
-description: "Use when reviewing current uncommitted Git changes to produce a concise Conventional Commit message, pull request title, point-form PR summary, and recommended branch name. Include tracked, staged, and untracked changes without modifying the worktree."
+description: "Use when reviewing current uncommitted Git changes to produce a concise Conventional Commit message, Conventional Commit pull request title, GitHub-flavored point-form PR summary, and recommended branch name. Include tracked, staged, and untracked changes without modifying the worktree."
 argument-hint: "Review the current uncommitted changes and generate commit and PR metadata."
 user-invocable: true
 ---
@@ -35,32 +35,34 @@ Review the current uncommitted worktree and produce concise release metadata. Th
    - `chore`: maintenance that does not fit another type.
    - Add a scope only when it is clear and useful, using a short lowercase hyphenated name.
    - Add `!` for a confirmed breaking change and mention the migration impact briefly.
-5. Write the result using the exact compact format below. Keep the PR summary to 2-5 bullets, focused on behavior and verification. Use imperative, specific wording; do not merely list filenames.
+5. Write the result using the exact GitHub-flavored Markdown format below. Keep the PR summary to 2-5 bullets, focused on behavior and verification. Use imperative, specific wording; do not merely list filenames.
 
 ## Output Format
 
-**Commit message**
+## Commit message
 
 `type(scope): imperative summary`
 
-**PR title**
+## PR title
 
-`Short, user-facing summary`
+`type(scope): imperative summary`
 
-**PR summary**
+## PR summary
 
 - Concise behavior or feature change.
 - Important backend, frontend, data, or configuration impact.
 - Tests or validation added or updated, when present.
 
-**Branch name**
+## Branch name
 
 `type/short-kebab-case-description`
 
 ## Decision Rules
 
 - Use a Conventional Commit whenever the change maps cleanly to a type. Keep the subject in imperative mood, specific, and normally at or below 72 characters with no final period.
-- Make the PR title readable to a reviewer; it may be more descriptive than the commit subject but should describe the same outcome.
+- The PR title must use Conventional Commit syntax: `type(scope): imperative summary`, with an optional scope and optional `!` for a confirmed breaking change. It may use different wording from the commit message but must describe the same outcome.
+- Keep the PR title concise and normally at or below 72 characters with no final period.
+- Return GitHub-flavored Markdown: use `##` headings, backticks for commit/title/branch values, and `-` bullets for the PR summary. Do not return JSON, tables, or unformatted labels.
 - Mention validation only when it is visible in the changes or has been run. Do not claim tests passed if they were not run.
 - Include untracked files in the analysis. If an untracked file appears unrelated, sensitive, or incomplete, call that out in one short note after the required sections.
 - If the worktree contains clearly unrelated changes, still provide one best summary for the dominant cohesive change and add one brief `Note` recommending the changes be split. Do not silently fold unrelated work into the title.
