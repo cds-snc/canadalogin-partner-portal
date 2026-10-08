@@ -28,6 +28,7 @@ frontend:
 
 backend:
   dockerfile: backend/Dockerfile
+  migrations: true
   build_args:
     APP_VERSION: "{release_version}"
   services: [web]
