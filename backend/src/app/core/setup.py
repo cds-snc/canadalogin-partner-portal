@@ -1,3 +1,4 @@
+import re
 from asyncio import Event
 from collections.abc import AsyncGenerator, Callable
 from contextlib import _AsyncGeneratorContextManager, asynccontextmanager
@@ -19,6 +20,7 @@ from ..api.dependencies import get_current_superuser
 from ..core.logger import logging
 from ..core.utils.rate_limit import rate_limiter
 from ..middleware.client_cache_middleware import ClientCacheMiddleware
+from ..middleware.csrf_middleware import CSRFProtectionMiddleware
 from ..middleware.logger_middleware import LoggerMiddleware
 from ..models import *  # noqa: F403
 from ..repositories.dependencies import close_ibm_sv_admin_client as close_ibm_sv_admin_client_dep
@@ -33,6 +35,8 @@ from .config import (
     AppSettings,
     ClientSideCacheSettings,
     CORSSettings,
+    CryptSettings,
+    CSRFSettings,
     DatabaseSettings,
     EnvironmentOption,
     EnvironmentSettings,
@@ -188,6 +192,8 @@ def lifespan_factory(
         | AppSettings
         | ClientSideCacheSettings
         | CORSSettings
+        | CryptSettings
+        | CSRFSettings
         | RedisQueueSettings
         | RedisRateLimiterSettings
         | RedisSessionSettings
@@ -270,6 +276,8 @@ def create_application(
         | AppSettings
         | ClientSideCacheSettings
         | CORSSettings
+        | CryptSettings
+        | CSRFSettings
         | RedisQueueSettings
         | RedisRateLimiterSettings
         | RedisSessionSettings
@@ -358,6 +366,27 @@ def create_application(
             cookie_domain=settings.SESSION_COOKIE_DOMAIN,
             cookie_same_site=settings.SESSION_COOKIE_SAMESITE
         )
+
+        if isinstance(settings, CSRFSettings):
+            csrf_secret = settings.CSRF_SECRET_KEY
+            if csrf_secret is None:
+                if not isinstance(settings, CryptSettings):
+                    raise ValueError("CSRF_SECRET_KEY or SECRET_KEY must be configured")
+                csrf_secret = settings.SECRET_KEY
+            application.add_middleware(
+                CSRFProtectionMiddleware,
+                secret=csrf_secret.get_secret_value(),
+                sensitive_cookies={settings.SESSION_COOKIE_NAME},
+                exempt_urls=[re.compile(r"^/api/v1/auth/oidc/backchannel-logout$")],
+                cookie_name=settings.CSRF_COOKIE_NAME,
+                cookie_domain=settings.CSRF_COOKIE_DOMAIN or settings.SESSION_COOKIE_DOMAIN or None,
+                cookie_secure=(
+                    settings.CSRF_COOKIE_SECURE
+                    if settings.CSRF_COOKIE_SECURE is not None
+                    else settings.SESSION_COOKIE_SECURE
+                ),
+                cookie_samesite=settings.CSRF_COOKIE_SAMESITE or settings.SESSION_COOKIE_SAMESITE,
+            )
 
     if isinstance(settings, ClientSideCacheSettings):
         application.add_middleware(ClientCacheMiddleware, max_age=settings.CLIENT_CACHE_MAX_AGE)
