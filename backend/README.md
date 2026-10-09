@@ -52,6 +52,10 @@ UV_PROJECT_ENVIRONMENT=../.venv uv run uvicorn src.app.main:app --reload --host 
 
 When authoring Alembic migrations in `backend/src/migrations/versions/`, keep the internal `revision` string at 32 characters or fewer. Prefer short symbolic ids; the filename can stay more descriptive if needed.
 
+## Database operator scripts
+
+See [database/scripts](database/scripts/README.md) for separate user, partner, application, and access SQL packages. Each package includes CSV templates, examples, and preview/apply instructions. These data operations are separate from schema migrations.
+
 ## Docker
 
 ```bash

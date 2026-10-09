@@ -8,6 +8,7 @@ Learn how to work with the data-access layer in the FastAPI Boilerplate. This se
 - **[Schemas](schemas.md)** - Validate and serialize data with Pydantic schemas  
 - **[CRUD Operations](crud.md)** - Perform database operations with FastCRUD
 - **[Migrations](migrations.md)** - Manage database schema changes with Alembic
+- **[Database operator scripts](../../../database/scripts/README.md)** - Separate SQL packages, CSV templates, examples, and instructions for users, partners, applications, and access
 
 ## Quick Overview
 
