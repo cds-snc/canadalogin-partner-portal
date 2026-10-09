@@ -68,6 +68,16 @@ export const applicationEnvironmentSchema = z
 		verificationSignatureAlgorithms: z.array(algorithmSchema).min(1),
 	})
 	.superRefine((values, context) => {
+		if (
+			values.tenantCode &&
+			values.environmentName.length + values.tenantCode.length + 1 > 64
+		) {
+			context.addIssue({
+				code: "custom",
+				message: "environmentName",
+				path: ["environmentName"],
+			});
+		}
 		if (values.tenantCode === "") {
 			context.addIssue({
 				code: "custom",
