@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.4.1](https://github.com/cds-snc/canadalogin-partner-portal/compare/v1.4.0...v1.4.1) (2026-10-09)
+
+
+### Bug Fixes
+
+* **application-environment-ui:** Align Application Environment UI with Figma ([#264](https://github.com/cds-snc/canadalogin-partner-portal/issues/264)) ([b1edec3](https://github.com/cds-snc/canadalogin-partner-portal/commit/b1edec3842b79dc70b487a828d1d684c4ed341da))
+
 ## [1.4.0](https://github.com/cds-snc/canadalogin-partner-portal/compare/v1.3.1...v1.4.0) (2026-10-07)
 
 
