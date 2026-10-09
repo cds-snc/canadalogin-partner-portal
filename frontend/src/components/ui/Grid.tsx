@@ -18,6 +18,7 @@ interface GridProps {
 	columnsDesktop?: string;
 	columnsTablet?: string;
 	container?: "full" | "xl" | "lg" | "md" | "sm" | "xs";
+	className?: string;
 	display?: "grid" | "inline-grid";
 	equalRowHeight?: boolean;
 	justifyContent?: ContentValues;
@@ -44,6 +45,7 @@ const Grid: React.FC<GridProps> = React.memo(
 		columnsDesktop,
 		columnsTablet,
 		container,
+		className,
 		display = "grid",
 		equalRowHeight,
 		justifyContent,
@@ -56,6 +58,7 @@ const Grid: React.FC<GridProps> = React.memo(
 		<GcdsGrid
 			alignItems={alignItems}
 			alignment={alignment}
+			className={className}
 			columns={columns}
 			columnsDesktop={columnsDesktop}
 			columnsTablet={columnsTablet}

@@ -25,19 +25,20 @@ const algorithmSchema = z.enum(SIGNING_ALGORITHMS);
 const encryptionKeySchema = z.enum(ENCRYPTION_KEY_ALGORITHMS);
 const encryptionContentSchema = z.enum(ENCRYPTION_CONTENT_ALGORITHMS);
 const tenantCodeSchema = z.enum(["test", "staging"]);
+const clientTypeSchema = z.enum(["public", "confidential"]);
 
 export const applicationEnvironmentSchema = z
 	.object({
 		applicationUrlEn: urlSchema,
 		applicationUrlFr: urlSchema,
-		canDecryptMessages: z.boolean(),
-		canEncryptRequests: z.boolean(),
-		canSignMessages: z.boolean(),
+		canDecryptMessages: z.boolean().nullable(),
+		canEncryptRequests: z.boolean().nullable(),
+		canSignMessages: z.boolean().nullable(),
 		clientAuthMethod: z
 			.enum(["private_key_jwt", "client_secret_basic", "client_secret_post"])
 			.optional(),
-		clientType: z.enum(["public", "confidential"]),
-		copyExisting: z.boolean(),
+		clientType: clientTypeSchema.nullable(),
+		copyExisting: z.boolean().nullable(),
 		decryptionContentAlgorithms: z.array(encryptionContentSchema),
 		decryptionKeyAlgorithms: z.array(encryptionKeySchema),
 		decryptionMessages: z.array(
@@ -52,21 +53,31 @@ export const applicationEnvironmentSchema = z
 			.regex(/^[A-Za-z0-9](?:[A-Za-z0-9-]*[A-Za-z0-9])?$/),
 		jwksUri: optionalUrlSchema,
 		logoutMethod: z.enum(["front_channel", "back_channel"]).optional(),
-		pkceSupported: z.boolean(),
+		pkceSupported: z.boolean().nullable(),
 		postLogoutRedirectUris: z.array(urlSchema).min(1),
 		redirectUris: z.array(urlSchema).min(1),
 		sectorIdentifierUrl: optionalUrlSchema,
-		sharesIdentifier: z.boolean(),
+		sharesIdentifier: z.boolean().nullable(),
 		signOutRequestUrl: optionalUrlSchema,
 		signingMessages: z.array(z.enum(["request_object", "token_endpoint"])),
 		signingSignatureAlgorithms: z.array(algorithmSchema),
-		singleSignOut: z.boolean(),
+		singleSignOut: z.boolean().nullable(),
 		sourceEnvironmentUuid: z.string().optional(),
 		tenantCode: tenantCodeSchema.or(z.literal("")),
 		verificationMessages: z.array(z.enum(["id_token", "userinfo"])).min(1),
 		verificationSignatureAlgorithms: z.array(algorithmSchema).min(1),
 	})
 	.superRefine((values, context) => {
+		if (
+			values.tenantCode &&
+			values.environmentName.length + values.tenantCode.length + 1 > 64
+		) {
+			context.addIssue({
+				code: "custom",
+				message: "environmentName",
+				path: ["environmentName"],
+			});
+		}
 		if (values.tenantCode === "") {
 			context.addIssue({
 				code: "custom",
@@ -79,6 +90,55 @@ export const applicationEnvironmentSchema = z
 				code: "custom",
 				message: "sourceEnvironmentUuid",
 				path: ["sourceEnvironmentUuid"],
+			});
+		}
+		if (values.clientType === null) {
+			context.addIssue({
+				code: "custom",
+				message: "clientType",
+				path: ["clientType"],
+			});
+		}
+		if (values.pkceSupported === null) {
+			context.addIssue({
+				code: "custom",
+				message: "pkceSupported",
+				path: ["pkceSupported"],
+			});
+		}
+		if (values.sharesIdentifier === null) {
+			context.addIssue({
+				code: "custom",
+				message: "sharesIdentifier",
+				path: ["sharesIdentifier"],
+			});
+		}
+		if (values.singleSignOut === null) {
+			context.addIssue({
+				code: "custom",
+				message: "singleSignOut",
+				path: ["singleSignOut"],
+			});
+		}
+		if (values.canSignMessages === null) {
+			context.addIssue({
+				code: "custom",
+				message: "canSignMessages",
+				path: ["canSignMessages"],
+			});
+		}
+		if (values.canEncryptRequests === null) {
+			context.addIssue({
+				code: "custom",
+				message: "canEncryptRequests",
+				path: ["canEncryptRequests"],
+			});
+		}
+		if (values.canDecryptMessages === null) {
+			context.addIssue({
+				code: "custom",
+				message: "canDecryptMessages",
+				path: ["canDecryptMessages"],
 			});
 		}
 		if (values.singleSignOut && !values.logoutMethod) {
@@ -95,7 +155,7 @@ export const applicationEnvironmentSchema = z
 				path: ["signOutRequestUrl"],
 			});
 		}
-		if (values.clientType === "public" && !values.pkceSupported) {
+		if (values.clientType === "public" && values.pkceSupported === false) {
 			context.addIssue({
 				code: "custom",
 				message: "pkceSupported",
@@ -157,14 +217,17 @@ export type ApplicationEnvironmentFormValues = z.infer<
 	typeof applicationEnvironmentSchema
 >;
 
+export const stripEnvironmentTypePrefix = (environmentName: string): string =>
+	environmentName.replace(/^(?:TEST|STAGING)-/, "");
+
 export const DEFAULT_VALUES: ApplicationEnvironmentFormValues = {
 	applicationUrlEn: "",
 	applicationUrlFr: "",
-	canDecryptMessages: false,
-	canEncryptRequests: false,
-	canSignMessages: false,
-	clientType: "confidential",
-	copyExisting: false,
+	canDecryptMessages: null,
+	canEncryptRequests: null,
+	canSignMessages: null,
+	clientType: null,
+	copyExisting: null,
 	decryptionContentAlgorithms: [],
 	decryptionKeyAlgorithms: [],
 	decryptionMessages: [],
@@ -172,15 +235,15 @@ export const DEFAULT_VALUES: ApplicationEnvironmentFormValues = {
 	encryptionKeyAlgorithms: [],
 	environmentName: "",
 	jwksUri: "",
-	pkceSupported: true,
+	pkceSupported: null,
 	postLogoutRedirectUris: [""],
 	redirectUris: [""],
 	sectorIdentifierUrl: "",
-	sharesIdentifier: false,
+	sharesIdentifier: null,
 	signOutRequestUrl: "",
 	signingMessages: [],
 	signingSignatureAlgorithms: [],
-	singleSignOut: false,
+	singleSignOut: null,
 	sourceEnvironmentUuid: "",
 	tenantCode: "",
 	verificationMessages: ["id_token"],
@@ -194,6 +257,13 @@ export const toPayload = (
 	values: ApplicationEnvironmentFormValues
 ): ApplicationEnvironmentCreate => ({
 	...values,
+	canDecryptMessages: values.canDecryptMessages ?? false,
+	canEncryptRequests: values.canEncryptRequests ?? false,
+	canSignMessages: values.canSignMessages ?? false,
+	clientType: values.clientType ?? "confidential",
+	copyExisting: values.copyExisting ?? false,
+	sharesIdentifier: values.sharesIdentifier ?? false,
+	singleSignOut: values.singleSignOut ?? false,
 	tenantCode: tenantCodeSchema.parse(values.tenantCode),
 	clientAuthMethod:
 		values.clientType === "confidential"
@@ -220,7 +290,8 @@ export const toPayload = (
 			? optional(values.jwksUri)
 			: undefined,
 	logoutMethod: values.singleSignOut ? values.logoutMethod : undefined,
-	pkceSupported: values.clientType === "public" ? true : values.pkceSupported,
+	pkceSupported:
+		values.clientType === "public" ? true : (values.pkceSupported ?? false),
 	sectorIdentifierUrl: values.sharesIdentifier
 		? optional(values.sectorIdentifierUrl)
 		: undefined,
@@ -234,4 +305,5 @@ export const toPayload = (
 	sourceEnvironmentUuid: values.copyExisting
 		? optional(values.sourceEnvironmentUuid ?? "")
 		: undefined,
+	environmentName: `${values.tenantCode.toUpperCase()}-${values.environmentName}`,
 });
