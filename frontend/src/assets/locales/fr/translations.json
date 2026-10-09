@@ -69,16 +69,20 @@
 		"title": "À propos du Portail partenaire CanadaLogin"
 	},
 	"support": {
-		"intro": "Trouvez du soutien pour le Portail partenaire CanadaLogin.",
+		"intro": "Obtenez de l'aide avec le Portail partenaire CanadaLogin.",
 		"sectionTroubleshootingItem1Title": "Je n'arrive pas à accéder au portail",
-		"sectionTroubleshootingItem1Body": "Vérifiez que votre adresse courriel est correctement saisie et qu'il s'agit d'une adresse courriel valide du gouvernement du Canada.",
-		"sectionTroubleshootingItem2Title": "Je ne vois pas mon application",
-		"sectionTroubleshootingItem2Body": "Nous n'ajoutons que les applications en production. Pour demander l'ajout d'une application, soumettez un billet.",
-		"sectionTroubleshootingTitle": "Dépannage courant",
-		"sectionRequestBody": "Utilisez le système de billetterie pour demander du soutien. Vous devrez recevoir une invitation et créer un compte Atlassian pour soumettre des demandes.",
-		"submitTicketButton": "Soumettre un billet",
-		"requestAtlassianAccount": "Demander un compte Atlassian",
-		"sectionRequestTitle": "Soumettre une demande",
+		"sectionTroubleshootingItem1Body": "Assurez-vous de vous connecter à CanadaLogin avec la même adresse courriel du gouvernement du Canada que celle utilisée pour configurer votre accès au portail.",
+		"sectionTroubleshootingItem1Followup": "Si vous n'arrivez toujours pas à accéder au portail, communiquez avec votre responsable des relations CanadaLogin.",
+		"sectionTroubleshootingItem2Title": "Je ne vois pas mon application ou mon environnement",
+		"sectionTroubleshootingItem2Body": "Si une application ou un environnement est manquant, <ticketLink>soumettez un billet de soutien</ticketLink> afin que nous puissions vérifier votre accès et la configuration du portail.",
+		"sectionTroubleshootingTitle": "Problèmes courants",
+		"sectionTroubleshootingIntro": "Découvrez quoi faire si vous avez de la difficulté à accéder au portail ou à trouver vos applications et environnements.",
+		"sectionRequestBody": "Utilisez notre système de billetterie pour obtenir de l'aide avec le Portail partenaire CanadaLogin.",
+		"sectionRequestFollowup": "Vous serez dirigé vers notre système de billetterie Atlassian. Vous avez besoin d'un compte Atlassian pour soumettre et suivre vos demandes de soutien.",
+		"submitTicketButton": "Soumettre un billet de soutien",
+		"requestAtlassianAccountTitle": "Vous n'avez pas de compte Atlassian?",
+		"requestAtlassianAccount": "Communiquez avec votre responsable des relations CanadaLogin pour obtenir de l'aide.",
+		"sectionRequestTitle": "Obtenir du soutien",
 		"summary": "Ressources de soutien pour les administrateurs d'applications RP.",
 		"title": "Soutien"
 	},
@@ -111,17 +115,14 @@
 		"requestAccess": "Demander l'accès à l'équipe CanadaLogin."
 	},
 	"genericError": {
-		"dashboardAction": "Aller au tableau de bord",
-		"homeAction": "Aller à l'accueil",
 		"notFoundApplicationsAction": "Aller aux applications",
 		"notFoundBody": "La page que vous cherchez a peut-être été déplacée ou supprimée, ou l'adresse est incorrecte.",
 		"notFoundPartnerPortalAction": "Aller au portail des partenaires CanadaLogin",
 		"notFoundSupportLink": "l'équipe de soutien CanadaLogin",
 		"notFoundSupportPrefix": "Si le problème persiste, communiquez avec",
 		"notFoundTitle": "Nous ne trouvons pas cette page",
-		"title": "Une erreur est survenue",
-		"unexpectedBody": "Une erreur inattendue est survenue lors du chargement de cette page. Réessayez à partir du tableau de bord.",
-		"unexpectedTitle": "Erreur inattendue"
+		"unexpectedBody": "Un problème est survenu lors du chargement de la page. Vous pouvez retourner à CanadaLogin ou réessayer plus tard.",
+		"unexpectedTitle": "Nous éprouvons des difficultés à charger cette page"
 	},
 	"rpDepartmentSetup": {
 		"chooseDepartment": "Choisir une organisation",

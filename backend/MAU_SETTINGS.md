@@ -72,7 +72,6 @@ app-c,105,31,2,103,745,2026-06-15
 
 - Schema / parsing: `backend/src/app/schemas/mau.py` (`MAUCsvRow`)
 - S3 fetching: `backend/src/app/repositories/s3_repository.py`
-- Worker job: `backend/src/app/core/worker/functions.py` (`load_mau_data`)
 - Redis caching: `backend/src/app/services/mau_service.py`
 
 ---

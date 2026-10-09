@@ -1,6 +1,7 @@
 import { useTranslation } from "react-i18next";
 import type { FunctionComponent } from "@/common/types";
-import { Button, Heading, Notice, Text } from "@/components/ui";
+import { Button, Container, Heading, Link, Text } from "@/components/ui";
+import { useSession } from "@/hooks";
 
 export type GenericErrorKind = "not_found" | "unexpected";
 
@@ -12,6 +13,7 @@ export const GenericErrorPage = ({
 	kind,
 }: GenericErrorPageProps): FunctionComponent => {
 	const { t } = useTranslation();
+	const { hasHydrated, isAuthenticated } = useSession();
 	const isNotFound = kind === "not_found";
 	const titleKey = isNotFound
 		? "genericError.notFoundTitle"
@@ -19,21 +21,24 @@ export const GenericErrorPage = ({
 	const bodyKey = isNotFound
 		? "genericError.notFoundBody"
 		: "genericError.unexpectedBody";
+	const actionHref = isAuthenticated ? "/applications" : "/";
+	const actionKey = isAuthenticated
+		? "genericError.notFoundApplicationsAction"
+		: "genericError.notFoundPartnerPortalAction";
 
 	return (
-		<>
-			<Heading tag="h1">{t("genericError.title")}</Heading>
-			<Notice noticeRole="danger" noticeTitle={t(titleKey)} noticeTitleTag="h2">
-				<Text>{t(bodyKey)}</Text>
-			</Notice>
-			<div className="flex flex-wrap gap-150">
-				<Button href="/applications" type="link">
-					{t("genericError.dashboardAction")}
+		<Container alignment="start" id="generic-error-page-content" size="md">
+			<Heading tag="h1">{t(titleKey)}</Heading>
+			<Text>{t(bodyKey)}</Text>
+			<Text>
+				{t("genericError.notFoundSupportPrefix")} {" "}
+				<Link href="/support">{t("genericError.notFoundSupportLink")}</Link>.
+			</Text>
+			{hasHydrated ? (
+				<Button href={actionHref} type="link">
+					{t(actionKey)}
 				</Button>
-				<Button buttonRole="secondary" href="/" type="link">
-					{t("genericError.homeAction")}
-				</Button>
-			</div>
-		</>
+			) : null}
+		</Container>
 	);
 };

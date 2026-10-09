@@ -1,46 +1,56 @@
-import { useTranslation } from "react-i18next";
+import { Trans, useTranslation } from "react-i18next";
 import type { FunctionComponent } from "../common/types";
-import { Button, Heading, Link, Text } from "../components";
+import { Button, Container, Heading, Link, Text } from "../components";
 
 const Support = (): FunctionComponent => {
 	const { t } = useTranslation();
+	const ticketUrl = "https://jtickets.atlassian.net/servicedesk/customer/portal/140";
 
 	return (
-		<>
-			<div className="max-w-3xl">
+		<Container alignment="start" id="support-page-content" size="md">
 				<Heading tag="h1">{t("support.title")}</Heading>
 				<Text>{t("support.intro")}</Text>
-			</div>
 
-			<section>
-				<Heading tag="h2">{t("support.sectionTroubleshootingTitle")}</Heading>
-				<Text marginBottom="100">
-					<strong>{t("support.sectionTroubleshootingItem1Title")}</strong>
-				</Text>
-				<Text>{t("support.sectionTroubleshootingItem1Body")}</Text>
-				<Text marginBottom="100">
-					<strong>{t("support.sectionTroubleshootingItem2Title")}</strong>
-				</Text>
-				<Text>{t("support.sectionTroubleshootingItem2Body")}</Text>
-			</section>
+				<section>
+					<Heading tag="h2">{t("support.sectionTroubleshootingTitle")}</Heading>
+					<Text>{t("support.sectionTroubleshootingIntro")}</Text>
 
-			<section>
-				<Heading tag="h2">{t("support.sectionRequestTitle")}</Heading>
-				<Text>{t("support.sectionRequestBody")}</Text>
-				<Button
-					buttonRole="primary"
-					href="https://jtickets.atlassian.net/servicedesk/customer/portal/140"
-					type="link"
-				>
-					{t("support.submitTicketButton")}
-				</Button>
-				<div className="mt-300">
-					<Link href="mailto:CDS.PartnerSuccessOperations-OperationsSuccesPartenaires.SNC@servicecanada.gc.ca">
+					<Heading tag="h3">
+						{t("support.sectionTroubleshootingItem1Title")}
+					</Heading>
+					<Text>{t("support.sectionTroubleshootingItem1Body")}</Text>
+					<Text>
+						{t("support.sectionTroubleshootingItem1Followup")}
+					</Text>
+
+					<Heading tag="h3">
+						{t("support.sectionTroubleshootingItem2Title")}
+					</Heading>
+					<Text>
+						<Trans
+							components={{ ticketLink: <Link href={ticketUrl}>{" "}</Link> }}
+							i18nKey="support.sectionTroubleshootingItem2Body"
+						/>
+					</Text>
+				</section>
+
+				<section>
+					<Heading tag="h2">{t("support.sectionRequestTitle")}</Heading>
+					<Text>{t("support.sectionRequestBody")}</Text>
+					<Button buttonRole="primary" href={ticketUrl} type="link">
+						{t("support.submitTicketButton")}
+					</Button>
+					<Text marginTop="300">
+						{t("support.sectionRequestFollowup")}
+					</Text>
+					<Heading tag="h3">
+						{t("support.requestAtlassianAccountTitle")}
+					</Heading>
+					<Text>
 						{t("support.requestAtlassianAccount")}
-					</Link>
-				</div>
-			</section>
-		</>
+					</Text>
+				</section>
+		</Container>
 	);
 };
 

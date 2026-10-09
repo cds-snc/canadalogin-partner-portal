@@ -1,6 +1,6 @@
 import { useTranslation } from "react-i18next";
 import type { FunctionComponent } from "@/common/types";
-import { Button, Heading, Link, Text } from "@/components/ui";
+import { Button, Container, Heading, Link, Text } from "@/components/ui";
 import { buildApiUrl } from "@/fetch/base-url";
 import { useAuthStore } from "@/store";
 
@@ -14,7 +14,7 @@ export const AccountNotFoundPage = (): FunctionComponent => {
 	};
 
 	return (
-		<>
+		<Container alignment="start" id="account-not-found-content" size="md">
 			<Heading tag="h1">{t("accountNotFound.title")}</Heading>
 			<Text>{t("accountNotFound.summary")}</Text>
 			<Text marginBottom="0">{t("accountNotFound.reasonIntro")}</Text>
@@ -29,6 +29,6 @@ export const AccountNotFoundPage = (): FunctionComponent => {
 			</Button>
 			<Heading tag="h2">{t("accountNotFound.noAccessTitle")}</Heading>
 			<Link href="/support">{t("accountNotFound.requestAccess")}</Link>
-		</>
+		</Container>
 	);
 };

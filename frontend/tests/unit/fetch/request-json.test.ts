@@ -147,6 +147,23 @@ describe("requestJson", () => {
 				method: "GET",
 			}),
 		).rejects.toBeInstanceOf(ServerRequestError);
+		expect(window.location.replace).toHaveBeenCalledWith(
+			"/error?kind=unexpected"
+		);
+	});
+
+	it("redirects network exceptions to the generic error route", async () => {
+		globalThis.fetch = vi.fn().mockRejectedValue(new TypeError("Failed to fetch"));
+
+		await expect(
+			requestJson("/api/v1/posts", {
+				method: "GET",
+			})
+		).rejects.toThrow("Failed to fetch");
+
+		expect(window.location.replace).toHaveBeenCalledWith(
+			"/error?kind=unexpected"
+		);
 	});
 
 	it("falls back to legacy detail payloads when the backend envelope is absent", async () => {

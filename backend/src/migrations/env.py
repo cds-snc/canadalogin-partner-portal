@@ -7,26 +7,25 @@ from logging.config import fileConfig
 from alembic import context
 from sqlalchemy import create_engine, pool
 from sqlalchemy.engine import Connection
-from sqlalchemy.ext.asyncio import async_engine_from_config
 
 from app.core.config import settings
+from app.core.db.connection import build_async_engine, get_database_url
 from app.core.db.database import Base
 
 # this is the Alembic Config object, which provides
 # access to the values within the .ini file in use.
 config = context.config
 
-config.set_main_option(
-    "sqlalchemy.url",
-    f"{settings.POSTGRES_ASYNC_PREFIX}{settings.POSTGRES_USER}:{settings.POSTGRES_PASSWORD}@{settings.POSTGRES_SERVER}:{settings.POSTGRES_PORT}/{settings.POSTGRES_DB}",
-)
+database_url = get_database_url(settings)
 
 # If running a dry-run autogenerate (no existing DB), allow overriding the DB URL
 # by setting ALEMBIC_DRY_RUN=1 in the environment. This helps generate a clean
 # initial migration without requiring the project's production DB state.
 if os.getenv("ALEMBIC_DRY_RUN") == "1":
+    if settings.POSTGRES_IAM_AUTH_ENABLED:
+        raise ValueError("ALEMBIC_DRY_RUN cannot be used with POSTGRES_IAM_AUTH_ENABLED")
     # use an in-memory sqlite DB for autogeneration comparison
-    config.set_main_option("sqlalchemy.url", "sqlite:///:memory:")
+    database_url = "sqlite:///:memory:"
 
 if config.config_file_name is not None:
     fileConfig(config.config_file_name)
@@ -50,9 +49,8 @@ def run_migrations_offline() -> None:
 
     Calls to context.execute() here emit the given string to the script output.
     """
-    url = config.get_main_option("sqlalchemy.url")
     context.configure(
-        url=url,
+        url=database_url,
         target_metadata=target_metadata,
         literal_binds=True,
         dialect_opts={"paramstyle": "named"},
@@ -72,16 +70,13 @@ def do_run_migrations(connection: Connection) -> None:
 async def run_async_migrations() -> None:
     """In this scenario we need to create an Engine and associate a connection with the context."""
 
-    connectable = async_engine_from_config(
-        config.get_section(config.config_ini_section, {}),
-        prefix="sqlalchemy.",
-        poolclass=pool.NullPool,
-    )
+    connectable = build_async_engine(settings, poolclass=pool.NullPool)
 
-    async with connectable.connect() as connection:
-        await connection.run_sync(do_run_migrations)
-
-    await connectable.dispose()
+    try:
+        async with connectable.connect() as connection:
+            await connection.run_sync(do_run_migrations)
+    finally:
+        await connectable.dispose()
 
 
 def run_migrations_online() -> None:
@@ -92,8 +87,7 @@ def run_migrations_online() -> None:
     # ALEMBIC_DRY_RUN=1 is set we use a synchronous sqlite engine and run
     # migrations directly; otherwise run the normal async flow.
     if os.getenv("ALEMBIC_DRY_RUN") == "1":
-        sync_url = config.get_main_option("sqlalchemy.url")
-        engine = create_engine(sync_url)
+        engine = create_engine(database_url)
         with engine.connect() as connection:
             do_run_migrations(connection)
         engine.dispose()
