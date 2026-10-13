@@ -2,8 +2,11 @@ import React from "react";
 import { GcdsLink } from "@gcds-core/components-react";
 
 interface LinkProps {
+	ariaLabel?: string;
+	ariaCurrent?: React.AriaAttributes["aria-current"];
 	children: React.ReactNode;
 	className?: string;
+	display?: "block" | "inline";
 	external?: boolean;
 	href: string;
 	onGcdsClick?: (event: Event) => void;
@@ -11,9 +14,22 @@ interface LinkProps {
 }
 
 const Link: React.FC<LinkProps> = React.memo(
-	({ children, className, external, href, onGcdsClick, size }) => (
+	({
+		ariaLabel,
+		ariaCurrent,
+		children,
+		className,
+		display,
+		external,
+		href,
+		onGcdsClick,
+		size,
+	}) => (
 		<GcdsLink
+			aria-current={ariaCurrent}
+			aria-label={ariaLabel}
 			className={className}
+			display={display}
 			external={external}
 			href={href}
 			size={size}

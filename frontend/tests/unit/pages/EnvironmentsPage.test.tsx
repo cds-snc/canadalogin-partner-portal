@@ -250,8 +250,12 @@ describe("EnvironmentsPage", () => {
 				.getAttribute("href")
 		).toBe("#");
 		expect(
-			screen.getByRole("link", { name: "Test environment" }).getAttribute("href")
-		).toBe("#");
+			screen
+				.getByRole("link", { name: "Test environment" })
+				.getAttribute("href")
+		).toBe(
+			"/applications/application-uuid-1/environments/environment-1"
+		);
 		expect(screen.getByTestId("switch-application-icon")).toBeTruthy();
 	});
 

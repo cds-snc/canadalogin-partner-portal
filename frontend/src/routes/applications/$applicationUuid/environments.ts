@@ -1,19 +1,14 @@
-import { createFileRoute } from "@tanstack/react-router";
-import { lazy } from "react";
+import { Outlet, createFileRoute } from "@tanstack/react-router";
 import { z } from "zod";
 import i18n from "../../../common/i18n";
 import { requireAuthenticatedUser } from "../../../features/auth/auth-routing";
 import type { RouteBackLinkContext } from "../../../types/route-breadcrumbs";
 
-const EnvironmentsPage = lazy(async () => ({
-	default: (
-		await import("../../../features/application-environments/pages/EnvironmentsPage")
-	).EnvironmentsPage,
-}));
-
 const searchSchema = z.object({
 	connect: z.coerce.boolean().optional(),
 	page: z.coerce.number().int().positive().optional(),
+	requestProduction: z.coerce.boolean().optional(),
+	sourceEnvironmentUuid: z.string().uuid().optional(),
 });
 
 export const Route = createFileRoute(
@@ -32,6 +27,6 @@ export const Route = createFileRoute(
 			},
 		} satisfies RouteBackLinkContext;
 	},
-	component: EnvironmentsPage,
+	component: Outlet,
 	validateSearch: searchSchema,
 });

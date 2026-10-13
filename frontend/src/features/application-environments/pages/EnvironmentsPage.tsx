@@ -168,7 +168,7 @@ export const EnvironmentsPage = (): FunctionComponent => {
 									badge={statusLabel ?? undefined}
 									cardTitle={environment.partnerLabel}
 									cardTitleTag="h3"
-									href="#"
+									href={`/applications/${applicationUuid}/environments/${environment.uuid}`}
 									style={cardStyle}
 								>
 									<Text marginBottom="0">
