@@ -14,6 +14,21 @@ from ..schemas.application_environment import ApplicationEnvironmentCreate
 
 
 class ApplicationEnvironmentService:
+    async def get_application_environment(
+        self,
+        db: AsyncSession,
+        application_uuid: uuid_pkg.UUID,
+        environment_uuid: uuid_pkg.UUID,
+    ) -> dict[str, Any]:
+        environment = await application_environment_repository.get_environment(
+            db=db,
+            application_uuid=application_uuid,
+            environment_uuid=environment_uuid,
+        )
+        if environment is None:
+            raise NotFoundException("Application environment not found")
+        return environment
+
     async def create_application_environment(
         self,
         db: AsyncSession,

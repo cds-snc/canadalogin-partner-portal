@@ -1,0 +1,33 @@
+.configuration-grid {
+	width: 100%;
+}
+
+.configuration-grid__row {
+	--gcds-grid-gap-300: var(--gcds-spacing-300);
+	align-items: start;
+	padding-block: var(--gcds-spacing-200);
+}
+
+.configuration-grid__row {
+	border-block-end: 0.0625rem solid var(--gcds-border-default);
+}
+
+.configuration-grid__field {
+	font-weight: var(--gcds-font-weights-bold);
+}
+
+.configuration-grid__value {
+	min-width: 0;
+	overflow-wrap: anywhere;
+}
+
+.configuration-grid__edit {
+	min-width: max-content;
+	text-align: end;
+}
+
+@media (max-width: 47.999em) {
+	.configuration-grid__edit {
+		text-align: start;
+	}
+}

@@ -4,7 +4,7 @@ from unittest.mock import AsyncMock, patch
 
 import pytest
 
-from src.app.core.exceptions.http_exceptions import NotFoundException
+from src.app.core.exceptions.http_exceptions import BadRequestException, NotFoundException
 from src.app.schemas.application_environment import ApplicationEnvironmentCreate
 from src.app.services.application_environment_service import ApplicationEnvironmentService
 
@@ -136,6 +136,30 @@ async def test_create_application_environment_maps_and_persists_configuration(mo
         status_code="submitted",
         config=environment.model_dump(by_alias=True, exclude_none=True, mode="json"),
     )
+
+
+@pytest.mark.asyncio
+async def test_create_application_environment_rejects_ineligible_copy_source(mock_db):
+    environment = valid_environment_create().model_copy(
+        update={
+            "copy_existing": True,
+            "source_environment_uuid": uuid.uuid4(),
+        }
+    )
+
+    with patch("src.app.services.application_environment_service.application_environment_repository") as repository:
+        repository.get_application_id = AsyncMock(return_value=42)
+        repository.source_environment_exists = AsyncMock(return_value=False)
+        repository.create_environment = AsyncMock()
+
+        with pytest.raises(BadRequestException, match="Source environment not found"):
+            await ApplicationEnvironmentService().create_application_environment(
+                db=mock_db,
+                application_uuid=uuid.uuid4(),
+                environment=environment,
+            )
+
+    repository.create_environment.assert_not_awaited()
 
 
 @pytest.mark.asyncio

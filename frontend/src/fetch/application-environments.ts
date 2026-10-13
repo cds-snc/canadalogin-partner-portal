@@ -105,6 +105,23 @@ export const getApplicationEnvironments = async (
 	return result;
 };
 
+export const getApplicationEnvironment = async (
+	applicationUuid: string,
+	environmentUuid: string
+): Promise<ApplicationEnvironmentRead> => {
+	const result = await requestJson<ApplicationEnvironmentRead | null>(
+		`/api/v1/applications/${encodeURIComponent(applicationUuid)}/environments/${encodeURIComponent(environmentUuid)}`,
+		{
+			cache: "no-store",
+			method: "GET",
+		}
+	);
+	if (!result) {
+		throw new Error("Failed to load application environment");
+	}
+	return result;
+};
+
 export const createApplicationEnvironment = async (
 	applicationUuid: string,
 	payload: ApplicationEnvironmentCreate

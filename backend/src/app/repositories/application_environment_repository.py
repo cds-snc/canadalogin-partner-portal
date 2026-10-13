@@ -47,11 +47,14 @@ class ApplicationEnvironmentRepository:
             select(ApplicationConfiguration.id)
             .select_from(ApplicationConfiguration)
             .join(Application, Application.id == ApplicationConfiguration.application_id)
+            .join(Tenant, Tenant.id == ApplicationConfiguration.tenant_id)
             .where(
                 Application.uuid == application_uuid,
                 Application.is_deleted.is_(False),
                 ApplicationConfiguration.uuid == source_environment_uuid,
                 ApplicationConfiguration.is_deleted.is_(False),
+                Tenant.code.in_(("test", "staging")),
+                Tenant.is_deleted.is_(False),
             )
         )
         return (await db.execute(statement)).scalar_one_or_none() is not None
@@ -215,6 +218,45 @@ class ApplicationEnvironmentRepository:
             "data": [dict(environment) for environment in environments],
             "total_count": int(total_count),
         }
+
+    async def get_environment(
+        self,
+        db: AsyncSession,
+        application_uuid: uuid_pkg.UUID,
+        environment_uuid: uuid_pkg.UUID,
+    ) -> dict[str, Any] | None:
+        statement = (
+            select(
+                ApplicationConfiguration.uuid,
+                ApplicationConfiguration.partner_label,
+                Tenant.code.label("tenant_code"),
+                ApplicationConfigurationStatus.code.label("status_code"),
+                ApplicationConfiguration.config,
+                ApplicationConfiguration.created_at,
+                ApplicationConfiguration.updated_at,
+            )
+            .select_from(Application)
+            .join(
+                ApplicationConfiguration,
+                ApplicationConfiguration.application_id == Application.id,
+            )
+            .join(
+                ApplicationConfigurationStatus,
+                ApplicationConfigurationStatus.id
+                == ApplicationConfiguration.application_configuration_status_id,
+            )
+            .join(Tenant, Tenant.id == ApplicationConfiguration.tenant_id)
+            .where(
+                Application.uuid == application_uuid,
+                Application.is_deleted.is_(False),
+                ApplicationConfiguration.uuid == environment_uuid,
+                ApplicationConfiguration.is_deleted.is_(False),
+                ApplicationConfigurationStatus.is_deleted.is_(False),
+                Tenant.is_deleted.is_(False),
+            )
+        )
+        environment = (await db.execute(statement)).mappings().one_or_none()
+        return dict(environment) if environment is not None else None
 
 
 application_environment_repository = ApplicationEnvironmentRepository()
