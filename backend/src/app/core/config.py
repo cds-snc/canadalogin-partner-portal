@@ -37,6 +37,14 @@ class SessionSettings(BaseSettings):
     CONCURRENT_SESSION_LOCK_TTL: int = 5
 
 
+class CSRFSettings(BaseSettings):
+    CSRF_SECRET_KEY: SecretStr | None = None
+    CSRF_COOKIE_NAME: str = "csrftoken"
+    CSRF_COOKIE_DOMAIN: str | None = None
+    CSRF_COOKIE_SECURE: bool | None = None
+    CSRF_COOKIE_SAMESITE: Literal["lax", "strict", "none"] = "lax"
+
+
 class RedisSessionSettings(BaseSettings):
     REDIS_SESSION_HOST: str = "localhost"
     REDIS_SESSION_PORT: int = 6379
@@ -302,6 +310,7 @@ class Settings(
     PostgresSettings,
     CryptSettings,
     SessionSettings,
+    CSRFSettings,
     RedisSessionSettings,
     OIDCSettings,
     GCNotifySettings,
@@ -360,6 +369,27 @@ class Settings(
             self.REDIS_RATE_LIMIT_PASSWORD = self.REDIS_SESSION_PASSWORD
         if self.REDIS_RATE_LIMIT_SSL is None:
             self.REDIS_RATE_LIMIT_SSL = self.REDIS_SESSION_SSL
+
+        return self
+
+    @model_validator(mode="after")
+    def _validate_csrf_secret(self) -> "Settings":
+        if self.ENVIRONMENT == EnvironmentOption.PRODUCTION:
+            if self.CSRF_SECRET_KEY is None:
+                raise ValueError("CSRF_SECRET_KEY must be configured in production")
+
+            csrf_secret = self.CSRF_SECRET_KEY.get_secret_value()
+            if len(csrf_secret) < 32:
+                raise ValueError("CSRF_SECRET_KEY must contain at least 32 characters")
+            if csrf_secret == self.SECRET_KEY.get_secret_value():
+                raise ValueError("CSRF_SECRET_KEY must be distinct from SECRET_KEY")
+            csrf_cookie_secure = (
+                self.CSRF_COOKIE_SECURE
+                if self.CSRF_COOKIE_SECURE is not None
+                else self.SESSION_COOKIE_SECURE
+            )
+            if not csrf_cookie_secure:
+                raise ValueError("CSRF_COOKIE_SECURE must be enabled in production")
 
         return self
 

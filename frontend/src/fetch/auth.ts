@@ -19,6 +19,13 @@ export type UserRead = {
 	uuid: string;
 };
 
+export type LogoutReason = "manual" | "session-expired";
+
+type LogoutResponse = {
+	message: string;
+	redirectUrl: string;
+};
+
 export const getCurrentUser = async (): Promise<UserRead | null> => {
 	try {
 		return await requestJson<UserRead>(
@@ -44,6 +51,21 @@ export const getOidcLoginUrl = (language?: string): string => {
 		return `${url}?ui_locales=${language}`;
 	}
 	return url;
+};
+
+export const logoutAndRedirect = async (
+	reason: LogoutReason = "manual"
+): Promise<void> => {
+	const response = await requestJson<LogoutResponse>(
+		`/api/v1/logout?reason=${reason}`,
+		{ method: "POST" }
+	);
+
+	if (!response?.redirectUrl) {
+		throw new Error("The backend logout response did not include a redirect URL.");
+	}
+
+	globalThis.location.href = response.redirectUrl;
 };
 
 export const getBackendOrigin = (): string => getApiBaseUrl();

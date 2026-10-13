@@ -13,6 +13,7 @@ class LogoutOidcResponse(BaseModel):
     end_session_endpoint: str
     id_token_hint: str | None = None
     post_logout_redirect_uri: str | None = None
+    state: str | None = None
 
 
 class LogoutResponse(BaseModel):
@@ -25,3 +26,4 @@ class LogoutResponse(BaseModel):
 
     message: str
     oidc_logout: LogoutOidcResponse | None = None
+    redirect_url: str

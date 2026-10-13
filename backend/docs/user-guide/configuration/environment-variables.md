@@ -82,6 +82,13 @@ SECRET_KEY="your-super-secret-key-here"
 ALGORITHM="HS256"
 ACCESS_TOKEN_EXPIRE_MINUTES=30
 REFRESH_TOKEN_EXPIRE_DAYS=7
+
+# CSRF protection (required in production)
+CSRF_SECRET_KEY="generate-a-distinct-secret-with-openssl-rand-hex-32"
+# Optional; cookie settings default to the corresponding session cookie settings.
+CSRF_COOKIE_DOMAIN=".yourapp.com"
+CSRF_COOKIE_SECURE=true
+CSRF_COOKIE_SAMESITE=lax
 ```
 
 **Variables Explained:**
@@ -90,6 +97,10 @@ REFRESH_TOKEN_EXPIRE_DAYS=7
 - `ALGORITHM`: JWT signing algorithm (HS256 recommended)
 - `ACCESS_TOKEN_EXPIRE_MINUTES`: How long access tokens remain valid
 - `REFRESH_TOKEN_EXPIRE_DAYS`: How long refresh tokens remain valid
+- `CSRF_SECRET_KEY`: Dedicated signing secret for CSRF tokens. Production requires a value of at least 32 characters, distinct from `SECRET_KEY`; provision it at runtime through a secret manager, not as a Docker build argument.
+- `CSRF_COOKIE_DOMAIN`: Optional cookie domain. By default, it follows `SESSION_COOKIE_DOMAIN` so the frontend can read the double-submit token across subdomains.
+- `CSRF_COOKIE_SECURE`: Optional Secure-cookie override. By default, it follows `SESSION_COOKIE_SECURE`; the effective value must be enabled in production.
+- `CSRF_COOKIE_SAMESITE`: Optional SameSite override. By default, it follows `SESSION_COOKIE_SAMESITE`.
 
 !!! danger "Security Warning"
 Never use default values in production. Generate a strong secret key:
@@ -190,8 +201,10 @@ CORS_HEADERS=["*"]
 # Production - Specific domains only
 CORS_ORIGINS=["https://yourapp.com","https://www.yourapp.com"]
 CORS_METHODS=["GET","POST","PUT","DELETE","PATCH"]
-CORS_HEADERS=["Authorization","Content-Type","X-Requested-With"]
+CORS_HEADERS=["Authorization","Content-Type","X-Requested-With","X-CSRFToken"]
 ```
+
+The browser sends the CSRF token in the `x-csrftoken` request header. Include `X-CSRFToken` in `CORS_HEADERS` when using an explicit production allowlist.
 
 !!! danger "Security Warning"
 Never use wildcard (`*`) for `CORS_ORIGINS` in production environments. Always specify exact allowed domains to prevent unauthorized cross-origin requests.
@@ -253,6 +266,8 @@ class Settings(
     AppSettings,
     PostgresSettings,
     CryptSettings,
+    SessionSettings,
+    CSRFSettings,
     FirstUserSettings,
     RedisCacheSettings,
     ClientSideCacheSettings,

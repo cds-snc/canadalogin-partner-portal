@@ -3,6 +3,7 @@ from fastapi import APIRouter
 from .application_environments import router as application_environments_router
 from .applications import router as applications_router
 from .audit_logs import router as audit_logs_router
+from .csrf import router as csrf_router
 from .departments import router as departments_router
 from .health import router as health_router
 from .ibm_sv_admin import router as ibm_sv_admin_router
@@ -22,6 +23,7 @@ router.include_router(applications_router)
 router.include_router(application_environments_router)
 router.include_router(audit_logs_router)
 router.include_router(departments_router)
+router.include_router(csrf_router)
 router.include_router(health_router)
 router.include_router(ibm_sv_admin_router)
 router.include_router(mau_router)
