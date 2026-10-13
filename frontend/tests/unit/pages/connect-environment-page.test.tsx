@@ -14,16 +14,19 @@ const {
 	mockedNavigate,
 	mockedScrollIntoView,
 	mockedUseApplicationEnvironments,
+	mockedUseSearch,
 } = vi.hoisted(() => ({
 	mockedCreateEnvironment: vi.fn(),
 	mockedNavigate: vi.fn(),
 	mockedScrollIntoView: vi.fn(),
 	mockedUseApplicationEnvironments: vi.fn(),
+	mockedUseSearch: vi.fn(() => ({})),
 }));
 
 vi.mock("@tanstack/react-router", () => ({
 	useNavigate: () => mockedNavigate,
 	useParams: () => ({ applicationUuid: "application-uuid-1" }),
+	useSearch: mockedUseSearch,
 }));
 
 vi.mock("react-i18next", () => ({
@@ -249,6 +252,8 @@ describe("ConnectEnvironmentPage", () => {
 		mockedNavigate.mockReset();
 		mockedScrollIntoView.mockReset();
 		mockedUseApplicationEnvironments.mockReset();
+		mockedUseSearch.mockReset();
+		mockedUseSearch.mockReturnValue({});
 		Object.defineProperty(HTMLFormElement.prototype, "scrollIntoView", {
 			configurable: true,
 			value: mockedScrollIntoView,

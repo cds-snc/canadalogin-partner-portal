@@ -1,6 +1,6 @@
 import { zodResolver } from "@hookform/resolvers/zod";
-import { useNavigate, useParams } from "@tanstack/react-router";
 import { TrashIcon } from "@heroicons/react/24/outline";
+import { useNavigate, useParams, useSearch } from "@tanstack/react-router";
 import { GcdsHint, GcdsLabel } from "@gcds-core/components-react";
 import { useEffect, useRef, useState, type FormEvent } from "react";
 import {
@@ -273,12 +273,19 @@ export const ConnectEnvironmentPage = (): FunctionComponent => {
 	const { applicationUuid } = useParams({
 		from: "/applications/$applicationUuid/environments",
 	});
+	const {
+		requestProduction = false,
+		sourceEnvironmentUuid: initialSourceEnvironmentUuid,
+	} = useSearch({
+		from: "/applications/$applicationUuid/environments",
+	});
 	const navigate = useNavigate({
 		from: "/applications/$applicationUuid/environments",
 	});
 	const [step, setStep] = useState(0);
 	const formRef = useRef<HTMLFormElement>(null);
 	const previousStep = useRef(step);
+	const actionInitialized = useRef(false);
 	const { data: environments } = useApplicationEnvironments(
 		applicationUuid,
 		1,
@@ -477,6 +484,41 @@ export const ConnectEnvironmentPage = (): FunctionComponent => {
 			? environments.application.nameFr
 			: (environments?.application?.nameEn ??
 				t("applicationEnvironmentConnect.applicationNameFallback"));
+
+	useEffect(() => {
+		if (
+			actionInitialized.current ||
+			!environments ||
+			!initialSourceEnvironmentUuid
+		) {
+			return;
+		}
+
+		const initialSource = environments.data.find(
+			(environment) => environment.uuid === initialSourceEnvironmentUuid
+		);
+		if (!initialSource || (requestProduction && initialSource.tenantCode !== "staging")) {
+			actionInitialized.current = true;
+			return;
+		}
+
+		actionInitialized.current = true;
+		reset({
+			...DEFAULT_VALUES,
+			...initialSource.config,
+			copyExisting: true,
+			sourceEnvironmentUuid: initialSource.uuid,
+			tenantCode:
+				requestProduction || initialSource.tenantCode === "staging"
+					? "staging"
+					: "test",
+		});
+	}, [
+		environments,
+		initialSourceEnvironmentUuid,
+		requestProduction,
+		reset,
+	]);
 
 	useEffect(() => {
 		if (!hasCopySource && values.copyExisting) {

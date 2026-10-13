@@ -2,3 +2,7 @@
 	display: inline-flex;
 	transform: rotate(90deg);
 }
+
+.environment-management__actions {
+	margin-block: var(--gcds-spacing-400);
+}

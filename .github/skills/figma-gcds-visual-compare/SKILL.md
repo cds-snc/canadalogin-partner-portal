@@ -50,12 +50,29 @@ If the route, reference, or desktop dimensions are missing and cannot be inferre
 
 ### 3. Capture the current desktop page
 
-- Start the frontend dev server on an available port if one is not already running.
+- Use the desktop server bootstrap below. Reuse a working frontend server instead of starting another process.
 - Open the exact target route in Playwright at the Figma frame's desktop viewport dimensions.
 - Establish the required auth and data state before comparing.
 - Capture one screenshot using the same page region represented by the Figma frame. Use full-page capture only when the reference represents the full page.
 - Check console errors, failed requests, missing assets, and route redirects before judging visual differences.
 - Do not capture mobile or alternate responsive views for this workflow.
+
+#### Desktop server bootstrap
+
+1. Probe the configured/default frontend origin first, normally `http://127.0.0.1:3000/`. If it returns the portal HTML, reuse that server and keep its exact origin.
+2. If the default origin is occupied by another process or is not the portal, probe one fallback port such as `3001`, then `3002`, then `4173`. Use the first free port; do not repeatedly retry an occupied port.
+3. Start Vite directly from `frontend/`:
+
+	```sh
+	cd frontend && pnpm exec vite --host 127.0.0.1 --port <port>
+	```
+
+	Do not use `pnpm run dev -- --port <port>` here. In this repository that form can forward an extra literal `--` and leave Vite on the wrong port.
+4. Wait for the `Local:` URL and verify the exact origin once with `curl -fsS <origin>/` before opening Playwright.
+5. Keep one server URL and one browser page for the comparison. If startup fails, act on the first error by reusing the existing server or moving to the next fallback port; do not rerun the same failing start command.
+6. Set the Playwright viewport explicitly to the Figma desktop width and height before navigation. Never infer desktop mode from the current browser window.
+
+If the route redirects because the API or session is unavailable, separate that from server startup. Reuse an authenticated page when possible; for a visual-only comparison, mock representative API responses in the browser harness and report the mocked-data limitation with the final comparison.
 
 ### 4. Produce the approval list
 
