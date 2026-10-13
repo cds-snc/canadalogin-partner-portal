@@ -6,238 +6,17 @@ from fastapi.testclient import TestClient
 import src.app.services.rp_application_service as rp_application_module
 from src.app.api.dependencies import get_current_user, get_rp_application_service
 from src.app.core.db.database import async_get_db
-from src.app.core.exceptions.http_exceptions import ForbiddenException, NotFoundException
+from src.app.core.exceptions.http_exceptions import ForbiddenException
 from src.app.main import app
 from src.app.repositories.dependencies import get_ibm_sv_admin_client
 from src.app.services.rp_application_service import RPApplicationService
 
 
-class TestCurrentUserRPOAuthSetupAPI:
-    def test_oauth_setup_owner_success_response_contract(self) -> None:
+class TestLegacyRPApplicationAPIDisabled:
+    def test_oauth_setup_is_denied_before_service_call(self) -> None:
         service = Mock()
         service.get_current_user_rp_application_oauth_setup = AsyncMock(
-            return_value={
-                "rpApplicationName": "Benefits Portal",
-                "status": "active",
-                "applicationUrl": "https://benefits.example.gc.ca",
-                "discoveryEndpoint": "https://cds-gcsignin-dev.verify.ibm.com/oauth2/.well-known/openid-configuration",
-                "departmentName": None,
-                "departmentNameFr": None,
-                "pkceEnabled": True,
-                "redirectUris": [
-                    "https://benefits.example.gc.ca/callback",
-                ],
-                "logoutUri": "https://benefits.example.gc.ca/backchannel-logout",
-                "logoutRedirectUris": [
-                    "https://benefits.example.gc.ca/logout-complete",
-                ],
-            }
-        )
-
-        app.dependency_overrides[get_current_user] = lambda: {
-            "email": "owner@example.gc.ca",
-            "id": 42,
-            "username": "owner@example.gc.ca",
-            "is_superuser": True,
-            "uuid": "018f6f83-0000-0000-0000-000000000111",
-        }
-        app.dependency_overrides[get_rp_application_service] = lambda: service
-        app.dependency_overrides[get_ibm_sv_admin_client] = lambda: Mock()
-        app.dependency_overrides[async_get_db] = lambda: Mock()
-
-        try:
-            with TestClient(app) as client:
-                response = client.get(
-                    "/api/v1/rp-applications/mine/"
-                    "018f6f83-0000-0000-0000-000000000333/oauth-setup"
-                )
-        finally:
-            app.dependency_overrides.clear()
-
-        assert response.status_code == 200
-        assert response.json() == {
-            "rpApplicationName": "Benefits Portal",
-            "status": "active",
-            "applicationUrl": "https://benefits.example.gc.ca",
-            "discoveryEndpoint": "https://cds-gcsignin-dev.verify.ibm.com/oauth2/.well-known/openid-configuration",
-            "departmentName": None,
-            "departmentNameFr": None,
-            "pkceEnabled": True,
-            "redirectUris": ["https://benefits.example.gc.ca/callback"],
-            "logoutUri": "https://benefits.example.gc.ca/backchannel-logout",
-            "logoutRedirectUris": [
-                "https://benefits.example.gc.ca/logout-complete"
-            ],
-        }
-
-    def test_client_credentials_owner_success_response_contract(self) -> None:
-        service = Mock()
-        service.get_current_user_rp_application_client_credentials = AsyncMock(
-            return_value={
-                "clientId": "client-id-123",
-                "clientSecret": "secret-value-123",
-                "clientSecretId": "secret-id-123",
-            }
-        )
-
-        app.dependency_overrides[get_current_user] = lambda: {
-            "email": "owner@example.gc.ca",
-            "id": 42,
-            "username": "owner@example.gc.ca",
-            "is_superuser": True,
-            "uuid": "018f6f83-0000-0000-0000-000000000111",
-        }
-        app.dependency_overrides[get_rp_application_service] = lambda: service
-        app.dependency_overrides[get_ibm_sv_admin_client] = lambda: Mock()
-        app.dependency_overrides[async_get_db] = lambda: Mock()
-
-        try:
-            with TestClient(app) as client:
-                response = client.get(
-                    "/api/v1/rp-applications/mine/"
-                    "018f6f83-0000-0000-0000-000000000333/client"
-                )
-        finally:
-            app.dependency_overrides.clear()
-
-        assert response.status_code == 200
-        assert response.json() == {
-            "clientId": "client-id-123",
-            "clientSecret": "secret-value-123",
-            "clientSecretId": "secret-id-123",
-        }
-
-    def test_rotated_secrets_owner_success_response_contract(self) -> None:
-        service = Mock()
-        service.list_current_user_rp_application_rotated_secrets = AsyncMock(
-            return_value=[
-                {
-                    "description": "30 days",
-                    "expiredAt": 1782345600,
-                    "path": "/rotatedSecrets/0",
-                    "rotatedAt": 1779824867,
-                    "value": "{sha512}redacted",
-                    "secretId": "/rotatedSecrets/0",
-                }
-            ]
-        )
-
-        app.dependency_overrides[get_current_user] = lambda: {
-            "email": "owner@example.gc.ca",
-            "id": 42,
-            "username": "owner@example.gc.ca",
-            "is_superuser": True,
-            "uuid": "018f6f83-0000-0000-0000-000000000111",
-        }
-        app.dependency_overrides[get_rp_application_service] = lambda: service
-        app.dependency_overrides[get_ibm_sv_admin_client] = lambda: Mock()
-        app.dependency_overrides[async_get_db] = lambda: Mock()
-
-        try:
-            with TestClient(app) as client:
-                response = client.get(
-                    "/api/v1/rp-applications/mine/"
-                    "018f6f83-0000-0000-0000-000000000333/client/rotated-secrets"
-                )
-        finally:
-            app.dependency_overrides.clear()
-
-        assert response.status_code == 200
-        assert response.json() == [
-            {
-                "description": "30 days",
-                "expiredAt": 1782345600,
-                "rotatedAt": 1779824867,
-                "value": "{sha512}redacted",
-                "secretId": "/rotatedSecrets/0",
-            }
-        ]
-
-    def test_rotate_secret_owner_success_response_contract(self) -> None:
-        service = Mock()
-        service.rotate_current_user_rp_application_client_secret = AsyncMock(
-            return_value={
-                "clientId": "client-id-123",
-                "clientSecret": "secret-value-456",
-                "clientSecretId": "secret-id-456",
-            }
-        )
-
-        app.dependency_overrides[get_current_user] = lambda: {
-            "email": "owner@example.gc.ca",
-            "id": 42,
-            "username": "owner@example.gc.ca",
-            "is_superuser": True,
-            "uuid": "018f6f83-0000-0000-0000-000000000111",
-        }
-        app.dependency_overrides[get_rp_application_service] = lambda: service
-        app.dependency_overrides[get_ibm_sv_admin_client] = lambda: Mock()
-        app.dependency_overrides[async_get_db] = lambda: Mock()
-
-        try:
-            with TestClient(app) as client:
-                response = client.post(
-                    "/api/v1/rp-applications/mine/"
-                    "018f6f83-0000-0000-0000-000000000333/client/rotate-secret",
-                    json={
-                        "deleteRotatedSecrets": False,
-                        "description": "",
-                        "rotatedSecretExpiredAt": 0,
-                    },
-                )
-        finally:
-            app.dependency_overrides.clear()
-
-        assert response.status_code == 200
-        assert response.json() == {
-            "clientId": "client-id-123",
-            "clientSecret": "secret-value-456",
-            "clientSecretId": "secret-id-456",
-        }
-
-    def test_delete_rotated_secret_owner_success_response_contract(self) -> None:
-        service = Mock()
-        service.delete_current_user_rp_application_rotated_secret = AsyncMock(
-            return_value=True
-        )
-
-        app.dependency_overrides[get_current_user] = lambda: {
-            "email": "owner@example.gc.ca",
-            "id": 42,
-            "username": "owner@example.gc.ca",
-            "is_superuser": True,
-            "uuid": "018f6f83-0000-0000-0000-000000000111",
-        }
-        app.dependency_overrides[get_rp_application_service] = lambda: service
-        app.dependency_overrides[get_ibm_sv_admin_client] = lambda: Mock()
-        app.dependency_overrides[async_get_db] = lambda: Mock()
-
-        try:
-            with TestClient(app) as client:
-                response = client.delete(
-                    "/api/v1/rp-applications/mine/"
-                    "018f6f83-0000-0000-0000-000000000333/client/rotated-secrets/"
-                    "%7Bsha512%7Dredacted"
-                )
-        finally:
-            app.dependency_overrides.clear()
-
-        assert response.status_code == 200
-        assert response.json() == {"message": "Rotated client secret deleted"}
-        service.delete_current_user_rp_application_rotated_secret.assert_awaited_once()
-        assert (
-            service.delete_current_user_rp_application_rotated_secret.await_args.kwargs[
-                "value"
-            ]
-            == "{sha512}redacted"
-        )
-
-    def test_oauth_setup_non_owner_returns_403(self) -> None:
-        service = Mock()
-        service.get_current_user_rp_application_oauth_setup = AsyncMock(
-            side_effect=ForbiddenException(
-                "Only RP application owners can view OAuth setup"
-            )
+            side_effect=ForbiddenException("Only RP application owners can view OAuth setup")
         )
 
         app.dependency_overrides[get_current_user] = lambda: {
@@ -253,21 +32,17 @@ class TestCurrentUserRPOAuthSetupAPI:
 
         try:
             with TestClient(app) as client:
-                response = client.get(
-                    "/api/v1/rp-applications/mine/"
-                    "018f6f83-0000-0000-0000-000000000334/oauth-setup"
-                )
+                response = client.get("/api/v1/rp-applications/mine/018f6f83-0000-0000-0000-000000000334/oauth-setup")
         finally:
             app.dependency_overrides.clear()
 
         assert response.status_code == 403
         assert response.json()["error"]["code"] == "forbidden"
+        service.get_current_user_rp_application_oauth_setup.assert_not_awaited()
 
-    def test_oauth_setup_missing_resource_returns_404(self) -> None:
+    def test_oauth_setup_missing_resource_is_also_denied_before_service_call(self) -> None:
         service = Mock()
-        service.get_current_user_rp_application_oauth_setup = AsyncMock(
-            side_effect=NotFoundException("RP application not found")
-        )
+        service.get_current_user_rp_application_oauth_setup = AsyncMock()
 
         app.dependency_overrides[get_current_user] = lambda: {
             "email": "owner@example.gc.ca",
@@ -282,15 +57,13 @@ class TestCurrentUserRPOAuthSetupAPI:
 
         try:
             with TestClient(app) as client:
-                response = client.get(
-                    "/api/v1/rp-applications/mine/"
-                    "018f6f83-0000-0000-0000-000000000335/oauth-setup"
-                )
+                response = client.get("/api/v1/rp-applications/mine/018f6f83-0000-0000-0000-000000000335/oauth-setup")
         finally:
             app.dependency_overrides.clear()
 
-        assert response.status_code == 404
-        assert response.json()["error"]["code"] == "not_found"
+        assert response.status_code == 403
+        assert response.json()["error"]["code"] == "forbidden"
+        service.get_current_user_rp_application_oauth_setup.assert_not_awaited()
 
 
 class TestCurrentUserRPOAuthSetupService:
@@ -326,185 +99,30 @@ class TestCurrentUserRPOAuthSetupService:
 
         ibm_admin_client.get_application_detail.assert_not_awaited()
 
-    @pytest.mark.asyncio
-    async def test_client_credentials_raises_unexpected_error_when_secret_missing(self) -> None:
-        service = RPApplicationService()
-        db = Mock()
-        ibm_admin_client = Mock()
-        ibm_admin_client.get_application_detail = AsyncMock(
-            return_value={
-                "applicationState": True,
-                "providers": {
-                    "oidc": {
-                        "applicationUrl": "https://benefits.example.gc.ca",
-                        "requirePkceVerification": "true",
-                        "properties": {
-                            "clientId": "client-id-337",
-                            "redirectUris": [
-                                "https://benefits.example.gc.ca/callback"
-                            ],
-                        },
-                    }
-                },
-            }
+
+@pytest.mark.asyncio
+async def test_shared_rp_audit_helper_logs_non_secret_operation() -> None:
+    db = Mock()
+    log_action = AsyncMock()
+    original_log_action = rp_application_module.AuditService.log_action
+    rp_application_module.AuditService.log_action = log_action
+    try:
+        await RPApplicationService()._create_audit_log_entry(
+            db=db,
+            current_user={"name": "Developer", "uuid": "user-uuid"},
+            rp_application_data={"uuid": "application-uuid"},
+            operation="UPDATE",
+            description="Updated RP application",
         )
-        ibm_admin_client.get_client_secret = AsyncMock(return_value={})
+    finally:
+        rp_application_module.AuditService.log_action = original_log_action
 
-        original_get = rp_application_module.crud_rp_applications.get
-        original_log_action = rp_application_module.AuditService.log_action
-        rp_application_module.crud_rp_applications.get = AsyncMock(
-            return_value={
-                "uuid": "018f6f83-0000-0000-0000-000000000337",
-                "dnr_app_name": "Benefits Portal",
-                "ibm_sv_application_id": "ibm-app-337",
-                "application_owner": {
-                    "owners": [{"email": "owner@example.gc.ca"}],
-                },
-            }
-        )
-        rp_application_module.AuditService.log_action = AsyncMock()
-
-        try:
-            with pytest.raises(RuntimeError):
-                await service.get_current_user_rp_application_client_credentials(
-                    db=db,
-                    rp_application_uuid="018f6f83-0000-0000-0000-000000000337",
-                    current_user={"email": "owner@example.gc.ca"},
-                    ibm_admin_client=ibm_admin_client,
-                )
-        finally:
-            rp_application_module.crud_rp_applications.get = original_get
-            rp_application_module.AuditService.log_action = original_log_action
-
-        ibm_admin_client.get_application_detail.assert_awaited_once_with("ibm-app-337")
-        ibm_admin_client.get_client_secret.assert_awaited_once_with("client-id-337")
-
-    @pytest.mark.asyncio
-    async def test_list_rotated_secrets_normalizes_response_contract(self) -> None:
-        service = RPApplicationService()
-        db = Mock()
-        ibm_admin_client = Mock()
-        ibm_admin_client.get_application_detail = AsyncMock(
-            return_value={
-                "providers": {
-                    "oidc": {
-                        "properties": {
-                            "clientId": "client-id-338",
-                        }
-                    }
-                }
-            }
-        )
-        ibm_admin_client.get_client_secret = AsyncMock(
-            return_value={
-                "additionalConfig": {
-                    "rotatedSecrets": [
-                        {
-                            "description": "30 days",
-                            "value": "{sha512}redacted",
-                            "rotatedAt": 1779824867.0,
-                            "expiredAt": 1782345600.0,
-                        }
-                    ]
-                }
-            }
-        )
-
-        original_get = rp_application_module.crud_rp_applications.get
-        original_log_action = rp_application_module.AuditService.log_action
-        rp_application_module.crud_rp_applications.get = AsyncMock(
-            return_value={
-                "uuid": "018f6f83-0000-0000-0000-000000000338",
-                "dnr_app_name": "Benefits Portal",
-                "ibm_sv_application_id": "ibm-app-338",
-                "application_owner": {
-                    "owners": [{"email": "owner@example.gc.ca"}],
-                },
-            }
-        )
-        rp_application_module.AuditService.log_action = AsyncMock()
-
-        try:
-            result = await service.list_current_user_rp_application_rotated_secrets(
-                db=db,
-                rp_application_uuid="018f6f83-0000-0000-0000-000000000338",
-                current_user={"email": "owner@example.gc.ca"},
-                ibm_admin_client=ibm_admin_client,
-            )
-        finally:
-            rp_application_module.crud_rp_applications.get = original_get
-            rp_application_module.AuditService.log_action = original_log_action
-
-        assert result == [
-            {
-                "description": "30 days",
-                "expiredAt": 1782345600,
-                "rotatedAt": 1779824867,
-                "value": "{sha512}redacted",
-                "secretId": "/rotatedSecrets/0",
-            }
-        ]
-
-    @pytest.mark.asyncio
-    async def test_delete_rotated_secret_resolves_internal_path_from_value(self) -> None:
-        service = RPApplicationService()
-        db = Mock()
-        ibm_admin_client = Mock()
-        ibm_admin_client.get_application_detail = AsyncMock(
-            return_value={
-                "providers": {
-                    "oidc": {
-                        "properties": {
-                            "clientId": "client-id-339",
-                        }
-                    }
-                }
-            }
-        )
-        ibm_admin_client.get_client_secret = AsyncMock(
-            return_value={
-                "additionalConfig": {
-                    "rotatedSecrets": [
-                        {
-                            "description": "30 days",
-                            "value": "{sha512}redacted",
-                            "rotatedAt": 1779824867.0,
-                            "expiredAt": 1782345600.0,
-                        }
-                    ]
-                }
-            }
-        )
-        ibm_admin_client.delete_rotated_client_secrets = AsyncMock(return_value=True)
-
-        original_get = rp_application_module.crud_rp_applications.get
-        original_log_action = rp_application_module.AuditService.log_action
-        rp_application_module.crud_rp_applications.get = AsyncMock(
-            return_value={
-                "uuid": "018f6f83-0000-0000-0000-000000000339",
-                "dnr_app_name": "Benefits Portal",
-                "ibm_sv_application_id": "ibm-app-339",
-                "application_owner": {
-                    "owners": [{"email": "owner@example.gc.ca"}],
-                },
-            }
-        )
-        rp_application_module.AuditService.log_action = AsyncMock()
-
-        try:
-            result = await service.delete_current_user_rp_application_rotated_secret(
-                db=db,
-                rp_application_uuid="018f6f83-0000-0000-0000-000000000339",
-                current_user={"email": "owner@example.gc.ca"},
-                value="{sha512}redacted",
-                ibm_admin_client=ibm_admin_client,
-            )
-        finally:
-            rp_application_module.crud_rp_applications.get = original_get
-            rp_application_module.AuditService.log_action = original_log_action
-
-        assert result is True
-        ibm_admin_client.delete_rotated_client_secrets.assert_awaited_once_with(
-            "client-id-339",
-            ["{sha512}redacted"],
-        )
+    log_action.assert_awaited_once_with(
+        db=db,
+        user="Developer",
+        user_uuid="user-uuid",
+        target="rp_application",
+        target_uuid="application-uuid",
+        operation="UPDATE",
+        description="Updated RP application",
+    )

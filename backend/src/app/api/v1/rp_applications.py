@@ -7,7 +7,6 @@ from fastcrud import PaginatedListResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from ...api.dependencies import (
-    get_audit_service,
     get_current_user,
     get_ibm_sv_user_service,
     get_mau_service,
@@ -24,26 +23,26 @@ from ...schemas.mau import MAUReportItem, MAUReportResponse
 from ...schemas.rp_application import (
     CurrentUserRPApplicationDepartmentAssignRequest,
     CurrentUserRPApplicationSummaryRead,
-    RPApplicationClientCredentialsRead,
-    RPApplicationClientRotatedSecretCreateRequest,
-    RPApplicationClientRotatedSecretRead,
-    RPApplicationClientSecretRotateRequest,
     RPApplicationCreate,
     RPApplicationCurrentUserOAuthSetupRead,
     RPApplicationCurrentUserRead,
     RPApplicationRead,
     RPApplicationUpdate,
 )
-from ...services.audit_service import AuditService
 from ...services.ibm_sv_user_service import IBMVerifyUserService
 from ...services.mau_service import MAUService
 from ...services.rp_application_service import RPApplicationService
 
 router = APIRouter(tags=["rp-applications"])
+legacy_rp_api_deny = casbin_guard.require_permission_for_subject(
+    "legacy_rp_api_disabled",
+    "deny",
+    "anonymous",
+)
 
 
 @router.post("/rp-application", response_model=RPApplicationRead, status_code=201)
-# @casbin_guard.require_permission("rp_applications", "write")
+@legacy_rp_api_deny
 async def write_rp_application(
     request: Request,
     rp_application: RPApplicationCreate,
@@ -60,7 +59,7 @@ async def write_rp_application(
 
 
 @router.get("/rp-applications", response_model=PaginatedListResponse[RPApplicationRead])
-# @casbin_guard.require_permission("rp_applications", "read")
+@legacy_rp_api_deny
 async def read_rp_applications(
     request: Request,
     db: Annotated[AsyncSession, Depends(async_get_db)],
@@ -80,7 +79,7 @@ async def read_rp_applications(
     response_model=list[RPApplicationCurrentUserRead],
     deprecated=True,
 )
-# @casbin_guard.require_permission("rp_applications", "read")
+@legacy_rp_api_deny
 async def read_current_user_rp_applications(
     request: Request,
     db: Annotated[AsyncSession, Depends(async_get_db)],
@@ -101,7 +100,7 @@ async def read_current_user_rp_applications(
     response_model=CurrentUserRPApplicationSummaryRead,
     responses=error_responses(403, 404, 500),
 )
-# @casbin_guard.require_permission("rp_applications", "read")
+@legacy_rp_api_deny
 async def read_current_user_rp_application_department(
     request: Request,
     rp_application_uuid: uuid_pkg.UUID,
@@ -122,7 +121,7 @@ async def read_current_user_rp_application_department(
     response_model=CurrentUserRPApplicationSummaryRead,
     responses=error_responses(403, 404, 409, 500),
 )
-# @casbin_guard.require_permission("rp_applications", "write")
+@legacy_rp_api_deny
 async def assign_current_user_rp_application_department(
     request: Request,
     rp_application_uuid: uuid_pkg.UUID,
@@ -145,7 +144,7 @@ async def assign_current_user_rp_application_department(
     response_model=RPApplicationCurrentUserOAuthSetupRead,
     responses=error_responses(403, 404, 409, 500),
 )
-# @casbin_guard.require_permission("rp_applications", "read")
+@legacy_rp_api_deny
 async def read_current_user_rp_application_oauth_setup(
     request: Request,
     rp_application_uuid: uuid_pkg.UUID,
@@ -166,148 +165,11 @@ async def read_current_user_rp_application_oauth_setup(
 
 
 @router.get(
-    "/rp-applications/mine/{rp_application_uuid}/client",
-    response_model=RPApplicationClientCredentialsRead,
-    responses=error_responses(403, 404, 500),
-)
-# @casbin_guard.require_permission("rp_client_secret", "read")
-async def read_current_user_rp_application_client_credentials(
-    request: Request,
-    rp_application_uuid: uuid_pkg.UUID,
-    db: Annotated[AsyncSession, Depends(async_get_db)],
-    current_user: Annotated[dict, Depends(get_current_user)],
-    service: Annotated[RPApplicationService, Depends(get_rp_application_service)],
-    audit_service: Annotated[AuditService, Depends(get_audit_service)],
-    ibm_admin_client: Annotated[
-        IBMVerifyAdminClient, Depends(get_ibm_sv_admin_client)
-    ],
-) -> RPApplicationClientCredentialsRead:
-    credentials = await service.get_current_user_rp_application_client_credentials(
-        db=db,
-        rp_application_uuid=rp_application_uuid,
-        current_user=current_user,
-        ibm_admin_client=ibm_admin_client,
-    )
-    return RPApplicationClientCredentialsRead.model_validate(credentials)
-
-
-@router.get(
-    "/rp-applications/mine/{rp_application_uuid}/client/rotated-secrets",
-    response_model=list[RPApplicationClientRotatedSecretRead],
-    responses=error_responses(403, 404, 500),
-)
-# @casbin_guard.require_permission("rp_client_secret", "read")
-async def read_current_user_rp_application_rotated_secrets(
-    request: Request,
-    rp_application_uuid: uuid_pkg.UUID,
-    db: Annotated[AsyncSession, Depends(async_get_db)],
-    current_user: Annotated[dict, Depends(get_current_user)],
-    service: Annotated[RPApplicationService, Depends(get_rp_application_service)],
-    ibm_admin_client: Annotated[
-        IBMVerifyAdminClient, Depends(get_ibm_sv_admin_client)
-    ],
-) -> list[RPApplicationClientRotatedSecretRead]:
-    rotated_secrets = await service.list_current_user_rp_application_rotated_secrets(
-        db=db,
-        rp_application_uuid=rp_application_uuid,
-        current_user=current_user,
-        ibm_admin_client=ibm_admin_client,
-    )
-    return [
-        RPApplicationClientRotatedSecretRead.model_validate(secret)
-        for secret in rotated_secrets
-    ]
-
-
-@router.post(
-    "/rp-applications/mine/{rp_application_uuid}/client/rotate-secret",
-    response_model=RPApplicationClientCredentialsRead,
-    responses=error_responses(400, 403, 404, 500),
-)
-@casbin_guard.require_permission("rp_client_secret", "write")
-async def rotate_current_user_rp_application_client_secret(
-    request: Request,
-    rp_application_uuid: uuid_pkg.UUID,
-    payload: RPApplicationClientSecretRotateRequest,
-    db: Annotated[AsyncSession, Depends(async_get_db)],
-    current_user: Annotated[dict, Depends(get_current_user)],
-    service: Annotated[RPApplicationService, Depends(get_rp_application_service)],
-    ibm_admin_client: Annotated[
-        IBMVerifyAdminClient, Depends(get_ibm_sv_admin_client)
-    ],
-) -> RPApplicationClientCredentialsRead:
-    credentials = await service.rotate_current_user_rp_application_client_secret(
-        db=db,
-        rp_application_uuid=rp_application_uuid,
-        current_user=current_user,
-        payload=payload,
-        ibm_admin_client=ibm_admin_client,
-    )
-    return RPApplicationClientCredentialsRead.model_validate(credentials)
-
-
-@router.post(
-    "/rp-applications/mine/{rp_application_uuid}/client/rotated-secrets",
-    response_model=list[RPApplicationClientRotatedSecretRead],
-    responses=error_responses(400, 403, 404, 500),
-)
-@casbin_guard.require_permission("rp_client_secret", "write")
-async def create_current_user_rp_application_rotated_secret(
-    request: Request,
-    rp_application_uuid: uuid_pkg.UUID,
-    payload: RPApplicationClientRotatedSecretCreateRequest,
-    db: Annotated[AsyncSession, Depends(async_get_db)],
-    current_user: Annotated[dict, Depends(get_current_user)],
-    service: Annotated[RPApplicationService, Depends(get_rp_application_service)],
-    ibm_admin_client: Annotated[
-        IBMVerifyAdminClient, Depends(get_ibm_sv_admin_client)
-    ],
-) -> list[RPApplicationClientRotatedSecretRead]:
-    rotated_secrets = await service.create_current_user_rp_application_rotated_secret(
-        db=db,
-        rp_application_uuid=rp_application_uuid,
-        current_user=current_user,
-        payload=payload,
-        ibm_admin_client=ibm_admin_client,
-    )
-    return [
-        RPApplicationClientRotatedSecretRead.model_validate(secret)
-        for secret in rotated_secrets
-    ]
-
-
-@router.delete(
-    "/rp-applications/mine/{rp_application_uuid}/client/rotated-secrets/{value}",
-    responses=error_responses(403, 404, 500),
-)
-@casbin_guard.require_permission("rp_client_secret", "write")
-async def delete_current_user_rp_application_rotated_secret(
-    request: Request,
-    rp_application_uuid: uuid_pkg.UUID,
-    value: str,
-    db: Annotated[AsyncSession, Depends(async_get_db)],
-    current_user: Annotated[dict, Depends(get_current_user)],
-    service: Annotated[RPApplicationService, Depends(get_rp_application_service)],
-    ibm_admin_client: Annotated[
-        IBMVerifyAdminClient, Depends(get_ibm_sv_admin_client)
-    ],
-) -> dict[str, str]:
-    await service.delete_current_user_rp_application_rotated_secret(
-        db=db,
-        rp_application_uuid=rp_application_uuid,
-        current_user=current_user,
-        value=value,
-        ibm_admin_client=ibm_admin_client,
-    )
-    return {"message": "Rotated client secret deleted"}
-
-
-@router.get(
     "/rp-applications/mine/{rp_application_uuid}/mau-report",
     response_model=MAUReportResponse,
     responses=error_responses(400, 403, 404, 409, 500),
 )
-@casbin_guard.require_permission("mau_report", "read")
+@legacy_rp_api_deny
 async def read_current_user_rp_application_mau_report(
     request: Request,
     rp_application_uuid: uuid_pkg.UUID,
@@ -377,7 +239,7 @@ async def read_current_user_rp_application_mau_report(
 
 
 @router.get("/rp-application/{rp_application_uuid}", response_model=RPApplicationRead)
-@casbin_guard.require_permission("rp_applications", "read")
+@legacy_rp_api_deny
 async def read_rp_application(
     request: Request,
     rp_application_uuid: uuid_pkg.UUID,
@@ -391,7 +253,7 @@ async def read_rp_application(
 
 
 @router.patch("/rp-application/{rp_application_uuid}")
-@casbin_guard.require_permission("rp_applications", "write")
+@legacy_rp_api_deny
 async def patch_rp_application(
     request: Request,
     rp_application_uuid: uuid_pkg.UUID,
@@ -409,7 +271,7 @@ async def patch_rp_application(
 
 
 @router.delete("/rp-application/{rp_application_uuid}")
-@casbin_guard.require_permission("rp_applications", "write")
+@legacy_rp_api_deny
 async def erase_rp_application(
     request: Request,
     rp_application_uuid: uuid_pkg.UUID,
