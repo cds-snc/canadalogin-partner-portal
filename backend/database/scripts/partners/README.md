@@ -1,70 +1,68 @@
 # Set up rehearsal partners
 
-`setup_partners.sql` creates two partner groups and two links to the existing
-`Partner Developer` role. A fresh batch has **four creates**. It requires the
-existing department catalog and active role; it does not require user accounts.
+`setup_partners.sql` creates the groups listed in `partners.csv` and links each
+to the existing `Partner Developer` role. It requires active departments and
+that role for a nonempty batch. Users can be prepared independently.
 
-Prepared only: no SQL or tests have been run. Read the [shared guide](../README.md)
-for connection requirements, verification scenarios, and recovery planning.
+Give SRE **`setup_partners.sql` and a completed `partners.csv`**. This README is
+optional context. The script is standalone: no repository checkout, supporting
+SQL files, or original folder layout is required.
 
-`partners.csv` is a header-only template. `partners.example.csv` contains the two
-synthetic partners. Keep their UUIDs unchanged. Replace `department_gc_org_id`
-with an existing active catalog identifier; `2222` is an example to verify in the
-target. English names are required; an unquoted empty French field becomes null.
+Prepared only: no SQL or tests have been run. The target needs PostgreSQL 13+
+and a migrated portal schema compatible with `0012_partner_developer_write`;
+the script does not enforce an Alembic revision or run migrations.
 
-The script reuses exact matches and rejects changed names, departments, deleted
-records, and extra active applications under the fixture groups. Existing
-holders of the global Developer role can see applications in these partners.
-Preview lists those users and any existing fixture applications, and includes
-them in the review digest. This does not establish individual partner membership.
+The CSV sets the batch size; a header-only file is a no-op. The example's two
+partners produce four creates: two groups and two role links. Supply a new UUID
+once per additional or different partner and retain it for reruns. Existing
+UUIDs require matching fields; duplicates, conflicting data, and deleted rows
+are rejected.
 
-## Prepare the CSV
+Set `department_gc_org_id` to an existing active catalog identifier; `2222` in
+the example must be verified in the target. English names are required; an
+unquoted empty French field becomes null.
 
-From the repository root, create a private working copy:
+Existing applications are allowed. Linking a partner to the global Developer
+role can expose all its active applications to existing role holders; the report
+lists those users and applications. This is not individual partner membership.
 
-```sh
-SCRIPT_DIR="$(pwd)/backend/database/scripts/partners"
-PARTNER_INPUT_DIR="$(mktemp -d "${TMPDIR:-/tmp}/portal-partners.XXXXXX")"
-chmod 700 "$PARTNER_INPUT_DIR"
-cp "$SCRIPT_DIR/partners.example.csv" "$PARTNER_INPUT_DIR/partners.csv"
-chmod 600 "$PARTNER_INPUT_DIR/partners.csv"
-cd "$PARTNER_INPUT_DIR"
+## Prepare the handoff
+
+Place the SQL and CSV together in a private directory on the machine running
+`psql`. Name the input `partners.csv` and keep this exact header:
+
+```csv
+uuid,department_gc_org_id,name_en,name_fr
 ```
 
-Edit that private CSV. Keep the exact header and two UUIDs. The script reads
-`partners.csv` from the current working directory; `\ir` resolves its shared SQL
-files relative to the script itself. Keep the SQL package together.
+The unchanged partner and application examples have matching UUIDs and work
+together as-is. For additional partners, use their saved UUIDs in the application
+CSV. The input is read from the current working directory.
 
 ## Preview, then apply
 
-Configure the approved database connection through `PGSERVICE` or the usual
-libpq connection settings. Replace the database placeholder below. The label
-`test` is operator-supplied; verify the connection and displayed target yourself.
-The shared checks require PostgreSQL 13+ and revision
-`0012_partner_developer_write`.
+Configure the usual PostgreSQL host/auth settings or add `-h HOST -U USER`.
+Start in the directory containing both files, replace `YOUR_DATABASE`, and check
+the printed connection. Use a fresh `psql` process for each command. The script
+owns its transaction; do not use `-1` or wrap it in an outer transaction.
+Preview is the default:
 
 ```sh
-psql -X --set=expected_database='replace_with_test_database' \
-  --set=target_environment=test \
-  --file="$SCRIPT_DIR/setup_partners.sql"
+cd /path/to/partner-handoff
+psql -X -d YOUR_DATABASE -f setup_partners.sql
 ```
 
-Review every row, the existing-user exposure, and `reviewed_digest_for_apply`.
-Preview does not insert permanent rows or consume their sequences. Apply in a
-new invocation using that digest:
+Review the rows and existing-user exposure, then apply:
 
 ```sh
-psql -X --set=expected_database='replace_with_test_database' \
-  --set=target_environment=test --set=mode=apply \
-  --set=reviewed_digest='paste-preview-digest' \
-  --file="$SCRIPT_DIR/setup_partners.sql"
+psql -X -d YOUR_DATABASE -v apply=true -f setup_partners.sql
 ```
 
-Apply rechecks the plan, inserts missing rows in one transaction, and reconciles
-both groups and their role links. Run a fresh preview afterward: an unchanged
-batch should show four reuses and zero creates.
+Each invocation validates current data. Preview is not bound to a later apply;
+keep the target quiet while applying, especially role changes. Apply inserts and
+reconciles in one transaction. A fresh preview after an unchanged batch shows
+two reuses per CSV row and zero creates. Preview consumes no permanent sequences.
 
-Continue with [applications](../applications/README.md), then access assignment.
-Users can be prepared independently. Each package commits separately; a later
-failure leaves earlier completed packages in place. Resolve the failure and
-preview that package again before proceeding.
+Continue with the standalone application import, then access assignment. Each
+script commits separately; failure of a later step leaves earlier completed
+steps in place.

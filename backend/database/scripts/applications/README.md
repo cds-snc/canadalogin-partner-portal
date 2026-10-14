@@ -1,71 +1,71 @@
 # Insert rehearsal applications
 
-`insert_applications.sql` creates three applications: one under the first
-rehearsal partner and two under the second. A fresh batch has **three creates**.
-Both active partner groups must already exist; otherwise preview fails before
-any permanent write. Complete [partner setup](../partners/README.md) first.
+`insert_applications.sql` creates the applications listed in `applications.csv`.
+Every parent partner must already be active; set up missing partners first.
+Existing partners can receive additional applications
+without resubmitting their other applications. Users and role mappings are not
+required by this step.
 
-Prepared only: no SQL or tests have been run. Read the [shared guide](../README.md)
-for connection requirements, verification scenarios, and recovery planning.
+Give SRE **`insert_applications.sql` and a completed `applications.csv`**. This
+README is optional context. The script is standalone: no repository checkout,
+supporting SQL files, or original folder layout is required.
 
-`applications.csv` is a header-only template. `applications.example.csv` contains
-the synthetic batch. Keep its application UUIDs and partner UUIDs unchanged.
-English names are required; an unquoted empty French field becomes null.
-Existing exact matches are reused; changes, reparenting, deleted rows, and extra
-active applications under these partners are rejected.
+Prepared only: no SQL or tests have been run. The target needs PostgreSQL 13+
+and a migrated portal schema compatible with `0012_partner_developer_write`;
+the script does not enforce an Alembic revision or run migrations.
 
-This package inserts only applications. It requires no user accounts or role
-mappings. Preview reports existing Developer users who can already see these
-partners through role mappings; their access to the new applications is included
-in the digest. Global role access does not provide individual partner membership.
+The CSV sets the batch size; a header-only file is a no-op. The example creates
+three applications, split one and two across the example partners. Supply a new
+UUID once per additional or different application and retain it for reruns. Set
+`partner_group_uuid` to its parent's saved UUID. Duplicate UUIDs are rejected.
 
-## Prepare the CSV
+English names are required; an unquoted empty French field becomes null. Existing
+exact matches are reused; changes, reparenting, and deleted input records are
+rejected. Other applications already under the same partners are allowed.
 
-From the repository root, create a private working copy:
+The report lists existing Developer users who can see the new applications
+through their partner role mappings. Global role access does not provide
+individual partner membership.
 
-```sh
-SCRIPT_DIR="$(pwd)/backend/database/scripts/applications"
-APPLICATION_INPUT_DIR="$(mktemp -d "${TMPDIR:-/tmp}/portal-applications.XXXXXX")"
-chmod 700 "$APPLICATION_INPUT_DIR"
-cp "$SCRIPT_DIR/applications.example.csv" "$APPLICATION_INPUT_DIR/applications.csv"
-chmod 600 "$APPLICATION_INPUT_DIR/applications.csv"
-cd "$APPLICATION_INPUT_DIR"
+## Prepare the handoff
+
+Place the SQL and CSV together in a private directory on the machine running
+`psql`. Name the input `applications.csv` and keep this exact header:
+
+```csv
+uuid,partner_group_uuid,name_en,name_fr
 ```
 
-Edit the names in the private CSV as needed. Keep the exact header and three
-UUID/parent pairs. The script reads `applications.csv` from the current working
-directory; its `\ir` includes resolve relative to the SQL file. Keep the SQL
-package together.
+The unchanged partner and application examples have matching UUIDs and work
+together as-is. For additional applications, use matching saved partner UUIDs
+and retain all identifiers for reruns. The input is read from the current
+working directory.
 
 ## Preview, then apply
 
-Configure the approved connection through `PGSERVICE` or the usual libpq
-settings. Replace the database placeholder. The `test` label is operator-supplied;
-verify the connection and displayed target. The shared checks require
-PostgreSQL 13+ and revision `0012_partner_developer_write`.
+Configure the usual PostgreSQL host/auth settings or add `-h HOST -U USER`.
+Start in the directory containing both files, replace `YOUR_DATABASE`, and check
+the printed connection. Use a fresh `psql` process for each command. The script
+owns its transaction; do not use `-1` or wrap it in an outer transaction.
+Preview is the default:
 
 ```sh
-psql -X --set=expected_database='replace_with_test_database' \
-  --set=target_environment=test \
-  --file="$SCRIPT_DIR/insert_applications.sql"
+cd /path/to/application-handoff
+psql -X -d YOUR_DATABASE -f insert_applications.sql
 ```
 
-Review all three applications, their parent associations, existing-user exposure,
-and `reviewed_digest_for_apply`. Preview consumes no permanent sequences. Apply
-in a new invocation with the reviewed digest:
+Review the applications, parent associations, and existing-user exposure, then apply:
 
 ```sh
-psql -X --set=expected_database='replace_with_test_database' \
-  --set=target_environment=test --set=mode=apply \
-  --set=reviewed_digest='paste-preview-digest' \
-  --file="$SCRIPT_DIR/insert_applications.sql"
+psql -X -d YOUR_DATABASE -v apply=true -f insert_applications.sql
 ```
 
-Apply rechecks the plan and reconciles the three rows and their one-plus-two
-ownership split before committing. A fresh preview afterward should show three
-reuses and zero creates for an unchanged batch.
+Each invocation validates current data. Preview is not bound to a later apply;
+keep the target quiet while applying, especially role changes. Apply inserts and
+reconciles the input rows in one transaction. A fresh preview after an unchanged
+batch shows one reuse per CSV row and zero creates. Preview consumes no permanent
+sequences.
 
-Users can be prepared independently; the sequence for dependent packages is
-partners → applications → access assignment. Each package has its own
-transaction, so an application failure leaves previously committed partners in
-place. Environments can then be created through the portal after access is set up.
+The dependent steps are partners → applications → access assignment. Each
+script commits separately; failure of a later step leaves earlier completed
+steps in place.

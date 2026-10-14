@@ -1,6 +1,19 @@
--- psql entry point: use --set=email=... OR a one-row access.csv in the CWD.
--- Preview is the default. The assignment uses a GLOBAL role: later group/app
--- changes may expand access. This command never creates users or group links.
+-- Standalone role assignment; hand off this SQL file and the required CSVs.
+-- UTF-8 files and headers:
+--   access.csv:       email,role (exactly one account; omit with -v email=...)
+--   partners.csv:     uuid,department_gc_org_id,name_en,name_fr (always required)
+--   applications.csv: uuid,partner_group_uuid,name_en,name_fr (always required)
+-- Requires PostgreSQL 13+ and a compatible, already-migrated Partner Portal schema.
+-- The account, Developer role/read-write policies and partner-group mappings must
+-- already exist. The scope CSVs must match that role's complete current access.
+-- Use a fresh psql process from the directory holding this SQL and its CSVs.
+-- This script owns its transaction; do not use -1/--single-transaction or an outer BEGIN.
+-- Select host/auth normally (for example -h HOST -U USER); verify \conninfo.
+-- Preview: psql -X -d YOUR_DATABASE -f assign_access.sql
+-- Apply:   psql -X -d YOUR_DATABASE -v apply=true -f assign_access.sql
+-- Email alternative: add -v email='person@example.com'; scope CSVs still required.
+-- This GLOBAL role can expand access after later group/app changes.
+-- This command never creates users or group links.
 \set ON_ERROR_STOP on
 \if :{?email}
   \set _parameter_input true
@@ -11,12 +24,40 @@
 \else
   \set role 'Partner Developer'
 \endif
-\set operation access
-\ir ../_shared/session.sql
+\pset pager off
+\if :{?apply}
+\else
+  \set apply false
+\endif
+-- Let PostgreSQL validate the boolean before psql uses it as a condition.
+SELECT :'apply'::boolean AS _apply \gset
+
+BEGIN ISOLATION LEVEL SERIALIZABLE;
+SET LOCAL lock_timeout = '5s';
+SET LOCAL statement_timeout = '60s';
+SET LOCAL idle_in_transaction_session_timeout = '60s';
+SET LOCAL search_path = pg_catalog, pg_temp;
+SET LOCAL timezone = 'UTC';
+
+-- Session-local helper: failed validation aborts this operation.
+CREATE FUNCTION pg_temp.assert_true(condition boolean, message text)
+RETURNS void LANGUAGE plpgsql AS $$
+BEGIN
+  IF condition IS DISTINCT FROM TRUE THEN
+    RAISE EXCEPTION '%', message;
+  END IF;
+END;
+$$;
+
+SELECT pg_temp.assert_true(current_setting('server_version_num')::integer >= 130000,
+                          'This script requires PostgreSQL 13 or newer.');
+-- Connection settings select the target. No environment is inferred from its name.
+\conninfo
+SELECT CASE WHEN :'_apply'::boolean THEN 'APPLY' ELSE 'PREVIEW' END AS mode;
 
 CREATE TEMP TABLE _access_input (email text, role_name text, input_source text) ON COMMIT DROP;
 \if :_parameter_input
-  -- Parameter mode deliberately does not read or combine a CSV file.
+  -- Parameter mode skips access.csv only; the scope CSVs below remain required.
   INSERT INTO _access_input SELECT lower(btrim(:'email')), :'role'::text, 'parameter';
 \else
   CREATE TEMP TABLE _csv_access (email text, role text) ON COMMIT DROP;
@@ -35,6 +76,39 @@ SELECT pg_temp.assert_true(
 SELECT pg_temp.assert_true(
   (SELECT role_name = 'Partner Developer' FROM _access_input),
   'Only Partner Developer is supported by this test-access rehearsal.');
+
+-- Reuse the operator's partner/application CSVs as an explicit scope selection.
+-- Names and department fields are read for the standard CSV shape, but only
+-- UUIDs and application ownership select access; partner/application data is not changed.
+CREATE TEMP TABLE _csv_expected_groups (
+  uuid text, department_gc_org_id text, name_en text, name_fr text
+) ON COMMIT DROP;
+CREATE TEMP TABLE _csv_expected_applications (
+  uuid text, partner_group_uuid text, name_en text, name_fr text
+) ON COMMIT DROP;
+\copy _csv_expected_groups FROM 'partners.csv' WITH (FORMAT csv, HEADER false, ENCODING 'UTF8')
+\copy _csv_expected_applications FROM 'applications.csv' WITH (FORMAT csv, HEADER false, ENCODING 'UTF8')
+SELECT pg_temp.assert_true(
+  (SELECT count(*) = 1 FROM _csv_expected_groups
+   WHERE (uuid, department_gc_org_id, name_en, name_fr) = ('uuid', 'department_gc_org_id', 'name_en', 'name_fr')),
+  'partners.csv must contain the exact documented header once.');
+SELECT pg_temp.assert_true(
+  (SELECT count(*) = 1 FROM _csv_expected_applications
+   WHERE (uuid, partner_group_uuid, name_en, name_fr) = ('uuid', 'partner_group_uuid', 'name_en', 'name_fr')),
+  'applications.csv must contain the exact documented header once.');
+DELETE FROM _csv_expected_groups
+WHERE (uuid, department_gc_org_id, name_en, name_fr) = ('uuid', 'department_gc_org_id', 'name_en', 'name_fr');
+DELETE FROM _csv_expected_applications
+WHERE (uuid, partner_group_uuid, name_en, name_fr) = ('uuid', 'partner_group_uuid', 'name_en', 'name_fr');
+CREATE TEMP TABLE _expected_groups (uuid uuid PRIMARY KEY) ON COMMIT DROP;
+CREATE TEMP TABLE _expected_applications (
+  uuid uuid PRIMARY KEY, partner_group_uuid uuid NOT NULL REFERENCES _expected_groups(uuid)
+) ON COMMIT DROP;
+INSERT INTO _expected_groups SELECT uuid::uuid FROM _csv_expected_groups;
+INSERT INTO _expected_applications SELECT uuid::uuid, partner_group_uuid::uuid FROM _csv_expected_applications;
+SELECT pg_temp.assert_true(
+  (SELECT count(*) > 0 FROM _expected_groups),
+  'Select at least one intended partner in partners.csv before assigning a global role.');
 
 CREATE TEMP TABLE _access_user AS
 SELECT u.id, u.uuid, u.email, u.is_deleted, u.deleted_at
@@ -65,8 +139,6 @@ SELECT pg_temp.assert_true(
   AND NOT EXISTS (SELECT 1 FROM _access_policies WHERE deleted_at IS NOT NULL),
   'Exactly one active Developer applications/read policy and one applications/write policy must exist.');
 
-\ir ../_shared/fixture.sql
-
 -- The portal checks is_deleted, not deleted_at. Include all rows it can see,
 -- then explicitly reject inconsistent lifecycle flags instead of hiding them.
 CREATE TEMP TABLE _scope_groups AS
@@ -80,10 +152,10 @@ SELECT pg_temp.assert_true(
   NOT EXISTS (SELECT 1 FROM _scope_groups WHERE deleted_at IS NOT NULL OR mapping_deleted_at IS NOT NULL),
   'An accessible partner group or role link has inconsistent deletion flags.');
 SELECT pg_temp.assert_true(
-  (SELECT count(*) = 2 FROM _scope_groups)
+  (SELECT count(*) FROM _scope_groups) = (SELECT count(*) FROM _expected_groups)
   AND NOT EXISTS (SELECT uuid FROM _scope_groups EXCEPT SELECT uuid FROM _expected_groups)
   AND NOT EXISTS (SELECT uuid FROM _expected_groups EXCEPT SELECT uuid FROM _scope_groups),
-  'Partner Developer must link to exactly the two sample partners; extra or missing links prevent assignment.');
+  'Partner Developer must link to exactly the partners selected in partners.csv; extra or missing links prevent assignment.');
 
 CREATE TEMP TABLE _scope_applications AS
 SELECT a.id, a.uuid, a.partner_group_id, g.uuid AS partner_group_uuid,
@@ -94,14 +166,14 @@ SELECT pg_temp.assert_true(
   NOT EXISTS (SELECT 1 FROM _scope_applications WHERE deleted_at IS NOT NULL),
   'An accessible application has inconsistent deletion flags.');
 SELECT pg_temp.assert_true(
-  (SELECT count(*) = 3 FROM _scope_applications)
+  (SELECT count(*) FROM _scope_applications) = (SELECT count(*) FROM _expected_applications)
   AND NOT EXISTS (
     SELECT uuid, partner_group_uuid FROM _scope_applications
     EXCEPT SELECT uuid, partner_group_uuid FROM _expected_applications)
   AND NOT EXISTS (
     SELECT uuid, partner_group_uuid FROM _expected_applications
     EXCEPT SELECT uuid, partner_group_uuid FROM _scope_applications),
-  'The sample partners must contain exactly the three expected applications with their expected parents.');
+  'Accessible applications and their parents must exactly match applications.csv; extra, missing or moved applications prevent assignment.');
 
 CREATE TEMP TABLE _access_membership AS
 SELECT m.id, m.uuid, m.is_deleted, m.deleted_at
@@ -122,28 +194,11 @@ SELECT i.email, i.input_source, u.uuid AS user_uuid, u.id AS user_id, r.name AS 
 FROM _access_input AS i CROSS JOIN _access_user AS u CROSS JOIN _access_role AS r
 LEFT JOIN _access_membership AS m ON true;
 
--- MD5 is a review-change fingerprint, not a signature or security credential.
-INSERT INTO _plan_summary (digest)
-SELECT md5(jsonb_build_object(
-  'operation', 'assign-test-partner-access-v1',
-  'target', jsonb_build_object(
-    'database', current_database(), 'serverAddress', inet_server_addr(),
-    'serverPort', inet_server_port(), 'environmentLabel', o.target_environment),
-  'assignment', (SELECT to_jsonb(p) FROM _access_plan AS p),
-  'policies', (SELECT jsonb_agg(to_jsonb(p) ORDER BY p.action) FROM _access_policies p),
-  'partnerGroups', (SELECT jsonb_agg(to_jsonb(g) ORDER BY g.uuid) FROM _scope_groups AS g),
-  'applications', (SELECT jsonb_agg(to_jsonb(a) ORDER BY a.uuid) FROM _scope_applications AS a)
-)::text) AS digest
-FROM _run_options AS o;
-
 SELECT email, input_source, user_uuid, role_name, action AS proposed_action FROM _access_plan;
 SELECT uuid AS partner_group_uuid, name_en, name_fr FROM _scope_groups ORDER BY uuid;
 SELECT uuid AS application_uuid, partner_group_uuid, name_en, name_fr FROM _scope_applications ORDER BY uuid;
-SELECT 'This global role currently covers both sample partners and all three applications. '
+SELECT 'This global role currently covers exactly the partners and applications selected in the scope CSVs. '
   'Later group/app changes can expand access; existing user permissions are retained.' AS scope_notice;
-SELECT digest AS review_digest FROM _plan_summary;
-\ir ../_shared/check_plan.sql
-
 \if :_apply
   INSERT INTO public.user_role (user_id, role_id, uuid, created_at, updated_at, deleted_at, is_deleted)
   SELECT user_id, role_id, gen_random_uuid(), now(), NULL, NULL, false
@@ -153,4 +208,12 @@ SELECT digest AS review_digest FROM _plan_summary;
      JOIN _access_plan p ON p.user_id = m.user_id AND p.role_id = m.role_id
      WHERE NOT m.is_deleted AND m.deleted_at IS NULL), 'User-role reconciliation failed.');
 \endif
-\ir ../_shared/finish.sql
+-- Finish this operation only. Earlier committed operations remain committed.
+-- ON_ERROR_STOP prevents reaching COMMIT after a SQL or COPY failure.
+\if :_apply
+  COMMIT;
+  \echo 'APPLIED: transaction committed. Retain the report and run a fresh preview to reconcile.'
+\else
+  ROLLBACK;
+  \echo 'PREVIEW ONLY: no permanent inserts or sequence calls were performed.'
+\endif

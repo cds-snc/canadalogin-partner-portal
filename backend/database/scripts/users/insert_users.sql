@@ -1,7 +1,43 @@
--- Run with psql -X -f from the directory containing users.csv.
--- Creates portal accounts only; no partner, application or role assignments.
-\set operation users
-\ir ../_shared/session.sql
+-- Standalone portal account import; hand off this SQL file and users.csv.
+-- Required UTF-8 CSV header: email,name
+-- Requires PostgreSQL 13+ and a compatible, already-migrated Partner Portal schema.
+-- Creates accounts only; no roles or partner/application access are assigned.
+-- Use a fresh psql process from the directory holding this SQL and users.csv.
+-- This script owns its transaction; do not use -1/--single-transaction or an outer BEGIN.
+-- Select host/auth normally (for example -h HOST -U USER); verify \conninfo.
+-- Preview: psql -X -d YOUR_DATABASE -f insert_users.sql
+-- Apply:   psql -X -d YOUR_DATABASE -v apply=true -f insert_users.sql
+\set ON_ERROR_STOP on
+\pset pager off
+\if :{?apply}
+\else
+  \set apply false
+\endif
+-- Let PostgreSQL validate the boolean before psql uses it as a condition.
+SELECT :'apply'::boolean AS _apply \gset
+
+BEGIN ISOLATION LEVEL SERIALIZABLE;
+SET LOCAL lock_timeout = '5s';
+SET LOCAL statement_timeout = '60s';
+SET LOCAL idle_in_transaction_session_timeout = '60s';
+SET LOCAL search_path = pg_catalog, pg_temp;
+SET LOCAL timezone = 'UTC';
+
+-- Session-local helper: failed validation aborts this operation.
+CREATE FUNCTION pg_temp.assert_true(condition boolean, message text)
+RETURNS void LANGUAGE plpgsql AS $$
+BEGIN
+  IF condition IS DISTINCT FROM TRUE THEN
+    RAISE EXCEPTION '%', message;
+  END IF;
+END;
+$$;
+
+SELECT pg_temp.assert_true(current_setting('server_version_num')::integer >= 130000,
+                          'This script requires PostgreSQL 13 or newer.');
+-- Connection settings select the target. No environment is inferred from its name.
+\conninfo
+SELECT CASE WHEN :'_apply'::boolean THEN 'APPLY' ELSE 'PREVIEW' END AS mode;
 
 CREATE TEMP TABLE _csv_users (email text, name text) ON COMMIT DROP;
 -- Read the header as data to validate its exact names and order on PostgreSQL 13.
@@ -40,19 +76,9 @@ SELECT 'user', i.email, CASE WHEN u.id IS NULL THEN 'create' ELSE 'reuse' END,
   jsonb_build_object('input', to_jsonb(i), 'existingId', u.id,
                     'existingUuid', u.uuid, 'existingUsername', u.username)
 FROM _input_users i LEFT JOIN public."user" u ON u.email = i.email;
-INSERT INTO _plan_summary (digest)
-SELECT md5(jsonb_build_object(
-  'operation', 'insert-users-v1',
-  'target', jsonb_build_object('database', current_database(), 'serverAddress', inet_server_addr(),
-    'serverPort', inet_server_port(), 'environmentLabel', o.target_environment),
-  'entries', (SELECT coalesce(jsonb_agg(to_jsonb(p) ORDER BY key), '[]'::jsonb) FROM _user_plan p)
-)::text) FROM _run_options o;
-
 SELECT kind, key, action, details FROM _user_plan ORDER BY key;
 SELECT action, count(*) AS row_count FROM _user_plan GROUP BY action ORDER BY action;
 SELECT 'New accounts have no roles or partner/application access. Users complete normal OIDC onboarding.' AS account_notice;
-\ir ../_shared/check_plan.sql
-
 \if :_apply
   INSERT INTO public."user" (
     name, username, email, auth_provider, auth_subject, profile_image_url,
@@ -74,4 +100,12 @@ SELECT 'New accounts have no roles or partner/application access. Users complete
   SELECT p.action, u.email, u.uuid AS actual_user_uuid
   FROM _user_plan p JOIN public."user" u ON u.email = p.key ORDER BY u.email;
 \endif
-\ir ../_shared/finish.sql
+-- Finish this operation only. Earlier committed operations remain committed.
+-- ON_ERROR_STOP prevents reaching COMMIT after a SQL or COPY failure.
+\if :_apply
+  COMMIT;
+  \echo 'APPLIED: transaction committed. Retain the report and run a fresh preview to reconcile.'
+\else
+  ROLLBACK;
+  \echo 'PREVIEW ONLY: no permanent inserts or sequence calls were performed.'
+\endif

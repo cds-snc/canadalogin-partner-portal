@@ -1,91 +1,74 @@
 # Partner data scripts
 
-Use these PostgreSQL/psql packages to rehearse account and partner data loading for [issue 209](https://github.com/cds-snc/canadalogin-partner-portal/issues/209) and [issue 224](https://github.com/cds-snc/canadalogin-partner-portal/issues/224). Start locally and repeat in shared test with a fresh preview for each operation.
+PostgreSQL/psql scripts for the test-data rehearsal in [issue 209](https://github.com/cds-snc/canadalogin-partner-portal/issues/209) and [issue 224](https://github.com/cds-snc/canadalogin-partner-portal/issues/224).
 
-**Prepared only:** the SQL and verification scenarios have been reviewed as source; no SQL, database operations, migrations, or tests have been executed.
+**Prepared only: no SQL, database operations, migrations, or tests have been run.**
 
-## Packages and order
+## What to run
 
-| Order | Package | Files | Permanent writes | Initial example inserts |
-| --- | --- | --- | --- | --- |
-| 1 | [Users](users/README.md) | `insert_users.sql`, `users.csv`, `users.example.csv` | Missing portal users | 2 |
-| 2 | [Partners](partners/README.md) | `setup_partners.sql`, `partners.csv`, `partners.example.csv` | Missing partner groups and Developer group-role links | 4 |
-| 3 | [Applications](applications/README.md) | `insert_applications.sql`, `applications.csv`, `applications.example.csv` | Missing applications under existing partners | 3 |
-| 4 | [Access](access/README.md) | `assign_access.sql`, `access.csv`, `access.example.csv` | One missing Developer assignment for an existing account | 1 per email |
+Each SQL file is self-contained. Hand off one script and its CSV inputs; the SRE does not need this repository or any other SQL files. Run one script at a time.
 
-Each folder also contains its own `README.md`. The provided `<name>.csv` is a blank header-only template; `<name>.example.csv` contains fictional sample data. Make a private working copy with the expected filename. Keep real account lists and run reports out of Git. A `private/` directory beneath this scripts folder is ignored by Git.
+| Order | Package | Main script | CSV inputs |
+| --- | --- | --- | --- |
+| 1 | [Users](users/README.md) | `users/insert_users.sql` | `users.csv` |
+| 2 | [Partners](partners/README.md) | `partners/setup_partners.sql` | `partners.csv` |
+| 3 | [Applications](applications/README.md) | `applications/insert_applications.sql` | `applications.csv` |
+| 4 | [Access](access/README.md) | `access/assign_access.sql` | `partners.csv`, `applications.csv`, and one email parameter or `access.csv` |
 
-The shared helpers in [_shared/](./_shared/) provide target checks, transactions, plan checks, and fixed rehearsal identifiers. Keep the packages and helpers together. Run an entry script in a fresh `psql` process; do not run a helper directly, concatenate entry scripts, or wrap them in another transaction.
+Users can be loaded independently. Applications need existing partners. Access needs the account and the intended partner/application setup to exist.
 
-Users can be prepared independently, or omitted when the accounts already exist. Partners must exist before applications, and both users and the full partner/application setup must exist before granting access.
+Each package contains a blank CSV template, an example CSV, and a README. The examples have two fictional partners and three applications (one under the first partner, two under the second). These are sample counts: add CSV rows to create more records. Give new records distinct UUIDs and retain them for reruns. Application rows specify their parent with `partner_group_uuid`.
 
-## Rehearsal data
+## SRE handoff
 
-| Partner | Applications |
-| --- | --- |
-| Test Partner One | Test One Service |
-| Test Partner Two | Test Two Intake; Test Two Status |
+For an issue in another repository, provide the selected SQL file, its reviewed CSV inputs under the filenames in the table, the target database/connection details, and the expected result. Each SQL file contains its own prerequisites and preview/apply commands in the opening comments. Its package README provides more detail but is not required to run it.
 
-Partner and application UUIDs are fixed for repeatable reruns. Partner/application packages accept only this two-partner, three-application rehearsal. Both example partners reference catalog GC organization `2222` solely as a fixture; the invented partners do not represent that organization. No departments, roles, access policies, environments, or IBM applications are created by these scripts.
+Use the same version of the script and inputs for preview and apply. The templates are header-only; example CSVs contain fictional data and must be copied or saved under the input filename before use. A `private/` working folder beneath this scripts directory is ignored by Git.
 
-The two example user emails are fictional, not working OIDC identities. For sign-in testing, use controlled identities in a private CSV. User insertion leaves profile/department onboarding and terms acceptance to the user; it does not create an identity-provider account or grant access.
+## Example: load partners
 
-## Connection and schema
+Save `setup_partners.sql` and the reviewed `partners.csv` together in a working folder, then open a terminal in that folder. No original repository paths are needed.
 
-Use `psql` against PostgreSQL 13 or newer, with the `public` schema already migrated to `0012_partner_developer_write`. Schema migrations are a separate operation. Review these scripts against a later revision before changing their version check. The scripts use [psql parameters, includes and client-side CSV loading](https://www.postgresql.org/docs/16/app-psql.html), so they cannot be pasted unchanged into a generic SQL editor.
+Use your normal PostgreSQL connection settings. Replace `YOUR_TEST_DATABASE`; add `-h YOUR_HOST -U YOUR_OPERATOR` if needed. Preview:
 
-Every README provides preview and apply commands. Supply `expected_database` matching the connected database and `target_environment` as `local`, `test`, or `staging`. The environment value is an operator label, **not deployment detection**. Confirm the actual connection/service/host independently; mislabeling a production database as test does not prevent writes. Prefer an explicit TCP host. Server address/port are displayed and included in plans, but are null on a Unix-socket connection.
+```bash
+psql -X -d YOUR_TEST_DATABASE -f setup_partners.sql
+```
 
-The operator needs SELECT on the referenced tables and `alembic_version`, appropriate INSERT and sequence access, database TEMP privilege, and privileges for the operation's table locks. No permanent schema objects or extensions are created. `psql` can run from an operator workstation using normal database authentication; the application image and Python are not needed.
+Review the connection, proposed creates/reuses, and affected access. To apply the same input, add **`-v apply=true`**:
 
-## Preview and apply
+```bash
+psql -X -d YOUR_TEST_DATABASE -v apply=true -f setup_partners.sql
+```
 
-1. Copy the chosen template or example into a private directory under the exact CSV filename stated in its README. Use UTF-8 without a byte-order mark and retain the header order. Native [PostgreSQL CSV parsing](https://www.postgresql.org/docs/16/sql-copy.html#SQL-COPY-NOTES) handles quoted fields and embedded commas/newlines.
-2. Run the script from that private directory in its default preview mode. `\copy` reads the CSV relative to the working directory; `\ir` finds helpers relative to the SQL file. Email-parameter access mode needs no CSV directory.
-3. Review the target, proposed create/reuse rows, affected access, and digest. Resolve conflicts by correcting the input or planning a separate data correction.
-4. Apply that operation using `mode=apply` and its own `reviewed_digest`. The script rechecks the plan before permanent inserts. A changed input, target, or relevant database state requires a new preview.
-5. Confirm the final `APPLIED: transaction committed` message, record the result, and run a fresh preview. It should show only reuses. Move to the next operation with a new preview and digest.
+Wait for `APPLIED: transaction committed`, then rerun the preview to confirm that matching rows are now reused. The other packages use the same pattern; their READMEs show their CSVs and commands. Do not copy an example over an edited working file between runs.
 
-Preview writes only temporary staging objects and rolls them back. It does not insert into portal tables or consume their ID sequences. It is not a PostgreSQL `READ ONLY` transaction because temporary objects are created. Digests are MD5 change fingerprints, not credentials or signatures.
+## What each script does
 
-Each apply is one transaction and inserts only absent records. Matching existing rows are reused; conflicting or deleted records are rejected. There is no automatic update, undelete, reparent, or deletion. Apply takes table locks before reading its plan; these briefly block writes to the tables used by that operation, with a five-second lock timeout. The users operation only locks the user table. Other operations also lock the tables used to assess ownership and shared-role visibility.
+- Sets up preview mode, error handling, a transaction, timeouts, and its own temporary validation function.
+- Reads the CSV, validates it, shows the proposed changes, and inserts only when `apply=true`.
+- Rolls back a preview or commits an apply.
 
-**The four operations are separate transactions.** If applications fail after users and partners have committed, those earlier records remain. Correct the failed stage's input, obtain a fresh preview, and resume; do not assume an all-or-nothing transaction across packages. An identical completed stage can be previewed and rerun safely.
+All of that SQL is included directly in each file; there are no external SQL includes or preinstalled custom functions. CSVs are read from your current working directory. Use a fresh `psql -X` process for each run and do not wrap scripts in another transaction. These are psql scripts; they cannot be pasted unchanged into a generic SQL editor.
 
-Earlier query output is provisional until the final commit message. A lost connection around commit leaves an uncertain outcome; reconnect and reconcile before retrying. A failed apply can consume integer sequence values even though its rows roll back. Sequence gaps are not partial imports.
+## Checks and transaction behaviour
 
-## Current access model
+Use PostgreSQL 13+ with the portal schema already migrated. The scripts were prepared against schema revision `0012_partner_developer_write`; they do not pin that revision or run migrations. Review schema changes before reuse. The operator needs SELECT, relevant INSERT/sequence access, and database TEMP privileges. The connection settings select the database; the scripts display that connection but do not detect test versus production.
 
-The application currently matches a user's global role with roles linked to partner groups. It does not model an individual user's membership in a partner or application. The access package therefore grants **both test partners and all three applications together** and supports only `Partner Developer`.
+Every run validates its input. Duplicate identities, missing references, deleted records, and conflicting existing data fail the operation. Matching rows are reused; there are no automatic updates or deletes. Empty user/partner/application templates are no-op batches. Later application batches can add apps without including the existing siblings.
 
-The partner and application previews list existing Developer users who can gain visibility when groups are linked or applications are added. The access package refuses any extra active partner or application in the role's current scope, a missing expected mapping, or incorrect ownership. Existing local demo data may trigger that refusal; use a dedicated rehearsal database rather than deleting unrelated mappings.
+Preview creates only temporary objects and rolls them back; it performs no portal inserts or ID-sequence calls. Apply uses one transaction per operation. If a later operation fails, earlier committed operations remain. A failed insert can leave harmless sequence gaps.
 
-Existing permissions remain. Later role mappings or application additions can widen access without rerunning these scripts. The one-time checks do not provide lasting partner isolation. That remains a production design dependency.
+**Preview and apply are separate runs.** Apply validates the current CSV and database state; it is not tied to an earlier preview. Keep the input unchanged and use a quiet test database while previewing and applying, especially for access changes. There are no explicit table-wide locks. Serializable transactions and constraints can reject concurrent conflicts; after a failure, review a fresh preview before retrying. A lost connection during commit also requires reconciliation before retrying.
 
-## Verification and recovery plan
+## Access limitation
 
-Execute these scenarios only when authorized, first on a disposable local database. Retain the commit, private input version, operator, target, per-stage preview/digest, final commit result, and reconciliation evidence. Reports may contain email addresses.
+The current portal uses a global `Partner Developer` role. Linking a partner to that role can expose its existing applications to other Developer users; the partner preview lists those applications and users. Application previews also list existing Developer users who can see the new apps.
 
-| Scenario | Expected result |
-| --- | --- |
-| Users on migrated DB without any partners | Example previews two user creates; no partner/app dependency; new accounts have no assigned roles |
-| Partners before applications | Example previews two group and two group-role creates; zero app/user writes |
-| Applications before partners | Refusal without permanent writes |
-| Applications after partners | Three inserts with the one-plus-two ownership split; no user/group/role writes |
-| Each preview | Portal counts and serial sequence values unchanged |
-| Each identical rerun | Only reuses; existing UUIDs and profile/auth/terms data unchanged |
-| Modified CSV after preview | Digest/conflict refusal before permanent inserts |
-| Wrong header, duplicate identity, missing reference, deleted record, extra app, wrong target/schema | Failure without committing that operation |
-| Forced failure during one apply | That operation rolls back; prior committed operations remain; sequence gaps are allowed |
-| Access parameter and one-row CSV modes | Same intended account/role; input source shown; one membership at most; no account/group creation |
-| Access with multiple CSV rows or expanded role scope | Refusal without a new assignment |
-| Portal checks | Controlled users sign in, accept terms, finish profile/department setup, see all three apps, and exercise environment creation |
-| Unassigned account | No application access; shared-role behavior is not evidence of individual partner isolation |
+Access assignment requires the role's full current scope to match the partner/application CSVs. Those CSVs are the intended scope, not a filter on the role. Supply the complete intended dataset, not just a later import batch. The script refuses extra or missing records, wrong application parents, or an empty partner selection. Zero applications is allowed. Existing permissions remain, and later global role changes can expand access; these scripts do not provide lasting individual partner isolation.
 
-There is no generic undo script for a committed operation. Use the disposable database's reset/restore process locally. Before shared test, arrange and rehearse snapshot recovery. Recovery must distinguish pre-existing data from the inserted rows and account for later writes; never delete by department, role, or display name.
+## Rehearsal and production plan
 
-## Production follow-up
+When execution is authorized, use a disposable test database first. Check the example load, four-or-more-partner inputs, adding one app to an existing partner, empty imports, and identical reruns. Verify that previews do not change portal data, invalid inputs roll back, and access refuses a scope different from the CSVs. Then verify sign-in and application visibility with controlled OIDC identities; the example emails are fictional and new user rows still need normal onboarding.
 
-Carry the procedure into production planning, not this fictional dataset unchanged. Complete issue 208's source mappings, resolve individual partner/application membership, extend the scripts for real environment and IBM configuration, and rehearse the final format in an equivalent non-production target. Credential pages still depend on legacy RP/IBM data. Arrange schema migrations separately; the IAM runtime database role lacks schema-migration ownership.
-
-Issues 209 and 224 need actual execution and user-flow evidence before completion. This preparation does not execute the production migration in issue 210.
+Keep inputs and run reports private. Arrange snapshot/reset recovery before a shared-test run; there is no generic undo script for committed data. Production planning still needs real source mappings, individual partner/application membership, environment/IBM configuration, and a reviewed execution/recovery process. The example department `2222` must exist in the target. These scripts do not create departments, roles, policies, environments, or IBM applications. Issues 209 and 224 require actual execution evidence before completion; production migration in issue 210 is outside this preparation.

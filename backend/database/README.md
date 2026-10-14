@@ -1,6 +1,6 @@
 # Database operations
 
-[scripts/](scripts/README.md) contains operator-run PostgreSQL data scripts. Each operation has its own folder with SQL, a blank CSV template, an example CSV, and usage instructions.
+[scripts/](scripts/README.md) contains operator-run PostgreSQL data scripts. Each operation has its own folder with a self-contained SQL file, a blank CSV template, an example CSV, and usage instructions. An SRE can run a script with its CSV inputs without a repository checkout or other SQL files.
 
 Schema changes remain in [src/migrations/](../src/migrations/README.md) and run through Alembic. Application database connection code remains in `src/app/core/db/`. These operator scripts neither replace migrations nor run automatically at application startup.
 

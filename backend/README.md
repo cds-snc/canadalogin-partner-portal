@@ -54,7 +54,7 @@ When authoring Alembic migrations in `backend/src/migrations/versions/`, keep th
 
 ## Database operator scripts
 
-See [database/scripts](database/scripts/README.md) for separate user, partner, application, and access SQL packages. Each package includes CSV templates, examples, and preview/apply instructions. These data operations are separate from schema migrations.
+See [database/scripts](database/scripts/README.md) for separate user, partner, application, and access SQL packages. Each script is self-contained for SRE handoff with its CSV inputs. Packages include templates, examples, and preview/apply instructions. These data operations are separate from schema migrations.
 
 ## Docker
 
