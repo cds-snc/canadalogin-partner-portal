@@ -32,9 +32,15 @@ const isCurrentPath = (pathname: string, href: string): boolean => {
 	return pathname === href || pathname.startsWith(`${href}/`);
 };
 
-const selectBackLink = (
+const isRouteBackLink = (value: unknown): value is RouteBackLink =>
+	typeof value === "object" &&
+	value !== null &&
+	typeof (value as { href?: unknown }).href === "string" &&
+	typeof (value as { label?: unknown }).label === "string";
+
+const selectBreadcrumbs = (
 	routeMatches: Array<{ context?: unknown }>
-): RouteBackLink | null => {
+): Array<RouteBackLink> => {
 	for (let index = routeMatches.length - 1; index >= 0; index -= 1) {
 		const match = routeMatches[index];
 
@@ -42,20 +48,25 @@ const selectBackLink = (
 			continue;
 		}
 
-		const context = match.context as { backLink?: unknown };
-		const { backLink } = context;
+		const context = match.context as {
+			backLink?: unknown;
+			breadcrumbs?: unknown;
+		};
 
 		if (
-			typeof backLink === "object" &&
-			backLink !== null &&
-			typeof (backLink as { href?: unknown }).href === "string" &&
-			typeof (backLink as { label?: unknown }).label === "string"
+			Array.isArray(context.breadcrumbs) &&
+			context.breadcrumbs.length > 0 &&
+			context.breadcrumbs.every(isRouteBackLink)
 		) {
-			return backLink as RouteBackLink;
+			return context.breadcrumbs;
+		}
+
+		if (isRouteBackLink(context.backLink)) {
+			return [context.backLink];
 		}
 	}
 
-	return null;
+	return [];
 };
 
 const Header = (): FunctionComponent => {
@@ -65,8 +76,8 @@ const Header = (): FunctionComponent => {
 	const pathname = useRouterState({
 		select: (state) => state.location.pathname,
 	});
-	const backLink = useRouterState({
-		select: (state) => selectBackLink(state.matches),
+	const breadcrumbs = useRouterState({
+		select: (state) => selectBreadcrumbs(state.matches),
 	});
 	const showNavigation = pathname !== "/logout";
 	const serviceName = t("home.title");
@@ -114,17 +125,17 @@ const Header = (): FunctionComponent => {
 				slot="toggle"
 				onClick={handleLangToggle}
 			/>
-			{backLink ? (
+			{breadcrumbs.length > 0 ? (
 				<Breadcrumbs
 					slot="breadcrumb"
 					items={[
-						{
-							href: backLink.href,
+						...breadcrumbs.map((breadcrumb) => ({
+							href: breadcrumb.href,
 							label:
-								backLink.showBackLabel === false
-									? backLink.label
-									: `← ${t("nav.backTo")} ${backLink.label}`,
-						},
+								breadcrumb.showBackLabel === false
+									? breadcrumb.label
+									: `← ${t("nav.backTo")} ${breadcrumb.label}`,
+						})),
 					]}
 				/>
 			) : null}

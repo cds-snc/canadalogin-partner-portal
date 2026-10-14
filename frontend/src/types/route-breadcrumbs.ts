@@ -5,5 +5,6 @@ export type RouteBackLink = {
 };
 
 export type RouteBackLinkContext = {
-	backLink: RouteBackLink;
+	backLink?: RouteBackLink;
+	breadcrumbs?: Array<RouteBackLink>;
 };

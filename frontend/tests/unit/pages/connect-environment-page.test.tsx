@@ -357,13 +357,6 @@ describe("ConnectEnvironmentPage", () => {
 				})
 			).getByRole("radio", { name: "common.yes" })
 		);
-		fireEvent.click(
-			within(
-				screen.getByRole("group", {
-					name: "applicationEnvironmentConnect.stepThree.sharesIdentifier",
-				})
-			).getByRole("radio", { name: "common.no" })
-		);
 	};
 
 	const expectYesFirst = (groupName: string): void => {
@@ -436,10 +429,6 @@ describe("ConnectEnvironmentPage", () => {
 		expectYesFirst(
 			"applicationEnvironmentConnect.stepThree.pkceSupported"
 		);
-		expectYesFirst(
-			"applicationEnvironmentConnect.stepThree.sharesIdentifier"
-		);
-
 		fireEvent.click(
 			within(
 				screen.getByRole("group", {
@@ -452,9 +441,9 @@ describe("ConnectEnvironmentPage", () => {
 		fireEvent.click(
 			within(
 				screen.getByRole("group", {
-					name: "applicationEnvironmentConnect.stepThree.sharesIdentifier",
+					name: "applicationEnvironmentConnect.stepThree.pkceSupported",
 				})
-			).getByRole("radio", { name: "common.no" })
+			).getByRole("radio", { name: "common.yes" })
 		);
 		fireEvent.click(
 			screen.getByRole("button", {
@@ -773,12 +762,10 @@ describe("ConnectEnvironmentPage", () => {
 		);
 		await waitFor(() => {
 			expect(
-				(
-					screen.getByLabelText(
-						"applicationEnvironmentConnect.stepThree.sectorIdentifierUrl"
-					) as HTMLInputElement
-				).value
-			).toBe("https://en.example.com/sector.json");
+				screen.getByRole("group", {
+					name: "applicationEnvironmentConnect.stepThree.clientType",
+				})
+			).toBeTruthy();
 		});
 		expect(
 			within(
@@ -797,25 +784,15 @@ describe("ConnectEnvironmentPage", () => {
 			).getByRole("radio", { name: "common.yes" })
 		).toHaveProperty("checked", true);
 		expect(
-			within(
-				screen.getByRole("group", {
-					name: "applicationEnvironmentConnect.stepThree.sharesIdentifier",
-				})
-			).getByRole("radio", { name: "common.yes" })
-		).toHaveProperty("checked", true);
-		fireEvent.input(
-			screen.getByLabelText(
-				"applicationEnvironmentConnect.stepThree.sectorIdentifierUrl"
-			),
-			{ target: { value: "https://example.com/updated-sector.json" } }
-		);
+			screen.queryByRole("group", {
+				name: "applicationEnvironmentConnect.stepThree.sharesIdentifier",
+			})
+		).toBeNull();
 		expect(
-			(
-				screen.getByLabelText(
-					"applicationEnvironmentConnect.stepThree.sectorIdentifierUrl"
-				) as HTMLInputElement
-			).value
-		).toBe("https://example.com/updated-sector.json");
+			screen.queryByLabelText(
+				"applicationEnvironmentConnect.stepThree.sectorIdentifierUrl"
+			)
+		).toBeNull();
 	});
 
 	it("shows linked GCDS errors for visible Step 1 fields", async () => {
@@ -1060,7 +1037,7 @@ describe("ConnectEnvironmentPage", () => {
 		expect(screen.queryByTestId("error-summary")).toBeNull();
 	});
 
-	it("defaults PKCE to Yes when Public is selected", async () => {
+	it("leaves PKCE unanswered when Public is selected", async () => {
 		mockedUseApplicationEnvironments.mockReturnValue({
 			data: applicationSummary,
 			error: null,
@@ -1086,7 +1063,7 @@ describe("ConnectEnvironmentPage", () => {
 					name: "applicationEnvironmentConnect.stepThree.pkceSupported",
 				})
 			).getByRole("radio", { name: "common.yes" })
-		).toHaveProperty("checked", true);
+		).toHaveProperty("checked", false);
 	});
 
 	it("leaves Step 3 radio choices unanswered until selected", async () => {
@@ -1102,7 +1079,6 @@ describe("ConnectEnvironmentPage", () => {
 		for (const groupName of [
 			"applicationEnvironmentConnect.stepThree.clientType",
 			"applicationEnvironmentConnect.stepThree.pkceSupported",
-			"applicationEnvironmentConnect.stepThree.sharesIdentifier",
 		]) {
 			for (const radio of screen
 				.getByRole("group", { name: groupName })
@@ -1116,14 +1092,12 @@ describe("ConnectEnvironmentPage", () => {
 				name: "applicationEnvironmentConnect.continue",
 			})
 		);
-
 		await waitFor(() => {
 			expect(screen.getByTestId("error-summary")).toBeTruthy();
 		});
 		for (const errorKey of [
 			"applicationEnvironmentConnect.stepThree.validationClientType",
 			"applicationEnvironmentConnect.stepThree.validationPkceSupported",
-			"applicationEnvironmentConnect.stepThree.validationSharesIdentifier",
 		]) {
 			expect(screen.getByRole("link", { name: errorKey })).toBeTruthy();
 		}
@@ -1222,7 +1196,7 @@ describe("ConnectEnvironmentPage", () => {
 		).toBeNull();
 	});
 
-	it("shows the sector identifier URL only when sharing is enabled", async () => {
+	it("does not show identifier sharing controls", async () => {
 		mockedUseApplicationEnvironments.mockReturnValue({
 			data: applicationSummary,
 			error: null,
@@ -1231,20 +1205,11 @@ describe("ConnectEnvironmentPage", () => {
 
 		render(<ConnectEnvironmentPage />);
 		await enterStepThree();
-		const sharesGroup = screen.getByRole("group", {
-			name: "applicationEnvironmentConnect.stepThree.sharesIdentifier",
-		});
-		fireEvent.click(
-			within(sharesGroup).getByRole("radio", { name: "common.yes" })
-		);
 		expect(
-			screen.getByLabelText(
-				"applicationEnvironmentConnect.stepThree.sectorIdentifierUrl"
-			)
-		).toBeTruthy();
-		fireEvent.click(
-			within(sharesGroup).getByRole("radio", { name: "common.no" })
-		);
+			screen.queryByRole("group", {
+				name: "applicationEnvironmentConnect.stepThree.sharesIdentifier",
+			})
+		).toBeNull();
 		expect(
 			screen.queryByLabelText(
 				"applicationEnvironmentConnect.stepThree.sectorIdentifierUrl"
@@ -1270,17 +1235,12 @@ describe("ConnectEnvironmentPage", () => {
 				name: "applicationEnvironmentConnect.publicClient",
 			})
 		);
-		const sharesGroup = screen.getByRole("group", {
-			name: "applicationEnvironmentConnect.stepThree.sharesIdentifier",
-		});
 		fireEvent.click(
-			within(sharesGroup).getByRole("radio", { name: "common.yes" })
-		);
-		fireEvent.input(
-			screen.getByLabelText(
-				"applicationEnvironmentConnect.stepThree.sectorIdentifierUrl"
-			),
-			{ target: { value: "https://example.com/sector.json" } }
+			within(
+				screen.getByRole("group", {
+					name: "applicationEnvironmentConnect.stepThree.pkceSupported",
+				})
+			).getByRole("radio", { name: "common.yes" })
 		);
 		fireEvent.click(screen.getByRole("button", { name: "common.back" }));
 		await waitFor(() => {
@@ -1297,12 +1257,10 @@ describe("ConnectEnvironmentPage", () => {
 		);
 		await waitFor(() => {
 			expect(
-				(
-					screen.getByLabelText(
-						"applicationEnvironmentConnect.stepThree.sectorIdentifierUrl"
-					) as HTMLInputElement
-				).value
-			).toBe("https://example.com/sector.json");
+				screen.getByRole("group", {
+					name: "applicationEnvironmentConnect.stepThree.clientType",
+				})
+			).toBeTruthy();
 		});
 		expect(
 			within(
@@ -1312,6 +1270,13 @@ describe("ConnectEnvironmentPage", () => {
 			).getByRole("radio", {
 				name: "applicationEnvironmentConnect.publicClient",
 			})
+		).toHaveProperty("checked", true);
+		expect(
+			within(
+				screen.getByRole("group", {
+					name: "applicationEnvironmentConnect.stepThree.pkceSupported",
+				})
+			).getByRole("radio", { name: "common.yes" })
 		).toHaveProperty("checked", true);
 	});
 
@@ -1721,8 +1686,11 @@ describe("ConnectEnvironmentPage", () => {
 		await waitFor(() => {
 			expect(mockedCreateEnvironment).toHaveBeenCalledOnce();
 			expect(mockedNavigate).toHaveBeenCalledWith({
-				to: "/applications/$applicationUuid/environments",
-				params: { applicationUuid: "application-uuid-1" },
+				to: "/applications/$applicationUuid/environments/$environmentUuid",
+				params: {
+					applicationUuid: "application-uuid-1",
+					environmentUuid: "environment-uuid-1",
+				},
 			});
 		});
 		expect(mockedCreateEnvironment).toHaveBeenCalledWith(

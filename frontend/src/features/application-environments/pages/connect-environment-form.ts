@@ -57,7 +57,7 @@ export const applicationEnvironmentSchema = z
 		postLogoutRedirectUris: z.array(urlSchema).min(1),
 		redirectUris: z.array(urlSchema).min(1),
 		sectorIdentifierUrl: optionalUrlSchema,
-		sharesIdentifier: z.boolean().nullable(),
+		sharesIdentifier: z.boolean(),
 		signOutRequestUrl: optionalUrlSchema,
 		signingMessages: z.array(z.enum(["request_object", "token_endpoint"])),
 		signingSignatureAlgorithms: z.array(algorithmSchema),
@@ -104,13 +104,6 @@ export const applicationEnvironmentSchema = z
 				code: "custom",
 				message: "pkceSupported",
 				path: ["pkceSupported"],
-			});
-		}
-		if (values.sharesIdentifier === null) {
-			context.addIssue({
-				code: "custom",
-				message: "sharesIdentifier",
-				path: ["sharesIdentifier"],
 			});
 		}
 		if (values.singleSignOut === null) {
@@ -239,7 +232,7 @@ export const DEFAULT_VALUES: ApplicationEnvironmentFormValues = {
 	postLogoutRedirectUris: [""],
 	redirectUris: [""],
 	sectorIdentifierUrl: "",
-	sharesIdentifier: null,
+	sharesIdentifier: false,
 	signOutRequestUrl: "",
 	signingMessages: [],
 	signingSignatureAlgorithms: [],
