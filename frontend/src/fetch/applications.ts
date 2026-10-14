@@ -39,3 +39,28 @@ export const getCurrentUserApplications = async ({
 	}
 	return result;
 };
+
+export const getCurrentUserApplicationByUuid = async (
+	applicationUuid: string
+): Promise<CurrentUserApplicationRead | null> => {
+	const findInPage = async (
+		page: number
+	): Promise<CurrentUserApplicationRead | null> => {
+		const applications = await getCurrentUserApplications({
+			itemsPerPage: 100,
+			page,
+		});
+		const application = applications.data.find(
+			(item) => item.uuid === applicationUuid
+		);
+		if (application) {
+			return application;
+		}
+		if (!applications.hasMore) {
+			return null;
+		}
+		return findInPage(page + 1);
+	};
+
+	return findInPage(1);
+};

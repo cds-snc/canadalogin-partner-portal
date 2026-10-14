@@ -1,14 +1,12 @@
 import type { PropsWithChildren, ReactElement } from "react";
-import { render, screen, waitFor } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from "vitest";
 import { DepartmentSetupPage } from "@/features/your-applications/pages/DepartmentSetupPage";
 import { HttpRequestError } from "@/fetch/errors";
-import {
-	assignCurrentUserRPApplicationDepartment,
-	getCurrentUserRPApplicationDepartment,
-} from "@/fetch/rp-applications";
+import { assignCurrentUserRPApplicationDepartment } from "@/fetch/rp-applications";
 
 const replaceMock = vi.fn();
+const navigateMock = vi.hoisted(() => vi.fn());
 const originalLocation = globalThis.location;
 
 vi.mock("@tanstack/react-router", () => ({
@@ -16,7 +14,7 @@ vi.mock("@tanstack/react-router", () => ({
 		applicationUuid: "application-uuid-1",
 	}),
 	useSearch: (): { redirect?: string } => ({}),
-	useNavigate: (): (() => Promise<void>) => vi.fn().mockResolvedValue(undefined),
+	useNavigate: (): typeof navigateMock => navigateMock,
 }));
 
 vi.mock("react-i18next", () => ({
@@ -53,7 +51,6 @@ vi.mock("@/fetch/rp-applications", async () => {
 	const actual = await vi.importActual("@/fetch/rp-applications");
 	return {
 		...actual,
-		getCurrentUserRPApplicationDepartment: vi.fn(),
 		assignCurrentUserRPApplicationDepartment: vi.fn(),
 	};
 });
@@ -80,13 +77,19 @@ vi.mock("@/components/ui", () => ({
 	Grid: ({ children }: PropsWithChildren): ReactElement => <div>{children}</div>,
 	Select: ({
 		children,
-	}: PropsWithChildren): ReactElement => (
-		<select>{children}</select>
+		value,
+		onInput,
+	}: PropsWithChildren<{
+		value: string;
+		onInput: React.FormEventHandler<HTMLSelectElement>;
+	}>): ReactElement => (
+		<select value={value} onInput={onInput}>
+			{children}
+		</select>
 	),
 	Text: ({ children }: PropsWithChildren): ReactElement => <p>{children}</p>,
 }));
 
-const mockedGetDepartment = vi.mocked(getCurrentUserRPApplicationDepartment);
 const mockedAssignDepartment = vi.mocked(assignCurrentUserRPApplicationDepartment);
 
 describe("YourApplicationsDepartmentSetupPage", () => {
@@ -103,8 +106,8 @@ describe("YourApplicationsDepartmentSetupPage", () => {
 
 	afterEach(() => {
 		replaceMock.mockReset();
-		mockedGetDepartment.mockReset();
 		mockedAssignDepartment.mockReset();
+		navigateMock.mockReset().mockResolvedValue(undefined);
 	});
 
 	afterAll(() => {
@@ -114,31 +117,18 @@ describe("YourApplicationsDepartmentSetupPage", () => {
 		});
 	});
 
-	it("shows application name from preflight after load", async () => {
-		mockedGetDepartment.mockResolvedValue({
-			id: 10,
-			uuid: "application-uuid-1",
-			dnrAppName: "Benefits Portal",
-			departmentId: null,
-		});
-
+	it("renders the department picker without loading RP application context", async () => {
 		render(<DepartmentSetupPage />);
 
-		await waitFor(() => {
-			expect(screen.queryByText("Loading departments")).toBeNull();
-		});
-
-		await screen.findByRole("heading", { name: "Benefits Portal" });
+		expect(
+			await screen.findByRole("heading", {
+				name: "Assign application department",
+			})
+		).toBeTruthy();
+		await screen.findByText("Select a department to continue.");
 	});
 
 	it("shows setup instruction and department picker", async () => {
-		mockedGetDepartment.mockResolvedValue({
-			id: 10,
-			uuid: "application-uuid-1",
-			dnrAppName: "Benefits Portal",
-			departmentId: null,
-		});
-
 		render(<DepartmentSetupPage />);
 
 		await screen.findByText("Select a department to continue.");
@@ -146,13 +136,6 @@ describe("YourApplicationsDepartmentSetupPage", () => {
 	});
 
 	it("does not show a cancel or back button", async () => {
-		mockedGetDepartment.mockResolvedValue({
-			id: 10,
-			uuid: "application-uuid-1",
-			dnrAppName: "Benefits Portal",
-			departmentId: null,
-		});
-
 		render(<DepartmentSetupPage />);
 
 		await screen.findByText("Assign department");
@@ -166,51 +149,71 @@ describe("YourApplicationsDepartmentSetupPage", () => {
 		expect(cancelButton).toBeUndefined();
 	});
 
-	it("redirects to 403 route on forbidden preflight", async () => {
-		mockedGetDepartment.mockRejectedValue(
-			new HttpRequestError({ status: 403 })
-		);
-
-		render(<DepartmentSetupPage />);
-
-		await waitFor(() => {
-			expect(replaceMock).toHaveBeenCalledWith("/access-denied");
-		});
-	});
-
-	it("redirects to 404 route on not-found preflight", async () => {
-		mockedGetDepartment.mockRejectedValue(
-			new HttpRequestError({ status: 404 })
-		);
-
-		render(<DepartmentSetupPage />);
-
-		await waitFor(() => {
-			expect(replaceMock).toHaveBeenCalledWith("/404");
-		});
-	});
-
-	it("navigates to rp-application details on 409 conflict (race condition)", async () => {
-		const navigateMock = vi.fn().mockResolvedValue(undefined);
-
-		vi.doMock("@tanstack/react-router", () => ({
-			useParams: (): { applicationUuid: string } => ({
-				applicationUuid: "application-uuid-1",
-			}),
-			useSearch: (): { redirect?: string } => ({}),
-			useNavigate: (): typeof navigateMock => navigateMock,
-		}));
-
-		mockedGetDepartment.mockResolvedValue({
+	it("assigns the selected department and returns to the application", async () => {
+		mockedAssignDepartment.mockResolvedValue({
 			id: 10,
 			uuid: "application-uuid-1",
 			dnrAppName: "Benefits Portal",
-			departmentId: null,
+			departmentId: 1,
 		});
+		render(<DepartmentSetupPage />);
+
+		fireEvent.input(screen.getByRole("combobox"), {
+			target: { value: "dept-uuid-1" },
+		});
+		fireEvent.click(screen.getByRole("button", { name: "Assign department" }));
+
+		await waitFor(() => {
+			expect(mockedAssignDepartment).toHaveBeenCalledWith(
+				"application-uuid-1",
+				{ departmentUuid: "dept-uuid-1" }
+			);
+			expect(navigateMock).toHaveBeenCalledWith({
+				to: "/applications/application-uuid-1",
+				replace: true,
+			});
+		});
+	});
+
+	it("treats an already-assigned department as success", async () => {
 		mockedAssignDepartment.mockRejectedValue(
 			new HttpRequestError({ status: 409 })
 		);
+		render(<DepartmentSetupPage />);
 
-		vi.doUnmock("@tanstack/react-router");
+		fireEvent.input(screen.getByRole("combobox"), {
+			target: { value: "dept-uuid-1" },
+		});
+		fireEvent.click(screen.getByRole("button", { name: "Assign department" }));
+
+		await waitFor(() => {
+			expect(navigateMock).toHaveBeenCalledWith({
+				to: "/applications/$applicationUuid",
+				params: { applicationUuid: "application-uuid-1" },
+				replace: true,
+			});
+		});
 	});
+
+	it.each([
+		{ status: 403, path: "/access-denied" },
+		{ status: 404, path: "/404" },
+	])(
+		"redirects to $path when assignment returns $status",
+		async ({ status, path }) => {
+			mockedAssignDepartment.mockRejectedValue(
+				new HttpRequestError({ status })
+			);
+			render(<DepartmentSetupPage />);
+
+			fireEvent.input(screen.getByRole("combobox"), {
+				target: { value: "dept-uuid-1" },
+			});
+			fireEvent.click(screen.getByRole("button", { name: "Assign department" }));
+
+			await waitFor(() => {
+				expect(replaceMock).toHaveBeenCalledWith(path);
+			});
+		}
+	);
 });
