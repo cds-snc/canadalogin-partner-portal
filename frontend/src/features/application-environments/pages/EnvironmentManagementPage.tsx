@@ -1,4 +1,8 @@
-import { useNavigate, useParams } from "@tanstack/react-router";
+import {
+	useNavigate,
+	useParams,
+	useRouteContext,
+} from "@tanstack/react-router";
 import { useTranslation } from "react-i18next";
 import type { FunctionComponent } from "@/common/types";
 import {
@@ -6,6 +10,7 @@ import {
 	ConfigurationGrid,
 	Grid,
 	Heading,
+	Icon,
 	Link,
 	Notice,
 	Tabs,
@@ -57,9 +62,14 @@ const formatDate = (value: string | null, language: string): string => {
 	if (!value) {
 		return "";
 	}
-	return new Intl.DateTimeFormat(language, {
-		dateStyle: "long",
-		timeStyle: "short",
+	const locale = language.startsWith("fr") ? "fr-CA" : language;
+	return new Intl.DateTimeFormat(locale, {
+		year: "numeric",
+		month: "long",
+		day: "numeric",
+		hour: "numeric",
+		minute: "2-digit",
+		timeZoneName: "short",
 	}).format(new Date(value));
 };
 
@@ -74,6 +84,9 @@ export const EnvironmentManagementPage = (): FunctionComponent => {
 	});
 	const { applicationUuid, environmentUuid } = useParams({
 		from: "/applications/$applicationUuid/environments/$environmentUuid",
+	});
+	const { rpApplicationName } = useRouteContext({
+		from: "/applications/$applicationUuid",
 	});
 	const {
 		data: environment,
@@ -427,6 +440,17 @@ export const EnvironmentManagementPage = (): FunctionComponent => {
 	return (
 		<Grid columns="1fr" container="xl" tag="div">
 			<Grid columns="minmax(0, 46.5rem)" tag="div">
+				<Grid alignItems="center" columns="auto auto 1fr" tag="div">
+					<Text marginBottom="0">
+						<strong>{rpApplicationName ?? environment.partnerLabel}</strong>
+					</Text>
+					<div className="application-switch-icon">
+						<Icon name="arrow-up-down" size="text" />
+					</div>
+					<Link href="/applications">
+						{t("applicationEnvironments.switchApplication")}
+					</Link>
+				</Grid>
 				<Heading tag="h1">{environment.partnerLabel}</Heading>
 				<Text marginBottom="0">
 					{t("applicationEnvironmentManagement.intro")}

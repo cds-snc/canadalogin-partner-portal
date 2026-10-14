@@ -7,11 +7,18 @@ export const Route = createFileRoute(
 )({
 	beforeLoad: ({ params }) =>
 		({
-			backLink: {
-				href: `/applications/${params.applicationUuid}/environments`,
-				label: i18n.t("applicationEnvironments.title"),
-				showBackLabel: false,
-			},
+			breadcrumbs: [
+				{
+					href: "/applications",
+					label: i18n.t("applicationEnvironments.applications"),
+					showBackLabel: false,
+				},
+				{
+					href: `/applications/${params.applicationUuid}/environments`,
+					label: i18n.t("applicationEnvironments.title"),
+					showBackLabel: false,
+				},
+			],
 		} satisfies RouteBackLinkContext),
 	component: Outlet,
 });
