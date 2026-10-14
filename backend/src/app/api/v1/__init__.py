@@ -1,5 +1,6 @@
 from fastapi import APIRouter
 
+from .application_environment_client_secrets import router as application_environment_client_secrets_router
 from .application_environments import router as application_environments_router
 from .applications import router as applications_router
 from .audit_logs import router as audit_logs_router
@@ -21,6 +22,7 @@ from .users import router as users_router
 router = APIRouter(prefix="/v1")
 router.include_router(applications_router)
 router.include_router(application_environments_router)
+router.include_router(application_environment_client_secrets_router)
 router.include_router(audit_logs_router)
 router.include_router(departments_router)
 router.include_router(csrf_router)
