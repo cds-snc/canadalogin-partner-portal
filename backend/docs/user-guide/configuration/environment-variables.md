@@ -106,6 +106,16 @@ CSRF_COOKIE_SAMESITE=lax
 Never use default values in production. Generate a strong secret key:
 `bash     openssl rand -hex 32     `
 
+### OIDC and Account Inactivity
+
+```env
+OIDC_ENABLED=true
+USER_INACTIVITY_DAYS=180
+```
+
+- `OIDC_ENABLED`: Enables the OIDC login and callback endpoints.
+- `USER_INACTIVITY_DAYS`: Number of days without a successful OIDC sign-in before a known user is deactivated on their next login attempt. Defaults to `180`.
+
 ### Redis Configuration
 
 Redis is used for caching, job queues, and rate limiting:

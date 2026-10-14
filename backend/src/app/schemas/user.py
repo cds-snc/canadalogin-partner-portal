@@ -62,6 +62,7 @@ class UserReadInternal(UserRead):
     id: int
     department_id: int | None = None
     tier_id: int | None = None
+    last_login_at: datetime | None = None
 
 
 class UserTierRead(UserRead):

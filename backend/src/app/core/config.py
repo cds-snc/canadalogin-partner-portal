@@ -66,6 +66,7 @@ class RedisSessionSettings(BaseSettings):
 
 class OIDCSettings(BaseSettings):
     OIDC_ENABLED: bool = False
+    USER_INACTIVITY_DAYS: int = 180
     OIDC_PROVIDER_NAME: str = "oidc"
     OIDC_SERVER_METADATA_URL: str | None = None
     OIDC_CLIENT_ID: str | None = None
