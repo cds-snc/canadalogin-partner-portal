@@ -52,7 +52,8 @@ cd /path/to/partner-handoff
 psql -X -d YOUR_DATABASE -f setup_partners.sql
 ```
 
-Review the rows and existing-user exposure, then apply:
+Preview shows `partner_action` and `role_link_action` for each CSV row, with
+separate create/reuse totals. Review these and existing-user exposure, then apply:
 
 ```sh
 psql -X -d YOUR_DATABASE -v apply=true -f setup_partners.sql

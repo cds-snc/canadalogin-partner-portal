@@ -54,7 +54,8 @@ cd /path/to/application-handoff
 psql -X -d YOUR_DATABASE -f insert_applications.sql
 ```
 
-Review the applications, parent associations, and existing-user exposure, then apply:
+Preview shows each application's parent and create/reuse action, followed by
+totals. Review these and existing-user exposure, then apply:
 
 ```sh
 psql -X -d YOUR_DATABASE -v apply=true -f insert_applications.sql

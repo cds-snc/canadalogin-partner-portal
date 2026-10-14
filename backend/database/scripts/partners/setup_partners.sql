@@ -1,14 +1,8 @@
--- Standalone partner setup: hand off this file and the completed partners.csv.
--- CSV header: uuid,department_gc_org_id,name_en,name_fr
--- Requires PostgreSQL 13+, a migrated portal schema compatible with
--- 0012_partner_developer_write, active referenced departments and the existing
--- Partner Developer role. No Alembic revision is enforced by this script.
--- From the directory containing this SQL and CSV, using normal host/user/auth
--- settings (or -h HOST -U USER):
---   Preview: psql -X -d YOUR_DATABASE -f setup_partners.sql
---   Apply:   psql -X -d YOUR_DATABASE -v apply=true -f setup_partners.sql
--- Use a fresh psql process for each invocation. This script owns its transaction;
--- do not use -1/--single-transaction or an outer BEGIN. No other SQL files needed.
+-- Import partners.csv and add Partner Developer role links; run beside the CSV.
+-- Requires PostgreSQL 13+ and the migrated portal schema.
+-- Use a fresh psql process; this script owns its transaction (no -1/outer BEGIN).
+-- Preview: psql -X -d YOUR_DATABASE -f setup_partners.sql
+-- Apply:   psql -X -d YOUR_DATABASE -v apply=true -f setup_partners.sql
 
 \set ON_ERROR_STOP on
 \pset pager off
@@ -17,7 +11,7 @@
   \set apply false
 \endif
 -- Let PostgreSQL validate the boolean before psql uses it as a condition.
-SELECT :'apply'::boolean AS _apply \gset
+SELECT :'apply'::boolean AS should_apply \gset
 
 BEGIN ISOLATION LEVEL SERIALIZABLE;
 SET LOCAL lock_timeout = '5s';
@@ -27,132 +21,157 @@ SET LOCAL search_path = pg_catalog, pg_temp;
 SET LOCAL timezone = 'UTC';
 
 -- Session-local helper: failed validation aborts this operation.
-CREATE FUNCTION pg_temp.assert_true(condition boolean, message text)
+CREATE FUNCTION pg_temp.require_valid(is_valid boolean, error_message text)
 RETURNS void LANGUAGE plpgsql AS $$
 BEGIN
-  IF condition IS DISTINCT FROM TRUE THEN
-    RAISE EXCEPTION '%', message;
+  IF is_valid IS DISTINCT FROM TRUE THEN
+    RAISE EXCEPTION '%', error_message;
   END IF;
 END;
 $$;
 
-SELECT pg_temp.assert_true(current_setting('server_version_num')::integer >= 130000,
+SELECT pg_temp.require_valid(current_setting('server_version_num')::integer >= 130000,
                           'These scripts require PostgreSQL 13 or newer.');
 -- Connection settings select the target. No environment is inferred from its name.
 \conninfo
-SELECT CASE WHEN :'_apply'::boolean THEN 'APPLY' ELSE 'PREVIEW' END AS mode;
+SELECT CASE WHEN :'should_apply'::boolean THEN 'APPLY' ELSE 'PREVIEW' END AS mode;
 
-CREATE TEMP TABLE _csv_partners (uuid text, department_gc_org_id text, name_en text, name_fr text) ON COMMIT DROP;
-\copy _csv_partners FROM 'partners.csv' WITH (FORMAT csv, HEADER false, ENCODING 'UTF8')
-SELECT pg_temp.assert_true(
-  (SELECT count(*) = 1 FROM _csv_partners
+-- Check the header before converting values so misplaced columns cannot be imported.
+CREATE TEMP TABLE csv_partner_rows (uuid text, department_gc_org_id text, name_en text, name_fr text) ON COMMIT DROP;
+\copy csv_partner_rows FROM 'partners.csv' WITH (FORMAT csv, HEADER false, ENCODING 'UTF8')
+SELECT pg_temp.require_valid(
+  (SELECT count(*) = 1 FROM csv_partner_rows
    WHERE (uuid, department_gc_org_id, name_en, name_fr) = ('uuid', 'department_gc_org_id', 'name_en', 'name_fr')),
   'partners.csv must contain exactly one header: uuid,department_gc_org_id,name_en,name_fr.');
-DELETE FROM _csv_partners
+DELETE FROM csv_partner_rows
   WHERE (uuid, department_gc_org_id, name_en, name_fr) = ('uuid', 'department_gc_org_id', 'name_en', 'name_fr');
 
-CREATE TEMP TABLE _input_partners (
+-- Types and constraints reject invalid values and duplicate UUIDs before writes.
+CREATE TEMP TABLE partners_to_import (
   uuid uuid PRIMARY KEY,
   department_gc_org_id integer NOT NULL CHECK (department_gc_org_id > 0),
   name_en varchar(256) NOT NULL CHECK (btrim(name_en) <> ''),
   name_fr varchar(256) CHECK (name_fr IS NULL OR btrim(name_fr) <> '')
 ) ON COMMIT DROP;
-INSERT INTO _input_partners SELECT uuid::uuid, department_gc_org_id::integer, name_en, name_fr FROM _csv_partners;
+INSERT INTO partners_to_import
+SELECT uuid::uuid, department_gc_org_id::integer, name_en, name_fr FROM csv_partner_rows;
 
-CREATE TEMP TABLE _departments ON COMMIT DROP AS
-SELECT d.* FROM public.department d
-JOIN (SELECT DISTINCT department_gc_org_id FROM _input_partners) i ON d.gc_org_id = i.department_gc_org_id;
-SELECT pg_temp.assert_true(
-  (SELECT count(*) FROM _departments) = (SELECT count(DISTINCT department_gc_org_id) FROM _input_partners)
-  AND NOT EXISTS (SELECT 1 FROM _departments WHERE is_deleted OR deleted_at IS NOT NULL),
+-- Resolve existing catalog entries; this import never creates departments or roles.
+CREATE TEMP TABLE referenced_departments ON COMMIT DROP AS
+SELECT department.id, department.gc_org_id, department.name, department.is_deleted, department.deleted_at
+FROM public.department AS department
+JOIN (SELECT DISTINCT department_gc_org_id FROM partners_to_import) AS requested_department
+  ON department.gc_org_id = requested_department.department_gc_org_id;
+SELECT pg_temp.require_valid(
+  (SELECT count(*) FROM referenced_departments) = (SELECT count(DISTINCT department_gc_org_id) FROM partners_to_import)
+  AND NOT EXISTS (SELECT 1 FROM referenced_departments WHERE is_deleted OR deleted_at IS NOT NULL),
   'Each partner must reference an existing active department catalog entry.');
-CREATE TEMP TABLE _developer_role ON COMMIT DROP AS
-SELECT * FROM public.role WHERE name = 'Partner Developer' AND EXISTS (SELECT 1 FROM _input_partners);
-SELECT pg_temp.assert_true(
-  NOT EXISTS (SELECT 1 FROM _input_partners)
-  OR ((SELECT count(*) = 1 FROM _developer_role)
-      AND NOT EXISTS (SELECT 1 FROM _developer_role WHERE is_deleted OR deleted_at IS NOT NULL)),
+CREATE TEMP TABLE developer_role ON COMMIT DROP AS
+SELECT id, name, is_deleted, deleted_at FROM public.role
+WHERE name = 'Partner Developer' AND EXISTS (SELECT 1 FROM partners_to_import);
+SELECT pg_temp.require_valid(
+  NOT EXISTS (SELECT 1 FROM partners_to_import)
+  OR ((SELECT count(*) = 1 FROM developer_role)
+      AND NOT EXISTS (SELECT 1 FROM developer_role WHERE is_deleted OR deleted_at IS NOT NULL)),
   'The active Partner Developer role must already exist.');
 
-SELECT pg_temp.assert_true(NOT EXISTS (
-  SELECT 1 FROM _input_partners i JOIN public.partner_group g ON g.uuid = i.uuid
-  JOIN _departments d ON d.gc_org_id = i.department_gc_org_id
-  WHERE g.is_deleted OR g.deleted_at IS NOT NULL OR g.department_id IS DISTINCT FROM d.id
-    OR g.name_en IS DISTINCT FROM i.name_en OR g.name_fr IS DISTINCT FROM i.name_fr),
+-- Reruns may reuse exact matches, but must not change or restore existing records.
+SELECT pg_temp.require_valid(NOT EXISTS (
+  SELECT 1 FROM partners_to_import AS input_partner
+  JOIN public.partner_group AS partner ON partner.uuid = input_partner.uuid
+  JOIN referenced_departments AS department ON department.gc_org_id = input_partner.department_gc_org_id
+  WHERE partner.is_deleted OR partner.deleted_at IS NOT NULL
+    OR partner.department_id IS DISTINCT FROM department.id
+    OR partner.name_en IS DISTINCT FROM input_partner.name_en
+    OR partner.name_fr IS DISTINCT FROM input_partner.name_fr),
   'An existing partner is deleted or conflicts with the input.');
-SELECT pg_temp.assert_true(NOT EXISTS (
-  SELECT 1 FROM public.partner_group_role m JOIN public.partner_group g ON g.id = m.partner_group_id
-  JOIN _input_partners i ON i.uuid = g.uuid JOIN _developer_role r ON r.id = m.role_id
-  WHERE m.is_deleted OR m.deleted_at IS NOT NULL),
+SELECT pg_temp.require_valid(NOT EXISTS (
+  SELECT 1 FROM public.partner_group_role AS group_role
+  JOIN public.partner_group AS partner ON partner.id = group_role.partner_group_id
+  JOIN partners_to_import AS input_partner ON input_partner.uuid = partner.uuid
+  JOIN developer_role ON developer_role.id = group_role.role_id
+  WHERE group_role.is_deleted OR group_role.deleted_at IS NOT NULL),
   'An existing group-role mapping is deleted; it will not be restored.');
 
--- Adding a group-role link can expose every active application already under an
--- input partner. Report that scope before inserting the links.
-CREATE TEMP TABLE _existing_applications ON COMMIT DROP AS
-SELECT a.id, a.uuid, a.name_en, a.name_fr, a.deleted_at, g.uuid AS partner_group_uuid
-FROM public.application a JOIN public.partner_group g ON g.id = a.partner_group_id
-JOIN _input_partners i ON i.uuid = g.uuid WHERE NOT a.is_deleted;
-SELECT pg_temp.assert_true(NOT EXISTS (
-  SELECT 1 FROM _existing_applications WHERE deleted_at IS NOT NULL),
+-- A group-role link exposes existing applications to every holder of that role.
+CREATE TEMP TABLE existing_partner_applications ON COMMIT DROP AS
+SELECT application.uuid, application.name_en, application.name_fr, application.deleted_at,
+       partner.uuid AS partner_group_uuid
+FROM public.application AS application
+JOIN public.partner_group AS partner ON partner.id = application.partner_group_id
+JOIN partners_to_import AS input_partner ON input_partner.uuid = partner.uuid
+WHERE NOT application.is_deleted;
+SELECT pg_temp.require_valid(NOT EXISTS (
+  SELECT 1 FROM existing_partner_applications WHERE deleted_at IS NOT NULL),
   'An input partner contains an active application with inconsistent deletion flags. No access mapping will be added.');
 
-CREATE TEMP TABLE _partner_plan (kind text, key text, action text, details jsonb) ON COMMIT DROP;
-INSERT INTO _partner_plan
-SELECT 'partner', i.uuid::text, CASE WHEN g.id IS NULL THEN 'create' ELSE 'reuse' END,
-  jsonb_build_object('input', to_jsonb(i), 'departmentId', d.id, 'departmentUuid', d.uuid, 'existingId', g.id)
-FROM _input_partners i JOIN _departments d ON d.gc_org_id = i.department_gc_org_id
-LEFT JOIN public.partner_group g ON g.uuid = i.uuid;
-INSERT INTO _partner_plan
-SELECT 'partnerGroupRole', i.uuid::text, CASE WHEN m.id IS NULL THEN 'create' ELSE 'reuse' END,
-  jsonb_build_object('partnerUuid', i.uuid, 'roleName', r.name, 'roleId', r.id, 'roleUuid', r.uuid,
-                    'existingId', m.id, 'existingUuid', m.uuid)
-FROM _input_partners i CROSS JOIN _developer_role r
-LEFT JOIN public.partner_group g ON g.uuid = i.uuid
-LEFT JOIN public.partner_group_role m ON m.partner_group_id = g.id AND m.role_id = r.id;
+CREATE TEMP TABLE partner_import_preview ON COMMIT DROP AS
+SELECT input_partner.uuid AS partner_uuid, input_partner.name_en, input_partner.name_fr,
+       input_partner.department_gc_org_id, department.name AS department_name,
+       CASE WHEN partner.id IS NULL THEN 'create' ELSE 'reuse' END AS partner_action,
+       CASE WHEN group_role.id IS NULL THEN 'create' ELSE 'reuse' END AS role_link_action
+FROM partners_to_import AS input_partner
+JOIN referenced_departments AS department ON department.gc_org_id = input_partner.department_gc_org_id
+CROSS JOIN developer_role
+LEFT JOIN public.partner_group AS partner ON partner.uuid = input_partner.uuid
+LEFT JOIN public.partner_group_role AS group_role
+  ON group_role.partner_group_id = partner.id AND group_role.role_id = developer_role.id;
 
 -- Match the portal's active-role visibility rules when reporting affected users.
-CREATE TEMP TABLE _existing_developers ON COMMIT DROP AS
-SELECT u.id, u.uuid, u.email, m.id AS membership_id, m.uuid AS membership_uuid
-FROM public."user" u JOIN public.user_role m ON m.user_id = u.id
-JOIN _developer_role r ON r.id = m.role_id WHERE NOT u.is_deleted AND NOT m.is_deleted;
-SELECT kind, key, action, details FROM _partner_plan ORDER BY kind, key;
-SELECT 'create' AS action, count(*) FILTER (WHERE action = 'create') AS row_count FROM _partner_plan
-UNION ALL SELECT 'reuse', count(*) FILTER (WHERE action = 'reuse') FROM _partner_plan;
+CREATE TEMP TABLE existing_developers ON COMMIT DROP AS
+SELECT portal_user.email
+FROM public."user" AS portal_user
+JOIN public.user_role AS user_role ON user_role.user_id = portal_user.id
+JOIN developer_role ON developer_role.id = user_role.role_id
+WHERE NOT portal_user.is_deleted AND NOT user_role.is_deleted;
+SELECT * FROM partner_import_preview ORDER BY partner_uuid;
+SELECT 'partner' AS record_type,
+       count(*) FILTER (WHERE partner_action = 'create') AS create_count,
+       count(*) FILTER (WHERE partner_action = 'reuse') AS reuse_count FROM partner_import_preview
+UNION ALL
+SELECT 'partner_role_link', count(*) FILTER (WHERE role_link_action = 'create'),
+       count(*) FILTER (WHERE role_link_action = 'reuse') FROM partner_import_preview;
 SELECT 'Existing holders of the global Partner Developer role can see applications in the input partners.' AS access_notice;
-SELECT email AS existing_developer_email FROM _existing_developers ORDER BY email;
-SELECT uuid AS existing_application_uuid, partner_group_uuid, name_en, name_fr FROM _existing_applications ORDER BY uuid;
+SELECT email AS existing_developer_email FROM existing_developers ORDER BY email;
+SELECT uuid AS existing_application_uuid, partner_group_uuid, name_en, name_fr FROM existing_partner_applications ORDER BY uuid;
 
-\if :_apply
+-- Insert only missing records, then verify every input row before committing.
+\if :should_apply
   INSERT INTO public.partner_group (department_id, name_en, name_fr, uuid, created_at, is_deleted)
-  SELECT d.id, i.name_en, i.name_fr, i.uuid, CURRENT_TIMESTAMP, false
-  FROM _input_partners i JOIN _departments d ON d.gc_org_id = i.department_gc_org_id
-  WHERE NOT EXISTS (SELECT 1 FROM public.partner_group g WHERE g.uuid = i.uuid);
+  SELECT department.id, input_partner.name_en, input_partner.name_fr, input_partner.uuid, CURRENT_TIMESTAMP, false
+  FROM partners_to_import AS input_partner
+  JOIN referenced_departments AS department ON department.gc_org_id = input_partner.department_gc_org_id
+  WHERE NOT EXISTS (SELECT 1 FROM public.partner_group AS partner WHERE partner.uuid = input_partner.uuid);
   INSERT INTO public.partner_group_role (partner_group_id, role_id, uuid, created_at, is_deleted)
-  SELECT g.id, r.id, gen_random_uuid(), CURRENT_TIMESTAMP, false
-  FROM _input_partners i JOIN public.partner_group g ON g.uuid = i.uuid CROSS JOIN _developer_role r
-  WHERE NOT EXISTS (SELECT 1 FROM public.partner_group_role m WHERE m.partner_group_id = g.id AND m.role_id = r.id);
-  SELECT pg_temp.assert_true(
-    (SELECT count(*) FROM public.partner_group g JOIN _input_partners i ON i.uuid = g.uuid
-     JOIN _departments d ON d.gc_org_id = i.department_gc_org_id
-     WHERE NOT g.is_deleted AND g.deleted_at IS NULL AND g.department_id = d.id
-       AND g.name_en IS NOT DISTINCT FROM i.name_en AND g.name_fr IS NOT DISTINCT FROM i.name_fr)
-      = (SELECT count(*) FROM _input_partners),
+  SELECT partner.id, developer_role.id, gen_random_uuid(), CURRENT_TIMESTAMP, false
+  FROM partners_to_import AS input_partner
+  JOIN public.partner_group AS partner ON partner.uuid = input_partner.uuid CROSS JOIN developer_role
+  WHERE NOT EXISTS (
+    SELECT 1 FROM public.partner_group_role AS group_role
+    WHERE group_role.partner_group_id = partner.id AND group_role.role_id = developer_role.id);
+  SELECT pg_temp.require_valid(
+    (SELECT count(*) FROM public.partner_group AS partner
+     JOIN partners_to_import AS input_partner ON input_partner.uuid = partner.uuid
+     JOIN referenced_departments AS department ON department.gc_org_id = input_partner.department_gc_org_id
+     WHERE NOT partner.is_deleted AND partner.deleted_at IS NULL AND partner.department_id = department.id
+       AND partner.name_en IS NOT DISTINCT FROM input_partner.name_en
+       AND partner.name_fr IS NOT DISTINCT FROM input_partner.name_fr)
+      = (SELECT count(*) FROM partners_to_import),
     'Partner reconciliation failed.');
-  SELECT pg_temp.assert_true(
-    (SELECT count(*) FROM public.partner_group_role m JOIN public.partner_group g ON g.id = m.partner_group_id
-     JOIN _input_partners i ON i.uuid = g.uuid JOIN _developer_role r ON r.id = m.role_id
-     WHERE NOT m.is_deleted AND m.deleted_at IS NULL) = (SELECT count(*) FROM _input_partners),
+  SELECT pg_temp.require_valid(
+    (SELECT count(*) FROM public.partner_group_role AS group_role
+     JOIN public.partner_group AS partner ON partner.id = group_role.partner_group_id
+     JOIN partners_to_import AS input_partner ON input_partner.uuid = partner.uuid
+     JOIN developer_role ON developer_role.id = group_role.role_id
+     WHERE NOT group_role.is_deleted AND group_role.deleted_at IS NULL) = (SELECT count(*) FROM partners_to_import),
     'Group-role reconciliation failed.');
-  SELECT g.uuid AS partner_uuid, g.name_en, g.name_fr, d.gc_org_id AS department_gc_org_id,
-         m.uuid AS developer_mapping_uuid
-  FROM public.partner_group g JOIN _input_partners i ON i.uuid = g.uuid
-  JOIN public.department d ON d.id = g.department_id
-  JOIN public.partner_group_role m ON m.partner_group_id = g.id
-  JOIN _developer_role r ON r.id = m.role_id ORDER BY g.uuid;
-\endif
--- Finish this operation only. Earlier committed operations remain committed.
--- ON_ERROR_STOP prevents reaching COMMIT after a SQL or COPY failure.
-\if :_apply
+  SELECT partner.uuid AS partner_uuid, partner.name_en, partner.name_fr, department.gc_org_id AS department_gc_org_id,
+         group_role.uuid AS developer_mapping_uuid
+  FROM public.partner_group AS partner
+  JOIN partners_to_import AS input_partner ON input_partner.uuid = partner.uuid
+  JOIN public.department AS department ON department.id = partner.department_id
+  JOIN public.partner_group_role AS group_role ON group_role.partner_group_id = partner.id
+  JOIN developer_role ON developer_role.id = group_role.role_id ORDER BY partner.uuid;
   COMMIT;
   \echo 'APPLIED: transaction committed. Retain the report and run a fresh preview to reconcile.'
 \else

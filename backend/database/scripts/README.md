@@ -55,7 +55,9 @@ All of that SQL is included directly in each file; there are no external SQL inc
 
 Use PostgreSQL 13+ with the portal schema already migrated. The scripts were prepared against schema revision `0012_partner_developer_write`; they do not pin that revision or run migrations. Review schema changes before reuse. The operator needs SELECT, relevant INSERT/sequence access, and database TEMP privileges. The connection settings select the database; the scripts display that connection but do not detect test versus production.
 
-Every run validates its input. Duplicate identities, missing references, deleted records, and conflicting existing data fail the operation. Matching rows are reused; there are no automatic updates or deletes. Empty user/partner/application templates are no-op batches. Later application batches can add apps without including the existing siblings.
+PostgreSQL handles invalid field types, missing required values, and duplicate keys through table constraints. The additional checks catch things those constraints cannot decide: whether an existing row conflicts with the CSV, whether a reference is soft-deleted, and whether a global role would grant unintended access. These checks matter because matching records are reused rather than overwritten.
+
+Empty user/partner/application templates are no-op batches. Later application batches can add apps without including the existing siblings. Reports show ordinary named columns and create/reuse actions. There are no automatic updates or deletes.
 
 Preview creates only temporary objects and rolls them back; it performs no portal inserts or ID-sequence calls. Apply uses one transaction per operation. If a later operation fails, earlier committed operations remain. A failed insert can leave harmless sequence gaps.
 

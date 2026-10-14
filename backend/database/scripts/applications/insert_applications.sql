@@ -1,14 +1,8 @@
--- Standalone application import: hand off this file and completed applications.csv.
--- CSV header: uuid,partner_group_uuid,name_en,name_fr
--- Requires PostgreSQL 13+, a migrated portal schema compatible with
--- 0012_partner_developer_write and existing active parent partner groups.
--- No Alembic revision is enforced. User accounts and role mappings are not required.
--- From the directory containing this SQL and CSV, using normal host/user/auth
--- settings (or -h HOST -U USER):
---   Preview: psql -X -d YOUR_DATABASE -f insert_applications.sql
---   Apply:   psql -X -d YOUR_DATABASE -v apply=true -f insert_applications.sql
--- Use a fresh psql process for each invocation. This script owns its transaction;
--- do not use -1/--single-transaction or an outer BEGIN. No other SQL files needed.
+-- Import applications.csv under existing partner groups; run beside the CSV.
+-- Requires PostgreSQL 13+ and the migrated portal schema.
+-- Use a fresh psql process; this script owns its transaction (no -1/outer BEGIN).
+-- Preview: psql -X -d YOUR_DATABASE -f insert_applications.sql
+-- Apply:   psql -X -d YOUR_DATABASE -v apply=true -f insert_applications.sql
 
 \set ON_ERROR_STOP on
 \pset pager off
@@ -17,7 +11,7 @@
   \set apply false
 \endif
 -- Let PostgreSQL validate the boolean before psql uses it as a condition.
-SELECT :'apply'::boolean AS _apply \gset
+SELECT :'apply'::boolean AS should_apply \gset
 
 BEGIN ISOLATION LEVEL SERIALIZABLE;
 SET LOCAL lock_timeout = '5s';
@@ -27,98 +21,108 @@ SET LOCAL search_path = pg_catalog, pg_temp;
 SET LOCAL timezone = 'UTC';
 
 -- Session-local helper: failed validation aborts this operation.
-CREATE FUNCTION pg_temp.assert_true(condition boolean, message text)
+CREATE FUNCTION pg_temp.require_valid(is_valid boolean, error_message text)
 RETURNS void LANGUAGE plpgsql AS $$
 BEGIN
-  IF condition IS DISTINCT FROM TRUE THEN
-    RAISE EXCEPTION '%', message;
+  IF is_valid IS DISTINCT FROM TRUE THEN
+    RAISE EXCEPTION '%', error_message;
   END IF;
 END;
 $$;
 
-SELECT pg_temp.assert_true(current_setting('server_version_num')::integer >= 130000,
+SELECT pg_temp.require_valid(current_setting('server_version_num')::integer >= 130000,
                           'These scripts require PostgreSQL 13 or newer.');
 -- Connection settings select the target. No environment is inferred from its name.
 \conninfo
-SELECT CASE WHEN :'_apply'::boolean THEN 'APPLY' ELSE 'PREVIEW' END AS mode;
+SELECT CASE WHEN :'should_apply'::boolean THEN 'APPLY' ELSE 'PREVIEW' END AS mode;
 
-CREATE TEMP TABLE _csv_applications (uuid text, partner_group_uuid text, name_en text, name_fr text) ON COMMIT DROP;
-\copy _csv_applications FROM 'applications.csv' WITH (FORMAT csv, HEADER false, ENCODING 'UTF8')
-SELECT pg_temp.assert_true(
-  (SELECT count(*) = 1 FROM _csv_applications
+-- Check the header before converting values so misplaced columns cannot be imported.
+CREATE TEMP TABLE csv_application_rows (uuid text, partner_group_uuid text, name_en text, name_fr text) ON COMMIT DROP;
+\copy csv_application_rows FROM 'applications.csv' WITH (FORMAT csv, HEADER false, ENCODING 'UTF8')
+SELECT pg_temp.require_valid(
+  (SELECT count(*) = 1 FROM csv_application_rows
    WHERE (uuid, partner_group_uuid, name_en, name_fr) = ('uuid', 'partner_group_uuid', 'name_en', 'name_fr')),
   'applications.csv must contain exactly one header: uuid,partner_group_uuid,name_en,name_fr.');
-DELETE FROM _csv_applications
+DELETE FROM csv_application_rows
   WHERE (uuid, partner_group_uuid, name_en, name_fr) = ('uuid', 'partner_group_uuid', 'name_en', 'name_fr');
 
-CREATE TEMP TABLE _input_applications (
+-- Types and constraints reject invalid values and duplicate UUIDs before writes.
+CREATE TEMP TABLE applications_to_import (
   uuid uuid PRIMARY KEY,
   partner_group_uuid uuid NOT NULL,
   name_en varchar(256) NOT NULL CHECK (btrim(name_en) <> ''),
   name_fr varchar(256) CHECK (name_fr IS NULL OR btrim(name_fr) <> '')
 ) ON COMMIT DROP;
-INSERT INTO _input_applications SELECT uuid::uuid, partner_group_uuid::uuid, name_en, name_fr FROM _csv_applications;
+INSERT INTO applications_to_import
+SELECT uuid::uuid, partner_group_uuid::uuid, name_en, name_fr FROM csv_application_rows;
 
-CREATE TEMP TABLE _parents ON COMMIT DROP AS
-SELECT g.id, g.uuid, g.name_en, g.name_fr, g.is_deleted, g.deleted_at
-FROM public.partner_group g
-JOIN (SELECT DISTINCT partner_group_uuid FROM _input_applications) i ON i.partner_group_uuid = g.uuid;
-SELECT pg_temp.assert_true(
-  (SELECT count(*) FROM _parents) = (SELECT count(DISTINCT partner_group_uuid) FROM _input_applications)
-  AND NOT EXISTS (SELECT 1 FROM _parents WHERE is_deleted OR deleted_at IS NOT NULL),
+-- Resolve each parent once; a missing or deleted partner must not silently drop a row.
+CREATE TEMP TABLE parent_partners ON COMMIT DROP AS
+SELECT partner.id, partner.uuid, partner.name_en, partner.name_fr, partner.is_deleted, partner.deleted_at
+FROM public.partner_group AS partner
+JOIN (SELECT DISTINCT partner_group_uuid FROM applications_to_import) AS requested_partner
+  ON requested_partner.partner_group_uuid = partner.uuid;
+SELECT pg_temp.require_valid(
+  (SELECT count(*) FROM parent_partners) = (SELECT count(DISTINCT partner_group_uuid) FROM applications_to_import)
+  AND NOT EXISTS (SELECT 1 FROM parent_partners WHERE is_deleted OR deleted_at IS NOT NULL),
   'Every input partner UUID must identify an existing active group. Complete partner setup for missing groups first.');
-SELECT pg_temp.assert_true(NOT EXISTS (
-  SELECT 1 FROM _input_applications i JOIN public.application a ON a.uuid = i.uuid
-  JOIN _parents g ON g.uuid = i.partner_group_uuid
-  WHERE a.is_deleted OR a.deleted_at IS NOT NULL OR a.partner_group_id IS DISTINCT FROM g.id
-    OR a.name_en IS DISTINCT FROM i.name_en OR a.name_fr IS DISTINCT FROM i.name_fr),
+
+-- Reruns may reuse exact matches, but must not change, move or restore an application.
+SELECT pg_temp.require_valid(NOT EXISTS (
+  SELECT 1 FROM applications_to_import AS input_application
+  JOIN public.application AS application ON application.uuid = input_application.uuid
+  JOIN parent_partners AS partner ON partner.uuid = input_application.partner_group_uuid
+  WHERE application.is_deleted OR application.deleted_at IS NOT NULL
+    OR application.partner_group_id IS DISTINCT FROM partner.id
+    OR application.name_en IS DISTINCT FROM input_application.name_en
+    OR application.name_fr IS DISTINCT FROM input_application.name_fr),
   'An existing application is deleted or conflicts with the input or expected partner.');
 
-CREATE TEMP TABLE _application_plan (kind text, key text, action text, details jsonb) ON COMMIT DROP;
-INSERT INTO _application_plan
-SELECT 'application', i.uuid::text, CASE WHEN a.id IS NULL THEN 'create' ELSE 'reuse' END,
-  jsonb_build_object('input', to_jsonb(i), 'parentId', g.id, 'parentUuid', g.uuid,
-    'parentNameEn', g.name_en, 'parentNameFr', g.name_fr, 'existingId', a.id, 'existingParentId', a.partner_group_id)
-FROM _input_applications i JOIN _parents g ON g.uuid = i.partner_group_uuid
-LEFT JOIN public.application a ON a.uuid = i.uuid;
+CREATE TEMP TABLE application_import_preview ON COMMIT DROP AS
+SELECT input_application.uuid AS application_uuid, input_application.name_en, input_application.name_fr,
+       partner.uuid AS partner_group_uuid, partner.name_en AS partner_name_en, partner.name_fr AS partner_name_fr,
+       CASE WHEN application.id IS NULL THEN 'create' ELSE 'reuse' END AS action
+FROM applications_to_import AS input_application
+JOIN parent_partners AS partner ON partner.uuid = input_application.partner_group_uuid
+LEFT JOIN public.application AS application ON application.uuid = input_application.uuid;
 
--- No user or role mapping is required or created here. Report the existing
--- Developer users who can see applications through the portal's current joins.
-CREATE TEMP TABLE _existing_developers ON COMMIT DROP AS
-SELECT g.uuid AS partner_group_uuid, u.id AS user_id, u.uuid AS user_uuid, u.email,
-       ur.id AS user_role_id, ur.uuid AS user_role_uuid,
-       gr.id AS group_role_id, gr.uuid AS group_role_uuid, r.id AS role_id, r.uuid AS role_uuid
-FROM _parents g JOIN public.partner_group_role gr ON gr.partner_group_id = g.id
-JOIN public.role r ON r.id = gr.role_id
-JOIN public.user_role ur ON ur.role_id = r.id
-JOIN public."user" u ON u.id = ur.user_id
-WHERE r.name = 'Partner Developer' AND NOT r.is_deleted AND NOT gr.is_deleted
-  AND NOT ur.is_deleted AND NOT u.is_deleted;
-SELECT kind, key, action, details FROM _application_plan ORDER BY key;
-SELECT 'create' AS action, count(*) FILTER (WHERE action = 'create') AS row_count FROM _application_plan
-UNION ALL SELECT 'reuse', count(*) FILTER (WHERE action = 'reuse') FROM _application_plan;
+-- Show existing role holders who can see the imported applications; do not grant roles.
+CREATE TEMP TABLE existing_developers ON COMMIT DROP AS
+SELECT partner.uuid AS partner_group_uuid, portal_user.email
+FROM parent_partners AS partner
+JOIN public.partner_group_role AS group_role ON group_role.partner_group_id = partner.id
+JOIN public.role AS developer_role ON developer_role.id = group_role.role_id
+JOIN public.user_role AS user_role ON user_role.role_id = developer_role.id
+JOIN public."user" AS portal_user ON portal_user.id = user_role.user_id
+WHERE developer_role.name = 'Partner Developer' AND NOT developer_role.is_deleted AND NOT group_role.is_deleted
+  AND NOT user_role.is_deleted AND NOT portal_user.is_deleted;
+SELECT * FROM application_import_preview ORDER BY application_uuid;
+SELECT count(*) FILTER (WHERE action = 'create') AS create_count,
+       count(*) FILTER (WHERE action = 'reuse') AS reuse_count FROM application_import_preview;
 SELECT 'Existing Developer users listed below can see the input applications through their partner role mappings.' AS access_notice;
-SELECT partner_group_uuid, email AS existing_developer_email FROM _existing_developers ORDER BY partner_group_uuid, email;
+SELECT partner_group_uuid, email AS existing_developer_email FROM existing_developers ORDER BY partner_group_uuid, email;
 
-\if :_apply
+-- Insert only missing records, then verify their names and ownership before committing.
+\if :should_apply
   INSERT INTO public.application (partner_group_id, name_en, name_fr, uuid, created_at, is_deleted)
-  SELECT g.id, i.name_en, i.name_fr, i.uuid, CURRENT_TIMESTAMP, false
-  FROM _input_applications i JOIN _parents g ON g.uuid = i.partner_group_uuid
-  WHERE NOT EXISTS (SELECT 1 FROM public.application a WHERE a.uuid = i.uuid);
-  SELECT pg_temp.assert_true(
-    (SELECT count(*) FROM public.application a JOIN _parents g ON g.id = a.partner_group_id
-      JOIN _input_applications i ON i.uuid = a.uuid AND i.partner_group_uuid = g.uuid
-      WHERE NOT a.is_deleted AND a.deleted_at IS NULL
-        AND a.name_en IS NOT DISTINCT FROM i.name_en AND a.name_fr IS NOT DISTINCT FROM i.name_fr)
-      = (SELECT count(*) FROM _input_applications),
+  SELECT partner.id, input_application.name_en, input_application.name_fr, input_application.uuid, CURRENT_TIMESTAMP, false
+  FROM applications_to_import AS input_application
+  JOIN parent_partners AS partner ON partner.uuid = input_application.partner_group_uuid
+  WHERE NOT EXISTS (SELECT 1 FROM public.application AS application WHERE application.uuid = input_application.uuid);
+  SELECT pg_temp.require_valid(
+    (SELECT count(*) FROM public.application AS application
+      JOIN parent_partners AS partner ON partner.id = application.partner_group_id
+      JOIN applications_to_import AS input_application
+        ON input_application.uuid = application.uuid AND input_application.partner_group_uuid = partner.uuid
+      WHERE NOT application.is_deleted AND application.deleted_at IS NULL
+        AND application.name_en IS NOT DISTINCT FROM input_application.name_en
+        AND application.name_fr IS NOT DISTINCT FROM input_application.name_fr)
+      = (SELECT count(*) FROM applications_to_import),
     'Application count or ownership reconciliation failed.');
-  SELECT a.uuid AS application_uuid, g.uuid AS partner_uuid, a.name_en, a.name_fr
-  FROM public.application a JOIN _input_applications i ON i.uuid = a.uuid
-  JOIN _parents g ON g.id = a.partner_group_id ORDER BY a.uuid;
-\endif
--- Finish this operation only. Earlier committed operations remain committed.
--- ON_ERROR_STOP prevents reaching COMMIT after a SQL or COPY failure.
-\if :_apply
+  SELECT application.uuid AS application_uuid, partner.uuid AS partner_uuid, application.name_en, application.name_fr
+  FROM public.application AS application
+  JOIN applications_to_import AS input_application ON input_application.uuid = application.uuid
+  JOIN parent_partners AS partner ON partner.id = application.partner_group_id ORDER BY application.uuid;
   COMMIT;
   \echo 'APPLIED: transaction committed. Retain the report and run a fresh preview to reconcile.'
 \else
