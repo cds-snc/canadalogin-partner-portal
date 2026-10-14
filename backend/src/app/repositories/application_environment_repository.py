@@ -228,6 +228,7 @@ class ApplicationEnvironmentRepository:
         statement = (
             select(
                 ApplicationConfiguration.uuid,
+                ApplicationConfiguration.ibm_client_id.label("client_id"),
                 ApplicationConfiguration.partner_label,
                 Tenant.code.label("tenant_code"),
                 ApplicationConfigurationStatus.code.label("status_code"),

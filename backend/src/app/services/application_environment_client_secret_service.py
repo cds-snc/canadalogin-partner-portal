@@ -155,7 +155,7 @@ class ApplicationEnvironmentClientSecretService:
     ) -> None:
         await self.audit_service.log_action(
             db=db,
-            user=current_user.get("name") or current_user.get("email", ""),
+            user="user",
             user_uuid=current_user.get("uuid"),
             target="application_environment",
             target_uuid=environment["uuid"],

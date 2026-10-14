@@ -6,3 +6,32 @@
 .environment-management__actions {
 	margin-block: var(--gcds-spacing-400);
 }
+
+.environment-credentials__value {
+	background-color: var(--gcds-color-grayscale-100, #f1f2f3);
+	box-sizing: border-box;
+	max-width: 100%;
+	overflow-wrap: anywhere;
+	padding: var(--gcds-spacing-100) var(--gcds-spacing-150);
+	width: fit-content;
+}
+
+.environment-credentials__secret-list {
+	display: grid;
+	gap: var(--gcds-spacing-300);
+	list-style: none;
+	margin: 0;
+	padding: 0;
+}
+
+.environment-credentials__secret-item {
+	display: grid;
+	gap: var(--gcds-spacing-150);
+}
+
+.environment-credentials__secret-details {
+	align-items: center;
+	display: flex;
+	flex-wrap: wrap;
+	gap: var(--gcds-spacing-200);
+}
