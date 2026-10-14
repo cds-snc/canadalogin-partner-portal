@@ -53,7 +53,24 @@ The portal treats the OIDC user identity as the sign-in source of truth and link
 
 ## Deactivation
 
-If the portal supports account deactivation, it should use soft delete so that historical records remain intact while the user can no longer sign in.
+The portal deactivates an account when a known user attempts to sign in more than `USER_INACTIVITY_DAYS` after their last successful OIDC sign-in. The setting defaults to 180 days. Deactivation occurs during login; there is no scheduled inactivity job. A user with no recorded successful sign-in (`last_login_at` is null) is not automatically deactivated.
+
+Deactivation uses soft delete, preserving historical records while excluding the account from OIDC user lookup. The callback redirects the user to the configured account-not-found page. The `enabled` field remains an onboarding flag and is not used for inactivity deactivation.
+
+## Reactivation
+
+There is no user-facing reactivation API. An authorized database operator must manually restore the account and reset its sign-in timestamp; otherwise its old timestamp will deactivate it again at the next login attempt.
+
+```sql
+UPDATE "user"
+SET is_deleted = false,
+    deleted_at = NULL,
+    last_login_at = CURRENT_TIMESTAMP,
+    updated_at = CURRENT_TIMESTAMP
+WHERE uuid = '<user-uuid>'::uuid;
+```
+
+Verify the target UUID and affected row before completing the operation. This does not change the user's onboarding state in `enabled`.
 
 ## Related Topics
 
