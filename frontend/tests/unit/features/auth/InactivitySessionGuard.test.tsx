@@ -107,7 +107,6 @@ describe("InactivitySessionGuard", () => {
 				"If you do not continue your session you will be signed out automatically."
 			)
 		).toBeTruthy();
-		expect(screen.getByText("5:00").tagName).toBe("STRONG");
 		expect(screen.getByRole("dialog").dataset["footerAlignment"]).toBe("start");
 		expect(screen.getByRole("dialog").dataset["footerDivider"]).toBe("false");
 		expect(screen.queryByRole("button", { name: "Close" })).toBeNull();

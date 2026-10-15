@@ -18,6 +18,30 @@ from ...services.application_environment_service import ApplicationEnvironmentSe
 router = APIRouter(tags=["application-environments"])
 
 
+@router.get(
+    "/applications/{application_uuid}/environments/{environment_uuid}",
+    response_model=ApplicationEnvironmentRead,
+    responses=error_responses(403, 404, 500),
+)
+@casbin_guard.require_application_permission("applications", "read")
+async def read_application_environment(
+    request: Request,
+    application_uuid: uuid_pkg.UUID,
+    environment_uuid: uuid_pkg.UUID,
+    db: Annotated[AsyncSession, Depends(async_get_db)],
+    service: Annotated[
+        ApplicationEnvironmentService,
+        Depends(get_application_environment_service),
+    ],
+) -> dict[str, Any]:
+    _ = request
+    return await service.get_application_environment(
+        db=db,
+        application_uuid=application_uuid,
+        environment_uuid=environment_uuid,
+    )
+
+
 @router.post(
     "/applications/{application_uuid}/environments",
     response_model=ApplicationEnvironmentRead,

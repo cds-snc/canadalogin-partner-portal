@@ -1,3 +1,4 @@
+import logging
 import uuid as uuid_pkg
 from datetime import datetime
 from typing import Any
@@ -7,6 +8,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from ..repositories.crud_audit_log import crud_audit_log
 from ..schemas.audit_log import AuditLogCreateInternal, AuditLogRead
+
+logger = logging.getLogger(__name__)
 
 
 class AuditService:
@@ -30,6 +33,15 @@ class AuditService:
                 operation=operation,
                 description=description,
             ),
+        )
+        logger.info(
+            "Audit action recorded: user=%s target=%s operation=%s "
+            "user_uuid=%s target_uuid=%s",
+            user,
+            target,
+            operation,
+            user_uuid,
+            target_uuid,
         )
 
     async def list_audit_logs(

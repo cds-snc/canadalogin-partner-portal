@@ -47,6 +47,8 @@ sequenceDiagram
 
 A callback denied by portal access rules clears the transient session and redirects to the configured access-denied page. It does not produce a successful `LOGIN` event.
 
+If a known account's `last_login_at` is more than `USER_INACTIVITY_DAYS` ago (180 days by default), the callback soft-deletes the account and redirects to `OIDC_ACCOUNT_NOT_FOUND_REDIRECT`. This check runs at login, before refreshing `last_login_at`; accounts with no recorded successful sign-in are exempt. Reactivation requires a manual database operation described in [User Management](user-management.md#reactivation).
+
 ## Session Validation
 
 Protected frontend routes call `revalidateCurrentUser()` before relying on cached Zustand state. The request reaches `get_current_user()`, which resolves an active portal user from the server-side session first. A bearer token is only a fallback when no valid session user is present. When revalidation fails, the frontend redirects the browser to OIDC login rather than trusting cached client state.

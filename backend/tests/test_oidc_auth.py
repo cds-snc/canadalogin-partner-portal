@@ -1,3 +1,5 @@
+from datetime import UTC, datetime, timedelta
+from types import SimpleNamespace
 from unittest.mock import AsyncMock, Mock, patch
 
 import pytest
@@ -23,6 +25,78 @@ def make_request(session: dict | None = None) -> Request:
 
 class TestSyncOidcUser:
     @pytest.mark.asyncio
+    @pytest.mark.parametrize("lookup_path", ["subject", "email"])
+    async def test_sync_oidc_user_disables_account_after_inactivity_threshold(
+        self, mock_db, lookup_path
+    ):
+        now = datetime(2026, 10, 14, tzinfo=UTC)
+        inactive_user = {
+            "id": 7,
+            "uuid": "019cfc22-bff2-7168-ae43-387a301d8fcb",
+            "last_login_at": now - timedelta(days=181),
+        }
+        claims = {"sub": "subject-123", "email": "inactive.user@example.com"}
+        get_results = (
+            [inactive_user, inactive_user]
+            if lookup_path == "subject"
+            else [None, inactive_user, inactive_user]
+        )
+
+        with patch("src.app.core.oidc.datetime") as mock_datetime:
+            mock_datetime.now.return_value = now
+            with patch(
+                "src.app.core.oidc.settings",
+                SimpleNamespace(OIDC_PROVIDER_NAME="oidc", USER_INACTIVITY_DAYS=180),
+            ):
+                with patch("src.app.core.oidc.crud_users") as mock_crud:
+                    mock_crud.get = AsyncMock(side_effect=get_results)
+                    mock_crud.update = AsyncMock()
+                    mock_crud.delete = AsyncMock()
+
+                    with pytest.raises(AccountNotFoundException):
+                        await sync_oidc_user(mock_db, claims)
+
+        mock_crud.delete.assert_awaited_once_with(
+            db=mock_db,
+            uuid=inactive_user["uuid"],
+        )
+
+    @pytest.mark.asyncio
+    async def test_sync_oidc_user_allows_login_at_exact_inactivity_threshold(
+        self, mock_db
+    ):
+        now = datetime(2026, 10, 14, tzinfo=UTC)
+        existing_user = {
+            "id": 7,
+            "uuid": "019cfc22-bff2-7168-ae43-387a301d8fcb",
+            "last_login_at": now - timedelta(days=180),
+        }
+        claims = {"sub": "subject-123", "email": "oidc.user@example.com"}
+
+        with patch("src.app.core.oidc.datetime") as mock_datetime:
+            mock_datetime.now.return_value = now
+            with patch(
+                "src.app.core.oidc.settings",
+                SimpleNamespace(OIDC_PROVIDER_NAME="oidc", USER_INACTIVITY_DAYS=180),
+            ):
+                with patch("src.app.core.oidc.crud_users") as mock_crud:
+                    mock_crud.get = AsyncMock(side_effect=[existing_user, existing_user])
+                    mock_crud.update = AsyncMock(return_value=None)
+                    mock_crud.delete = AsyncMock()
+
+                    result = await sync_oidc_user(mock_db, claims)
+
+        assert result == existing_user
+        mock_crud.delete.assert_not_awaited()
+
+    def test_oidc_inactivity_threshold_defaults_to_180_days_and_is_configurable(self):
+        default_settings = OIDCSettings(_env_file=None)
+        configured_settings = OIDCSettings(USER_INACTIVITY_DAYS=365, _env_file=None)
+
+        assert default_settings.USER_INACTIVITY_DAYS == 180
+        assert configured_settings.USER_INACTIVITY_DAYS == 365
+
+    @pytest.mark.asyncio
     async def test_sync_oidc_user_does_not_require_groups_or_assign_roles(self, mock_db):
         claims = {
             "sub": "subject-123",
@@ -37,6 +111,7 @@ class TestSyncOidcUser:
             "name": "OIDC User",
             "auth_provider": settings.OIDC_PROVIDER_NAME,
             "auth_subject": "subject-123",
+            "last_login_at": None,
         }
 
         with patch("src.app.core.oidc.crud_users") as mock_crud:

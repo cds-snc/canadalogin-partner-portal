@@ -5,6 +5,7 @@ import pytest
 
 from src.app.api.v1.application_environments import (
     create_application_environment,
+    read_application_environment,
     read_application_environments,
 )
 from src.app.schemas.application_environment import ApplicationEnvironmentCreate
@@ -50,6 +51,30 @@ async def test_read_application_environments_delegates_to_service(mock_db):
         application_uuid=application_uuid,
         page=1,
         items_per_page=10,
+    )
+
+
+@pytest.mark.asyncio
+async def test_read_application_environment_delegates_to_service(mock_db):
+    application_uuid = uuid.uuid4()
+    environment_uuid = uuid.uuid4()
+    expected = {"uuid": environment_uuid, "partner_label": "Test"}
+    mock_service = Mock()
+    mock_service.get_application_environment = AsyncMock(return_value=expected)
+
+    result = await unwrap_endpoint(read_application_environment)(
+        Mock(),
+        application_uuid,
+        environment_uuid,
+        mock_db,
+        mock_service,
+    )
+
+    assert result == expected
+    mock_service.get_application_environment.assert_awaited_once_with(
+        db=mock_db,
+        application_uuid=application_uuid,
+        environment_uuid=environment_uuid,
     )
 
 

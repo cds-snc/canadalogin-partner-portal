@@ -88,6 +88,7 @@ REDIS_SESSION_GC_TTL=2592000
 
 # OIDC
 OIDC_ENABLED=true
+USER_INACTIVITY_DAYS=180
 OIDC_PROVIDER_NAME="oidc"
 OIDC_SERVER_METADATA_URL="https://your-idp/.well-known/openid-configuration"
 OIDC_CLIENT_ID="your-client-id"
@@ -100,6 +101,7 @@ OIDC_ACCOUNT_NOT_FOUND_REDIRECT="http://localhost:3000/account-not-found"
 ```
 
 - Set `OIDC_ENABLED=true` to enable `/api/v1/auth/oidc/login` and `/api/v1/auth/oidc/callback`.
+- `USER_INACTIVITY_DAYS` sets how many days without a successful sign-in are allowed before an account is deactivated on its next login attempt. It defaults to `180`.
 - If your IdP strictly validates callback host and port, set `OIDC_REDIRECT_URI` to the exact pre-registered callback URL to avoid `redirect_uri` mismatch errors.
 - For split-origin local development, set `OIDC_POST_LOGIN_REDIRECT` to the frontend origin, for example `http://localhost:3000/auth-complete`, so the backend callback returns the browser to the SPA instead of the backend host.
 - Set `OIDC_ACCOUNT_NOT_FOUND_REDIRECT` to the frontend account-not-found page in each environment, for example `https://partner-portal.example.gc.ca/account-not-found`.

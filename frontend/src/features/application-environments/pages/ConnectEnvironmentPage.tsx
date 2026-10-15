@@ -1,8 +1,15 @@
 import { zodResolver } from "@hookform/resolvers/zod";
-import { useNavigate, useParams } from "@tanstack/react-router";
+import { TrashIcon } from "@heroicons/react/24/outline";
+import { useNavigate, useParams, useSearch } from "@tanstack/react-router";
 import { GcdsHint, GcdsLabel } from "@gcds-core/components-react";
 import { useEffect, useRef, useState, type FormEvent } from "react";
-import { Controller, useForm, useWatch } from "react-hook-form";
+import {
+	Controller,
+	useController,
+	useForm,
+	useWatch,
+	type Control,
+} from "react-hook-form";
 import { useTranslation } from "react-i18next";
 import type { FunctionComponent } from "@/common/types";
 import {
@@ -31,9 +38,11 @@ import {
 	ENCRYPTION_CONTENT_ALGORITHMS,
 	ENCRYPTION_KEY_ALGORITHMS,
 	SIGNING_ALGORITHMS,
+	stripEnvironmentTypePrefix,
 	toPayload,
 	type ApplicationEnvironmentFormValues,
 } from "./connect-environment-form";
+import "./environments-page.css";
 
 const inputValue = (event: FormEvent<Element>): string =>
 	(event.target as HTMLInputElement).value;
@@ -64,17 +73,18 @@ type StepThreeFieldName =
 	| "clientType"
 	| "pkceSupported"
 	| "clientAuthMethod"
-	| "jwksUri"
-	| "sharesIdentifier"
-	| "sectorIdentifierUrl";
+	| "jwksUri";
 
 type StepFourFieldName =
 	| "verificationMessages"
 	| "verificationSignatureAlgorithms"
+	| "canSignMessages"
 	| "signingMessages"
 	| "signingSignatureAlgorithms"
+	| "canEncryptRequests"
 	| "encryptionKeyAlgorithms"
 	| "encryptionContentAlgorithms"
+	| "canDecryptMessages"
 	| "decryptionMessages"
 	| "decryptionKeyAlgorithms"
 	| "decryptionContentAlgorithms";
@@ -109,6 +119,55 @@ const STEP_ONE_FIELD_CONFIG: Record<
 	},
 };
 
+type EnvironmentNameFieldProps = {
+	control: Control<ApplicationEnvironmentFormValues>;
+	errorMessage?: string;
+	tenantCode?: ApplicationEnvironmentFormValues["tenantCode"];
+};
+
+const EnvironmentNameField = ({
+	control,
+	errorMessage,
+	tenantCode,
+}: EnvironmentNameFieldProps): FunctionComponent => {
+	const { t } = useTranslation();
+	const { field } = useController({ control, name: "environmentName" });
+
+	return (
+		<Grid columns="1fr" tag="div">
+			<GcdsLabel
+				required
+				className="environment-name-label"
+				label={t("applicationEnvironmentConnect.stepOne.environmentName")}
+				labelFor="environment-name-control"
+			/>
+			<GcdsHint hintId="environment-name">
+				{t("applicationEnvironmentConnect.stepOne.environmentNameHint")}
+			</GcdsHint>
+			<Grid alignItems="end" columns="auto 1fr" tag="div">
+				<Text marginBottom="100" size="body">
+					{tenantCode === "staging" ? "STAGING-" : "TEST-"}
+				</Text>
+				<Input
+					hideLabel
+					required
+					ariaDescribedBy="hint-environment-name"
+					className="environment-name-input"
+					errorMessage={errorMessage}
+					id="environment-name-control"
+					inputId="environment-name"
+					label={t("applicationEnvironmentConnect.stepOne.environmentName")}
+					name={field.name}
+					value={field.value}
+					onInput={(event) => {
+						field.onChange(inputValue(event));
+					}}
+				/>
+			</Grid>
+		</Grid>
+	);
+};
+
 const STEP_THREE_FIELD_CONFIG: Record<
 	StepThreeFieldName,
 	{ errorKey: string; hostId: string }
@@ -130,22 +189,27 @@ const STEP_THREE_FIELD_CONFIG: Record<
 		errorKey: "applicationEnvironmentConnect.stepThree.validationPkceSupported",
 		hostId: "pkce-supported-control",
 	},
-	sectorIdentifierUrl: {
-		errorKey:
-			"applicationEnvironmentConnect.stepThree.validationSectorIdentifierUrl",
-		hostId: "sector-identifier-url-control",
-	},
-	sharesIdentifier: {
-		errorKey:
-			"applicationEnvironmentConnect.stepThree.validationSharesIdentifier",
-		hostId: "shares-identifier-control",
-	},
 };
 
 const STEP_FOUR_FIELD_CONFIG: Record<
 	StepFourFieldName,
 	{ errorKey: string; hostId: string }
 > = {
+	canDecryptMessages: {
+		errorKey:
+			"applicationEnvironmentConnect.stepFour.validationCanDecryptMessages",
+		hostId: "can-decrypt-messages-control",
+	},
+	canEncryptRequests: {
+		errorKey:
+			"applicationEnvironmentConnect.stepFour.validationCanEncryptRequests",
+		hostId: "can-encrypt-requests-control",
+	},
+	canSignMessages: {
+		errorKey:
+			"applicationEnvironmentConnect.stepFour.validationCanSignMessages",
+		hostId: "can-sign-messages-control",
+	},
 	decryptionContentAlgorithms: {
 		errorKey:
 			"applicationEnvironmentConnect.stepFour.validationDecryptionContentAlgorithms",
@@ -198,12 +262,19 @@ export const ConnectEnvironmentPage = (): FunctionComponent => {
 	const { applicationUuid } = useParams({
 		from: "/applications/$applicationUuid/environments",
 	});
+	const {
+		requestProduction = false,
+		sourceEnvironmentUuid: initialSourceEnvironmentUuid,
+	} = useSearch({
+		from: "/applications/$applicationUuid/environments",
+	});
 	const navigate = useNavigate({
 		from: "/applications/$applicationUuid/environments",
 	});
 	const [step, setStep] = useState(0);
 	const formRef = useRef<HTMLFormElement>(null);
 	const previousStep = useRef(step);
+	const actionInitialized = useRef(false);
 	const { data: environments } = useApplicationEnvironments(
 		applicationUuid,
 		1,
@@ -221,6 +292,8 @@ export const ConnectEnvironmentPage = (): FunctionComponent => {
 		formState: { errors },
 		handleSubmit,
 		reset,
+		clearErrors,
+		setError,
 		setValue,
 		trigger,
 	} = form;
@@ -236,12 +309,15 @@ export const ConnectEnvironmentPage = (): FunctionComponent => {
 		bodyKey: "applicationEnvironmentConnect.submitErrorBody",
 		titleKey: "applicationEnvironmentConnect.submitErrorTitle",
 	});
-	const sourceOptions = (environments?.data ?? []).map((environment) => ({
+	const sourceEnvironments = (environments?.data ?? []).filter(
+		(environment) => environment.tenantCode !== "production"
+	);
+	const sourceOptions = sourceEnvironments.map((environment) => ({
 		id: environment.uuid,
 		label: environment.partnerLabel,
 		value: environment.uuid,
 	}));
-	const selectedSource = (environments?.data ?? []).find(
+	const selectedSource = sourceEnvironments.find(
 		(environment) => environment.uuid === values.sourceEnvironmentUuid
 	);
 	const sourceConfig = selectedSource?.config;
@@ -326,6 +402,13 @@ export const ConnectEnvironmentPage = (): FunctionComponent => {
 		errors.signOutRequestUrl,
 		"applicationEnvironmentConnect.stepTwo.validationSignOutRequestUrl"
 	);
+	const singleSignOutErrorMessage = stepTwoErrorMessage(
+		errors.singleSignOut,
+		"applicationEnvironmentConnect.stepTwo.validationSingleSignOut"
+	);
+	if (singleSignOutErrorMessage) {
+		stepTwoErrorLinks["#single-sign-out-control"] = singleSignOutErrorMessage;
+	}
 	if (signOutRequestUrlErrorMessage) {
 		stepTwoErrorLinks["#sign-out-request-url-control"] =
 			signOutRequestUrlErrorMessage;
@@ -336,8 +419,6 @@ export const ConnectEnvironmentPage = (): FunctionComponent => {
 		"pkceSupported",
 		"clientAuthMethod",
 		"jwksUri",
-		"sharesIdentifier",
-		"sectorIdentifierUrl",
 	] as const satisfies ReadonlyArray<StepThreeFieldName>;
 	const stepThreeErrorFields = stepThreeFieldNames.filter(
 		(fieldName) => errors[fieldName]
@@ -358,10 +439,13 @@ export const ConnectEnvironmentPage = (): FunctionComponent => {
 	const stepFourFieldNames = [
 		"verificationMessages",
 		"verificationSignatureAlgorithms",
+		"canSignMessages",
 		"signingMessages",
 		"signingSignatureAlgorithms",
+		"canEncryptRequests",
 		"encryptionKeyAlgorithms",
 		"encryptionContentAlgorithms",
+		"canDecryptMessages",
 		"decryptionMessages",
 		"decryptionKeyAlgorithms",
 		"decryptionContentAlgorithms",
@@ -387,6 +471,41 @@ export const ConnectEnvironmentPage = (): FunctionComponent => {
 			? environments.application.nameFr
 			: (environments?.application?.nameEn ??
 				t("applicationEnvironmentConnect.applicationNameFallback"));
+
+	useEffect(() => {
+		if (
+			actionInitialized.current ||
+			!environments ||
+			!initialSourceEnvironmentUuid
+		) {
+			return;
+		}
+
+		const initialSource = environments.data.find(
+			(environment) => environment.uuid === initialSourceEnvironmentUuid
+		);
+		if (!initialSource || (requestProduction && initialSource.tenantCode !== "staging")) {
+			actionInitialized.current = true;
+			return;
+		}
+
+		actionInitialized.current = true;
+		reset({
+			...DEFAULT_VALUES,
+			...initialSource.config,
+			copyExisting: true,
+			sourceEnvironmentUuid: initialSource.uuid,
+			tenantCode:
+				requestProduction || initialSource.tenantCode === "staging"
+					? "staging"
+					: "test",
+		});
+	}, [
+		environments,
+		initialSourceEnvironmentUuid,
+		requestProduction,
+		reset,
+	]);
 
 	useEffect(() => {
 		if (!hasCopySource && values.copyExisting) {
@@ -417,6 +536,9 @@ export const ConnectEnvironmentPage = (): FunctionComponent => {
 		reset({
 			...DEFAULT_VALUES,
 			...sourceConfig,
+			environmentName: sourceConfig.environmentName
+				? stripEnvironmentTypePrefix(sourceConfig.environmentName)
+				: DEFAULT_VALUES.environmentName,
 			copyExisting: true,
 			sourceEnvironmentUuid: values.sourceEnvironmentUuid,
 			tenantCode: values.tenantCode,
@@ -461,8 +583,6 @@ export const ConnectEnvironmentPage = (): FunctionComponent => {
 			"pkceSupported",
 			"clientAuthMethod",
 			"jwksUri",
-			"sharesIdentifier",
-			"sectorIdentifierUrl",
 		],
 		[
 			"verificationMessages",
@@ -482,13 +602,24 @@ export const ConnectEnvironmentPage = (): FunctionComponent => {
 
 	const handleNext = async (): Promise<void> => {
 		const fieldsToValidate =
-			step === 0 && !hasSelectedTenant
-				? (["tenantCode"] as Array<keyof ApplicationEnvironmentFormValues>)
-				: stepFields[step];
+			step === 0 ? visibleStepOneFields : stepFields[step];
 		const isValid = await trigger(fieldsToValidate);
-		if (isValid) {
-			setStep((currentStep) => currentStep + 1);
+		if (
+			step === 0 &&
+			hasSelectedTenant &&
+			hasCopySource &&
+			values.copyExisting === null
+		) {
+			setError("copyExisting", {
+				type: "manual",
+				message: "applicationEnvironments.connect.validationCopyChoice",
+			});
+			return;
 		}
+		if (!isValid) {
+			return;
+		}
+		setStep((currentStep) => currentStep + 1);
 	};
 	const handleBack = (): void => {
 		setStep((currentStep) => currentStep - 1);
@@ -500,8 +631,11 @@ export const ConnectEnvironmentPage = (): FunctionComponent => {
 			const result = await createEnvironment(toPayload(formValues));
 			if (result) {
 				void navigate({
-					to: "/applications/$applicationUuid/environments",
-					params: { applicationUuid },
+					to: "/applications/$applicationUuid/environments/$environmentUuid",
+					params: {
+						applicationUuid,
+						environmentUuid: result.uuid,
+					},
 				});
 			}
 		} catch {
@@ -517,7 +651,9 @@ export const ConnectEnvironmentPage = (): FunctionComponent => {
 				<Text marginBottom="0">
 					<strong>{applicationName}</strong>
 				</Text>
-				<Icon name="arrow-up-down" size="text" />
+				<div className="application-switch-icon">
+					<Icon name="arrow-up-down" size="text" />
+				</div>
 				<Link href="/applications">
 					{t("applicationEnvironmentConnect.switchApplication")}
 				</Link>
@@ -543,7 +679,11 @@ export const ConnectEnvironmentPage = (): FunctionComponent => {
 					<Text>{t(requestError.bodyKey as never)}</Text>
 				</Notice>
 			)}
-			<form ref={formRef} onSubmit={handleSubmit(handleCreate)}>
+			<form
+				ref={formRef}
+				noValidate
+				onSubmit={handleSubmit(handleCreate)}
+			>
 				<Stepper currentStep={step + 1} tabIndex={0} tag="h2" totalSteps={4}>
 					<SrOnly>{t("applicationEnvironmentConnect.title")}</SrOnly>
 				</Stepper>
@@ -616,7 +756,7 @@ export const ConnectEnvironmentPage = (): FunctionComponent => {
 								/>
 							)}
 						/>
-						<Heading tag="h3">
+						<Heading marginBottom="0" marginTop="0" tag="h5">
 							{t("applicationEnvironmentConnect.stepOne.productionTitle")}
 						</Heading>
 						<Text>
@@ -638,7 +778,6 @@ export const ConnectEnvironmentPage = (): FunctionComponent => {
 										errorMessage={stepOneErrorMessage("copyExisting")}
 										id={STEP_ONE_FIELD_CONFIG.copyExisting.hostId}
 										name={field.name}
-										value={String(field.value)}
 										legend={t(
 											"applicationEnvironmentConnect.stepOne.connectionType"
 										)}
@@ -654,8 +793,12 @@ export const ConnectEnvironmentPage = (): FunctionComponent => {
 												value: "false",
 											},
 										]}
+										value={
+											field.value === null ? undefined : String(field.value)
+										}
 										onInput={(event) => {
 											field.onChange(boolValue(event));
+											clearErrors("copyExisting");
 										}}
 									/>
 								)}
@@ -693,49 +836,11 @@ export const ConnectEnvironmentPage = (): FunctionComponent => {
 						)}
 						{hasSelectedTenant && (
 							<>
-								<Grid columns="1fr" tag="div">
-									<GcdsLabel
-										required
-										className="environment-name-label"
-										labelFor="environment-name-control"
-										label={t(
-											"applicationEnvironmentConnect.stepOne.environmentName"
-										)}
-									/>
-									<GcdsHint hintId="environment-name">
-										{t(
-											"applicationEnvironmentConnect.stepOne.environmentNameHint"
-										)}
-									</GcdsHint>
-									<Grid alignItems="center" columns="auto 1fr" tag="div">
-										<Text marginBottom="0" size="body">
-											{values.tenantCode === "staging" ? "STAGING-" : "TEST-"}
-										</Text>
-										<Controller
-											control={control}
-											name="environmentName"
-											render={({ field }) => (
-												<Input
-													hideLabel
-													required
-													ariaDescribedBy="hint-environment-name"
-													className="environment-name-input"
-													errorMessage={stepOneErrorMessage("environmentName")}
-													id="environment-name-control"
-													inputId="environment-name"
-													name={field.name}
-													value={field.value}
-													label={t(
-														"applicationEnvironmentConnect.stepOne.environmentName"
-													)}
-													onInput={(event) => {
-														field.onChange(inputValue(event));
-													}}
-												/>
-											)}
-										/>
-									</Grid>
-								</Grid>
+								<EnvironmentNameField
+									control={control}
+									errorMessage={stepOneErrorMessage("environmentName")}
+									tenantCode={values.tenantCode}
+								/>
 								<Controller
 									control={control}
 									name="applicationUrlEn"
@@ -1043,12 +1148,60 @@ export const ConnectEnvironmentPage = (): FunctionComponent => {
 							)}
 						>
 							{Array.from({ length: redirectUriRowCount }, (_, index) => (
-								<Grid key={index} alignItems="end" columns="1fr auto" tag="div">
+								<Grid
+									key={index}
+									className="endpoint-url-row"
+									columns="1fr"
+									tag="div"
+								>
+									<Grid
+										alignItems="start"
+										className="endpoint-label-row"
+										columns="auto auto 1fr"
+										tag="div"
+									>
+										<GcdsLabel
+											className="endpoint-label"
+											labelFor={`redirect-uri-control-${index}`}
+											required={index === 0}
+											label={t(
+												"applicationEnvironmentConnect.stepTwo.redirectUrl",
+												{ count: index + 1 }
+											)}
+										/>
+										{redirectUriRowCount > 1 && index > 0 && (
+											<Link
+												href={`#redirect-uri-${index}`}
+												size="small"
+												onGcdsClick={(event) => {
+													event.preventDefault();
+													setValue(
+														"redirectUris",
+														redirectUris.filter(
+															(_, valueIndex) => valueIndex !== index
+														)
+													);
+												}}
+													>
+													<span
+														style={{
+															alignItems: "center",
+															display: "inline-flex",
+															gap: "var(--gcds-spacing-100)",
+														}}
+													>
+														<TrashIcon aria-hidden="true" height="1em" width="1em" />
+														{t("common.remove")}
+													</span>
+											</Link>
+										)}
+									</Grid>
 									<Controller
 										control={control}
 										name={`redirectUris.${index}` as const}
 										render={({ field: inputField }) => (
 											<Input
+												hideLabel
 												id={`redirect-uri-control-${index}`}
 												inputId={`redirect-uri-${index}`}
 												name={inputField.name}
@@ -1068,24 +1221,6 @@ export const ConnectEnvironmentPage = (): FunctionComponent => {
 											/>
 										)}
 									/>
-									{redirectUriRowCount > 1 && index > 0 && (
-										<Button
-											buttonRole="secondary"
-											size="small"
-											type="button"
-											onGcdsClick={() => {
-												setValue(
-													"redirectUris",
-													redirectUris.filter(
-														(_, valueIndex) => valueIndex !== index
-													)
-												);
-											}}
-										>
-											<span aria-hidden="true">×</span>
-											{t("common.remove")}
-										</Button>
-									)}
 								</Grid>
 							))}
 							<Button
@@ -1097,6 +1232,7 @@ export const ConnectEnvironmentPage = (): FunctionComponent => {
 								}}
 							>
 								<span aria-hidden="true">+</span>
+											{" "}
 								{t("applicationEnvironmentConnect.stepTwo.addRedirectUri")}
 							</Button>
 						</Fieldset>
@@ -1114,15 +1250,58 @@ export const ConnectEnvironmentPage = (): FunctionComponent => {
 								(_, index) => (
 									<Grid
 										key={index}
-										alignItems="end"
-										columns="1fr auto"
+										className="endpoint-url-row post-logout-url-row"
+										columns="1fr"
 										tag="div"
 									>
+										<Grid
+											alignItems="start"
+											className="endpoint-label-row"
+											columns="auto auto 1fr"
+											tag="div"
+										>
+											<GcdsLabel
+												className="endpoint-label"
+												labelFor={`post-logout-redirect-uri-control-${index}`}
+												required={index === 0}
+												label={t(
+													"applicationEnvironmentConnect.stepTwo.postLogoutUrl",
+													{ count: index + 1 }
+												)}
+											/>
+											{postLogoutRedirectUriRowCount > 1 && index > 0 && (
+												<Link
+													href={`#post-logout-redirect-uri-${index}`}
+														size="small"
+													onGcdsClick={(event) => {
+														event.preventDefault();
+														setValue(
+															"postLogoutRedirectUris",
+															postLogoutRedirectUris.filter(
+																(_, valueIndex) => valueIndex !== index
+															)
+														);
+													}}
+														>
+														<span
+															style={{
+																alignItems: "center",
+																display: "inline-flex",
+																gap: "var(--gcds-spacing-100)",
+															}}
+														>
+															<TrashIcon aria-hidden="true" height="1em" width="1em" />
+															{t("common.remove")}
+														</span>
+												</Link>
+											)}
+										</Grid>
 										<Controller
 											control={control}
 											name={`postLogoutRedirectUris.${index}` as const}
 											render={({ field: inputField }) => (
 												<Input
+														hideLabel
 													id={`post-logout-redirect-uri-control-${index}`}
 													inputId={`post-logout-redirect-uri-${index}`}
 													name={inputField.name}
@@ -1142,24 +1321,6 @@ export const ConnectEnvironmentPage = (): FunctionComponent => {
 												/>
 											)}
 										/>
-										{postLogoutRedirectUriRowCount > 1 && index > 0 && (
-											<Button
-												buttonRole="secondary"
-												size="small"
-												type="button"
-												onGcdsClick={() => {
-													setValue(
-														"postLogoutRedirectUris",
-														postLogoutRedirectUris.filter(
-															(_, valueIndex) => valueIndex !== index
-														)
-													);
-												}}
-											>
-												<span aria-hidden="true">×</span>
-												{t("common.remove")}
-											</Button>
-										)}
 									</Grid>
 								)
 							)}
@@ -1175,95 +1336,97 @@ export const ConnectEnvironmentPage = (): FunctionComponent => {
 								}}
 							>
 								<span aria-hidden="true">+</span>
+											{" "}
 								{t(
 									"applicationEnvironmentConnect.stepTwo.addPostLogoutRedirectUri"
 								)}
 							</Button>
 						</Fieldset>
-						<Fieldset
-							legendSize="h3"
-							legend={t(
-								"applicationEnvironmentConnect.stepTwo.singleSignOutSection"
-							)}
-						>
-							<Controller
-								control={control}
-								name="singleSignOut"
-								render={({ field }) => (
-									<Radios
-										name={field.name}
-										value={String(field.value)}
+						<Controller
+							control={control}
+							name="singleSignOut"
+							render={({ field }) => (
+								<Radios
+									required
+									errorMessage={singleSignOutErrorMessage}
+									id="single-sign-out-control"
+									name={field.name}
+									value={field.value === null ? undefined : String(field.value)}
 										legend={t(
-											"applicationEnvironmentConnect.stepTwo.singleSignOut"
-										)}
-										options={[
+										"applicationEnvironmentConnect.stepTwo.singleSignOut"
+									)}
+									options={[
+										{ id: "sso-yes", label: t("common.yes"), value: "true" },
 											{ id: "sso-no", label: t("common.no"), value: "false" },
-											{ id: "sso-yes", label: t("common.yes"), value: "true" },
-										]}
-										onInput={(event) => {
-											field.onChange(boolValue(event));
-										}}
-									/>
-								)}
-							/>
-							{values.singleSignOut && (
-								<>
-									<Controller
-										control={control}
-										name="logoutMethod"
-										render={({ field }) => (
-											<Radios
-												errorMessage={logoutMethodErrorMessage}
-												id="logout-method-control"
-												name={field.name}
-												value={field.value}
-												legend={t(
-													"applicationEnvironmentConnect.stepTwo.logoutMethod"
-												)}
-												options={[
-													{
-														id: "front-channel",
-														label: t(
-															"applicationEnvironmentConnect.frontChannel"
-														),
-														value: "front_channel",
-													},
-													{
-														id: "back-channel",
-														label: t(
-															"applicationEnvironmentConnect.backChannel"
-														),
-														value: "back_channel",
-													},
-												]}
-												onInput={(event) => {
-													field.onChange(inputValue(event));
-												}}
-											/>
-										)}
-									/>
-									<Controller
-										control={control}
-										name="signOutRequestUrl"
-										render={({ field }) => (
-											<Input
-												errorMessage={signOutRequestUrlErrorMessage}
-												id="sign-out-request-url-control"
-												inputId="sign-out-request-url"
-												name={field.name}
-												value={field.value}
-												label={t(
-													"applicationEnvironmentConnect.stepTwo.signOutRequestUrl"
-												)}
-												onInput={(event) => {
-													field.onChange(inputValue(event));
-												}}
-											/>
-										)}
-									/>
-								</>
+									]}
+									onInput={(event) => {
+										const singleSignOut = boolValue(event);
+										field.onChange(singleSignOut);
+										clearErrors("singleSignOut");
+										if (!singleSignOut) {
+											clearErrors(["logoutMethod", "signOutRequestUrl"]);
+										}
+									}}
+								/>
 							)}
-						</Fieldset>
+						/>
+						{values.singleSignOut && (
+							<>
+								<Controller
+									control={control}
+									name="logoutMethod"
+									render={({ field }) => (
+										<Radios
+											required
+											errorMessage={logoutMethodErrorMessage}
+											id="logout-method-control"
+											name={field.name}
+											value={field.value}
+											legend={t(
+												"applicationEnvironmentConnect.stepTwo.logoutMethod"
+											)}
+											options={[
+												{
+													id: "front-channel",
+													label: t(
+														"applicationEnvironmentConnect.frontChannel"
+													),
+													value: "front_channel",
+												},
+												{
+													id: "back-channel",
+													label: t("applicationEnvironmentConnect.backChannel"),
+													value: "back_channel",
+												},
+											]}
+											onInput={(event) => {
+												field.onChange(inputValue(event));
+											}}
+										/>
+									)}
+								/>
+								<Controller
+									control={control}
+									name="signOutRequestUrl"
+									render={({ field }) => (
+										<Input
+											required
+											errorMessage={signOutRequestUrlErrorMessage}
+											id="sign-out-request-url-control"
+											inputId="sign-out-request-url"
+											name={field.name}
+											value={field.value}
+											label={t(
+												"applicationEnvironmentConnect.stepTwo.signOutRequestUrl"
+											)}
+											onInput={(event) => {
+												field.onChange(inputValue(event));
+											}}
+										/>
+									)}
+								/>
+							</>
+						)}
 					</Grid>
 				)}
 				{step === 2 && (
@@ -1271,8 +1434,8 @@ export const ConnectEnvironmentPage = (): FunctionComponent => {
 						<Heading tag="h1">
 							{t("applicationEnvironmentConnect.stepThree.title")}
 						</Heading>
-						<Text>{t("applicationEnvironmentConnect.stepThree.intro")}</Text>
-						<Text>
+						<Text marginBottom="0">{t("applicationEnvironmentConnect.stepThree.intro")}</Text>
+						<Text marginBottom="0">
 							{t("applicationEnvironmentConnect.stepThree.learnMorePrefix")}{" "}
 							<Link href="/support">
 								{t(
@@ -1281,10 +1444,7 @@ export const ConnectEnvironmentPage = (): FunctionComponent => {
 							</Link>
 							.
 						</Text>
-						<Fieldset
-							legend={t("applicationEnvironmentConnect.stepThree.legend")}
-							legendSize="h2"
-						>
+						<Grid columns="1fr" tag="div">
 							<Controller
 								control={control}
 								name="clientType"
@@ -1294,7 +1454,7 @@ export const ConnectEnvironmentPage = (): FunctionComponent => {
 										errorMessage={stepThreeErrorMessage("clientType")}
 										id={STEP_THREE_FIELD_CONFIG.clientType.hostId}
 										name={field.name}
-										value={field.value}
+										value={field.value ?? undefined}
 										legend={t(
 											"applicationEnvironmentConnect.stepThree.clientType"
 										)}
@@ -1321,11 +1481,12 @@ export const ConnectEnvironmentPage = (): FunctionComponent => {
 										onInput={(event) => {
 											const selectedClientType = inputValue(event);
 											field.onChange(selectedClientType);
-											if (selectedClientType === "public") {
-												setValue("pkceSupported", true, {
-													shouldValidate: true,
-												});
-											}
+											clearErrors([
+												"clientType",
+												"pkceSupported",
+												"clientAuthMethod",
+												"jwksUri",
+											]);
 										}}
 									/>
 								)}
@@ -1340,16 +1501,19 @@ export const ConnectEnvironmentPage = (): FunctionComponent => {
 										hint={t("applicationEnvironmentConnect.stepThree.pkceHint")}
 										id={STEP_THREE_FIELD_CONFIG.pkceSupported.hostId}
 										name={field.name}
-										value={String(field.value)}
 										legend={t(
 											"applicationEnvironmentConnect.stepThree.pkceSupported"
 										)}
 										options={[
-											{ id: "pkce-no", label: t("common.no"), value: "false" },
 											{ id: "pkce-yes", label: t("common.yes"), value: "true" },
+											{ id: "pkce-no", label: t("common.no"), value: "false" },
 										]}
+										value={
+											field.value === null ? undefined : String(field.value)
+										}
 										onInput={(event) => {
 											field.onChange(boolValue(event));
+											clearErrors("pkceSupported");
 										}}
 									/>
 								)}
@@ -1365,7 +1529,7 @@ export const ConnectEnvironmentPage = (): FunctionComponent => {
 												errorMessage={stepThreeErrorMessage("clientAuthMethod")}
 												id={STEP_THREE_FIELD_CONFIG.clientAuthMethod.hostId}
 												name={field.name}
-												value={field.value}
+												value={field.value ?? undefined}
 												legend={t(
 													"applicationEnvironmentConnect.stepThree.clientAuthMethod"
 												)}
@@ -1403,6 +1567,7 @@ export const ConnectEnvironmentPage = (): FunctionComponent => {
 												]}
 												onInput={(event) => {
 													field.onChange(inputValue(event));
+													clearErrors(["clientAuthMethod", "jwksUri"]);
 												}}
 											/>
 										)}
@@ -1434,62 +1599,7 @@ export const ConnectEnvironmentPage = (): FunctionComponent => {
 									)}
 								</>
 							)}
-							<Controller
-								control={control}
-								name="sharesIdentifier"
-								render={({ field }) => (
-									<Radios
-										required
-										errorMessage={stepThreeErrorMessage("sharesIdentifier")}
-										id={STEP_THREE_FIELD_CONFIG.sharesIdentifier.hostId}
-										name={field.name}
-										value={String(field.value)}
-										legend={t(
-											"applicationEnvironmentConnect.stepThree.sharesIdentifier"
-										)}
-										options={[
-											{
-												id: "identifier-no",
-												label: t("common.no"),
-												value: "false",
-											},
-											{
-												id: "identifier-yes",
-												label: t("common.yes"),
-												value: "true",
-											},
-										]}
-										onInput={(event) => {
-											field.onChange(boolValue(event));
-										}}
-									/>
-								)}
-							/>
-							{values.sharesIdentifier && (
-								<Controller
-									control={control}
-									name="sectorIdentifierUrl"
-									render={({ field }) => (
-										<Input
-											required
-											id={STEP_THREE_FIELD_CONFIG.sectorIdentifierUrl.hostId}
-											inputId="sector-identifier-url"
-											name={field.name}
-											value={field.value}
-											errorMessage={stepThreeErrorMessage(
-												"sectorIdentifierUrl"
-											)}
-											label={t(
-												"applicationEnvironmentConnect.stepThree.sectorIdentifierUrl"
-											)}
-											onInput={(event) => {
-												field.onChange(inputValue(event));
-											}}
-										/>
-									)}
-								/>
-							)}
-						</Fieldset>
+						</Grid>
 					</Grid>
 				)}
 				{step === 3 && (
@@ -1497,11 +1607,15 @@ export const ConnectEnvironmentPage = (): FunctionComponent => {
 						<Heading tag="h1">
 							{t("applicationEnvironmentConnect.stepFour.title")}
 						</Heading>
-						<Text>{t("applicationEnvironmentConnect.stepFour.intro")}</Text>
-						<Text>
+						<Text marginBottom="0">{t("applicationEnvironmentConnect.stepFour.intro")}</Text>
+						<Text marginBottom="0">
+							{t(
+								"applicationEnvironmentConnect.stepFour.verificationRequirement"
+							)}
+						</Text>
+						<Text marginBottom="0">
 							{t("applicationEnvironmentConnect.stepFour.mustVerify")}{" "}
 							<Link href="/support">
-								{t("applicationEnvironmentConnect.stepFour.learnMorePrefix")}{" "}
 								{t("applicationEnvironmentConnect.stepFour.messageSecurity")}
 							</Link>
 							.
@@ -1578,17 +1692,23 @@ export const ConnectEnvironmentPage = (): FunctionComponent => {
 								name="canSignMessages"
 								render={({ field }) => (
 									<Radios
+										required
+										errorMessage={stepFourErrorMessage("canSignMessages")}
+										id={STEP_FOUR_FIELD_CONFIG.canSignMessages.hostId}
 										name={field.name}
-										value={String(field.value)}
 										legend={t(
 											"applicationEnvironmentConnect.stepFour.canSignMessages"
 										)}
 										options={[
-											{ id: "sign-no", label: t("common.no"), value: "false" },
 											{ id: "sign-yes", label: t("common.yes"), value: "true" },
+											{ id: "sign-no", label: t("common.no"), value: "false" },
 										]}
+										value={
+											field.value === null ? undefined : String(field.value)
+										}
 										onInput={(event) => {
 											field.onChange(boolValue(event));
+											clearErrors("canSignMessages");
 										}}
 									/>
 								)}
@@ -1672,25 +1792,31 @@ export const ConnectEnvironmentPage = (): FunctionComponent => {
 								name="canEncryptRequests"
 								render={({ field }) => (
 									<Radios
+										required
+										errorMessage={stepFourErrorMessage("canEncryptRequests")}
+										id={STEP_FOUR_FIELD_CONFIG.canEncryptRequests.hostId}
 										name={field.name}
-										value={String(field.value)}
 										legend={t(
 											"applicationEnvironmentConnect.stepFour.canEncryptRequests"
 										)}
 										options={[
 											{
-												id: "encrypt-no",
-												label: t("common.no"),
-												value: "false",
-											},
-											{
 												id: "encrypt-yes",
 												label: t("common.yes"),
 												value: "true",
 											},
+											{
+													id: "encrypt-no",
+													label: t("common.no"),
+													value: "false",
+											},
 										]}
+										value={
+											field.value === null ? undefined : String(field.value)
+										}
 										onInput={(event) => {
 											field.onChange(boolValue(event));
+											clearErrors("canEncryptRequests");
 										}}
 									/>
 								)}
@@ -1766,25 +1892,31 @@ export const ConnectEnvironmentPage = (): FunctionComponent => {
 								name="canDecryptMessages"
 								render={({ field }) => (
 									<Radios
+										required
+										errorMessage={stepFourErrorMessage("canDecryptMessages")}
+										id={STEP_FOUR_FIELD_CONFIG.canDecryptMessages.hostId}
 										name={field.name}
-										value={String(field.value)}
 										legend={t(
 											"applicationEnvironmentConnect.stepFour.canDecryptMessages"
 										)}
 										options={[
 											{
-												id: "decrypt-no",
-												label: t("common.no"),
-												value: "false",
-											},
-											{
 												id: "decrypt-yes",
 												label: t("common.yes"),
 												value: "true",
 											},
+											{
+													id: "decrypt-no",
+													label: t("common.no"),
+													value: "false",
+											},
 										]}
+										value={
+											field.value === null ? undefined : String(field.value)
+										}
 										onInput={(event) => {
 											field.onChange(boolValue(event));
+											clearErrors("canDecryptMessages");
 										}}
 									/>
 								)}
@@ -1891,36 +2023,40 @@ export const ConnectEnvironmentPage = (): FunctionComponent => {
 						</Fieldset>
 					</Grid>
 				)}
-				<Grid alignItems="center" columns="auto auto 1fr" tag="div">
-					{step < 3 ? (
-						<Button
-							type="button"
-							onGcdsClick={() => {
-								void handleNext();
-							}}
-						>
-							{t("applicationEnvironmentConnect.continue")}
-						</Button>
-					) : (
-						<Button disabled={isCreating} type="submit">
-							{isCreating
-								? t("applicationEnvironmentConnect.submitting")
-								: t("applicationEnvironmentConnect.submit")}
-						</Button>
-					)}
-					{step > 0 && (
-						<Button
-							buttonRole="secondary"
-							type="button"
-							onGcdsClick={handleBack}
-						>
-							{t("common.back")}
-						</Button>
-					)}
-					<Link href={`/applications/${applicationUuid}/environments`}>
-						{t("common.cancel")}
-					</Link>
-				</Grid>
+				<div className="connect-environment-actions">
+					<Grid alignItems="center" columns="auto auto 1fr" tag="div">
+						{step < 3 ? (
+							<Button
+								type="button"
+								onGcdsClick={() => {
+									void handleNext();
+								}}
+							>
+								{t("applicationEnvironmentConnect.continue")}
+							</Button>
+						) : (
+							<Button disabled={isCreating} type="submit">
+								{isCreating
+									? t("applicationEnvironmentConnect.submitting")
+									: t("applicationEnvironmentConnect.submit")}
+							</Button>
+						)}
+						{step > 0 && (
+							<Button
+								buttonRole="secondary"
+								type="button"
+								onGcdsClick={handleBack}
+							>
+								{t("common.back")}
+							</Button>
+						)}
+						{step === 0 && (
+							<Link href={`/applications/${applicationUuid}/environments`}>
+								{t("common.cancel")}
+							</Link>
+						)}
+					</Grid>
+				</div>
 			</form>
 		</Grid>
 	);

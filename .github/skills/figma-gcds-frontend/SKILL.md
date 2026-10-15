@@ -60,8 +60,25 @@ The map is a translation step, not a request to recreate every Figma layer. Use 
 
 ### 5. Run the page
 
-- Start the frontend dev server from `frontend/` with an available port. If the default port is occupied, choose another and retain the exact URL.
+- Use the desktop server bootstrap below. Do not start a second Vite process when a working frontend server already exists.
 - Confirm the route loads without console errors, failed module requests, or missing assets before visual comparison.
+
+#### Desktop server bootstrap
+
+1. Check the configured/default frontend origin first, normally `http://127.0.0.1:3000/`. If it returns the portal HTML, reuse that server and keep its exact origin.
+2. If the default origin is occupied by another process or is not the portal, probe one fallback port such as `3001`, then `3002`, then `4173`. Use the first port that is free; do not repeatedly retry an occupied port.
+3. Start Vite directly from the frontend package:
+
+	```sh
+	cd frontend && pnpm exec vite --host 127.0.0.1 --port <port>
+	```
+
+	Prefer this over `pnpm run dev -- --port <port>` because argument forwarding can pass a literal extra `--` to Vite in this repository.
+4. Wait for Vite's `Local:` URL, then verify the exact origin once with `curl -fsS <origin>/`. Only open the browser after that check succeeds.
+5. Keep one server URL and one browser page for the whole visual pass. If startup fails, read the first error and either reuse the reported existing server or choose the next fallback port; do not loop the same command.
+6. Set the Playwright viewport explicitly to the Figma desktop dimensions before navigation. A desktop check means a wide viewport such as the supplied frame size, not the browser's accidental current size.
+
+If the page redirects because the API or session is unavailable, treat that as an environment/data issue rather than a Vite startup failure. Reuse an authenticated page when one exists; for visual-only checks, provide representative API responses through the browser test harness and record that limitation.
 - Use the real route and representative data. Do not validate only an isolated component story when the request is for a page.
 
 ### 6. Inspect with Playwright

@@ -35,6 +35,9 @@ from ..services import (
     TierService,
     UserService,
 )
+from ..services.application_environment_client_secret_service import (
+    ApplicationEnvironmentClientSecretService,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -45,6 +48,10 @@ TERMS_PENDING_ALLOWED_PATHS = frozenset({"/api/v1/user/me/", "/api/v1/user/me/ac
 
 def get_application_environment_service() -> ApplicationEnvironmentService:
     return ApplicationEnvironmentService()
+
+
+def get_application_environment_client_secret_service() -> ApplicationEnvironmentClientSecretService:
+    return ApplicationEnvironmentClientSecretService()
 
 
 def get_application_service() -> ApplicationService:

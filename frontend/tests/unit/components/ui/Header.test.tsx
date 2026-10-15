@@ -1,10 +1,40 @@
 import type { ReactElement, ReactNode } from "react";
 import { render } from "@testing-library/react";
-import { describe, expect, it, vi } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import Header from "@/components/ui/Header";
 import { useSession } from "@/hooks";
 
 let pathname = "/users";
+type TestBreadcrumb = {
+	href: string;
+	label: string;
+	showBackLabel?: boolean;
+};
+
+type TestRouteMatch = {
+	context: {
+		backLink?: TestBreadcrumb;
+		breadcrumbs?: Array<TestBreadcrumb>;
+	};
+};
+
+const defaultRouteMatches: Array<TestRouteMatch> = [
+	{
+		context: {
+			backLink: {
+				href: "/applications",
+				label: "Applications",
+				showBackLabel: false,
+			},
+		},
+	},
+];
+let routeMatches = defaultRouteMatches;
+
+beforeEach(() => {
+	pathname = "/users";
+	routeMatches = defaultRouteMatches;
+});
 
 vi.mock("react-i18next", () => ({
 	useTranslation: (): {
@@ -45,30 +75,12 @@ vi.mock("@tanstack/react-router", () => ({
 	}: {
 		select: (state: {
 			location: { pathname: string };
-			matches: Array<{
-				context?: {
-					backLink?: {
-						href: string;
-						label: string;
-						showBackLabel?: boolean;
-					};
-				};
-			}>;
+			matches: Array<TestRouteMatch>;
 		}) => unknown;
 	}): unknown =>
 		select({
 			location: { pathname },
-			matches: [
-				{
-					context: {
-						backLink: {
-							href: "/applications",
-							label: "Applications",
-							showBackLabel: false,
-						},
-					},
-				},
-			],
+			matches: routeMatches,
 		}),
 }));
 
@@ -180,6 +192,24 @@ describe("Header", () => {
 
 	it("renders navigation for authenticated superuser", () => {
 		pathname = "/users";
+		routeMatches = [
+			{
+				context: {
+					breadcrumbs: [
+						{
+							href: "/applications",
+							label: "Applications",
+							showBackLabel: false,
+						},
+						{
+							href: "/applications/application-uuid/environments",
+							label: "Environments",
+							showBackLabel: false,
+						},
+					],
+				},
+			},
+		];
 		vi.mocked(useSession).mockReturnValue({
 			currentUser: {
 				name: "Jane Doe",
@@ -220,6 +250,11 @@ describe("Header", () => {
 		expect(document.querySelector("a[href='/applications']")?.textContent).toBe(
 			"Applications"
 		);
+		expect(
+			document.querySelector(
+				"nav[data-slot='breadcrumb'] a[href='/applications/application-uuid/environments']"
+			)?.textContent
+		).toBe("Environments");
 		expect(
 			document.querySelector(
 				"nav[aria-label='Primary navigation'] > a[data-href='/logout']"

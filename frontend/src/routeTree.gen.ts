@@ -36,6 +36,10 @@ import { Route as ApplicationsApplicationUuidDepartmentSetupRouteImport } from '
 import { Route as ApplicationsApplicationUuidEnvironmentsRouteImport } from './routes/applications/$applicationUuid/environments'
 import { Route as ApplicationsApplicationUuidManageCredentialsRouteImport } from './routes/applications/$applicationUuid/manage-credentials'
 import { Route as ApplicationsApplicationUuidMauReportRouteImport } from './routes/applications/$applicationUuid/mau-report'
+import { Route as ApplicationsApplicationUuidEnvironmentsIndexRouteImport } from './routes/applications/$applicationUuid/environments/index'
+import { Route as ApplicationsApplicationUuidEnvironmentsEnvironmentUuidRouteImport } from './routes/applications/$applicationUuid/environments/$environmentUuid'
+import { Route as ApplicationsApplicationUuidEnvironmentsEnvironmentUuidIndexRouteImport } from './routes/applications/$applicationUuid/environments/$environmentUuid/index'
+import { Route as ApplicationsApplicationUuidEnvironmentsEnvironmentUuidCredentialsRouteImport } from './routes/applications/$applicationUuid/environments/$environmentUuid/credentials'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
@@ -178,6 +182,36 @@ const ApplicationsApplicationUuidMauReportRoute =
     path: '/mau-report',
     getParentRoute: () => ApplicationsApplicationUuidRoute,
   } as any)
+const ApplicationsApplicationUuidEnvironmentsIndexRoute =
+  ApplicationsApplicationUuidEnvironmentsIndexRouteImport.update({
+    id: '/',
+    path: '/',
+    getParentRoute: () => ApplicationsApplicationUuidEnvironmentsRoute,
+  } as any)
+const ApplicationsApplicationUuidEnvironmentsEnvironmentUuidRoute =
+  ApplicationsApplicationUuidEnvironmentsEnvironmentUuidRouteImport.update({
+    id: '/$environmentUuid',
+    path: '/$environmentUuid',
+    getParentRoute: () => ApplicationsApplicationUuidEnvironmentsRoute,
+  } as any)
+const ApplicationsApplicationUuidEnvironmentsEnvironmentUuidIndexRoute =
+  ApplicationsApplicationUuidEnvironmentsEnvironmentUuidIndexRouteImport.update(
+    {
+      id: '/',
+      path: '/',
+      getParentRoute: () =>
+        ApplicationsApplicationUuidEnvironmentsEnvironmentUuidRoute,
+    } as any,
+  )
+const ApplicationsApplicationUuidEnvironmentsEnvironmentUuidCredentialsRoute =
+  ApplicationsApplicationUuidEnvironmentsEnvironmentUuidCredentialsRouteImport.update(
+    {
+      id: '/credentials',
+      path: '/credentials',
+      getParentRoute: () =>
+        ApplicationsApplicationUuidEnvironmentsEnvironmentUuidRoute,
+    } as any,
+  )
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -203,10 +237,14 @@ export interface FileRoutesByFullPath {
   '/profile/setup': typeof ProfileSetupRoute
   '/applications/': typeof ApplicationsIndexRoute
   '/applications/$applicationUuid/department-setup': typeof ApplicationsApplicationUuidDepartmentSetupRoute
-  '/applications/$applicationUuid/environments': typeof ApplicationsApplicationUuidEnvironmentsRoute
+  '/applications/$applicationUuid/environments': typeof ApplicationsApplicationUuidEnvironmentsRouteWithChildren
   '/applications/$applicationUuid/manage-credentials': typeof ApplicationsApplicationUuidManageCredentialsRoute
   '/applications/$applicationUuid/mau-report': typeof ApplicationsApplicationUuidMauReportRoute
   '/applications/$applicationUuid/': typeof ApplicationsApplicationUuidIndexRoute
+  '/applications/$applicationUuid/environments/$environmentUuid': typeof ApplicationsApplicationUuidEnvironmentsEnvironmentUuidRouteWithChildren
+  '/applications/$applicationUuid/environments/': typeof ApplicationsApplicationUuidEnvironmentsIndexRoute
+  '/applications/$applicationUuid/environments/$environmentUuid/credentials': typeof ApplicationsApplicationUuidEnvironmentsEnvironmentUuidCredentialsRoute
+  '/applications/$applicationUuid/environments/$environmentUuid/': typeof ApplicationsApplicationUuidEnvironmentsEnvironmentUuidIndexRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -230,10 +268,12 @@ export interface FileRoutesByTo {
   '/profile/setup': typeof ProfileSetupRoute
   '/applications': typeof ApplicationsIndexRoute
   '/applications/$applicationUuid/department-setup': typeof ApplicationsApplicationUuidDepartmentSetupRoute
-  '/applications/$applicationUuid/environments': typeof ApplicationsApplicationUuidEnvironmentsRoute
   '/applications/$applicationUuid/manage-credentials': typeof ApplicationsApplicationUuidManageCredentialsRoute
   '/applications/$applicationUuid/mau-report': typeof ApplicationsApplicationUuidMauReportRoute
   '/applications/$applicationUuid': typeof ApplicationsApplicationUuidIndexRoute
+  '/applications/$applicationUuid/environments': typeof ApplicationsApplicationUuidEnvironmentsIndexRoute
+  '/applications/$applicationUuid/environments/$environmentUuid/credentials': typeof ApplicationsApplicationUuidEnvironmentsEnvironmentUuidCredentialsRoute
+  '/applications/$applicationUuid/environments/$environmentUuid': typeof ApplicationsApplicationUuidEnvironmentsEnvironmentUuidIndexRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -260,10 +300,14 @@ export interface FileRoutesById {
   '/profile/setup': typeof ProfileSetupRoute
   '/applications/': typeof ApplicationsIndexRoute
   '/applications/$applicationUuid/department-setup': typeof ApplicationsApplicationUuidDepartmentSetupRoute
-  '/applications/$applicationUuid/environments': typeof ApplicationsApplicationUuidEnvironmentsRoute
+  '/applications/$applicationUuid/environments': typeof ApplicationsApplicationUuidEnvironmentsRouteWithChildren
   '/applications/$applicationUuid/manage-credentials': typeof ApplicationsApplicationUuidManageCredentialsRoute
   '/applications/$applicationUuid/mau-report': typeof ApplicationsApplicationUuidMauReportRoute
   '/applications/$applicationUuid/': typeof ApplicationsApplicationUuidIndexRoute
+  '/applications/$applicationUuid/environments/$environmentUuid': typeof ApplicationsApplicationUuidEnvironmentsEnvironmentUuidRouteWithChildren
+  '/applications/$applicationUuid/environments/': typeof ApplicationsApplicationUuidEnvironmentsIndexRoute
+  '/applications/$applicationUuid/environments/$environmentUuid/credentials': typeof ApplicationsApplicationUuidEnvironmentsEnvironmentUuidCredentialsRoute
+  '/applications/$applicationUuid/environments/$environmentUuid/': typeof ApplicationsApplicationUuidEnvironmentsEnvironmentUuidIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -295,6 +339,10 @@ export interface FileRouteTypes {
     | '/applications/$applicationUuid/manage-credentials'
     | '/applications/$applicationUuid/mau-report'
     | '/applications/$applicationUuid/'
+    | '/applications/$applicationUuid/environments/$environmentUuid'
+    | '/applications/$applicationUuid/environments/'
+    | '/applications/$applicationUuid/environments/$environmentUuid/credentials'
+    | '/applications/$applicationUuid/environments/$environmentUuid/'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -318,10 +366,12 @@ export interface FileRouteTypes {
     | '/profile/setup'
     | '/applications'
     | '/applications/$applicationUuid/department-setup'
-    | '/applications/$applicationUuid/environments'
     | '/applications/$applicationUuid/manage-credentials'
     | '/applications/$applicationUuid/mau-report'
     | '/applications/$applicationUuid'
+    | '/applications/$applicationUuid/environments'
+    | '/applications/$applicationUuid/environments/$environmentUuid/credentials'
+    | '/applications/$applicationUuid/environments/$environmentUuid'
   id:
     | '__root__'
     | '/'
@@ -351,6 +401,10 @@ export interface FileRouteTypes {
     | '/applications/$applicationUuid/manage-credentials'
     | '/applications/$applicationUuid/mau-report'
     | '/applications/$applicationUuid/'
+    | '/applications/$applicationUuid/environments/$environmentUuid'
+    | '/applications/$applicationUuid/environments/'
+    | '/applications/$applicationUuid/environments/$environmentUuid/credentials'
+    | '/applications/$applicationUuid/environments/$environmentUuid/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -567,12 +621,76 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApplicationsApplicationUuidMauReportRouteImport
       parentRoute: typeof ApplicationsApplicationUuidRoute
     }
+    '/applications/$applicationUuid/environments/': {
+      id: '/applications/$applicationUuid/environments/'
+      path: '/'
+      fullPath: '/applications/$applicationUuid/environments/'
+      preLoaderRoute: typeof ApplicationsApplicationUuidEnvironmentsIndexRouteImport
+      parentRoute: typeof ApplicationsApplicationUuidEnvironmentsRoute
+    }
+    '/applications/$applicationUuid/environments/$environmentUuid': {
+      id: '/applications/$applicationUuid/environments/$environmentUuid'
+      path: '/$environmentUuid'
+      fullPath: '/applications/$applicationUuid/environments/$environmentUuid'
+      preLoaderRoute: typeof ApplicationsApplicationUuidEnvironmentsEnvironmentUuidRouteImport
+      parentRoute: typeof ApplicationsApplicationUuidEnvironmentsRoute
+    }
+    '/applications/$applicationUuid/environments/$environmentUuid/': {
+      id: '/applications/$applicationUuid/environments/$environmentUuid/'
+      path: '/'
+      fullPath: '/applications/$applicationUuid/environments/$environmentUuid/'
+      preLoaderRoute: typeof ApplicationsApplicationUuidEnvironmentsEnvironmentUuidIndexRouteImport
+      parentRoute: typeof ApplicationsApplicationUuidEnvironmentsEnvironmentUuidRoute
+    }
+    '/applications/$applicationUuid/environments/$environmentUuid/credentials': {
+      id: '/applications/$applicationUuid/environments/$environmentUuid/credentials'
+      path: '/credentials'
+      fullPath: '/applications/$applicationUuid/environments/$environmentUuid/credentials'
+      preLoaderRoute: typeof ApplicationsApplicationUuidEnvironmentsEnvironmentUuidCredentialsRouteImport
+      parentRoute: typeof ApplicationsApplicationUuidEnvironmentsEnvironmentUuidRoute
+    }
   }
 }
 
+interface ApplicationsApplicationUuidEnvironmentsEnvironmentUuidRouteChildren {
+  ApplicationsApplicationUuidEnvironmentsEnvironmentUuidCredentialsRoute: typeof ApplicationsApplicationUuidEnvironmentsEnvironmentUuidCredentialsRoute
+  ApplicationsApplicationUuidEnvironmentsEnvironmentUuidIndexRoute: typeof ApplicationsApplicationUuidEnvironmentsEnvironmentUuidIndexRoute
+}
+
+const ApplicationsApplicationUuidEnvironmentsEnvironmentUuidRouteChildren: ApplicationsApplicationUuidEnvironmentsEnvironmentUuidRouteChildren =
+  {
+    ApplicationsApplicationUuidEnvironmentsEnvironmentUuidCredentialsRoute:
+      ApplicationsApplicationUuidEnvironmentsEnvironmentUuidCredentialsRoute,
+    ApplicationsApplicationUuidEnvironmentsEnvironmentUuidIndexRoute:
+      ApplicationsApplicationUuidEnvironmentsEnvironmentUuidIndexRoute,
+  }
+
+const ApplicationsApplicationUuidEnvironmentsEnvironmentUuidRouteWithChildren =
+  ApplicationsApplicationUuidEnvironmentsEnvironmentUuidRoute._addFileChildren(
+    ApplicationsApplicationUuidEnvironmentsEnvironmentUuidRouteChildren,
+  )
+
+interface ApplicationsApplicationUuidEnvironmentsRouteChildren {
+  ApplicationsApplicationUuidEnvironmentsEnvironmentUuidRoute: typeof ApplicationsApplicationUuidEnvironmentsEnvironmentUuidRouteWithChildren
+  ApplicationsApplicationUuidEnvironmentsIndexRoute: typeof ApplicationsApplicationUuidEnvironmentsIndexRoute
+}
+
+const ApplicationsApplicationUuidEnvironmentsRouteChildren: ApplicationsApplicationUuidEnvironmentsRouteChildren =
+  {
+    ApplicationsApplicationUuidEnvironmentsEnvironmentUuidRoute:
+      ApplicationsApplicationUuidEnvironmentsEnvironmentUuidRouteWithChildren,
+    ApplicationsApplicationUuidEnvironmentsIndexRoute:
+      ApplicationsApplicationUuidEnvironmentsIndexRoute,
+  }
+
+const ApplicationsApplicationUuidEnvironmentsRouteWithChildren =
+  ApplicationsApplicationUuidEnvironmentsRoute._addFileChildren(
+    ApplicationsApplicationUuidEnvironmentsRouteChildren,
+  )
+
 interface ApplicationsApplicationUuidRouteChildren {
   ApplicationsApplicationUuidDepartmentSetupRoute: typeof ApplicationsApplicationUuidDepartmentSetupRoute
-  ApplicationsApplicationUuidEnvironmentsRoute: typeof ApplicationsApplicationUuidEnvironmentsRoute
+  ApplicationsApplicationUuidEnvironmentsRoute: typeof ApplicationsApplicationUuidEnvironmentsRouteWithChildren
   ApplicationsApplicationUuidManageCredentialsRoute: typeof ApplicationsApplicationUuidManageCredentialsRoute
   ApplicationsApplicationUuidMauReportRoute: typeof ApplicationsApplicationUuidMauReportRoute
   ApplicationsApplicationUuidIndexRoute: typeof ApplicationsApplicationUuidIndexRoute
@@ -583,7 +701,7 @@ const ApplicationsApplicationUuidRouteChildren: ApplicationsApplicationUuidRoute
     ApplicationsApplicationUuidDepartmentSetupRoute:
       ApplicationsApplicationUuidDepartmentSetupRoute,
     ApplicationsApplicationUuidEnvironmentsRoute:
-      ApplicationsApplicationUuidEnvironmentsRoute,
+      ApplicationsApplicationUuidEnvironmentsRouteWithChildren,
     ApplicationsApplicationUuidManageCredentialsRoute:
       ApplicationsApplicationUuidManageCredentialsRoute,
     ApplicationsApplicationUuidMauReportRoute:
