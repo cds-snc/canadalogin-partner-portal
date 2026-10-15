@@ -16,6 +16,10 @@
 	width: fit-content;
 }
 
+.environment-credentials__actions {
+	margin-top: var(--gcds-spacing-200);
+}
+
 .environment-credentials__secret-list {
 	display: grid;
 	gap: var(--gcds-spacing-300);

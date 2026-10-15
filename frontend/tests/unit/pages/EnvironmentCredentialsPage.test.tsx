@@ -15,6 +15,7 @@ const {
 	mockedGetApplicationEnvironmentRotatedClientSecrets,
 	mockedRotateApplicationEnvironmentClientSecret,
 	mockedClipboardWriteText,
+	mockedNavigate,
 	mockedToastSuccess,
 	mockedUseApplicationEnvironment,
 } = vi.hoisted(() => ({
@@ -23,11 +24,13 @@ const {
 	mockedGetApplicationEnvironmentRotatedClientSecrets: vi.fn(),
 	mockedRotateApplicationEnvironmentClientSecret: vi.fn(),
 	mockedClipboardWriteText: vi.fn(),
+	mockedNavigate: vi.fn(),
 	mockedToastSuccess: vi.fn(),
 	mockedUseApplicationEnvironment: vi.fn(),
 }));
 
 vi.mock("@tanstack/react-router", () => ({
+	useNavigate: () => mockedNavigate,
 	useParams: () => ({
 		applicationUuid: "application-uuid-1",
 		environmentUuid: "environment-uuid-1",
@@ -51,6 +54,19 @@ vi.mock("react-i18next", () => ({
 					"Environment credentials",
 				"applicationEnvironmentManagement.clientIdCopiedSuccess":
 					"Client ID copied",
+				"applicationEnvironmentManagement.currentCredentialsTitle":
+					"Current credentials",
+				"applicationEnvironmentManagement.authenticationMethod":
+					"Authentication method",
+				"applicationEnvironmentManagement.clientIdLabel": "Client ID",
+				"applicationEnvironmentManagement.clientIdHelp":
+					"Used to identify this environment when connecting to CanadaLogin.",
+				"applicationEnvironmentManagement.jwksUriLabel": "JWKS URI",
+				"applicationEnvironmentManagement.jwksUriHelp":
+					"The location CanadaLogin uses to retrieve your application's public keys.",
+				"applicationEnvironmentManagement.jwksUriCopiedSuccess":
+					"JWKS URI copied to clipboard.",
+				"applicationEnvironmentManagement.change": "Change",
 				"applicationEnvironmentManagement.clientSecretCopiedSuccess":
 					"Secret copied",
 				"applicationEnvironmentManagement.expireConfirmTitle":
@@ -157,13 +173,16 @@ vi.mock("@/components/ui", () => ({
 		children,
 		disabled,
 		onGcdsClick,
+		size,
 		type = "button",
 	}: PropsWithChildren<{
 		disabled?: boolean;
 		onGcdsClick?: (event: Event) => void;
+		size?: "regular" | "small";
 		type?: "button" | "submit";
 	}>): ReactElement => (
 		<button
+			data-size={size}
 			disabled={disabled}
 			type={type}
 			onClick={() => onGcdsClick?.(new Event("click"))}
@@ -171,13 +190,14 @@ vi.mock("@/components/ui", () => ({
 			{children}
 		</button>
 	),
-	Grid: ({ children, columns, tag = "div" }: PropsWithChildren<{
+	Grid: ({ children, className, columns, tag = "div" }: PropsWithChildren<{
+		className?: string;
 		columns?: string;
 		tag?: string;
 	}>): ReactElement =>
 		createElement(
 			tag,
-			{ "data-grid-columns": columns, "data-grid-tag": tag },
+			{ className, "data-grid-columns": columns, "data-grid-tag": tag },
 			children
 		),
 	Heading: ({
@@ -375,10 +395,6 @@ describe("EnvironmentCredentialsPage", () => {
 			config: { clientAuthMethod: "client_secret_basic" },
 			tenantCode: "production",
 		},
-		{
-			config: { clientAuthMethod: "private_key_jwt" },
-			tenantCode: "test",
-		},
 	])("does not load credentials for an unsupported environment", async (environment) => {
 		mockedUseApplicationEnvironment.mockReturnValue({
 			data: { ...eligibleEnvironment, ...environment },
@@ -397,6 +413,85 @@ describe("EnvironmentCredentialsPage", () => {
 		expect(
 			mockedGetApplicationEnvironmentClientCredentials
 		).not.toHaveBeenCalled();
+	});
+
+	it("shows private-key credentials for production without loading secrets", async () => {
+		const jwksUri = "https://example.gov/.well-known/jwks.json";
+		mockedUseApplicationEnvironment.mockReturnValue({
+			data: {
+				...eligibleEnvironment,
+				config: { clientAuthMethod: "private_key_jwt", jwksUri },
+				tenantCode: "production",
+			},
+			error: null,
+			isLoading: false,
+		});
+
+		renderPage();
+
+		expect(
+			await screen.findByRole("heading", { name: "Current credentials" })
+		).toBeTruthy();
+		expect(screen.getByText("private_key_jwt")).toBeTruthy();
+		expect(screen.getByText("environment-client-id")).toBeTruthy();
+		expect(screen.getByText(jwksUri)).toBeTruthy();
+		const changeButton = screen.getByRole("button", { name: "Change" });
+		expect(changeButton).toBeTruthy();
+		fireEvent.click(changeButton);
+		expect(mockedNavigate).toHaveBeenCalledWith({
+			to: "/applications/$applicationUuid/environments/$environmentUuid",
+			params: {
+				applicationUuid: "application-uuid-1",
+				environmentUuid: "environment-uuid-1",
+			},
+		});
+		expect(
+			screen
+				.getAllByRole("button", { name: "Copy" })[1]
+				?.closest(".environment-credentials__actions")
+		).toBeTruthy();
+		expect(screen.getAllByRole("button", { name: "Copy" })).toHaveLength(2);
+		const copyButtons = screen.getAllByRole("button", { name: "Copy" });
+		expect(copyButtons[1]?.getAttribute("data-size")).toBe("small");
+		expect(changeButton.getAttribute("data-size")).toBe("small");
+		fireEvent.click(copyButtons[0]!);
+		fireEvent.click(copyButtons[1]!);
+		await waitFor(() => {
+			expect(mockedClipboardWriteText.mock.calls.map(([value]) => value)).toEqual([
+				"environment-client-id",
+				jwksUri,
+			]);
+		});
+		await waitFor(() => {
+			expect(mockedToastSuccess).toHaveBeenCalledWith("Client ID copied");
+			expect(mockedToastSuccess).toHaveBeenCalledWith(
+				"JWKS URI copied to clipboard."
+			);
+		});
+		expect(
+			mockedGetApplicationEnvironmentRotatedClientSecrets
+		).not.toHaveBeenCalled();
+		expect(
+			mockedGetApplicationEnvironmentClientCredentials
+		).not.toHaveBeenCalled();
+	});
+
+	it("disables JWKS copying when the configured URI is missing", async () => {
+		mockedUseApplicationEnvironment.mockReturnValue({
+			data: {
+				...eligibleEnvironment,
+				config: { clientAuthMethod: "private_key_jwt" },
+			},
+			error: null,
+			isLoading: false,
+		});
+
+		renderPage();
+
+		await screen.findByRole("heading", { name: "Current credentials" });
+		const copyButtons = screen.getAllByRole("button", { name: "Copy" });
+		expect(copyButtons).toHaveLength(2);
+		expect(copyButtons[1]?.hasAttribute("disabled")).toBe(true);
 	});
 
 	it("loads the active secret only after the user selects Reveal", async () => {

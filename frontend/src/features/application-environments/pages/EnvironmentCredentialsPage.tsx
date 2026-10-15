@@ -1,5 +1,5 @@
 import { useState, type FormEvent } from "react";
-import { useParams } from "@tanstack/react-router";
+import { useNavigate, useParams } from "@tanstack/react-router";
 import { useTranslation } from "react-i18next";
 import type { FunctionComponent } from "@/common/types";
 import { useToast } from "@/components/ui/Toast";
@@ -44,6 +44,9 @@ const formatExpiry = (
 
 export const EnvironmentCredentialsPage = (): FunctionComponent => {
 	const { i18n, t } = useTranslation();
+	const navigate = useNavigate({
+		from: "/applications/$applicationUuid/environments/$environmentUuid",
+	});
 	const toast = useToast();
 	const { applicationUuid, environmentUuid } = useParams({
 		from: "/applications/$applicationUuid/environments/$environmentUuid",
@@ -57,9 +60,12 @@ export const EnvironmentCredentialsPage = (): FunctionComponent => {
 		bodyKey: "applicationEnvironmentManagement.errorBody",
 		titleKey: "applicationEnvironmentManagement.errorTitle",
 	});
+	const isPrivateKeyJwt =
+		environment?.config?.clientAuthMethod === "private_key_jwt";
+	const jwksUri = environment?.config?.jwksUri;
 	const isEligible =
 		environment?.tenantCode !== "production" &&
-		environment?.config?.clientAuthMethod !== "private_key_jwt";
+		!isPrivateKeyJwt;
 	const {
 		credentials,
 		deleteRotatedSecret,
@@ -275,7 +281,122 @@ export const EnvironmentCredentialsPage = (): FunctionComponent => {
 							},
 						]}
 					/>
-					{isEligible ? (
+					{isPrivateKeyJwt ? (
+						<Grid columns="1fr" gap="300" tag="section">
+							<Heading marginBottom="0" tag="h2">
+								{t(
+									"applicationEnvironmentManagement.currentCredentialsTitle"
+								)}
+							</Heading>
+							<Grid columns="1fr" gap="150" tag="dl">
+								<dt>
+									<strong>
+										{t(
+											"applicationEnvironmentManagement.authenticationMethod"
+										)}
+									</strong>
+								</dt>
+								<dd>
+									<div className="environment-credentials__value">
+										<Text marginBottom="0">
+											<code>private_key_jwt</code>
+										</Text>
+									</div>
+								</dd>
+								<dt>
+									<strong>
+										{t("applicationEnvironmentManagement.clientIdLabel")}
+									</strong>
+								</dt>
+								<dd>
+									<Text marginBottom="100" size="small">
+										{t("applicationEnvironmentManagement.clientIdHelp")}
+									</Text>
+									<Grid
+										columns="1fr"
+										columnsDesktop="max-content max-content"
+										gap="200"
+										tag="div"
+									>
+										<div className="environment-credentials__value">
+											<Text marginBottom="0">
+												{environment.clientId ?? notAvailable}
+											</Text>
+										</div>
+										<Button
+											buttonRole="secondary"
+											disabled={!environment.clientId}
+											size="small"
+											type="button"
+											onGcdsClick={() => {
+												if (environment.clientId) {
+													void copyValue(
+														environment.clientId,
+														t(
+															"applicationEnvironmentManagement.clientIdCopiedSuccess"
+														)
+													);
+												}
+											}}
+										>
+											{t("applicationEnvironmentManagement.copyAction")}
+										</Button>
+									</Grid>
+								</dd>
+								<dt>
+									<strong>
+										{t("applicationEnvironmentManagement.jwksUriLabel")}
+									</strong>
+								</dt>
+								<dd>
+									<Text marginBottom="100" size="small">
+										{t("applicationEnvironmentManagement.jwksUriHelp")}
+									</Text>
+									<div className="environment-credentials__value">
+										<Text marginBottom="0">{jwksUri ?? notAvailable}</Text>
+									</div>
+									<Grid
+										className="environment-credentials__actions"
+										columns="max-content max-content"
+										gap="200"
+										tag="div"
+									>
+										<Button
+											buttonRole="secondary"
+											disabled={!jwksUri}
+											size="small"
+											type="button"
+											onGcdsClick={() => {
+												if (jwksUri) {
+													void copyValue(
+														jwksUri,
+														t(
+															"applicationEnvironmentManagement.jwksUriCopiedSuccess"
+														)
+													);
+												}
+											}}
+										>
+											{t("applicationEnvironmentManagement.copyAction")}
+										</Button>
+										<Button
+											buttonRole="secondary"
+											size="small"
+											type="button"
+											onGcdsClick={() => {
+												void navigate({
+													to: "/applications/$applicationUuid/environments/$environmentUuid",
+													params: { applicationUuid, environmentUuid },
+												});
+											}}
+										>
+											{t("applicationEnvironmentManagement.change")}
+										</Button>
+									</Grid>
+								</dd>
+							</Grid>
+						</Grid>
+					) : isEligible ? (
 						<>
 							<Text>
 								{t("applicationEnvironmentManagement.credentialsSecurityNote")}
