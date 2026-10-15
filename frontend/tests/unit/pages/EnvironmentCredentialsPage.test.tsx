@@ -45,10 +45,10 @@ vi.mock("react-i18next", () => ({
 				"applicationEnvironmentManagement.configurationTab": "Configuration",
 				"applicationEnvironmentManagement.copyAction": "Copy",
 				"applicationEnvironmentManagement.copySecretAction": "Copy secret",
-				"applicationEnvironmentManagement.credentialsComingSoonBody":
-					"Credentials are coming soon.",
-				"applicationEnvironmentManagement.credentialsComingSoonTitle":
-					"Credentials coming soon",
+				"applicationEnvironmentManagement.publicClientCredentialsBody":
+					"Public clients do not have a client secret. They use PKCE to protect the sign-in flow.",
+				"applicationEnvironmentManagement.publicClientCredentialsTitle":
+					"Public client",
 				"applicationEnvironmentManagement.credentialsTab": "Credentials",
 				"applicationEnvironmentManagement.credentialsTitle":
 					"Environment credentials",
@@ -390,6 +390,35 @@ describe("EnvironmentCredentialsPage", () => {
 		).not.toHaveBeenCalled();
 	});
 
+	it("shows a public-client notice without secret-management controls", async () => {
+		mockedUseApplicationEnvironment.mockReturnValue({
+			data: {
+				...eligibleEnvironment,
+				config: { clientType: "public", pkceSupported: true },
+			},
+			error: null,
+			isLoading: false,
+		});
+
+		renderPage();
+
+		expect(
+			await screen.findByRole("heading", { name: "Public client" })
+		).toBeTruthy();
+		expect(
+			screen.getByText(
+				"Public clients do not have a client secret. They use PKCE to protect the sign-in flow."
+			)
+		).toBeTruthy();
+		expect(screen.queryByRole("button", { name: "Reveal" })).toBeNull();
+		expect(
+			mockedGetApplicationEnvironmentRotatedClientSecrets
+		).not.toHaveBeenCalled();
+		expect(
+			mockedGetApplicationEnvironmentClientCredentials
+		).not.toHaveBeenCalled();
+	});
+
 	it.each([
 		{
 			config: { clientAuthMethod: "client_secret_basic" },
@@ -404,9 +433,7 @@ describe("EnvironmentCredentialsPage", () => {
 
 		renderPage();
 
-		expect(
-			await screen.findByText("Credentials are coming soon.")
-		).toBeTruthy();
+		expect(screen.queryByRole("button", { name: "Reveal" })).toBeNull();
 		expect(
 			mockedGetApplicationEnvironmentRotatedClientSecrets
 		).not.toHaveBeenCalled();

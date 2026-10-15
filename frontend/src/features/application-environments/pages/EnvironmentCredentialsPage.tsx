@@ -62,8 +62,10 @@ export const EnvironmentCredentialsPage = (): FunctionComponent => {
 	});
 	const isPrivateKeyJwt =
 		environment?.config?.clientAuthMethod === "private_key_jwt";
+	const isPublicClient = environment?.config?.clientType === "public";
 	const jwksUri = environment?.config?.jwksUri;
 	const isEligible =
+		!isPublicClient &&
 		environment?.tenantCode !== "production" &&
 		!isPrivateKeyJwt;
 	const {
@@ -281,7 +283,21 @@ export const EnvironmentCredentialsPage = (): FunctionComponent => {
 							},
 						]}
 					/>
-					{isPrivateKeyJwt ? (
+					{isPublicClient ? (
+						<Notice
+							noticeRole="info"
+							noticeTitleTag="h2"
+							noticeTitle={t(
+								"applicationEnvironmentManagement.publicClientCredentialsTitle"
+							)}
+						>
+							<Text>
+								{t(
+									"applicationEnvironmentManagement.publicClientCredentialsBody"
+								)}
+							</Text>
+						</Notice>
+					) : isPrivateKeyJwt ? (
 						<Grid columns="1fr" gap="300" tag="section">
 							<Heading marginBottom="0" tag="h2">
 								{t(
@@ -710,21 +726,7 @@ export const EnvironmentCredentialsPage = (): FunctionComponent => {
 								) : null}
 							</Grid>
 						</>
-					) : (
-						<Notice
-							noticeRole="info"
-							noticeTitleTag="h2"
-							noticeTitle={t(
-								"applicationEnvironmentManagement.credentialsComingSoonTitle"
-							)}
-						>
-							<Text>
-								{t(
-									"applicationEnvironmentManagement.credentialsComingSoonBody"
-								)}
-							</Text>
-						</Notice>
-					)}
+					) : null}
 				</Grid>
 			)}
 			{isRotateDialogOpen ? (
