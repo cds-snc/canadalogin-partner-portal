@@ -5,7 +5,7 @@ import {
 	type ReactNode,
 } from "react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { EnvironmentCredentialsPage } from "@/features/application-environments/pages/EnvironmentCredentialsPage";
 
@@ -61,13 +61,31 @@ vi.mock("react-i18next", () => ({
 					"The secret is no longer active.",
 				"applicationEnvironmentManagement.expireSuccessTitle":
 					"Secret expired successfully",
+				"applicationEnvironmentManagement.expireFailureBody":
+					"The secret is still active. Try again. If the problem continues, contact support.",
+				"applicationEnvironmentManagement.expireFailureTitle":
+					"Secret could not be expired",
+				"applicationEnvironmentManagement.retrieveFailureBody":
+					"Try again. If the problem continues, contact support.",
+				"applicationEnvironmentManagement.retrieveFailureTitle":
+					"Secret could not be retrieved",
 				"applicationEnvironmentManagement.revealAction": "Reveal",
 				"applicationEnvironmentManagement.rotateConfirmTitle": "Rotate secret?",
+				"applicationEnvironmentManagement.rotateFailureBody":
+					"Try again. If the problem continues, contact support.",
+				"applicationEnvironmentManagement.rotateFailureTitle":
+					"Secret could not be rotated",
 				"applicationEnvironmentManagement.rotateSecretAction": "Rotate",
 				"applicationEnvironmentManagement.rotateSuccessTitle":
 					"Secret rotated successfully",
 				"applicationEnvironmentManagement.rotationReasonLabel":
 					"Reason for rotation",
+				"applicationEnvironmentManagement.rotationReasonRequired":
+					"Reason for rotation is a required field.",
+				"applicationEnvironmentManagement.rotateConfirmBody":
+					"Confirm secret rotation.",
+				"applicationEnvironmentManagement.expireConfirmBody":
+					"Confirm secret expiry.",
 				"applicationEnvironmentManagement.tabsLabel": "Environment views",
 			};
 			return translations[key] ?? key;
@@ -120,6 +138,21 @@ vi.mock("@/components/ui", () => ({
 			</button>
 		</section>
 	),
+	ErrorSummary: ({
+		errorLinks,
+	}: {
+		errorLinks?: Record<string, string>;
+	}): ReactElement | null =>
+		errorLinks && Object.keys(errorLinks).length > 0 ? (
+			<section aria-label="There was a problem" data-error-summary>
+				<h2>There was a problem</h2>
+				{Object.entries(errorLinks).map(([href, message]) => (
+					<a href={href} key={href}>
+						{message}
+					</a>
+				))}
+			</section>
+		) : null,
 	Button: ({
 		children,
 		disabled,
@@ -155,19 +188,23 @@ vi.mock("@/components/ui", () => ({
 		return <HeadingTag>{children}</HeadingTag>;
 	},
 	Input: ({
+		errorMessage,
+		id,
 		inputId,
 		label,
 		name,
 		onInput,
 		value,
 	}: {
+		errorMessage?: string;
+		id?: string;
 		inputId: string;
 		label: string;
 		name: string;
 		onInput?: React.FormEventHandler<Element>;
 		value?: string;
 	}): ReactElement => (
-		<label>
+		<label data-error-message={errorMessage} id={id}>
 			{label}
 			<input
 				id={inputId}
@@ -380,6 +417,77 @@ describe("EnvironmentCredentialsPage", () => {
 		expect(mockedToastSuccess).not.toHaveBeenCalled();
 	});
 
+	it("shows a linked error summary and inline message when the rotation reason is missing", async () => {
+		mockedUseApplicationEnvironment.mockReturnValue({
+			data: eligibleEnvironment,
+			error: null,
+			isLoading: false,
+		});
+
+		renderPage();
+		fireEvent.submit(
+			screen.getByLabelText("Reason for rotation").closest("form") as HTMLFormElement
+		);
+
+		expect(await screen.findByLabelText("There was a problem")).toBeTruthy();
+		expect(
+			screen.getByRole("link", {
+				name: "Reason for rotation is a required field.",
+			}).getAttribute("href")
+		).toBe("#environment-rotation-reason-control");
+		expect(
+			screen
+				.getByLabelText("Reason for rotation")
+				.closest("label")
+				?.getAttribute("data-error-message")
+		).toBe("Reason for rotation is a required field.");
+	});
+
+	it("shows an alert when retrieving the secret fails from Reveal", async () => {
+		mockedUseApplicationEnvironment.mockReturnValue({
+			data: eligibleEnvironment,
+			error: null,
+			isLoading: false,
+		});
+		mockedGetApplicationEnvironmentClientCredentials.mockRejectedValue(
+			new Error("request failed")
+		);
+
+		renderPage();
+		fireEvent.click(await screen.findByRole("button", { name: "Reveal" }));
+
+		const alert = await screen.findByText("Secret could not be retrieved");
+		expect(alert.closest("[data-alert-role]")?.getAttribute("data-alert-role"))
+			.toBe("danger");
+		expect(
+			alert
+				.closest("[data-alert-role]")
+				?.parentElement?.getAttribute("data-grid-columns")
+		).toBe("1fr 1fr");
+	});
+
+	it("shows an alert when retrieving the secret fails from Copy secret", async () => {
+		mockedUseApplicationEnvironment.mockReturnValue({
+			data: eligibleEnvironment,
+			error: null,
+			isLoading: false,
+		});
+		mockedGetApplicationEnvironmentClientCredentials.mockRejectedValue(
+			new Error("request failed")
+		);
+
+		renderPage();
+		fireEvent.click(await screen.findByRole("button", { name: "Copy secret" }));
+
+		const alert = await screen.findByText("Secret could not be retrieved");
+		expect(alert).toBeTruthy();
+		expect(
+			alert
+				.closest("[data-alert-role]")
+				?.parentElement?.getAttribute("data-grid-columns")
+		).toBe("1fr 1fr");
+	});
+
 	it("shows grey backgrounds for the three displayed credential values", async () => {
 		mockedUseApplicationEnvironment.mockReturnValue({
 			data: eligibleEnvironment,
@@ -493,6 +601,43 @@ describe("EnvironmentCredentialsPage", () => {
 		).not.toHaveBeenCalled();
 	});
 
+	it("shows an alert when rotating the secret fails", async () => {
+		mockedUseApplicationEnvironment.mockReturnValue({
+			data: eligibleEnvironment,
+			error: null,
+			isLoading: false,
+		});
+		mockedRotateApplicationEnvironmentClientSecret.mockRejectedValue(
+			new Error("request failed")
+		);
+
+		renderPage();
+		const reasonInput = screen.getByLabelText("Reason for rotation");
+		fireEvent.input(reasonInput, { target: { value: "annual rotation" } });
+		fireEvent.submit(reasonInput.closest("form") as HTMLFormElement);
+		const rotationDialog = await screen.findByRole("dialog", {
+			name: "Rotate secret?",
+		});
+		fireEvent.click(within(rotationDialog).getByRole("button", { name: "Rotate" }));
+
+		const alert = await screen.findByRole("heading", {
+			name: "Secret could not be rotated",
+		});
+		expect(alert.closest("[data-alert-role]")?.getAttribute("data-alert-role"))
+			.toBe("danger");
+		expect(
+			alert
+				.closest("[data-alert-role]")
+				?.parentElement?.getAttribute("data-grid-columns")
+		).toBe("1fr 1fr");
+		expect(await screen.findByLabelText("There was a problem")).toBeTruthy();
+		expect(
+			screen.getByRole("link", { name: "Secret could not be rotated" })
+				.getAttribute("href")
+		).toBe("#environment-rotation-form");
+		expect(screen.queryByRole("dialog", { name: "Rotate secret?" })).toBeNull();
+	});
+
 	it("expires only the selected rotated secret after confirmation", async () => {
 		mockedUseApplicationEnvironment.mockReturnValue({
 			data: eligibleEnvironment,
@@ -556,5 +701,41 @@ describe("EnvironmentCredentialsPage", () => {
 		expect(
 			mockedGetApplicationEnvironmentClientCredentials
 		).not.toHaveBeenCalled();
+	});
+
+	it("shows an alert when expiring the selected secret fails", async () => {
+		mockedUseApplicationEnvironment.mockReturnValue({
+			data: eligibleEnvironment,
+			error: null,
+			isLoading: false,
+		});
+		mockedGetApplicationEnvironmentRotatedClientSecrets.mockResolvedValue([
+			{
+				description: "incident #21213",
+				expiredAt: 1_800_000_000,
+				rotatedAt: 1_799_000_000,
+				secretId: "rotated-secret-id",
+				value: "rotated-secret-value",
+			},
+		]);
+		mockedDeleteApplicationEnvironmentRotatedClientSecret.mockRejectedValue(
+			new Error("request failed")
+		);
+
+		renderPage();
+		fireEvent.click(await screen.findByRole("button", { name: "Expire now" }));
+		fireEvent.click(
+			await screen.findByRole("button", { name: "Expire secret" })
+		);
+
+		const alert = await screen.findByText("Secret could not be expired");
+		expect(alert.closest("[data-alert-role]")?.getAttribute("data-alert-role"))
+			.toBe("danger");
+		expect(
+			alert
+				.closest("[data-alert-role]")
+				?.parentElement?.getAttribute("data-grid-columns")
+		).toBe("1fr 1fr");
+		expect(screen.queryByRole("dialog", { name: "Expire secret now?" })).toBeNull();
 	});
 });

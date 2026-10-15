@@ -6,6 +6,7 @@ import { useToast } from "@/components/ui/Toast";
 import {
 	Alert,
 	Button,
+	ErrorSummary,
 	Grid,
 	Heading,
 	Input,
@@ -77,6 +78,9 @@ export const EnvironmentCredentialsPage = (): FunctionComponent => {
 	const [isSecretVisible, setIsSecretVisible] = useState(false);
 	const [rotationReason, setRotationReason] = useState("");
 	const [rotationReasonError, setRotationReasonError] = useState("");
+	const [operationError, setOperationError] = useState<
+		"expire" | "retrieve" | "rotate" | null
+	>(null);
 	const [isRotateDialogOpen, setIsRotateDialogOpen] = useState(false);
 	const [secretToExpire, setSecretToExpire] = useState<{
 		description: string | null;
@@ -88,6 +92,16 @@ export const EnvironmentCredentialsPage = (): FunctionComponent => {
 	>(null);
 	const language = i18n.resolvedLanguage?.startsWith("fr") ? "fr-CA" : "en-CA";
 	const notAvailable = t("common.notAvailable");
+	const rotationErrorLinks: Record<string, string> = {};
+	if (rotationReasonError) {
+		rotationErrorLinks["#environment-rotation-reason-control"] =
+			rotationReasonError;
+	}
+	if (operationError === "rotate") {
+		rotationErrorLinks["#environment-rotation-form"] = t(
+			"applicationEnvironmentManagement.rotateFailureTitle"
+		);
+	}
 
 	const copyValue = async (
 		value: string,
@@ -102,6 +116,7 @@ export const EnvironmentCredentialsPage = (): FunctionComponent => {
 	};
 
 	const handleRevealSecret = async (): Promise<void> => {
+		setOperationError(null);
 		if (isSecretVisible) {
 			setIsSecretVisible(false);
 			return;
@@ -111,6 +126,7 @@ export const EnvironmentCredentialsPage = (): FunctionComponent => {
 			try {
 				currentCredentials = await getClientCredentials();
 			} catch {
+				setOperationError("retrieve");
 				return;
 			}
 		}
@@ -121,11 +137,13 @@ export const EnvironmentCredentialsPage = (): FunctionComponent => {
 	};
 
 	const handleCopySecret = async (): Promise<void> => {
+		setOperationError(null);
 		let currentCredentials = credentials;
 		if (!currentCredentials) {
 			try {
 				currentCredentials = await getClientCredentials();
 			} catch {
+				setOperationError("retrieve");
 				return;
 			}
 		}
@@ -139,6 +157,7 @@ export const EnvironmentCredentialsPage = (): FunctionComponent => {
 
 	const handleRotationSubmit = (event: FormEvent<HTMLFormElement>): void => {
 		event.preventDefault();
+		setOperationError(null);
 		if (!rotationReason.trim()) {
 			setRotationReasonError(
 				t("applicationEnvironmentManagement.rotationReasonRequired")
@@ -150,6 +169,7 @@ export const EnvironmentCredentialsPage = (): FunctionComponent => {
 	};
 
 	const handleRotateSecret = async (): Promise<void> => {
+		setSuccessNotice(null);
 		try {
 			await rotateSecret({
 				description: rotationReason.trim(),
@@ -159,9 +179,12 @@ export const EnvironmentCredentialsPage = (): FunctionComponent => {
 			});
 			setIsSecretVisible(false);
 			setRotationReason("");
+			setOperationError(null);
 			setSuccessNotice("rotated");
 			setIsRotateDialogOpen(false);
 		} catch {
+			setOperationError("rotate");
+			setIsRotateDialogOpen(false);
 			return;
 		}
 	};
@@ -170,11 +193,15 @@ export const EnvironmentCredentialsPage = (): FunctionComponent => {
 		if (!secretToExpire) {
 			return;
 		}
+		setSuccessNotice(null);
 		try {
 			await deleteRotatedSecret(secretToExpire.value);
 			setSecretToExpire(null);
+			setOperationError(null);
 			setSuccessNotice("expired");
 		} catch {
+			setOperationError("expire");
+			setSecretToExpire(null);
 			return;
 		}
 	};
@@ -218,6 +245,12 @@ export const EnvironmentCredentialsPage = (): FunctionComponent => {
 			) : (
 				<Grid columns="minmax(0, 46.5rem)" tag="div">
 					<Heading tag="h1">{environment.partnerLabel}</Heading>
+					{Object.keys(rotationErrorLinks).length > 0 ? (
+						<ErrorSummary
+							errorLinks={rotationErrorLinks}
+							listen={false}
+						/>
+					) : null}
 					<Text marginBottom="0">
 						{t("applicationEnvironmentManagement.credentialsIntro")}
 						<br />
@@ -355,6 +388,26 @@ export const EnvironmentCredentialsPage = (): FunctionComponent => {
 										</Grid>
 									</dd>
 								</Grid>
+								{operationError === "retrieve" ? (
+									<Grid columns="1fr 1fr" tag="div">
+										<Alert
+											alertRole="danger"
+											container="full"
+											heading={t(
+												"applicationEnvironmentManagement.retrieveFailureTitle"
+											)}
+											onDismiss={() => {
+												setOperationError(null);
+											}}
+										>
+											<Text>
+												{t(
+													"applicationEnvironmentManagement.retrieveFailureBody"
+												)}
+											</Text>
+										</Alert>
+									</Grid>
+								) : null}
 							</Grid>
 							<Grid columns="1fr" gap="300" tag="section">
 								<Heading marginBottom="0" tag="h2">
@@ -363,11 +416,16 @@ export const EnvironmentCredentialsPage = (): FunctionComponent => {
 								<Text marginBottom="0">
 									{t("applicationEnvironmentManagement.rotateSecretHelp")}
 								</Text>
-								<form onSubmit={handleRotationSubmit}>
+								<form
+									noValidate
+									id="environment-rotation-form"
+									onSubmit={handleRotationSubmit}
+								>
 									<Grid columns="1fr" gap="200" tag="div">
 										<Input
 											required
 											errorMessage={rotationReasonError || undefined}
+											id="environment-rotation-reason-control"
 											inputId="environment-rotation-reason"
 											name="rotation-reason"
 											type="text"
@@ -394,6 +452,26 @@ export const EnvironmentCredentialsPage = (): FunctionComponent => {
 										</Button>
 									</Grid>
 								</form>
+								{operationError === "rotate" ? (
+									<Grid columns="1fr 1fr" tag="div">
+										<Alert
+											alertRole="danger"
+											container="full"
+											heading={t(
+												"applicationEnvironmentManagement.rotateFailureTitle"
+											)}
+											onDismiss={() => {
+												setOperationError(null);
+											}}
+										>
+											<Text>
+												{t(
+													"applicationEnvironmentManagement.rotateFailureBody"
+												)}
+											</Text>
+										</Alert>
+									</Grid>
+								) : null}
 								{successNotice === "rotated" ? (
 									<Grid columns="1fr 1fr" tag="div">
 										<Alert
@@ -473,6 +551,26 @@ export const EnvironmentCredentialsPage = (): FunctionComponent => {
 										{t("applicationEnvironmentManagement.noExpiringSecrets")}
 									</Text>
 								)}
+								{operationError === "expire" ? (
+									<Grid columns="1fr 1fr" tag="div">
+										<Alert
+											alertRole="danger"
+											container="full"
+											heading={t(
+												"applicationEnvironmentManagement.expireFailureTitle"
+											)}
+											onDismiss={() => {
+												setOperationError(null);
+											}}
+										>
+											<Text>
+												{t(
+													"applicationEnvironmentManagement.expireFailureBody"
+												)}
+											</Text>
+										</Alert>
+									</Grid>
+								) : null}
 								{successNotice === "expired" ? (
 									<Grid columns="1fr 1fr" tag="div">
 										<Alert
