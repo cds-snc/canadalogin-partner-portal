@@ -395,14 +395,16 @@ export const EnvironmentCredentialsPage = (): FunctionComponent => {
 									</Grid>
 								</form>
 								{successNotice === "rotated" ? (
-									<Alert
-										alertRole="success"
-										container="xs"
-										heading={t(
-											"applicationEnvironmentManagement.rotateSuccessTitle"
-										)}
-										onDismiss={() => { setSuccessNotice(null); }}
-									/>
+									<Grid columns="1fr 1fr" tag="div">
+										<Alert
+											alertRole="success"
+											container="full"
+											heading={t(
+												"applicationEnvironmentManagement.rotateSuccessTitle"
+											)}
+											onDismiss={() => { setSuccessNotice(null); }}
+										/>
+									</Grid>
 								) : null}
 							</Grid>
 							<Grid columns="1fr" gap="300" tag="section">
@@ -472,18 +474,20 @@ export const EnvironmentCredentialsPage = (): FunctionComponent => {
 									</Text>
 								)}
 								{successNotice === "expired" ? (
-									<Alert
-										alertRole="success"
-										container="xs"
-										heading={t(
-											"applicationEnvironmentManagement.expireSuccessTitle"
-										)}
-										onDismiss={() => { setSuccessNotice(null); }}
-									>
-										<Text>
-											{t("applicationEnvironmentManagement.expireSuccessBody")}
-										</Text>
-									</Alert>
+									<Grid columns="1fr 1fr" tag="div">
+										<Alert
+											alertRole="success"
+											container="full"
+											heading={t(
+												"applicationEnvironmentManagement.expireSuccessTitle"
+											)}
+											onDismiss={() => { setSuccessNotice(null); }}
+										>
+											<Text>
+												{t("applicationEnvironmentManagement.expireSuccessBody")}
+											</Text>
+										</Alert>
+									</Grid>
 								) : null}
 							</Grid>
 						</>

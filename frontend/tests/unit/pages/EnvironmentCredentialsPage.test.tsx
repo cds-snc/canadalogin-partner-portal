@@ -138,8 +138,15 @@ vi.mock("@/components/ui", () => ({
 			{children}
 		</button>
 	),
-	Grid: ({ children, tag = "div" }: PropsWithChildren<{ tag?: string }>): ReactElement =>
-		createElement(tag, { "data-grid-tag": tag }, children),
+	Grid: ({ children, columns, tag = "div" }: PropsWithChildren<{
+		columns?: string;
+		tag?: string;
+	}>): ReactElement =>
+		createElement(
+			tag,
+			{ "data-grid-columns": columns, "data-grid-tag": tag },
+			children
+		),
 	Heading: ({
 		children,
 		tag,
@@ -462,12 +469,13 @@ describe("EnvironmentCredentialsPage", () => {
 				.closest("section")
 				?.getAttribute("data-alert-role")
 		).toBe("success");
+		const rotationAlert = screen
+			.getByText("Secret rotated successfully")
+			.closest("[data-alert-role]");
+		expect(rotationAlert?.getAttribute("data-alert-container")).toBe("full");
 		expect(
-			screen
-				.getByText("Secret rotated successfully")
-				.closest("section")
-				?.getAttribute("data-alert-container")
-		).toBe("xs");
+			rotationAlert?.parentElement?.getAttribute("data-grid-columns")
+		).toBe("1fr 1fr");
 		const rotationSection = screen
 			.getByRole("heading", {
 				name: "applicationEnvironmentManagement.rotateSecretTitle",
@@ -526,12 +534,13 @@ describe("EnvironmentCredentialsPage", () => {
 			);
 		});
 		expect(await screen.findByText("Secret expired successfully")).toBeTruthy();
+		const expiryAlert = screen
+			.getByText("Secret expired successfully")
+			.closest("[data-alert-role]");
+		expect(expiryAlert?.getAttribute("data-alert-container")).toBe("full");
 		expect(
-			screen
-				.getByText("Secret expired successfully")
-				.closest("section")
-				?.getAttribute("data-alert-container")
-		).toBe("xs");
+			expiryAlert?.parentElement?.getAttribute("data-grid-columns")
+		).toBe("1fr 1fr");
 		const expiringSecretsSection = screen
 			.getByRole("heading", {
 				name: "applicationEnvironmentManagement.expiringSecretsTitle",
