@@ -63,25 +63,27 @@ export const EnvironmentCredentialsPage = (): FunctionComponent => {
 	const isPrivateKeyJwt =
 		environment?.config?.clientAuthMethod === "private_key_jwt";
 	const isPublicClient = environment?.config?.clientType === "public";
+	const isProduction = environment?.tenantCode === "production";
+	const isClientSecretEnvironment = !isPublicClient && !isPrivateKeyJwt;
 	const jwksUri = environment?.config?.jwksUri;
-	const isEligible =
-		!isPublicClient &&
-		environment?.tenantCode !== "production" &&
-		!isPrivateKeyJwt;
 	const {
 		credentials,
 		deleteRotatedSecret,
 		getClientCredentials,
 		isDeletingRotatedSecret,
 		isLoadingClientCredentials,
+		isLoadingPermissions,
 		isLoadingRotatedSecrets,
 		isRotatingSecret,
+		permissions,
+		permissionsError,
 		rotatedSecrets,
 		rotateSecret,
 	} = useApplicationEnvironmentCredentials(
 		applicationUuid,
 		environmentUuid,
-		Boolean(environment && isEligible)
+		Boolean(environment && isClientSecretEnvironment),
+		isProduction
 	);
 	const [isSecretVisible, setIsSecretVisible] = useState(false);
 	const [rotationReason, setRotationReason] = useState("");
@@ -125,6 +127,9 @@ export const EnvironmentCredentialsPage = (): FunctionComponent => {
 
 	const handleRevealSecret = async (): Promise<void> => {
 		setOperationError(null);
+		if (!permissions?.canRevealSecret) {
+			return;
+		}
 		if (isSecretVisible) {
 			setIsSecretVisible(false);
 			return;
@@ -146,6 +151,9 @@ export const EnvironmentCredentialsPage = (): FunctionComponent => {
 
 	const handleCopySecret = async (): Promise<void> => {
 		setOperationError(null);
+		if (!permissions?.canRevealSecret) {
+			return;
+		}
 		let currentCredentials = credentials;
 		if (!currentCredentials) {
 			try {
@@ -166,6 +174,9 @@ export const EnvironmentCredentialsPage = (): FunctionComponent => {
 	const handleRotationSubmit = (event: FormEvent<HTMLFormElement>): void => {
 		event.preventDefault();
 		setOperationError(null);
+		if (!permissions?.canRotateSecret) {
+			return;
+		}
 		if (!rotationReason.trim()) {
 			setRotationReasonError(
 				t("applicationEnvironmentManagement.rotationReasonRequired")
@@ -177,6 +188,9 @@ export const EnvironmentCredentialsPage = (): FunctionComponent => {
 	};
 
 	const handleRotateSecret = async (): Promise<void> => {
+		if (!permissions?.canRotateSecret) {
+			return;
+		}
 		setSuccessNotice(null);
 		try {
 			await rotateSecret({
@@ -198,7 +212,7 @@ export const EnvironmentCredentialsPage = (): FunctionComponent => {
 	};
 
 	const handleExpireSecret = async (): Promise<void> => {
-		if (!secretToExpire) {
+		if (!secretToExpire || !permissions?.canExpireRotatedSecrets) {
 			return;
 		}
 		setSuccessNotice(null);
@@ -395,24 +409,36 @@ export const EnvironmentCredentialsPage = (): FunctionComponent => {
 										>
 											{t("applicationEnvironmentManagement.copyAction")}
 										</Button>
-										<Button
-											buttonRole="secondary"
-											size="small"
-											type="button"
-											onGcdsClick={() => {
-												void navigate({
-													to: "/applications/$applicationUuid/environments/$environmentUuid",
-													params: { applicationUuid, environmentUuid },
-												});
-											}}
-										>
-											{t("applicationEnvironmentManagement.change")}
-										</Button>
+										{!isProduction ? (
+											<Button
+												buttonRole="secondary"
+												size="small"
+												type="button"
+												onGcdsClick={() => {
+													void navigate({
+														to: "/applications/$applicationUuid/environments/$environmentUuid",
+														params: { applicationUuid, environmentUuid },
+													});
+												}}
+											>
+												{t("applicationEnvironmentManagement.change")}
+											</Button>
+										) : null}
 									</Grid>
 								</dd>
 							</Grid>
 						</Grid>
-					) : isEligible ? (
+					) : isLoadingPermissions ? (
+						<Text>{t("applicationEnvironmentManagement.loadingRotatedSecrets")}</Text>
+					) : permissionsError || !permissions ? (
+						<Notice
+							noticeRole="danger"
+							noticeTitle={t("applicationEnvironmentManagement.errorTitle")}
+							noticeTitleTag="h2"
+						>
+							<Text>{t("applicationEnvironmentManagement.errorBody")}</Text>
+						</Notice>
+					) : isClientSecretEnvironment ? (
 						<>
 							<Text>
 								{t("applicationEnvironmentManagement.credentialsSecurityNote")}
@@ -485,6 +511,7 @@ export const EnvironmentCredentialsPage = (): FunctionComponent => {
 										</strong>
 									</dt>
 									<dd>
+										{permissions.canRevealSecret ? (
 										<Grid
 											columns="1fr"
 											columnsDesktop="max-content max-content max-content"
@@ -523,6 +550,20 @@ export const EnvironmentCredentialsPage = (): FunctionComponent => {
 												{t("applicationEnvironmentManagement.copySecretAction")}
 											</Button>
 										</Grid>
+										) : (
+											<Grid columns="1fr" gap="150" tag="div">
+												<Text marginBottom="0">
+													{t(
+														"applicationEnvironmentManagement.productionSecretAccessDenied"
+													)}
+												</Text>
+												<Link href="/support">
+													{t(
+														"applicationEnvironmentManagement.productionSecretRequestAccess"
+													)}
+												</Link>
+											</Grid>
+										)}
 									</dd>
 								</Grid>
 								{operationError === "retrieve" ? (
@@ -550,9 +591,25 @@ export const EnvironmentCredentialsPage = (): FunctionComponent => {
 								<Heading marginBottom="0" tag="h2">
 									{t("applicationEnvironmentManagement.rotateSecretTitle")}
 								</Heading>
-								<Text marginBottom="0">
-									{t("applicationEnvironmentManagement.rotateSecretHelp")}
-								</Text>
+								{isProduction ? (
+									<Text marginBottom="0">
+										{t(
+											"applicationEnvironmentManagement.productionRotateSecretHelpPrefix"
+										)}{" "}
+										<Link href="/support">
+											{t(
+												"applicationEnvironmentManagement.productionSupportLink"
+											)}
+										</Link>
+										.
+									</Text>
+								) : (
+									<Text marginBottom="0">
+										{t("applicationEnvironmentManagement.rotateSecretHelp")}
+									</Text>
+								)}
+								{permissions.canRotateSecret ? (
+									<>
 								<form
 									noValidate
 									id="environment-rotation-form"
@@ -582,8 +639,10 @@ export const EnvironmentCredentialsPage = (): FunctionComponent => {
 										/>
 										<Button
 											buttonRole="primary"
-											disabled={isRotatingSecret}
 											type="submit"
+											disabled={
+												isRotatingSecret || !permissions.canRotateSecret
+											}
 										>
 											{t("applicationEnvironmentManagement.rotateSecretAction")}
 										</Button>
@@ -621,14 +680,30 @@ export const EnvironmentCredentialsPage = (): FunctionComponent => {
 										/>
 									</Grid>
 								) : null}
+									</>
+								) : null}
 							</Grid>
 							<Grid columns="1fr" gap="300" tag="section">
 								<Heading marginBottom="0" tag="h2">
 									{t("applicationEnvironmentManagement.expiringSecretsTitle")}
 								</Heading>
-								<Text marginBottom="0">
-									{t("applicationEnvironmentManagement.expiringSecretsHelp")}
-								</Text>
+								{isProduction ? (
+									<Text marginBottom="0">
+										{t(
+											"applicationEnvironmentManagement.productionExpiringSecretsHelpPrefix"
+										)}{" "}
+										<Link href="/support">
+											{t(
+												"applicationEnvironmentManagement.productionSupportLink"
+											)}
+										</Link>
+										.
+									</Text>
+								) : (
+									<Text marginBottom="0">
+										{t("applicationEnvironmentManagement.expiringSecretsHelp")}
+									</Text>
+								)}
 								{isLoadingRotatedSecrets ? (
 									<Text>
 										{t(
@@ -659,7 +734,7 @@ export const EnvironmentCredentialsPage = (): FunctionComponent => {
 																	),
 															})}
 														</Text>
-														{deleteValue ? (
+														{deleteValue && permissions.canExpireRotatedSecrets ? (
 															<Button
 																buttonRole="secondary"
 																disabled={isDeletingRotatedSecret}

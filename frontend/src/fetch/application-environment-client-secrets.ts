@@ -6,6 +6,13 @@ export type ApplicationEnvironmentClientCredentialsRead = {
 	clientSecretId: string | null;
 };
 
+export type ApplicationEnvironmentClientSecretPermissionsRead = {
+	canRevealSecret: boolean;
+	canViewRotatedSecrets: boolean;
+	canRotateSecret: boolean;
+	canExpireRotatedSecrets: boolean;
+};
+
 export type ApplicationEnvironmentRotatedClientSecretRead = {
 	description: string | null;
 	expiredAt: number | null;
@@ -24,6 +31,24 @@ const getEnvironmentClientPath = (
 	environmentUuid: string
 ): string =>
 	`/api/v1/applications/${encodeURIComponent(applicationUuid)}/environments/${encodeURIComponent(environmentUuid)}/client`;
+
+export const getApplicationEnvironmentClientSecretPermissions = async (
+	applicationUuid: string,
+	environmentUuid: string
+): Promise<ApplicationEnvironmentClientSecretPermissionsRead> => {
+	const result =
+		await requestJson<ApplicationEnvironmentClientSecretPermissionsRead | null>(
+			`${getEnvironmentClientPath(applicationUuid, environmentUuid)}/permissions`,
+			{
+				cache: "no-store",
+				method: "GET",
+			}
+		);
+	if (!result) {
+		throw new Error("Failed to load application environment secret permissions");
+	}
+	return result;
+};
 
 export const getApplicationEnvironmentClientCredentials = async (
 	applicationUuid: string,

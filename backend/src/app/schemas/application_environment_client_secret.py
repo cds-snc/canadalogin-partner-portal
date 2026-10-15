@@ -21,6 +21,20 @@ class ApplicationEnvironmentClientSecretCredentialsRead(BaseModel):
     client_secret_id: str | None = None
 
 
+class ApplicationEnvironmentClientSecretPermissionsRead(BaseModel):
+    model_config = ConfigDict(
+        validate_by_name=True,
+        validate_by_alias=True,
+        alias_generator=to_camel,
+        populate_by_name=True,
+    )
+
+    can_reveal_secret: bool
+    can_view_rotated_secrets: bool
+    can_rotate_secret: bool
+    can_expire_rotated_secrets: bool
+
+
 class ApplicationEnvironmentRotatedClientSecretRead(BaseModel):
     model_config = ConfigDict(
         validate_by_name=True,

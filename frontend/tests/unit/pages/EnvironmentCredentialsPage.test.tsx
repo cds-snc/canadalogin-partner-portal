@@ -12,6 +12,7 @@ import { EnvironmentCredentialsPage } from "@/features/application-environments/
 const {
 	mockedDeleteApplicationEnvironmentRotatedClientSecret,
 	mockedGetApplicationEnvironmentClientCredentials,
+	mockedGetApplicationEnvironmentClientSecretPermissions,
 	mockedGetApplicationEnvironmentRotatedClientSecrets,
 	mockedRotateApplicationEnvironmentClientSecret,
 	mockedClipboardWriteText,
@@ -21,6 +22,7 @@ const {
 } = vi.hoisted(() => ({
 	mockedDeleteApplicationEnvironmentRotatedClientSecret: vi.fn(),
 	mockedGetApplicationEnvironmentClientCredentials: vi.fn(),
+	mockedGetApplicationEnvironmentClientSecretPermissions: vi.fn(),
 	mockedGetApplicationEnvironmentRotatedClientSecrets: vi.fn(),
 	mockedRotateApplicationEnvironmentClientSecret: vi.fn(),
 	mockedClipboardWriteText: vi.fn(),
@@ -45,6 +47,16 @@ vi.mock("react-i18next", () => ({
 				"applicationEnvironmentManagement.configurationTab": "Configuration",
 				"applicationEnvironmentManagement.copyAction": "Copy",
 				"applicationEnvironmentManagement.copySecretAction": "Copy secret",
+				"applicationEnvironmentManagement.productionSecretAccessDenied":
+					"You don't have permission to access the production secret.",
+				"applicationEnvironmentManagement.productionSecretRequestAccess":
+					"Request access to production secrets",
+				"applicationEnvironmentManagement.productionRotateSecretHelpPrefix":
+					"Production secrets cannot be rotated directly in the Partner Portal. To rotate this secret, contact the",
+				"applicationEnvironmentManagement.productionExpiringSecretsHelpPrefix":
+					"These secrets are still active and will stop working on the date and time shown. To expire a secret early,",
+				"applicationEnvironmentManagement.productionSupportLink":
+					"CanadaLogin support team",
 				"applicationEnvironmentManagement.publicClientCredentialsBody":
 					"Public clients do not have a client secret. They use PKCE to protect the sign-in flow.",
 				"applicationEnvironmentManagement.publicClientCredentialsTitle":
@@ -92,6 +104,7 @@ vi.mock("react-i18next", () => ({
 				"applicationEnvironmentManagement.rotateFailureTitle":
 					"Secret could not be rotated",
 				"applicationEnvironmentManagement.rotateSecretAction": "Rotate",
+				"applicationEnvironmentManagement.rotateSecretTitle": "Rotate secret",
 				"applicationEnvironmentManagement.rotateSuccessTitle":
 					"Secret rotated successfully",
 				"applicationEnvironmentManagement.rotationReasonLabel":
@@ -122,6 +135,8 @@ vi.mock("@/fetch/application-environment-client-secrets", () => ({
 		mockedDeleteApplicationEnvironmentRotatedClientSecret,
 	getApplicationEnvironmentClientCredentials:
 		mockedGetApplicationEnvironmentClientCredentials,
+	getApplicationEnvironmentClientSecretPermissions:
+		mockedGetApplicationEnvironmentClientSecretPermissions,
 	getApplicationEnvironmentRotatedClientSecrets:
 		mockedGetApplicationEnvironmentRotatedClientSecrets,
 	rotateApplicationEnvironmentClientSecret:
@@ -334,6 +349,12 @@ describe("EnvironmentCredentialsPage", () => {
 			clientSecret: "environment-client-secret",
 			clientSecretId: "secret-id",
 		});
+		mockedGetApplicationEnvironmentClientSecretPermissions.mockResolvedValue({
+			canRevealSecret: true,
+			canViewRotatedSecrets: true,
+			canRotateSecret: true,
+			canExpireRotatedSecrets: true,
+		});
 		mockedGetApplicationEnvironmentRotatedClientSecrets.mockResolvedValue([]);
 		mockedDeleteApplicationEnvironmentRotatedClientSecret.mockResolvedValue({
 			message: "Rotated client secret deleted",
@@ -419,20 +440,26 @@ describe("EnvironmentCredentialsPage", () => {
 		).not.toHaveBeenCalled();
 	});
 
-	it.each([
-		{
-			config: { clientAuthMethod: "client_secret_basic" },
-			tenantCode: "production",
-		},
-	])("does not load credentials for an unsupported environment", async (environment) => {
+	it("does not load production secrets when the user has no production role", async () => {
 		mockedUseApplicationEnvironment.mockReturnValue({
-			data: { ...eligibleEnvironment, ...environment },
+			data: { ...eligibleEnvironment, tenantCode: "production" },
 			error: null,
 			isLoading: false,
+		});
+		mockedGetApplicationEnvironmentClientSecretPermissions.mockResolvedValue({
+			canRevealSecret: false,
+			canViewRotatedSecrets: false,
+			canRotateSecret: false,
+			canExpireRotatedSecrets: false,
 		});
 
 		renderPage();
 
+		await waitFor(() => {
+			expect(
+				mockedGetApplicationEnvironmentClientSecretPermissions
+			).toHaveBeenCalledWith("application-uuid-1", "environment-uuid-1");
+		});
 		expect(screen.queryByRole("button", { name: "Reveal" })).toBeNull();
 		expect(
 			mockedGetApplicationEnvironmentRotatedClientSecrets
@@ -440,6 +467,101 @@ describe("EnvironmentCredentialsPage", () => {
 		expect(
 			mockedGetApplicationEnvironmentClientCredentials
 		).not.toHaveBeenCalled();
+	});
+
+	it("allows Production Administrators to reveal secrets but not rotate or expire", async () => {
+		mockedUseApplicationEnvironment.mockReturnValue({
+			data: { ...eligibleEnvironment, tenantCode: "production" },
+			error: null,
+			isLoading: false,
+		});
+		mockedGetApplicationEnvironmentClientSecretPermissions.mockResolvedValue({
+			canRevealSecret: true,
+			canViewRotatedSecrets: true,
+			canRotateSecret: false,
+			canExpireRotatedSecrets: false,
+		});
+		mockedGetApplicationEnvironmentRotatedClientSecrets.mockResolvedValue([
+			{
+				description: "annual rotation",
+				expiredAt: 1_800_000_000,
+				rotatedAt: 1_799_000_000,
+				secretId: "rotated-secret-id",
+				value: "rotated-secret-value",
+			},
+		]);
+
+		renderPage();
+
+		expect(
+			(await screen.findByRole("button", { name: "Reveal" })).hasAttribute(
+				"disabled"
+			)
+		).toBe(false);
+		expect(
+			screen.getByRole("button", { name: "Copy secret" }).hasAttribute("disabled")
+		).toBe(false);
+		await screen.findByRole("listitem");
+		expect(
+			await screen.findByRole("heading", { name: "Rotate secret" })
+		).toBeTruthy();
+		expect(
+			screen
+				.getAllByRole("link", { name: "CanadaLogin support team" })
+				.every((link) => link.getAttribute("href") === "/support")
+		).toBe(true);
+		expect(screen.queryByLabelText("Reason for rotation")).toBeNull();
+		expect(screen.queryByRole("button", { name: "Rotate" })).toBeNull();
+		expect(screen.queryByRole("button", { name: "Expire now" })).toBeNull();
+	});
+
+	it("denies active-secret controls to Production Developers", async () => {
+		mockedUseApplicationEnvironment.mockReturnValue({
+			data: { ...eligibleEnvironment, tenantCode: "production" },
+			error: null,
+			isLoading: false,
+		});
+		mockedGetApplicationEnvironmentClientSecretPermissions.mockResolvedValue({
+			canRevealSecret: false,
+			canViewRotatedSecrets: true,
+			canRotateSecret: false,
+			canExpireRotatedSecrets: false,
+		});
+		mockedGetApplicationEnvironmentRotatedClientSecrets.mockResolvedValue([
+			{
+				description: "incident #21213",
+				expiredAt: 1_800_000_000,
+				rotatedAt: 1_799_000_000,
+				secretId: "rotated-secret-id",
+				value: "rotated-secret-value",
+			},
+		]);
+
+		renderPage();
+
+		expect(
+			await screen.findByText(
+				"You don't have permission to access the production secret."
+			)
+		).toBeTruthy();
+		expect(
+			screen.getByRole("link", { name: "Request access to production secrets" })
+				.getAttribute("href")
+		).toBe("/support");
+		expect(screen.queryByRole("button", { name: "Reveal" })).toBeNull();
+		expect(screen.queryByRole("button", { name: "Copy secret" })).toBeNull();
+		await screen.findByRole("listitem");
+		expect(
+			await screen.findByRole("heading", { name: "Rotate secret" })
+		).toBeTruthy();
+		expect(
+			screen
+				.getAllByRole("link", { name: "CanadaLogin support team" })
+				.every((link) => link.getAttribute("href") === "/support")
+		).toBe(true);
+		expect(screen.queryByLabelText("Reason for rotation")).toBeNull();
+		expect(screen.queryByRole("button", { name: "Rotate" })).toBeNull();
+		expect(screen.queryByRole("button", { name: "Expire now" })).toBeNull();
 	});
 
 	it("shows private-key credentials for production without loading secrets", async () => {
@@ -462,16 +584,7 @@ describe("EnvironmentCredentialsPage", () => {
 		expect(screen.getByText("private_key_jwt")).toBeTruthy();
 		expect(screen.getByText("environment-client-id")).toBeTruthy();
 		expect(screen.getByText(jwksUri)).toBeTruthy();
-		const changeButton = screen.getByRole("button", { name: "Change" });
-		expect(changeButton).toBeTruthy();
-		fireEvent.click(changeButton);
-		expect(mockedNavigate).toHaveBeenCalledWith({
-			to: "/applications/$applicationUuid/environments/$environmentUuid",
-			params: {
-				applicationUuid: "application-uuid-1",
-				environmentUuid: "environment-uuid-1",
-			},
-		});
+		expect(screen.queryByRole("button", { name: "Change" })).toBeNull();
 		expect(
 			screen
 				.getAllByRole("button", { name: "Copy" })[1]
@@ -480,7 +593,6 @@ describe("EnvironmentCredentialsPage", () => {
 		expect(screen.getAllByRole("button", { name: "Copy" })).toHaveLength(2);
 		const copyButtons = screen.getAllByRole("button", { name: "Copy" });
 		expect(copyButtons[1]?.getAttribute("data-size")).toBe("small");
-		expect(changeButton.getAttribute("data-size")).toBe("small");
 		fireEvent.click(copyButtons[0]!);
 		fireEvent.click(copyButtons[1]!);
 		await waitFor(() => {
@@ -501,6 +613,31 @@ describe("EnvironmentCredentialsPage", () => {
 		expect(
 			mockedGetApplicationEnvironmentClientCredentials
 		).not.toHaveBeenCalled();
+	});
+
+	it("allows changing private-key credentials outside production", async () => {
+		mockedUseApplicationEnvironment.mockReturnValue({
+			data: {
+				...eligibleEnvironment,
+				config: {
+					clientAuthMethod: "private_key_jwt",
+					jwksUri: "https://example.gov/.well-known/jwks.json",
+				},
+			},
+		error: null,
+			isLoading: false,
+		});
+
+		renderPage();
+
+		fireEvent.click(await screen.findByRole("button", { name: "Change" }));
+		expect(mockedNavigate).toHaveBeenCalledWith({
+			to: "/applications/$applicationUuid/environments/$environmentUuid",
+			params: {
+				applicationUuid: "application-uuid-1",
+				environmentUuid: "environment-uuid-1",
+			},
+		});
 	});
 
 	it("disables JWKS copying when the configured URI is missing", async () => {
@@ -708,7 +845,7 @@ describe("EnvironmentCredentialsPage", () => {
 		).toBe("1fr 1fr");
 		const rotationSection = screen
 			.getByRole("heading", {
-				name: "applicationEnvironmentManagement.rotateSecretTitle",
+				name: "Rotate secret",
 			})
 			.closest('[data-grid-tag="section"]');
 		expect(
