@@ -1,5 +1,11 @@
 # Changelog
 
+## Unreleased
+
+### Security
+
+* Bump PyJWT to >=2.14.0,<3.0 (locked to 2.14.0) to fix CVE-2026-102268: authentication bypass via improper public key.
+
 ## [1.4.0](https://github.com/cds-snc/canadalogin-partner-portal/compare/v1.3.1...v1.4.0) (2026-10-07)
 
 
