@@ -6,6 +6,36 @@
 
 * Bump PyJWT to >=2.15.0,<3.0 (locked to 2.15.1) to fix CVE-2026-102268 (authentication bypass via improper public key), GHSA-42vr-xj54-vc7v (recursive payload parsing), and GHSA-x33g-cr3x-6449 (inconsistent OKP JWKs).
 
+## [1.5.0](https://github.com/cds-snc/canadalogin-partner-portal/compare/v1.4.0...v1.5.0) (2026-10-16)
+
+
+### Features
+
+* 268 frontend redesign of client credential mangement ([#275](https://github.com/cds-snc/canadalogin-partner-portal/issues/275)) ([747d436](https://github.com/cds-snc/canadalogin-partner-portal/commit/747d43690a65d35db97a2518b3326aec752fb011))
+* **application-environments:** add environment management views ([#266](https://github.com/cds-snc/canadalogin-partner-portal/issues/266)) ([0c01911](https://github.com/cds-snc/canadalogin-partner-portal/commit/0c01911c1449bd38f79c6679331882131be2d3bb))
+* **application-environments:** refine management and connection flow ([#272](https://github.com/cds-snc/canadalogin-partner-portal/issues/272)) ([3564778](https://github.com/cds-snc/canadalogin-partner-portal/commit/3564778e1386cfd96c7b6cb66b489359f66129fd))
+* csrf protect ([#263](https://github.com/cds-snc/canadalogin-partner-portal/issues/263)) ([3436bdb](https://github.com/cds-snc/canadalogin-partner-portal/commit/3436bdb80fd714bb1b27eaa9ad0a3e69c5fda07e))
+* inactive user after 180 days ([#274](https://github.com/cds-snc/canadalogin-partner-portal/issues/274)) ([9246180](https://github.com/cds-snc/canadalogin-partner-portal/commit/924618001e1526c4df41835781d9ca453dfb279f))
+
+
+### Bug Fixes
+
+* **application-environment-ui:** Align Application Environment UI with Figma ([#264](https://github.com/cds-snc/canadalogin-partner-portal/issues/264)) ([b1edec3](https://github.com/cds-snc/canadalogin-partner-portal/commit/b1edec3842b79dc70b487a828d1d684c4ed341da))
+* Fix frontend release build type error ([#276](https://github.com/cds-snc/canadalogin-partner-portal/issues/276)) ([966ddb8](https://github.com/cds-snc/canadalogin-partner-portal/commit/966ddb8a7c67c26f0f695c8a27059053bcb239e3))
+* refactor client secret backend ([#270](https://github.com/cds-snc/canadalogin-partner-portal/issues/270)) ([3896f1d](https://github.com/cds-snc/canadalogin-partner-portal/commit/3896f1d89a885c7d44472fce68f1023918c4f38b))
+* refactor partner group user role mapping ([#283](https://github.com/cds-snc/canadalogin-partner-portal/issues/283)) ([c4aa76a](https://github.com/cds-snc/canadalogin-partner-portal/commit/c4aa76a28c5c2d686b07bee2c914ed8e2587fabd))
+
+
+### Miscellaneous Chores
+
+* Bump pyjwt to &gt;=2.14.0 to fix CVE-2026-102268 ([#280](https://github.com/cds-snc/canadalogin-partner-portal/issues/280)) ([6fcdace](https://github.com/cds-snc/canadalogin-partner-portal/commit/6fcdace1af8424fc9f99a241e54d6c15c3eef18b))
+* bump release pipeline to v1.3.0 ([#279](https://github.com/cds-snc/canadalogin-partner-portal/issues/279)) ([e131533](https://github.com/cds-snc/canadalogin-partner-portal/commit/e131533bbe26e68c5d8d8fba9d5960fc3272e782))
+
+
+### Continuous Integration
+
+* validate frontend TypeScript in pull requests ([#278](https://github.com/cds-snc/canadalogin-partner-portal/issues/278)) ([3ba336a](https://github.com/cds-snc/canadalogin-partner-portal/commit/3ba336abb7eb413544c0be196c4a7affd5522b38))
+
 ## [1.4.0](https://github.com/cds-snc/canadalogin-partner-portal/compare/v1.3.1...v1.4.0) (2026-10-07)
 
 
