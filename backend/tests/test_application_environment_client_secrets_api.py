@@ -6,11 +6,13 @@ import pytest
 from src.app.api.v1.application_environment_client_secrets import (
     create_application_environment_rotated_client_secret,
     read_application_environment_client_credentials,
+    read_application_environment_client_secret_permissions,
     router,
 )
 from src.app.schemas.application_environment_client_secret import (
     ApplicationEnvironmentClientSecretCreateRequest,
     ApplicationEnvironmentClientSecretCredentialsRead,
+    ApplicationEnvironmentClientSecretPermissionsRead,
 )
 
 
@@ -27,6 +29,10 @@ def test_environment_client_secret_routes_are_nested_under_environment():
     assert (
         "GET",
         "/applications/{application_uuid}/environments/{environment_uuid}/client",
+    ) in paths
+    assert (
+        "GET",
+        "/applications/{application_uuid}/environments/{environment_uuid}/client/permissions",
     ) in paths
     assert (
         "POST",
@@ -110,4 +116,33 @@ async def test_create_rotated_secret_delegates_to_environment_service(mock_db):
         current_user=current_user,
         payload=payload,
         ibm_admin_client=ibm_admin_client,
+    )
+
+
+@pytest.mark.asyncio
+async def test_read_client_secret_permissions_delegates_to_environment_service(mock_db):
+    application_uuid = uuid.uuid4()
+    environment_uuid = uuid.uuid4()
+    current_user = {"uuid": uuid.uuid4()}
+    expected = {
+        "canRevealSecret": False,
+        "canViewRotatedSecrets": True,
+        "canRotateSecret": False,
+        "canExpireRotatedSecrets": False,
+    }
+    service = Mock()
+    service.get_client_secret_permissions = AsyncMock(return_value=expected)
+
+    result = await unwrap_endpoint(read_application_environment_client_secret_permissions)(
+        Mock(), application_uuid, environment_uuid, mock_db, current_user, service
+    )
+
+    assert result == ApplicationEnvironmentClientSecretPermissionsRead.model_validate(
+        expected
+    )
+    service.get_client_secret_permissions.assert_awaited_once_with(
+        db=mock_db,
+        application_uuid=application_uuid,
+        environment_uuid=environment_uuid,
+        current_user=current_user,
     )

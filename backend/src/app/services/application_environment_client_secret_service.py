@@ -4,7 +4,11 @@ from typing import Any
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from ..core.exceptions.http_exceptions import BadRequestException, NotFoundException
+from ..core.exceptions.http_exceptions import (
+    BadRequestException,
+    ForbiddenException,
+    NotFoundException,
+)
 from ..repositories.application_environment_repository import application_environment_repository
 from ..repositories.ibm_sv_admin import IBMVerifyAdminClient
 from ..schemas.application_environment_client_secret import (
@@ -145,6 +149,82 @@ class ApplicationEnvironmentClientSecretService:
             raise BadRequestException("Application environment has no IBM Verify client configured")
         return environment
 
+    async def _get_production_role_names(
+        self,
+        db: AsyncSession,
+        application_uuid: uuid_pkg.UUID,
+        environment: dict[str, Any],
+        current_user: dict[str, Any],
+    ) -> set[str]:
+        if environment.get("tenant_code") != "production":
+            return set()
+
+        from .partner_group_role_service import PartnerGroupRoleService
+
+        roles = await PartnerGroupRoleService().get_user_roles_for_application(
+            db=db,
+            user_uuid=current_user["uuid"],
+            application_uuid=application_uuid,
+        )
+        return {str(role["name"]) for role in roles}
+
+    async def _get_credential_permissions(
+        self,
+        db: AsyncSession,
+        application_uuid: uuid_pkg.UUID,
+        environment: dict[str, Any],
+        current_user: dict[str, Any],
+    ) -> dict[str, bool]:
+        if environment.get("tenant_code") != "production":
+            return {
+                "can_reveal_secret": True,
+                "can_view_rotated_secrets": True,
+                "can_rotate_secret": True,
+                "can_expire_rotated_secrets": True,
+            }
+
+        role_names = await self._get_production_role_names(
+            db, application_uuid, environment, current_user
+        )
+        is_production_administrator = (
+            "Partner Production Administrator" in role_names
+            and "Partner Developer" not in role_names
+        )
+        has_supported_production_role = bool(
+            role_names
+            & {"Partner Production Administrator", "Partner Developer"}
+        )
+        return {
+            "can_reveal_secret": is_production_administrator,
+            "can_view_rotated_secrets": has_supported_production_role,
+            "can_rotate_secret": False,
+            "can_expire_rotated_secrets": False,
+        }
+
+    async def get_client_secret_permissions(
+        self,
+        db: AsyncSession,
+        application_uuid: uuid_pkg.UUID,
+        environment_uuid: uuid_pkg.UUID,
+        current_user: dict[str, Any],
+    ) -> dict[str, bool]:
+        environment = await self._get_environment_context(
+            db, application_uuid, environment_uuid
+        )
+        return await self._get_credential_permissions(
+            db, application_uuid, environment, current_user
+        )
+
+    def _require_credential_permission(
+        self,
+        permissions: dict[str, bool],
+        permission: str,
+    ) -> None:
+        if not permissions[permission]:
+            raise ForbiddenException(
+                "You do not have permission to access production client secrets."
+            )
+
     async def _audit_action(
         self,
         db: AsyncSession,
@@ -155,7 +235,7 @@ class ApplicationEnvironmentClientSecretService:
     ) -> None:
         await self.audit_service.log_action(
             db=db,
-            user=current_user.get("name") or current_user.get("email", ""),
+            user="user",
             user_uuid=current_user.get("uuid"),
             target="application_environment",
             target_uuid=environment["uuid"],
@@ -187,6 +267,10 @@ class ApplicationEnvironmentClientSecretService:
         ibm_admin_client: IBMVerifyAdminClient,
     ) -> dict[str, Any]:
         environment = await self._get_environment_context(db, application_uuid, environment_uuid)
+        permissions = await self._get_credential_permissions(
+            db, application_uuid, environment, current_user
+        )
+        self._require_credential_permission(permissions, "can_reveal_secret")
         credentials = await self._read_credentials(ibm_admin_client, environment["ibm_client_id"])
         await self._audit_action(
             db,
@@ -206,8 +290,15 @@ class ApplicationEnvironmentClientSecretService:
         ibm_admin_client: IBMVerifyAdminClient,
     ) -> list[dict[str, Any]]:
         environment = await self._get_environment_context(db, application_uuid, environment_uuid)
+        permissions = await self._get_credential_permissions(
+            db, application_uuid, environment, current_user
+        )
+        self._require_credential_permission(permissions, "can_view_rotated_secrets")
         response = await ibm_admin_client.get_client_secret(environment["ibm_client_id"])
         secrets = self._extract_rotated_secrets(response)
+        if not permissions["can_reveal_secret"]:
+            for secret in secrets:
+                secret["value"] = None
         await self._audit_action(
             db,
             current_user,
@@ -227,6 +318,10 @@ class ApplicationEnvironmentClientSecretService:
         ibm_admin_client: IBMVerifyAdminClient,
     ) -> dict[str, Any]:
         environment = await self._get_environment_context(db, application_uuid, environment_uuid)
+        permissions = await self._get_credential_permissions(
+            db, application_uuid, environment, current_user
+        )
+        self._require_credential_permission(permissions, "can_rotate_secret")
         await ibm_admin_client.update_client_secret(
             environment["ibm_client_id"],
             payload.model_dump(by_alias=True),
@@ -252,6 +347,10 @@ class ApplicationEnvironmentClientSecretService:
         ibm_admin_client: IBMVerifyAdminClient,
     ) -> list[dict[str, Any]]:
         environment = await self._get_environment_context(db, application_uuid, environment_uuid)
+        permissions = await self._get_credential_permissions(
+            db, application_uuid, environment, current_user
+        )
+        self._require_credential_permission(permissions, "can_rotate_secret")
         await ibm_admin_client.update_client_secret(
             environment["ibm_client_id"],
             {
@@ -280,6 +379,10 @@ class ApplicationEnvironmentClientSecretService:
         ibm_admin_client: IBMVerifyAdminClient,
     ) -> bool:
         environment = await self._get_environment_context(db, application_uuid, environment_uuid)
+        permissions = await self._get_credential_permissions(
+            db, application_uuid, environment, current_user
+        )
+        self._require_credential_permission(permissions, "can_expire_rotated_secrets")
         client_id = environment["ibm_client_id"]
         response = await ibm_admin_client.get_client_secret(client_id)
         rotated_secrets = self._extract_rotated_secrets(response)

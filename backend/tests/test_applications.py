@@ -4,6 +4,7 @@ from unittest.mock import AsyncMock, Mock, patch
 import pytest
 
 from src.app.api.v1.applications import read_current_user_applications
+from src.app.repositories.application_repository import ApplicationRepository
 from src.app.services.application_service import ApplicationService
 
 
@@ -12,6 +13,22 @@ def unwrap_endpoint(endpoint):
     while hasattr(current, "__wrapped__"):
         current = current.__wrapped__
     return current
+
+
+def test_application_repository_access_scope_includes_both_partner_roles():
+    conditions = ApplicationRepository._access_conditions(uuid.uuid4())
+    bound_values = set()
+    for condition in conditions:
+        for value in condition.compile().params.values():
+            if isinstance(value, str):
+                bound_values.add(value)
+            elif isinstance(value, (list, tuple, set)):
+                bound_values.update(item for item in value if isinstance(item, str))
+
+    assert {
+        "Partner Developer",
+        "Partner Production Administrator",
+    } <= bound_values
 
 
 @pytest.mark.asyncio

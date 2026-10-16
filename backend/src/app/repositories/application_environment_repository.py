@@ -228,6 +228,7 @@ class ApplicationEnvironmentRepository:
         statement = (
             select(
                 ApplicationConfiguration.uuid,
+                ApplicationConfiguration.ibm_client_id.label("client_id"),
                 ApplicationConfiguration.partner_label,
                 Tenant.code.label("tenant_code"),
                 ApplicationConfigurationStatus.code.label("status_code"),
@@ -270,17 +271,20 @@ class ApplicationEnvironmentRepository:
                 ApplicationConfiguration.partner_label,
                 ApplicationConfiguration.ibm_application_id,
                 ApplicationConfiguration.ibm_client_id,
+                Tenant.code.label("tenant_code"),
             )
             .select_from(Application)
             .join(
                 ApplicationConfiguration,
                 ApplicationConfiguration.application_id == Application.id,
             )
+            .join(Tenant, Tenant.id == ApplicationConfiguration.tenant_id)
             .where(
                 Application.uuid == application_uuid,
                 Application.is_deleted.is_(False),
                 ApplicationConfiguration.uuid == environment_uuid,
                 ApplicationConfiguration.is_deleted.is_(False),
+                Tenant.is_deleted.is_(False),
             )
         )
         environment = (await db.execute(statement)).mappings().one_or_none()

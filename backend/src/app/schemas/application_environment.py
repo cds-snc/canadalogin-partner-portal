@@ -121,6 +121,7 @@ class ApplicationEnvironmentRead(BaseModel):
     )
 
     uuid: uuid_pkg.UUID
+    client_id: str | None = None
     partner_label: str
     tenant_code: str
     status_code: str

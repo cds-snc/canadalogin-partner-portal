@@ -4,7 +4,11 @@ from unittest.mock import AsyncMock, Mock, patch
 
 import pytest
 
-from src.app.core.exceptions.http_exceptions import BadRequestException, NotFoundException
+from src.app.core.exceptions.http_exceptions import (
+    BadRequestException,
+    ForbiddenException,
+    NotFoundException,
+)
 from src.app.schemas.application_environment_client_secret import (
     ApplicationEnvironmentClientSecretCreateRequest,
     ApplicationEnvironmentClientSecretRotateRequest,
@@ -66,6 +70,187 @@ async def test_get_client_credentials_uses_environment_client_and_audits_read(mo
     assert audit_args["user_uuid"] == user_uuid
     assert audit_args["operation"] == "REVEAL_SECRET"
     assert "secret-value" not in audit_args["description"]
+
+
+@pytest.mark.asyncio
+async def test_production_partner_developer_cannot_reveal_active_secret(mock_db):
+    provider = Mock()
+    provider.get_client_secret = AsyncMock(return_value={"clientSecret": "secret"})
+    service = ApplicationEnvironmentClientSecretService()
+
+    with (
+        patch(
+            "src.app.services.application_environment_client_secret_service.application_environment_repository"
+        ) as repository,
+        patch(
+            "src.app.services.partner_group_role_service.PartnerGroupRoleService.get_user_roles_for_application",
+            new_callable=AsyncMock,
+            return_value=[{"name": "Partner Developer"}],
+        ),
+    ):
+        repository.get_client_secret_context = AsyncMock(
+            return_value={
+                "uuid": uuid.uuid4(),
+                "tenant_code": "production",
+                "ibm_client_id": "production-client",
+            }
+        )
+
+        with pytest.raises(ForbiddenException):
+            await service.get_client_credentials(
+                db=mock_db,
+                application_uuid=uuid.uuid4(),
+                environment_uuid=uuid.uuid4(),
+                current_user={"uuid": uuid.uuid4()},
+                ibm_admin_client=provider,
+            )
+
+    provider.get_client_secret.assert_not_awaited()
+
+
+@pytest.mark.parametrize(
+    ("role_name", "expected_permissions"),
+    [
+        (
+            "Partner Production Administrator",
+            {
+                "can_reveal_secret": True,
+                "can_view_rotated_secrets": True,
+                "can_rotate_secret": False,
+                "can_expire_rotated_secrets": False,
+            },
+        ),
+        (
+            "Partner Developer",
+            {
+                "can_reveal_secret": False,
+                "can_view_rotated_secrets": True,
+                "can_rotate_secret": False,
+                "can_expire_rotated_secrets": False,
+            },
+        ),
+        (
+            "Other role",
+            {
+                "can_reveal_secret": False,
+                "can_view_rotated_secrets": False,
+                "can_rotate_secret": False,
+                "can_expire_rotated_secrets": False,
+            },
+        ),
+    ],
+)
+@pytest.mark.asyncio
+async def test_production_permissions_follow_application_role(
+    mock_db, role_name, expected_permissions
+):
+    application_uuid = uuid.uuid4()
+    environment_uuid = uuid.uuid4()
+    current_user = {"uuid": uuid.uuid4()}
+    service = ApplicationEnvironmentClientSecretService()
+
+    with (
+        patch(
+            "src.app.services.application_environment_client_secret_service.application_environment_repository"
+        ) as repository,
+        patch(
+            "src.app.services.partner_group_role_service.PartnerGroupRoleService.get_user_roles_for_application",
+            new_callable=AsyncMock,
+            return_value=[{"name": role_name}],
+        ),
+    ):
+        repository.get_client_secret_context = AsyncMock(
+            return_value={
+                "uuid": environment_uuid,
+                "tenant_code": "production",
+                "ibm_client_id": "production-client",
+            }
+        )
+
+        permissions = await service.get_client_secret_permissions(
+            db=mock_db,
+            application_uuid=application_uuid,
+            environment_uuid=environment_uuid,
+            current_user=current_user,
+        )
+
+    assert permissions == expected_permissions
+
+
+@pytest.mark.parametrize(
+    ("role_name", "operation"),
+    [
+        ("Partner Production Administrator", "rotate"),
+        ("Partner Developer", "rotate"),
+        ("Partner Production Administrator", "create"),
+        ("Partner Developer", "create"),
+        ("Partner Production Administrator", "expire"),
+        ("Partner Developer", "expire"),
+    ],
+)
+@pytest.mark.asyncio
+async def test_production_roles_cannot_mutate_secrets(
+    mock_db, role_name, operation
+):
+    application_uuid = uuid.uuid4()
+    environment_uuid = uuid.uuid4()
+    provider = Mock()
+    provider.update_client_secret = AsyncMock()
+    provider.get_client_secret = AsyncMock(return_value={"rotatedSecrets": []})
+    provider.delete_rotated_client_secrets = AsyncMock(return_value=True)
+    service = ApplicationEnvironmentClientSecretService()
+
+    with (
+        patch(
+            "src.app.services.application_environment_client_secret_service.application_environment_repository"
+        ) as repository,
+        patch(
+            "src.app.services.partner_group_role_service.PartnerGroupRoleService.get_user_roles_for_application",
+            new_callable=AsyncMock,
+            return_value=[{"name": role_name}],
+        ),
+    ):
+        repository.get_client_secret_context = AsyncMock(
+            return_value={
+                "uuid": environment_uuid,
+                "tenant_code": "production",
+                "ibm_client_id": "production-client",
+            }
+        )
+
+        with pytest.raises(ForbiddenException):
+            if operation == "rotate":
+                await service.rotate_secret(
+                    db=mock_db,
+                    application_uuid=application_uuid,
+                    environment_uuid=environment_uuid,
+                    current_user={"uuid": uuid.uuid4()},
+                    payload=ApplicationEnvironmentClientSecretRotateRequest(),
+                    ibm_admin_client=provider,
+                )
+            elif operation == "create":
+                await service.create_rotated_secret(
+                    db=mock_db,
+                    application_uuid=application_uuid,
+                    environment_uuid=environment_uuid,
+                    current_user={"uuid": uuid.uuid4()},
+                    payload=ApplicationEnvironmentClientSecretCreateRequest(
+                        description="test"
+                    ),
+                    ibm_admin_client=provider,
+                )
+            else:
+                await service.delete_rotated_secret(
+                    db=mock_db,
+                    application_uuid=application_uuid,
+                    environment_uuid=environment_uuid,
+                    current_user={"uuid": uuid.uuid4()},
+                    value="secret-value",
+                    ibm_admin_client=provider,
+                )
+
+    provider.update_client_secret.assert_not_awaited()
+    provider.delete_rotated_client_secrets.assert_not_awaited()
 
 
 def test_rotated_secret_create_request_defaults_to_seven_days():
@@ -145,6 +330,63 @@ async def test_list_rotated_secrets_audits_environment_read(mock_db):
     assert audit_args["operation"] == "VIEW_ROTATED"
     assert audit_args["target_uuid"] == environment_uuid
     assert "{sha512}redacted" not in audit_args["description"]
+
+
+@pytest.mark.asyncio
+async def test_production_developer_can_view_rotated_secret_metadata_only(mock_db):
+    application_uuid = uuid.uuid4()
+    environment_uuid = uuid.uuid4()
+    provider = Mock()
+    provider.get_client_secret = AsyncMock(
+        return_value={
+            "rotatedSecrets": [
+                {
+                    "description": "deployment",
+                    "value": "production-secret-value",
+                    "rotatedAt": 1779824867,
+                    "expiredAt": 1782345600,
+                }
+            ]
+        }
+    )
+    audit_service = Mock()
+    audit_service.log_action = AsyncMock()
+    service = ApplicationEnvironmentClientSecretService(audit_service=audit_service)
+
+    with (
+        patch(
+            "src.app.services.application_environment_client_secret_service.application_environment_repository"
+        ) as repository,
+        patch(
+            "src.app.services.partner_group_role_service.PartnerGroupRoleService.get_user_roles_for_application",
+            new_callable=AsyncMock,
+            return_value=[{"name": "Partner Developer"}],
+        ),
+    ):
+        repository.get_client_secret_context = AsyncMock(
+            return_value={
+                "uuid": environment_uuid,
+                "tenant_code": "production",
+                "ibm_client_id": "production-client",
+            }
+        )
+        secrets = await service.list_rotated_secrets(
+            db=mock_db,
+            application_uuid=application_uuid,
+            environment_uuid=environment_uuid,
+            current_user={"uuid": uuid.uuid4()},
+            ibm_admin_client=provider,
+        )
+
+    assert secrets == [
+        {
+            "description": "deployment",
+            "expiredAt": 1782345600,
+            "rotatedAt": 1779824867,
+            "value": None,
+            "secretId": "/rotatedSecrets/0",
+        }
+    ]
 
 
 @pytest.mark.asyncio

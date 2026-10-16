@@ -16,6 +16,7 @@ from ...repositories.ibm_sv_admin import IBMVerifyAdminClient
 from ...schemas.application_environment_client_secret import (
     ApplicationEnvironmentClientSecretCreateRequest,
     ApplicationEnvironmentClientSecretCredentialsRead,
+    ApplicationEnvironmentClientSecretPermissionsRead,
     ApplicationEnvironmentClientSecretRotateRequest,
     ApplicationEnvironmentRotatedClientSecretRead,
 )
@@ -24,6 +25,33 @@ from ...services.application_environment_client_secret_service import (
 )
 
 router = APIRouter(tags=["application-environment-client-secrets"])
+
+
+@router.get(
+    "/applications/{application_uuid}/environments/{environment_uuid}/client/permissions",
+    response_model=ApplicationEnvironmentClientSecretPermissionsRead,
+    responses=error_responses(403, 404, 500),
+)
+@casbin_guard.require_application_permission("applications", "read")
+async def read_application_environment_client_secret_permissions(
+    request: Request,
+    application_uuid: uuid_pkg.UUID,
+    environment_uuid: uuid_pkg.UUID,
+    db: Annotated[AsyncSession, Depends(async_get_db)],
+    current_user: Annotated[dict[str, Any], Depends(get_current_user)],
+    service: Annotated[
+        ApplicationEnvironmentClientSecretService,
+        Depends(get_application_environment_client_secret_service),
+    ],
+) -> ApplicationEnvironmentClientSecretPermissionsRead:
+    _ = request
+    permissions = await service.get_client_secret_permissions(
+        db=db,
+        application_uuid=application_uuid,
+        environment_uuid=environment_uuid,
+        current_user=current_user,
+    )
+    return ApplicationEnvironmentClientSecretPermissionsRead.model_validate(permissions)
 
 
 @router.get(

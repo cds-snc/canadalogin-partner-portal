@@ -1,12 +1,9 @@
-import { useEffect, useMemo, useState, type ReactElement } from "react";
+import { useMemo, useState, type ReactElement } from "react";
 import { useNavigate, useParams, useSearch } from "@tanstack/react-router";
 import { useTranslation } from "react-i18next";
 import { Button, Grid, Heading, Notice, Select, Text } from "@/components/ui";
 import { HttpRequestError } from "@/fetch/errors";
-import {
-	assignCurrentUserRPApplicationDepartment,
-	getCurrentUserRPApplicationDepartment,
-} from "@/fetch/rp-applications";
+import { assignCurrentUserRPApplicationDepartment } from "@/fetch/rp-applications";
 import { useDepartments } from "@/features/departments/hooks/use-departments";
 
 export const DepartmentSetupPage = (): ReactElement => {
@@ -23,37 +20,6 @@ export const DepartmentSetupPage = (): ReactElement => {
 		from: "/applications/$applicationUuid/department-setup",
 	});
 	const navigate = useNavigate();
-
-	const [applicationName, setApplicationName] = useState<string | null>(null);
-	const [isContextLoading, setIsContextLoading] = useState(true);
-
-	useEffect(() => {
-		let isMounted = true;
-		const loadContext = async (): Promise<void> => {
-			try {
-				const preflight =
-					await getCurrentUserRPApplicationDepartment(rpApplicationUuid);
-				if (!isMounted) return;
-				setApplicationName(preflight.dnrAppName);
-				setIsContextLoading(false);
-			} catch (error) {
-				if (!isMounted) return;
-				if (error instanceof HttpRequestError && error.status === 403) {
-					globalThis.location.replace("/access-denied");
-					return;
-				}
-				if (error instanceof HttpRequestError && error.status === 404) {
-					globalThis.location.replace("/404");
-					return;
-				}
-				globalThis.location.replace("/error?kind=unexpected");
-			}
-		};
-		void loadContext();
-		return (): void => {
-			isMounted = false;
-		};
-	}, [rpApplicationUuid]);
 
 	const {
 		departments = [],
@@ -83,6 +49,14 @@ export const DepartmentSetupPage = (): ReactElement => {
 				search.redirect ?? `/applications/${rpApplicationUuid}`;
 			await navigate({ to: redirectTarget, replace: true });
 		} catch (error) {
+			if (error instanceof HttpRequestError && error.status === 403) {
+				globalThis.location.replace("/access-denied");
+				return;
+			}
+			if (error instanceof HttpRequestError && error.status === 404) {
+				globalThis.location.replace("/404");
+				return;
+			}
 			if (error instanceof HttpRequestError && error.status === 409) {
 				// Already assigned — precondition satisfied, navigate to details
 				await navigate({
@@ -98,7 +72,7 @@ export const DepartmentSetupPage = (): ReactElement => {
 		}
 	};
 
-	const isLoading = isContextLoading || isDepartmentsLoading;
+	const isLoading = isDepartmentsLoading;
 
 	if (isLoading) {
 		return (
@@ -141,11 +115,7 @@ export const DepartmentSetupPage = (): ReactElement => {
 
 	return (
 		<Grid columns="1fr" tag="div">
-			{applicationName ? (
-				<Heading tag="h1">{applicationName}</Heading>
-			) : (
-				<Heading tag="h1">{t("rpDepartmentSetup.title")}</Heading>
-			)}
+			<Heading tag="h1">{t("rpDepartmentSetup.title")}</Heading>
 
 			<Text>{t("rpDepartmentSetup.intro")}</Text>
 

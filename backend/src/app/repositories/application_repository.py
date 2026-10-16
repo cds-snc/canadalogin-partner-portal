@@ -12,7 +12,10 @@ from ..models.role import Role
 from ..models.user import User
 from ..models.user_role import UserRole
 
-PARTNER_DEVELOPER_ROLE = "Partner Developer"
+PARTNER_APPLICATION_ROLES = (
+    "Partner Developer",
+    "Partner Production Administrator",
+)
 
 
 class ApplicationRepository:
@@ -79,7 +82,7 @@ class ApplicationRepository:
             User.is_deleted.is_(False),
             UserRole.is_deleted.is_(False),
             PartnerGroupRole.is_deleted.is_(False),
-            Role.name == PARTNER_DEVELOPER_ROLE,
+            Role.name.in_(PARTNER_APPLICATION_ROLES),
             Role.is_deleted.is_(False),
             PartnerGroup.is_deleted.is_(False),
             Application.is_deleted.is_(False),
