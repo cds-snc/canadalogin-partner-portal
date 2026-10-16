@@ -7,17 +7,31 @@ Authorization determines what authenticated users can do within your application
 Application access has two independent checks:
 
 1. Casbin grants the role a global resource-action permission.
-2. The role must be associated with the target application's partner group.
+2. An active `partner_group_role` grant must associate the current user and role with the target application's partner group.
 
 The scoped relationship is:
 
 ```text
-User -> UserRole -> Role -> PartnerGroupRole -> PartnerGroup -> Application
+User -> PartnerGroupRole(user_id, role_id, partner_group_id) -> PartnerGroup -> Application
+                                                 |
+                                                 +-> Role -> AccessPolicy
 ```
 
-`PartnerGroupRoleService` centrally resolves every active role a user holds for a partner group or application. It ignores soft-deleted users, roles, mappings, groups, and applications. A missing or soft-deleted user, partner group, or application raises `NotFoundException`; a valid user with no matching scoped role resolves to an empty list or `False`.
+`PartnerGroupRoleService` centrally resolves every active role a user holds for a partner group or application. A scoped grant is independent of the user's global `UserRole` assignments, which continue to drive portal-wide Casbin authorization. The service ignores soft-deleted users, roles, grants, groups, and applications. A missing or soft-deleted user, partner group, or application raises `NotFoundException`; a valid user with no matching scoped grant resolves to an empty list or `False`.
 
 The service deliberately does not grant a superuser a scoped role. Any future superuser exception must be an explicit endpoint policy decision.
+
+Group-scoped assignments are provisioned with the `partner_group_roles` section in the role-sync YAML file. Each entry identifies one partner group, role, and set of user email addresses:
+
+```yaml
+partner_group_roles:
+    - partner_group_uuid: 00000000-0000-7000-8000-000000000001
+        role_name: Partner Developer
+        emails:
+            - developer@example.ca
+```
+
+The existing top-level role-to-email entries continue to assign global roles. This change does not add group-scoped assignment API endpoints.
 
 ### Seeded Application Permissions
 
@@ -32,9 +46,9 @@ The `0011_partner_group_roles` migration restores the Casbin policy data removed
 
 Casbin is default-deny. A role must have an active matching `access_policy` record for every decorated resource-action pair; routes that already have other decorators remain denied until their policies are explicitly seeded or created.
 
-### Future API Usage
+### Application API Usage
 
-The partner-group check is not wired into API routes yet. When adding an application endpoint, apply both checks before accessing the target resource:
+Application environment and client-secret routes use the scoped Casbin guard before accessing the target application:
 
 ```python
 @router.patch("/applications/{application_uuid}")
@@ -48,7 +62,7 @@ async def update_application(
     return await service.update_application(...)
 ```
 
-For application list endpoints, apply the same relationship as a database filter rather than retrieving every application and filtering in Python.
+Application list endpoints apply the same relationship as a database filter rather than retrieving every application and filtering in Python.
 
 ## Understanding Authorization
 

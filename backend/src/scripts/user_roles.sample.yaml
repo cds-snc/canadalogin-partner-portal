@@ -1,6 +1,11 @@
-Partner Developer:
-  - partner.developer@example.gc.ca
-Partner Production Administrator:
-  - partner.production.admin@example.gc.ca
 CanadaLogin Administrators:
   - canadalogin.admin@example.gc.ca
+partner_group_roles:
+  - partner_group_uuid: 00000000-0000-7000-8000-000000000001
+    role_name: Partner Developer
+    emails:
+      - partner.developer@example.gc.ca
+  - partner_group_uuid: 00000000-0000-7000-8000-000000000001
+    role_name: Partner Production Administrator
+    emails:
+      - partner.production.admin@example.gc.ca

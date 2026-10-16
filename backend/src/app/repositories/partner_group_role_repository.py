@@ -9,7 +9,6 @@ from ..models.partner_group import PartnerGroup
 from ..models.partner_group_role import PartnerGroupRole
 from ..models.role import Role
 from ..models.user import User
-from ..models.user_role import UserRole
 
 
 class PartnerGroupRoleRepository:
@@ -41,11 +40,9 @@ class PartnerGroupRoleRepository:
                 Role.deleted_at,
                 Role.is_deleted,
             )
-            .join(UserRole, UserRole.role_id == Role.id)
             .join(PartnerGroupRole, PartnerGroupRole.role_id == Role.id)
             .where(
-                UserRole.user_id == user_id,
-                UserRole.is_deleted.is_(False),
+                PartnerGroupRole.user_id == user_id,
                 PartnerGroupRole.partner_group_id == partner_group_id,
                 PartnerGroupRole.is_deleted.is_(False),
                 Role.is_deleted.is_(False),
