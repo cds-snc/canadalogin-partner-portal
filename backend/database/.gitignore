@@ -1,0 +1,5 @@
+# Keep private account data and run reports out of Git.
+private/
+*.local.sql
+*.local.csv
+*.log

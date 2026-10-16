@@ -1,4 +1,0 @@
-# Private working copies and reports are not repository fixtures.
-private/
-*.local.csv
-*.log

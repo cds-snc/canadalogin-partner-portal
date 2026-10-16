@@ -1,16 +1,7 @@
 # Partner data loading rehearsal
 
-Operator SQL now lives in [backend/database/scripts](../../../database/scripts/README.md). Each operation has a SQL script, a blank CSV template, an example CSV, and its own README:
+Use the [database operating guide](../../../database/README.md) and its single [load_test_data.sql](../../../database/load_test_data.sql) file for [planning issue 1043](https://github.com/cds-snc/canadalogin-planning/issues/1043). The guide contains the editable-data instructions, migration prerequisites, and CloudShell commands. Running the seed commits a one-time load of three users, two partners, and three applications.
 
-1. [Insert users](../../../database/scripts/users/README.md).
-2. [Set up partners](../../../database/scripts/partners/README.md).
-3. [Insert applications](../../../database/scripts/applications/README.md).
-4. [Assign access by email or CSV](../../../database/scripts/access/README.md).
+Test the unregistered account before loading. After normal onboarding, user 1 has no applications and users 2 and 3 both see all three through the shared Developer role. Separate per-user partner scope, a one-application stage, and environment/IBM provisioning are outside this seed.
 
-The example uses two fictional partners with one application under the first and two under the second. These are sample counts: partner/application imports accept any number of CSV rows, with relationships supplied by application parent UUIDs. Access assignment uses the same CSV formats to declare the full intended scope and checks it against the current shared role.
-
-Each SQL script is self-contained: hand off that file and its required CSV inputs to the SRE without a repository checkout or other SQL files. Opening comments explain the prerequisites and commands. Run from the folder containing the SQL and CSVs. Preview is the default; add `-v apply=true` to insert and commit. Each run validates its current input and database state. Each operation has its own transaction, so a later failure does not roll back earlier committed operations.
-
-See the [shared guide](../../../database/scripts/README.md) for prerequisites, scope limitations, verification scenarios, recovery, and production follow-up for issues 209 and 224. Individual user-to-partner/application membership remains a dependency; current access uses shared global roles.
-
-These files are prepared only. No SQL, migrations, database operations, or tests have been executed.
+No successful load has been verified. This change involved no agent execution of scripts, tests, migrations, or database operations.

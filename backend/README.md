@@ -52,9 +52,9 @@ UV_PROJECT_ENVIRONMENT=../.venv uv run uvicorn src.app.main:app --reload --host 
 
 When authoring Alembic migrations in `backend/src/migrations/versions/`, keep the internal `revision` string at 32 characters or fewer. Prefer short symbolic ids; the filename can stay more descriptive if needed.
 
-## Database operator scripts
+## Database test data
 
-See [database/scripts](database/scripts/README.md) for separate user, partner, application, and access SQL packages. Each script is self-contained for SRE handoff with its CSV inputs. Packages include templates, examples, and preview/apply instructions. These data operations are separate from schema migrations.
+Use [database/load_test_data.sql](database/load_test_data.sql) for the one-time test dataset. All editable data is at the top of the file. The [database guide](database/README.md) covers prerequisites, CloudShell commands, and scenario limits. Running the seed commits the data; schema migrations remain separate.
 
 ## Docker
 
