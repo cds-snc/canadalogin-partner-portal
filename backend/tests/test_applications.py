@@ -2,8 +2,10 @@ import uuid
 from unittest.mock import AsyncMock, Mock, patch
 
 import pytest
+from sqlalchemy import select
 
 from src.app.api.v1.applications import read_current_user_applications
+from src.app.models.application import Application
 from src.app.repositories.application_repository import ApplicationRepository
 from src.app.services.application_service import ApplicationService
 
@@ -29,6 +31,16 @@ def test_application_repository_access_scope_includes_both_partner_roles():
         "Partner Developer",
         "Partner Production Administrator",
     } <= bound_values
+
+
+def test_application_repository_joins_user_through_scoped_role_mapping():
+    statement = ApplicationRepository._with_access_joins(
+        select(Application.id)
+    )
+    compiled_statement = str(statement.compile())
+
+    assert "partner_group_role.user_id" in compiled_statement
+    assert "JOIN user_role" not in compiled_statement
 
 
 @pytest.mark.asyncio
