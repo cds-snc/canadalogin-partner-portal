@@ -1,7 +1,6 @@
 import {
 	useNavigate,
 	useParams,
-	useRouteContext,
 } from "@tanstack/react-router";
 import { useTranslation } from "react-i18next";
 import type { FunctionComponent } from "@/common/types";
@@ -84,9 +83,6 @@ export const EnvironmentManagementPage = (): FunctionComponent => {
 	});
 	const { applicationUuid, environmentUuid } = useParams({
 		from: "/applications/$applicationUuid/environments/$environmentUuid",
-	});
-	const { rpApplicationName } = useRouteContext({
-		from: "/applications/$applicationUuid",
 	});
 	const {
 		data: environment,
@@ -442,7 +438,7 @@ export const EnvironmentManagementPage = (): FunctionComponent => {
 			<Grid columns="minmax(0, 46.5rem)" tag="div">
 				<Grid alignItems="center" columns="auto auto 1fr" tag="div">
 					<Text marginBottom="0">
-						<strong>{rpApplicationName ?? environment.partnerLabel}</strong>
+						<strong>{environment.partnerLabel}</strong>
 					</Text>
 					<div className="application-switch-icon">
 						<Icon name="arrow-up-down" size="text" />
