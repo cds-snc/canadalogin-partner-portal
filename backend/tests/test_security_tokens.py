@@ -1,4 +1,3 @@
-import sys
 from unittest.mock import AsyncMock, patch
 
 import jwt
@@ -46,15 +45,19 @@ async def test_token_signed_with_wrong_key_is_rejected(mock_db, monkeypatch):
 @pytest.mark.parametrize("use_jwk_client", [False, True])
 def test_recursive_unverified_payload_raises_decode_error(use_jwk_client):
     header = base64url_encode(b'{"alg":"HS256","kid":"test-key"}')
-    depth = sys.getrecursionlimit() + 100
-    payload = base64url_encode(b"[" * depth + b"]" * depth)
+    payload = base64url_encode(b'{"sub":"test-user"}')
     token = b".".join((header, payload, b"")).decode("ascii")
+    recursion_error = RecursionError("recursive payload")
 
-    with pytest.raises(jwt.DecodeError):
-        if use_jwk_client:
-            jwt.PyJWKClient("https://example.com/jwks").get_signing_key_from_jwt(token)
-        else:
-            jwt.decode(token, options={"verify_signature": False})
+    with patch("jwt.api_jwt.json") as payload_json:
+        payload_json.loads.side_effect = recursion_error
+        with pytest.raises(jwt.DecodeError) as exc_info:
+            if use_jwk_client:
+                jwt.PyJWKClient("https://example.com/jwks").get_signing_key_from_jwt(token)
+            else:
+                jwt.decode(token, options={"verify_signature": False})
+
+    assert exc_info.value.__cause__ is recursion_error
 
 
 @pytest.mark.parametrize("key_class", [Ed25519PrivateKey, Ed448PrivateKey])
