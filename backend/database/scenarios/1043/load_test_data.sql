@@ -15,9 +15,9 @@ INSERT INTO public."user" (
 SELECT user_uuid::uuid, email, email, name, 'https://profileimageurl.com', CURRENT_TIMESTAMP,
   false, false, false
 FROM (VALUES
-  ('10432000-0000-4000-8000-000000000001', 'sai.tapaswee.sreeram+PP@cds-snc.ca', 'Test User 1'),
-  ('10432000-0000-4000-8000-000000000002', 'sai.tapaswee.sreeram+PP0@cds-snc.ca', 'Test User 2'),
-  ('10432000-0000-4000-8000-000000000003', 'sai.tapaswee.sreeram+PP1@cds-snc.ca', 'Test User 3')
+  ('10432000-0000-4000-8000-000000000001', 'test1', 'Test User 1'),
+  ('10432000-0000-4000-8000-000000000002', 'test2', 'Test User 2'),
+  ('10432000-0000-4000-8000-000000000003', 'test', 'Test User 3')
 ) AS test_user(user_uuid, email, name);
 
 -- 2. Partners. Resolve the department's integer ID from its catalog number.
