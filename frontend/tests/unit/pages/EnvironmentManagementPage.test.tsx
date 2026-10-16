@@ -24,7 +24,6 @@ vi.mock("@tanstack/react-router", () => ({
 		applicationUuid: "application-uuid-1",
 		environmentUuid: "environment-uuid-1",
 	}),
-	useRouteContext: () => ({ rpApplicationName: "Benefits portal" }),
 }));
 
 vi.mock("react-i18next", () => ({
@@ -204,7 +203,12 @@ describe("EnvironmentManagementPage", () => {
 		render(<EnvironmentManagementPage />);
 
 		expect(screen.getAllByText("Inactive").length).toBeGreaterThan(0);
-		expect(screen.getByText("Benefits portal")).toBeTruthy();
+		expect(
+			screen.getByRole("heading", {
+				level: 1,
+				name: "Test environment",
+			})
+		).toBeTruthy();
 		const expectedCreatedDate = new Intl.DateTimeFormat("en", {
 			year: "numeric",
 			month: "long",
