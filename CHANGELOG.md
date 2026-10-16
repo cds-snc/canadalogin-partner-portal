@@ -1,5 +1,11 @@
 # Changelog
 
+## Unreleased
+
+### Security
+
+* Bump PyJWT to >=2.15.0,<3.0 (locked to 2.15.1) to fix CVE-2026-102268 (authentication bypass via improper public key), GHSA-42vr-xj54-vc7v (recursive payload parsing), and GHSA-x33g-cr3x-6449 (inconsistent OKP JWKs).
+
 ## [1.4.0](https://github.com/cds-snc/canadalogin-partner-portal/compare/v1.3.1...v1.4.0) (2026-10-07)
 
 
