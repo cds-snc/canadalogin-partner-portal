@@ -9,6 +9,7 @@ import {
 	ErrorSummary,
 	Grid,
 	Heading,
+	Icon,
 	Input,
 	Link,
 	Modal,
@@ -18,6 +19,7 @@ import {
 } from "@/components/ui";
 import { getRequestErrorNotice } from "@/fetch";
 import { useApplicationEnvironment } from "../hooks/use-application-environment";
+import { useApplicationEnvironments } from "../hooks/use-application-environments";
 import { useApplicationEnvironmentCredentials } from "../hooks/use-application-environment-credentials";
 import "./environments-page.css";
 
@@ -56,6 +58,16 @@ export const EnvironmentCredentialsPage = (): FunctionComponent => {
 		error,
 		isLoading,
 	} = useApplicationEnvironment(applicationUuid, environmentUuid);
+	const { data: environments } = useApplicationEnvironments(
+		applicationUuid,
+		1,
+		1
+	);
+	const applicationName =
+		i18n.resolvedLanguage === "fr" && environments?.application.nameFr
+			? environments.application.nameFr
+			: (environments?.application.nameEn ??
+				t("applicationEnvironmentConnect.applicationNameFallback"));
 	const errorNotice = getRequestErrorNotice(error, {
 		bodyKey: "applicationEnvironmentManagement.errorBody",
 		titleKey: "applicationEnvironmentManagement.errorTitle",
@@ -266,6 +278,17 @@ export const EnvironmentCredentialsPage = (): FunctionComponent => {
 				</>
 			) : (
 				<Grid columns="minmax(0, 46.5rem)" tag="div">
+					<Grid alignItems="center" columns="auto auto 1fr" tag="div">
+						<Text marginBottom="0">
+							<strong>{applicationName}</strong>
+						</Text>
+						<div className="application-switch-icon">
+							<Icon name="arrow-up-down" size="text" />
+						</div>
+						<Link href="/applications">
+							{t("applicationEnvironments.switchApplication")}
+						</Link>
+					</Grid>
 					<Heading tag="h1">{environment.partnerLabel}</Heading>
 					{Object.keys(rotationErrorLinks).length > 0 ? (
 						<ErrorSummary
@@ -380,9 +403,13 @@ export const EnvironmentCredentialsPage = (): FunctionComponent => {
 								</dt>
 								<dd>
 									<Text marginBottom="100" size="small">
-										{t("applicationEnvironmentManagement.jwksUriHelp")}
+										{t(
+											isProduction
+												? "applicationEnvironmentManagement.productionJwksUriHelp"
+												: "applicationEnvironmentManagement.jwksUriHelp"
+										)}
 									</Text>
-									<div className="environment-credentials__value">
+									<div className="environment-credentials__value environment-credentials__value--jwks">
 										<Text marginBottom="0">{jwksUri ?? notAvailable}</Text>
 									</div>
 									<Grid
@@ -416,7 +443,7 @@ export const EnvironmentCredentialsPage = (): FunctionComponent => {
 												type="button"
 												onGcdsClick={() => {
 													void navigate({
-														to: "/applications/$applicationUuid/environments/$environmentUuid",
+														to: "/applications/$applicationUuid/environments/$environmentUuid/authentication-method",
 														params: { applicationUuid, environmentUuid },
 													});
 												}}
@@ -440,7 +467,10 @@ export const EnvironmentCredentialsPage = (): FunctionComponent => {
 						</Notice>
 					) : isClientSecretEnvironment ? (
 						<>
-							<Text>
+							<Text marginBottom="0">
+								<strong>
+									{t("applicationEnvironmentManagement.credentialsSecurityTitle")}
+								</strong>{" "}
 								{t("applicationEnvironmentManagement.credentialsSecurityNote")}
 							</Text>
 							<Grid columns="1fr" gap="300" tag="section">

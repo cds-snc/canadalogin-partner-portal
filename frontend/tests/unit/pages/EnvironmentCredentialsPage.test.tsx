@@ -19,6 +19,8 @@ const {
 	mockedNavigate,
 	mockedToastSuccess,
 	mockedUseApplicationEnvironment,
+	mockedUseApplicationEnvironments,
+	mockedI18n,
 } = vi.hoisted(() => ({
 	mockedDeleteApplicationEnvironmentRotatedClientSecret: vi.fn(),
 	mockedGetApplicationEnvironmentClientCredentials: vi.fn(),
@@ -29,6 +31,8 @@ const {
 	mockedNavigate: vi.fn(),
 	mockedToastSuccess: vi.fn(),
 	mockedUseApplicationEnvironment: vi.fn(),
+	mockedUseApplicationEnvironments: vi.fn(),
+	mockedI18n: { resolvedLanguage: "en" },
 }));
 
 vi.mock("@tanstack/react-router", () => ({
@@ -41,9 +45,16 @@ vi.mock("@tanstack/react-router", () => ({
 
 vi.mock("react-i18next", () => ({
 	useTranslation: () => ({
-		i18n: { resolvedLanguage: "en" },
+		i18n: mockedI18n,
 		t: (key: string): string => {
 			const translations: Record<string, string> = {
+				"applicationEnvironments.switchApplication": "Switch application",
+				"applicationEnvironmentConnect.applicationNameFallback":
+					"this application",
+				"applicationEnvironmentManagement.credentialsSecurityTitle":
+					"Keep credentials secure.",
+				"applicationEnvironmentManagement.credentialsSecurityNote":
+					"Do not share secrets or store them in public repositories. Treat credentials as Protected B information.",
 				"applicationEnvironmentManagement.configurationTab": "Configuration",
 				"applicationEnvironmentManagement.copyAction": "Copy",
 				"applicationEnvironmentManagement.copySecretAction": "Copy secret",
@@ -76,6 +87,8 @@ vi.mock("react-i18next", () => ({
 				"applicationEnvironmentManagement.jwksUriLabel": "JWKS URI",
 				"applicationEnvironmentManagement.jwksUriHelp":
 					"The location CanadaLogin uses to retrieve your application's public keys.",
+				"applicationEnvironmentManagement.productionJwksUriHelp":
+					"The JWKS URI can't be changed in production. To use a different URI, update it in staging and submit a new production request.",
 				"applicationEnvironmentManagement.jwksUriCopiedSuccess":
 					"JWKS URI copied to clipboard.",
 				"applicationEnvironmentManagement.change": "Change",
@@ -146,6 +159,11 @@ vi.mock("@/fetch/application-environment-client-secrets", () => ({
 vi.mock(
 	"@/features/application-environments/hooks/use-application-environment",
 	() => ({ useApplicationEnvironment: mockedUseApplicationEnvironment })
+);
+
+vi.mock(
+	"@/features/application-environments/hooks/use-application-environments",
+	() => ({ useApplicationEnvironments: mockedUseApplicationEnvironments })
 );
 
 vi.mock("@/components/ui", () => ({
@@ -222,6 +240,7 @@ vi.mock("@/components/ui", () => ({
 		const HeadingTag = tag;
 		return <HeadingTag>{children}</HeadingTag>;
 	},
+	Icon: (): ReactElement => <span />,
 	Input: ({
 		errorMessage,
 		id,
@@ -311,7 +330,12 @@ vi.mock("@/components/ui", () => ({
 			))}
 		</nav>
 	),
-	Text: ({ children }: PropsWithChildren): ReactElement => <p>{children}</p>,
+	Text: ({
+		children,
+		marginBottom,
+	}: PropsWithChildren<{ marginBottom?: string }>): ReactElement => (
+		<p data-margin-bottom={marginBottom}>{children}</p>
+	),
 }));
 
 const renderPage = (): void => {
@@ -340,6 +364,15 @@ describe("EnvironmentCredentialsPage", () => {
 
 	beforeEach(() => {
 		vi.clearAllMocks();
+		mockedI18n.resolvedLanguage = "en";
+		mockedUseApplicationEnvironments.mockReturnValue({
+			data: {
+				application: {
+					nameEn: "Example application",
+					nameFr: "Application exemple",
+				},
+			},
+		});
 		vi.stubGlobal("navigator", {
 			clipboard: { writeText: mockedClipboardWriteText },
 		});
@@ -386,6 +419,47 @@ describe("EnvironmentCredentialsPage", () => {
 		expect(
 			screen.getByRole("link", { name: "Configuration" }).getAttribute("href")
 		).toBe("/applications/application-uuid-1/environments/environment-uuid-1");
+	});
+
+	it.each([
+		["en", "Example application"],
+		["fr", "Application exemple"],
+	])("shows the application switcher in %s", (language, applicationName) => {
+		mockedI18n.resolvedLanguage = language;
+		mockedUseApplicationEnvironment.mockReturnValue({
+			data: eligibleEnvironment,
+			error: null,
+			isLoading: false,
+		});
+
+		renderPage();
+
+		expect(screen.getByText(applicationName).tagName).toBe("STRONG");
+		expect(
+			screen.getByRole("link", { name: "Switch application" }).getAttribute("href")
+		).toBe("/applications");
+		expect(mockedUseApplicationEnvironments).toHaveBeenCalledWith(
+			"application-uuid-1",
+			1,
+			1
+		);
+	});
+
+	it("emphasizes the security reminder without adding an extra paragraph gap", async () => {
+		mockedUseApplicationEnvironment.mockReturnValue({
+			data: eligibleEnvironment,
+			error: null,
+			isLoading: false,
+		});
+
+		renderPage();
+
+		const securityTitle = await screen.findByText("Keep credentials secure.");
+		expect(securityTitle.tagName).toBe("STRONG");
+		expect(securityTitle.closest("p")?.getAttribute("data-margin-bottom")).toBe("0");
+		expect(securityTitle.closest("p")?.textContent).toBe(
+			"Keep credentials secure. Do not share secrets or store them in public repositories. Treat credentials as Protected B information."
+		);
 	});
 
 	it("loads rotated secrets but not the active secret on page entry", async () => {
@@ -584,6 +658,21 @@ describe("EnvironmentCredentialsPage", () => {
 		expect(screen.getByText("private_key_jwt")).toBeTruthy();
 		expect(screen.getByText("environment-client-id")).toBeTruthy();
 		expect(screen.getByText(jwksUri)).toBeTruthy();
+		expect(
+			screen.getByText(jwksUri).parentElement?.classList.contains(
+				"environment-credentials__value--jwks"
+			)
+		).toBe(true);
+		expect(
+			screen.getByText(
+				"The JWKS URI can't be changed in production. To use a different URI, update it in staging and submit a new production request."
+			)
+		).toBeTruthy();
+		expect(
+			screen.queryByText(
+				"The location CanadaLogin uses to retrieve your application's public keys."
+			)
+		).toBeNull();
 		expect(screen.queryByRole("button", { name: "Change" })).toBeNull();
 		expect(
 			screen
@@ -630,9 +719,14 @@ describe("EnvironmentCredentialsPage", () => {
 
 		renderPage();
 
+		expect(
+			screen.getByText(
+				"The location CanadaLogin uses to retrieve your application's public keys."
+			)
+		).toBeTruthy();
 		fireEvent.click(await screen.findByRole("button", { name: "Change" }));
 		expect(mockedNavigate).toHaveBeenCalledWith({
-			to: "/applications/$applicationUuid/environments/$environmentUuid",
+			to: "/applications/$applicationUuid/environments/$environmentUuid/authentication-method",
 			params: {
 				applicationUuid: "application-uuid-1",
 				environmentUuid: "environment-uuid-1",
