@@ -242,7 +242,6 @@ describe("EnvironmentManagementPage", () => {
 			pkceSupported: true,
 			postLogoutRedirectUris: [],
 			redirectUris: [],
-			sharesIdentifier: false,
 			signingMessages: [],
 			signingSignatureAlgorithms: [],
 			singleSignOut: false,

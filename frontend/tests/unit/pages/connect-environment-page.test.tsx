@@ -659,6 +659,67 @@ describe("ConnectEnvironmentPage", () => {
 		).toBeNull();
 	});
 
+	it("hides the single sign-out choice and shows required settings for staging", async () => {
+		mockedUseApplicationEnvironments.mockReturnValue({
+			data: applicationSummary,
+			error: null,
+			isLoading: false,
+		});
+
+		render(<ConnectEnvironmentPage />);
+		fireEvent.click(
+			screen.getByRole("radio", {
+				name: "applicationEnvironmentConnect.tenantStaging",
+			})
+		);
+		fireEvent.input(
+			screen.getByLabelText(
+				"applicationEnvironmentConnect.stepOne.environmentName"
+			),
+			{ target: { value: "portal" } }
+		);
+		fireEvent.input(
+			screen.getByLabelText(
+				"applicationEnvironmentConnect.stepOne.applicationUrlEn"
+			),
+			{ target: { value: "https://en.example.com" } }
+		);
+		fireEvent.input(
+			screen.getByLabelText(
+				"applicationEnvironmentConnect.stepOne.applicationUrlFr"
+			),
+			{ target: { value: "https://fr.example.com" } }
+		);
+		fireEvent.click(
+			screen.getByRole("button", {
+				name: "applicationEnvironmentConnect.continue",
+			})
+		);
+
+		await waitFor(() => {
+			expect(
+				screen.getByRole("heading", {
+					name: "applicationEnvironmentConnect.stepTwo.title",
+				})
+			).toBeTruthy();
+		});
+		expect(
+			screen.queryByRole("group", {
+			name: "applicationEnvironmentConnect.stepTwo.singleSignOut",
+		})
+		).toBeNull();
+		expect(
+			screen.getByRole("group", {
+			name: "applicationEnvironmentConnect.stepTwo.logoutMethod",
+		})
+		).toBeTruthy();
+		expect(
+			screen.getByLabelText(
+				"applicationEnvironmentConnect.stepTwo.signOutRequestUrl"
+			)
+		).toBeTruthy();
+	});
+
 	it("preserves entered endpoint values when navigating back", async () => {
 		mockedUseApplicationEnvironments.mockReturnValue({
 			data: applicationSummary,
@@ -710,8 +771,6 @@ describe("ConnectEnvironmentPage", () => {
 							signOutRequestUrl: "https://en.example.com/signout",
 							clientType: "public",
 							pkceSupported: true,
-							sharesIdentifier: true,
-							sectorIdentifierUrl: "https://en.example.com/sector.json",
 						},
 					},
 				],
@@ -783,16 +842,6 @@ describe("ConnectEnvironmentPage", () => {
 				})
 			).getByRole("radio", { name: "common.yes" })
 		).toHaveProperty("checked", true);
-		expect(
-			screen.queryByRole("group", {
-				name: "applicationEnvironmentConnect.stepThree.sharesIdentifier",
-			})
-		).toBeNull();
-		expect(
-			screen.queryByLabelText(
-				"applicationEnvironmentConnect.stepThree.sectorIdentifierUrl"
-			)
-		).toBeNull();
 	});
 
 	it("shows linked GCDS errors for visible Step 1 fields", async () => {
@@ -1196,27 +1245,6 @@ describe("ConnectEnvironmentPage", () => {
 		).toBeNull();
 	});
 
-	it("does not show identifier sharing controls", async () => {
-		mockedUseApplicationEnvironments.mockReturnValue({
-			data: applicationSummary,
-			error: null,
-			isLoading: false,
-		});
-
-		render(<ConnectEnvironmentPage />);
-		await enterStepThree();
-		expect(
-			screen.queryByRole("group", {
-				name: "applicationEnvironmentConnect.stepThree.sharesIdentifier",
-			})
-		).toBeNull();
-		expect(
-			screen.queryByLabelText(
-				"applicationEnvironmentConnect.stepThree.sectorIdentifierUrl"
-			)
-		).toBeNull();
-	});
-
 	it("preserves Step 3 values when returning to Step 2", async () => {
 		mockedUseApplicationEnvironments.mockReturnValue({
 			data: applicationSummary,
@@ -1395,6 +1423,15 @@ describe("ConnectEnvironmentPage", () => {
 				name: "applicationEnvironmentConnect.stepFour.encryptionTitle",
 			})
 		).toBeTruthy();
+		const verificationAlgorithms = screen.getByRole("group", {
+			name: "applicationEnvironmentConnect.stepFour.verificationAlgorithms",
+		});
+		expect(
+			within(verificationAlgorithms).getByRole("radio", { name: "RS256" })
+		).toBeTruthy();
+		expect(
+			within(verificationAlgorithms).queryByRole("checkbox", { name: "RS256" })
+		).toBeNull();
 
 		fireEvent.click(screen.getByRole("button", { name: "common.back" }));
 		await waitFor(() => {
@@ -1448,6 +1485,32 @@ describe("ConnectEnvironmentPage", () => {
 				})
 			).getByRole("radio", { name: "common.yes" })
 		);
+		const encryptionKeyAlgorithms = screen.getByRole("group", {
+			name: "applicationEnvironmentConnect.stepFour.encryptionKeyAlgorithms",
+		});
+		const encryptionContentAlgorithms = screen.getByRole("group", {
+			name: "applicationEnvironmentConnect.stepFour.encryptionContentAlgorithms",
+		});
+		expect(
+			within(encryptionKeyAlgorithms).getByRole("radio", {
+				name: "RSA-OAEP",
+			})
+		).toBeTruthy();
+		expect(
+			within(encryptionKeyAlgorithms).queryByRole("checkbox", {
+				name: "RSA-OAEP",
+			})
+		).toBeNull();
+		expect(
+			within(encryptionContentAlgorithms).getByRole("radio", {
+				name: "A128GCM",
+			})
+		).toBeTruthy();
+		expect(
+			within(encryptionContentAlgorithms).queryByRole("checkbox", {
+				name: "A128GCM",
+			})
+		).toBeNull();
 		fireEvent.click(
 			screen.getByRole("button", {
 				name: "applicationEnvironmentConnect.submit",
@@ -1582,6 +1645,41 @@ describe("ConnectEnvironmentPage", () => {
 				)
 			);
 		}
+		const signingAlgorithms = screen.getByRole("group", {
+			name: "applicationEnvironmentConnect.stepFour.signingAlgorithms",
+		});
+		expect(
+			within(signingAlgorithms).getByRole("radio", { name: "RS256" })
+		).toBeTruthy();
+		expect(
+			within(signingAlgorithms).queryByRole("checkbox", { name: "RS256" })
+		).toBeNull();
+		const decryptionKeyAlgorithms = screen.getByRole("group", {
+			name: "applicationEnvironmentConnect.stepFour.decryptionKeyAlgorithms",
+		});
+		const decryptionContentAlgorithms = screen.getByRole("group", {
+			name: "applicationEnvironmentConnect.stepFour.decryptionContentAlgorithms",
+		});
+		expect(
+			within(decryptionKeyAlgorithms).getByRole("radio", {
+				name: "RSA-OAEP",
+			})
+		).toBeTruthy();
+		expect(
+			within(decryptionKeyAlgorithms).queryByRole("checkbox", {
+				name: "RSA-OAEP",
+			})
+		).toBeNull();
+		expect(
+			within(decryptionContentAlgorithms).getByRole("radio", {
+				name: "A128GCM",
+			})
+		).toBeTruthy();
+		expect(
+			within(decryptionContentAlgorithms).queryByRole("checkbox", {
+				name: "A128GCM",
+			})
+		).toBeNull();
 		fireEvent.click(
 			screen.getByRole("button", {
 				name: "applicationEnvironmentConnect.submit",

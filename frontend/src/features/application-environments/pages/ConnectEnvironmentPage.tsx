@@ -323,6 +323,7 @@ export const ConnectEnvironmentPage = (): FunctionComponent => {
 	const sourceConfig = selectedSource?.config;
 	const hasCopySource = sourceOptions.length > 0;
 	const hasSelectedTenant = values.tenantCode !== "";
+	const isStaging = values.tenantCode === "staging";
 	const visibleStepOneFields: Array<StepOneFieldName> = ["tenantCode"];
 	if (hasSelectedTenant && hasCopySource) {
 		visibleStepOneFields.push("copyExisting");
@@ -407,7 +408,9 @@ export const ConnectEnvironmentPage = (): FunctionComponent => {
 		"applicationEnvironmentConnect.stepTwo.validationSingleSignOut"
 	);
 	if (singleSignOutErrorMessage) {
-		stepTwoErrorLinks["#single-sign-out-control"] = singleSignOutErrorMessage;
+		if (!isStaging) {
+			stepTwoErrorLinks["#single-sign-out-control"] = singleSignOutErrorMessage;
+		}
 	}
 	if (signOutRequestUrlErrorMessage) {
 		stepTwoErrorLinks["#sign-out-request-url-control"] =
@@ -499,6 +502,9 @@ export const ConnectEnvironmentPage = (): FunctionComponent => {
 				requestProduction || initialSource.tenantCode === "staging"
 					? "staging"
 					: "test",
+			...(requestProduction || initialSource.tenantCode === "staging"
+				? { singleSignOut: true }
+				: {}),
 		});
 	}, [
 		environments,
@@ -542,6 +548,7 @@ export const ConnectEnvironmentPage = (): FunctionComponent => {
 			copyExisting: true,
 			sourceEnvironmentUuid: values.sourceEnvironmentUuid,
 			tenantCode: values.tenantCode,
+			...(values.tenantCode === "staging" ? { singleSignOut: true } : {}),
 		});
 	}, [
 		reset,
@@ -550,6 +557,12 @@ export const ConnectEnvironmentPage = (): FunctionComponent => {
 		values.sourceEnvironmentUuid,
 		values.tenantCode,
 	]);
+
+	useEffect(() => {
+		if (isStaging && values.singleSignOut !== true) {
+			setValue("singleSignOut", true);
+		}
+	}, [isStaging, setValue, values.singleSignOut]);
 
 	useEffect(() => {
 		if (previousStep.current === step) {
@@ -751,7 +764,11 @@ export const ConnectEnvironmentPage = (): FunctionComponent => {
 										},
 									]}
 									onInput={(event) => {
-										field.onChange(inputValue(event));
+										const tenantCode = inputValue(event);
+										field.onChange(tenantCode);
+										if (tenantCode === "staging") {
+											setValue("singleSignOut", true);
+										}
 									}}
 								/>
 							)}
@@ -1342,35 +1359,39 @@ export const ConnectEnvironmentPage = (): FunctionComponent => {
 								)}
 							</Button>
 						</Fieldset>
-						<Controller
-							control={control}
-							name="singleSignOut"
-							render={({ field }) => (
-								<Radios
-									required
-									errorMessage={singleSignOutErrorMessage}
-									id="single-sign-out-control"
-									name={field.name}
-									value={field.value === null ? undefined : String(field.value)}
+						{!isStaging && (
+							<Controller
+								control={control}
+								name="singleSignOut"
+								render={({ field }) => (
+									<Radios
+										required
+										errorMessage={singleSignOutErrorMessage}
+										id="single-sign-out-control"
+										name={field.name}
+										value={field.value === null ? undefined : String(field.value)}
 										legend={t(
-										"applicationEnvironmentConnect.stepTwo.singleSignOut"
-									)}
-									options={[
-										{ id: "sso-yes", label: t("common.yes"), value: "true" },
+											"applicationEnvironmentConnect.stepTwo.singleSignOut"
+										)}
+										options={[
+											{ id: "sso-yes", label: t("common.yes"), value: "true" },
 											{ id: "sso-no", label: t("common.no"), value: "false" },
-									]}
-									onInput={(event) => {
-										const singleSignOut = boolValue(event);
-										field.onChange(singleSignOut);
-										clearErrors("singleSignOut");
-										if (!singleSignOut) {
-											clearErrors(["logoutMethod", "signOutRequestUrl"]);
-										}
+										]}
+										onInput={(event) => {
+											const singleSignOut = boolValue(event);
+											field.onChange(singleSignOut);
+											clearErrors("singleSignOut");
+											if (!singleSignOut) {
+												setValue("logoutMethod", undefined);
+												setValue("signOutRequestUrl", "");
+												clearErrors(["logoutMethod", "signOutRequestUrl"]);
+											}
 									}}
-								/>
-							)}
-						/>
-						{values.singleSignOut && (
+									/>
+								)}
+							/>
+						)}
+						{(isStaging || values.singleSignOut) && (
 							<>
 								<Controller
 									control={control}
@@ -1661,11 +1682,11 @@ export const ConnectEnvironmentPage = (): FunctionComponent => {
 								control={control}
 								name="verificationSignatureAlgorithms"
 								render={({ field }) => (
-									<Checkboxes
+									<Radios
 										required
 										name={field.name}
 										options={listOptions(SIGNING_ALGORITHMS, (value) => value)}
-										value={field.value}
+										value={field.value[0] ?? ""}
 										errorMessage={stepFourErrorMessage(
 											"verificationSignatureAlgorithms"
 										)}
@@ -1677,7 +1698,8 @@ export const ConnectEnvironmentPage = (): FunctionComponent => {
 											"applicationEnvironmentConnect.stepFour.verificationAlgorithms"
 										)}
 										onInput={(event) => {
-											field.onChange(event.target.value);
+											const value = (event.target as HTMLInputElement).value;
+											field.onChange(value ? [value] : []);
 										}}
 									/>
 								)}
@@ -1754,10 +1776,10 @@ export const ConnectEnvironmentPage = (): FunctionComponent => {
 										control={control}
 										name="signingSignatureAlgorithms"
 										render={({ field }) => (
-											<Checkboxes
+											<Radios
 												required
 												name={field.name}
-												value={field.value}
+												value={field.value[0] ?? ""}
 												errorMessage={stepFourErrorMessage(
 													"signingSignatureAlgorithms"
 												)}
@@ -1773,7 +1795,8 @@ export const ConnectEnvironmentPage = (): FunctionComponent => {
 													(value) => value
 												)}
 												onInput={(event) => {
-													field.onChange(event.target.value);
+													const value = (event.target as HTMLInputElement).value;
+													field.onChange(value ? [value] : []);
 												}}
 											/>
 										)}
@@ -1827,10 +1850,10 @@ export const ConnectEnvironmentPage = (): FunctionComponent => {
 										control={control}
 										name="encryptionKeyAlgorithms"
 										render={({ field }) => (
-											<Checkboxes
+											<Radios
 												required
 												name={field.name}
-												value={field.value}
+												value={field.value[0] ?? ""}
 												errorMessage={stepFourErrorMessage(
 													"encryptionKeyAlgorithms"
 												)}
@@ -1845,7 +1868,8 @@ export const ConnectEnvironmentPage = (): FunctionComponent => {
 													(value) => value
 												)}
 												onInput={(event) => {
-													field.onChange(event.target.value);
+													const value = (event.target as HTMLInputElement).value;
+													field.onChange(value ? [value] : []);
 												}}
 											/>
 										)}
@@ -1854,10 +1878,10 @@ export const ConnectEnvironmentPage = (): FunctionComponent => {
 										control={control}
 										name="encryptionContentAlgorithms"
 										render={({ field }) => (
-											<Checkboxes
+											<Radios
 												required
 												name={field.name}
-												value={field.value}
+												value={field.value[0] ?? ""}
 												errorMessage={stepFourErrorMessage(
 													"encryptionContentAlgorithms"
 												)}
@@ -1873,7 +1897,8 @@ export const ConnectEnvironmentPage = (): FunctionComponent => {
 													(value) => value
 												)}
 												onInput={(event) => {
-													field.onChange(event.target.value);
+													const value = (event.target as HTMLInputElement).value;
+													field.onChange(value ? [value] : []);
 												}}
 											/>
 										)}
@@ -1967,10 +1992,10 @@ export const ConnectEnvironmentPage = (): FunctionComponent => {
 										control={control}
 										name="decryptionKeyAlgorithms"
 										render={({ field }) => (
-											<Checkboxes
+											<Radios
 												required
 												name={field.name}
-												value={field.value}
+												value={field.value[0] ?? ""}
 												errorMessage={stepFourErrorMessage(
 													"decryptionKeyAlgorithms"
 												)}
@@ -1985,7 +2010,8 @@ export const ConnectEnvironmentPage = (): FunctionComponent => {
 													(value) => value
 												)}
 												onInput={(event) => {
-													field.onChange(event.target.value);
+													const value = (event.target as HTMLInputElement).value;
+													field.onChange(value ? [value] : []);
 												}}
 											/>
 										)}
@@ -1994,10 +2020,10 @@ export const ConnectEnvironmentPage = (): FunctionComponent => {
 										control={control}
 										name="decryptionContentAlgorithms"
 										render={({ field }) => (
-											<Checkboxes
+											<Radios
 												required
 												name={field.name}
-												value={field.value}
+												value={field.value[0] ?? ""}
 												errorMessage={stepFourErrorMessage(
 													"decryptionContentAlgorithms"
 												)}
@@ -2013,7 +2039,8 @@ export const ConnectEnvironmentPage = (): FunctionComponent => {
 													(value) => value
 												)}
 												onInput={(event) => {
-													field.onChange(event.target.value);
+													const value = (event.target as HTMLInputElement).value;
+													field.onChange(value ? [value] : []);
 												}}
 											/>
 										)}

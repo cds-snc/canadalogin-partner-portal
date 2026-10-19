@@ -173,7 +173,6 @@ export const EnvironmentManagementPage = (): FunctionComponent => {
 	const canDecryptMessages = config.canDecryptMessages === true;
 	const singleSignOut = config.singleSignOut === true;
 	const isPrivateKeyJwt = config.clientAuthMethod === "private_key_jwt";
-	const sharesIdentifier = config.sharesIdentifier === true;
 	const sections: Array<SummarySection> = [
 		{
 			title: t("applicationEnvironmentManagement.sections.environment"),
@@ -344,18 +343,6 @@ export const EnvironmentManagementPage = (): FunctionComponent => {
 							},
 						]
 					: []),
-				{
-					change: true,
-					editHref: `/applications/${applicationUuid}/environments/${environmentUuid}/sector-identifier`,
-					label: t("applicationEnvironmentManagement.fields.sectorIdentifier"),
-					value: sharesIdentifier
-						? formatValue(
-								config.sectorIdentifierUrl,
-								inactiveLabel,
-								formatToken
-							)
-						: inactiveLabel,
-				},
 			],
 		},
 		{

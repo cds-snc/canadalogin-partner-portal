@@ -10,7 +10,6 @@ import {
 	type ApplicationEnvironmentPostLogoutRedirectUrisUpdate,
 	type ApplicationEnvironmentRead,
 	type ApplicationEnvironmentRedirectUrisUpdate,
-	type ApplicationEnvironmentSectorIdentifierUpdate,
 	type ApplicationEnvironmentSigningUpdate,
 	type ApplicationEnvironmentSingleSignOutUpdate,
 	type ApplicationEnvironmentUrlUpdate,
@@ -22,7 +21,6 @@ import {
 	updateApplicationEnvironmentEncryption,
 	updateApplicationEnvironmentPostLogoutRedirectUris,
 	updateApplicationEnvironmentRedirectUris,
-	updateApplicationEnvironmentSectorIdentifier,
 	updateApplicationEnvironmentSigning,
 	updateApplicationEnvironmentSingleSignOut,
 	updateApplicationEnvironmentUrl,
@@ -62,11 +60,6 @@ type UpdateEnvironmentAuthenticationMethodInput =
 		environmentUuid: string;
 	};
 
-type UpdateEnvironmentSectorIdentifierInput =
-	ApplicationEnvironmentSectorIdentifierUpdate & {
-		environmentUuid: string;
-	};
-
 type UpdateEnvironmentVerificationInput =
 	ApplicationEnvironmentVerificationUpdate & {
 		environmentUuid: string;
@@ -98,7 +91,6 @@ type ApplicationEnvironmentManagement = {
 	isUpdatingSingleSignOut: boolean;
 	isUpdatingClientType: boolean;
 	isUpdatingAuthenticationMethod: boolean;
-	isUpdatingSectorIdentifier: boolean;
 	isUpdatingSigning: boolean;
 	isUpdatingEncryption: boolean;
 	isUpdatingDecryption: boolean;
@@ -122,9 +114,6 @@ type ApplicationEnvironmentManagement = {
 	updateEnvironmentAuthenticationMethod: (
 		input: UpdateEnvironmentAuthenticationMethodInput
 	) => Promise<ApplicationEnvironmentRead>;
-	updateEnvironmentSectorIdentifier: (
-		input: UpdateEnvironmentSectorIdentifierInput
-	) => Promise<ApplicationEnvironmentRead>;
 	updateEnvironmentSigning: (
 		input: UpdateEnvironmentSigningInput
 	) => Promise<ApplicationEnvironmentRead>;
@@ -145,7 +134,6 @@ type ApplicationEnvironmentManagement = {
 	singleSignOutUpdateError: Error | null;
 	clientTypeUpdateError: Error | null;
 	authenticationMethodUpdateError: Error | null;
-	sectorIdentifierUpdateError: Error | null;
 	signingUpdateError: Error | null;
 	encryptionUpdateError: Error | null;
 	decryptionUpdateError: Error | null;
@@ -351,32 +339,6 @@ export const useApplicationEnvironmentManagement = (
 			]);
 		},
 	});
-	const updateSectorIdentifierMutation = useMutation<
-		ApplicationEnvironmentRead,
-		Error,
-		UpdateEnvironmentSectorIdentifierInput
-	>({
-		mutationFn: ({ environmentUuid, ...payload }) =>
-			updateApplicationEnvironmentSectorIdentifier(
-				applicationUuid,
-				environmentUuid,
-				payload
-			),
-		onSuccess: async (_, { environmentUuid }) => {
-			await Promise.all([
-				queryClient.invalidateQueries({
-					queryKey: ["application-environments", applicationUuid],
-				}),
-				queryClient.invalidateQueries({
-					queryKey: [
-						"application-environment",
-						applicationUuid,
-						environmentUuid,
-					],
-				}),
-			]);
-		},
-	});
 	const updateVerificationMutation = useMutation<
 		ApplicationEnvironmentRead,
 		Error,
@@ -494,7 +456,6 @@ export const useApplicationEnvironmentManagement = (
 		isUpdatingClientType: updateClientTypeMutation.isPending,
 		isUpdatingAuthenticationMethod:
 			updateAuthenticationMethodMutation.isPending,
-		isUpdatingSectorIdentifier: updateSectorIdentifierMutation.isPending,
 		isUpdatingSigning: updateSigningMutation.isPending,
 		isUpdatingEncryption: updateEncryptionMutation.isPending,
 		isUpdatingDecryption: updateDecryptionMutation.isPending,
@@ -508,8 +469,6 @@ export const useApplicationEnvironmentManagement = (
 		updateEnvironmentClientType: updateClientTypeMutation.mutateAsync,
 		updateEnvironmentAuthenticationMethod:
 			updateAuthenticationMethodMutation.mutateAsync,
-		updateEnvironmentSectorIdentifier:
-			updateSectorIdentifierMutation.mutateAsync,
 		updateEnvironmentSigning: updateSigningMutation.mutateAsync,
 		updateEnvironmentEncryption: updateEncryptionMutation.mutateAsync,
 		updateEnvironmentDecryption: updateDecryptionMutation.mutateAsync,
@@ -521,7 +480,6 @@ export const useApplicationEnvironmentManagement = (
 		singleSignOutUpdateError: updateSingleSignOutMutation.error,
 		clientTypeUpdateError: updateClientTypeMutation.error,
 		authenticationMethodUpdateError: updateAuthenticationMethodMutation.error,
-		sectorIdentifierUpdateError: updateSectorIdentifierMutation.error,
 		signingUpdateError: updateSigningMutation.error,
 		encryptionUpdateError: updateEncryptionMutation.error,
 		decryptionUpdateError: updateDecryptionMutation.error,

@@ -8,7 +8,6 @@ import type { FunctionComponent } from "@/common/types";
 import type { ApplicationEnvironmentEncryptionUpdate } from "@/fetch/application-environments";
 import {
 	Button,
-	Checkboxes,
 	ErrorSummary,
 	Fieldset,
 	Grid,
@@ -356,18 +355,19 @@ export const EnvironmentRequestsEncryptedPage = (): FunctionComponent => {
 										control={control}
 										name="encryptionKeyAlgorithms"
 										render={({ field }) => (
-											<Checkboxes
+											<Radios
 												required
 												errorMessage={encryptionKeyAlgorithmsErrorMessage}
 												id="encryption-key-algorithms-control"
 												name={field.name}
 												options={keyAlgorithmOptions}
-														value={field.value}
+												value={field.value[0] ?? ""}
 												legend={t(
 													"applicationEnvironmentConnect.stepFour.encryptionKeyAlgorithms"
 												)}
 												onInput={(event) => {
-													field.onChange(event.target.value);
+													const value = inputValue(event);
+													field.onChange(value ? [value] : []);
 													clearErrors("encryptionKeyAlgorithms");
 												}}
 											/>
@@ -377,12 +377,12 @@ export const EnvironmentRequestsEncryptedPage = (): FunctionComponent => {
 										control={control}
 										name="encryptionContentAlgorithms"
 										render={({ field }) => (
-											<Checkboxes
+											<Radios
 												required
 												id="encryption-content-algorithms-control"
 												name={field.name}
 												options={contentAlgorithmOptions}
-														value={field.value}
+												value={field.value[0] ?? ""}
 														errorMessage={
 															encryptionContentAlgorithmsErrorMessage
 														}
@@ -390,7 +390,8 @@ export const EnvironmentRequestsEncryptedPage = (): FunctionComponent => {
 													"applicationEnvironmentConnect.stepFour.encryptionContentAlgorithms"
 												)}
 												onInput={(event) => {
-													field.onChange(event.target.value);
+													const value = inputValue(event);
+													field.onChange(value ? [value] : []);
 													clearErrors("encryptionContentAlgorithms");
 												}}
 											/>

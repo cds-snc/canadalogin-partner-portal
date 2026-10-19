@@ -40,8 +40,6 @@ export type ApplicationEnvironmentCreate = {
 	pkceSupported: boolean;
 	postLogoutRedirectUris: Array<string>;
 	redirectUris: Array<string>;
-	sectorIdentifierUrl?: string;
-	sharesIdentifier: boolean;
 	signOutRequestUrl?: string;
 	signingMessages: Array<"request_object" | "token_endpoint">;
 	signingSignatureAlgorithms: Array<
@@ -115,16 +113,6 @@ export type ApplicationEnvironmentAuthenticationMethodUpdate =
 	| {
 			clientAuthMethod: "client_secret_basic" | "client_secret_post";
 			jwksUri: null;
-	  };
-
-export type ApplicationEnvironmentSectorIdentifierUpdate =
-	| {
-			sectorIdentifierUrl: string;
-			sharesIdentifier: true;
-	  }
-	| {
-			sectorIdentifierUrl: null;
-			sharesIdentifier: false;
 	  };
 
 export type ApplicationEnvironmentVerificationUpdate = {
@@ -407,26 +395,6 @@ export const updateApplicationEnvironmentAuthenticationMethod = async (
 	if (!result) {
 		throw new Error(
 			"Failed to update application environment authentication method"
-		);
-	}
-	return result;
-};
-
-export const updateApplicationEnvironmentSectorIdentifier = async (
-	applicationUuid: string,
-	environmentUuid: string,
-	payload: ApplicationEnvironmentSectorIdentifierUpdate
-): Promise<ApplicationEnvironmentRead> => {
-	const result = await requestJson<ApplicationEnvironmentRead | null>(
-		`/api/v1/applications/${encodeURIComponent(applicationUuid)}/environments/${encodeURIComponent(environmentUuid)}`,
-		{
-			body: JSON.stringify(payload),
-			method: "PATCH",
-		}
-	);
-	if (!result) {
-		throw new Error(
-			"Failed to update application environment sector identifier"
 		);
 	}
 	return result;

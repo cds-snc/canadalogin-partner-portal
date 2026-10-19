@@ -101,13 +101,16 @@ export const EnvironmentSingleSignOutPage = (): FunctionComponent => {
 		setValue,
 	} = form;
 	const singleSignOut = useWatch({ control, name: "singleSignOut" });
+	const isStaging = environment?.tenantCode === "staging";
 
 	useEffect(() => {
 		if (!environment) {
 			return;
 		}
 
-		const enabled = environment.config?.singleSignOut === true;
+		const enabled =
+			environment.tenantCode === "staging" ||
+			environment.config?.singleSignOut === true;
 		reset({
 			logoutMethod: enabled ? environment.config?.logoutMethod : undefined,
 			signOutRequestUrl: enabled
@@ -140,7 +143,7 @@ export const EnvironmentSingleSignOutPage = (): FunctionComponent => {
 		? t("applicationEnvironmentConnect.stepTwo.validationSignOutRequestUrl")
 		: undefined;
 	const errorLinks: Record<string, string> = {};
-	if (singleSignOutErrorMessage) {
+	if (!isStaging && singleSignOutErrorMessage) {
 		errorLinks["#single-sign-out-control"] = singleSignOutErrorMessage;
 	}
 	if (singleSignOut && logoutMethodErrorMessage) {
@@ -195,7 +198,8 @@ export const EnvironmentSingleSignOutPage = (): FunctionComponent => {
 	}
 
 	const onSubmit = async (values: SingleSignOutFormValues): Promise<void> => {
-		if (values.singleSignOut) {
+		const enabled = isStaging || values.singleSignOut;
+		if (enabled) {
 			if (!values.logoutMethod || !values.signOutRequestUrl) {
 				return;
 			}
@@ -255,45 +259,47 @@ export const EnvironmentSingleSignOutPage = (): FunctionComponent => {
 					}}
 				>
 					<Grid columns="1fr" tag="div">
-						<Controller
-							control={control}
-							name="singleSignOut"
-							render={({ field }) => (
-								<Radios
-									required
-									errorMessage={singleSignOutErrorMessage}
-									id="single-sign-out-control"
-									name={field.name}
-									value={String(field.value)}
-									legend={t(
-										"applicationEnvironmentConnect.stepTwo.singleSignOut"
-									)}
-									options={[
-										{
-											id: "sso-yes",
-											label: t("common.yes"),
-											value: "true",
-										},
-										{
-											id: "sso-no",
-											label: t("common.no"),
-											value: "false",
-										},
-									]}
-									onInput={(event) => {
-										const enabled = boolValue(event);
-										field.onChange(enabled);
-										clearErrors("singleSignOut");
-										if (!enabled) {
-											setValue("logoutMethod", undefined);
-											setValue("signOutRequestUrl", "");
-											clearErrors(["logoutMethod", "signOutRequestUrl"]);
-										}
-								}}
-								/>
-							)}
-						/>
-						{singleSignOut && (
+						{!isStaging && (
+							<Controller
+								control={control}
+								name="singleSignOut"
+								render={({ field }) => (
+									<Radios
+										required
+										errorMessage={singleSignOutErrorMessage}
+										id="single-sign-out-control"
+										name={field.name}
+										value={String(field.value)}
+										legend={t(
+											"applicationEnvironmentConnect.stepTwo.singleSignOut"
+										)}
+										options={[
+											{
+												id: "sso-yes",
+												label: t("common.yes"),
+												value: "true",
+											},
+											{
+												id: "sso-no",
+												label: t("common.no"),
+												value: "false",
+											},
+										]}
+										onInput={(event) => {
+											const enabled = boolValue(event);
+											field.onChange(enabled);
+											clearErrors("singleSignOut");
+											if (!enabled) {
+												setValue("logoutMethod", undefined);
+												setValue("signOutRequestUrl", "");
+												clearErrors(["logoutMethod", "signOutRequestUrl"]);
+											}
+										}}
+									/>
+								)}
+							/>
+						)}
+						{(isStaging || singleSignOut) && (
 							<>
 								<Controller
 									control={control}

@@ -34,9 +34,9 @@ vi.mock("react-i18next", () => ({
 				"applicationEnvironmentConnect.stepFour.canDecryptMessages":
 					"Can your environment decrypt messages?",
 				"applicationEnvironmentConnect.stepFour.decryptionContentAlgorithms":
-					"Which encryption algorithms can it use to decrypt messages?",
+					"Which encryption algorithm can it use to decrypt messages?",
 				"applicationEnvironmentConnect.stepFour.decryptionKeyAlgorithms":
-					"Which key management algorithms can it use to decrypt messages?",
+					"Which key management algorithm can it use to decrypt messages?",
 				"applicationEnvironmentConnect.stepFour.decryptionMessages":
 					"Which messages can it decrypt?",
 				"applicationEnvironmentConnect.stepFour.decryptionTitle":
@@ -44,9 +44,9 @@ vi.mock("react-i18next", () => ({
 				"applicationEnvironmentConnect.stepFour.validationCanDecryptMessages":
 					"Select whether your environment can decrypt messages.",
 				"applicationEnvironmentConnect.stepFour.validationDecryptionContentAlgorithms":
-					"Select at least one decryption content algorithm.",
+					"Select one decryption content algorithm.",
 				"applicationEnvironmentConnect.stepFour.validationDecryptionKeyAlgorithms":
-					"Select at least one decryption key algorithm.",
+					"Select one decryption key algorithm.",
 				"applicationEnvironmentConnect.stepFour.validationDecryptionMessages":
 					"Select at least one message type to decrypt.",
 				"applicationEnvironmentConnect.stepFour.tokenEndpointResponse":
@@ -295,8 +295,26 @@ describe("EnvironmentMessagesDecryptedPage", () => {
 			(screen.getByRole("checkbox", { name: "ID token" }) as HTMLInputElement)
 				.checked
 		).toBe(true);
+		expect(
+			(screen.getByRole("radio", { name: "RSA-OAEP" }) as HTMLInputElement)
+				.checked
+		).toBe(true);
+		expect(
+			(screen.getByRole("radio", { name: "RSA-OAEP-256" }) as HTMLInputElement)
+				.checked
+		).toBe(false);
+		expect(
+			(screen.getByRole("radio", { name: "A256GCM" }) as HTMLInputElement)
+				.checked
+		).toBe(true);
+		expect(
+			(screen.getByRole("radio", { name: "A128GCM" }) as HTMLInputElement)
+				.checked
+		).toBe(false);
 
 		fireEvent.click(screen.getByRole("checkbox", { name: "UserInfo endpoint" }));
+		fireEvent.click(screen.getByRole("radio", { name: "RSA-OAEP-256" }));
+		fireEvent.click(screen.getByRole("radio", { name: "A128GCM" }));
 		fireEvent.submit(
 			screen
 				.getByRole("button", { name: "Save changes" })
@@ -308,8 +326,8 @@ describe("EnvironmentMessagesDecryptedPage", () => {
 				environmentUuid: "environment-uuid-1",
 				canDecryptMessages: true,
 				decryptionMessages: ["id_token", "userinfo"],
-				decryptionKeyAlgorithms: ["RSA-OAEP"],
-				decryptionContentAlgorithms: ["A256GCM"],
+				decryptionKeyAlgorithms: ["RSA-OAEP-256"],
+				decryptionContentAlgorithms: ["A128GCM"],
 			});
 		});
 		expect(mockedNavigate).toHaveBeenCalled();
@@ -401,17 +419,17 @@ describe("EnvironmentMessagesDecryptedPage", () => {
 		expect(
 			screen
 			.getByRole("link", {
-				name: "Select at least one decryption key algorithm.",
+					name: "Select one decryption key algorithm.",
 			})
 			.getAttribute("href")
 		).toBe("#decryption-key-algorithms-control");
 		expect(
 			screen
 			.getByRole("group", {
-				name: "Which encryption algorithms can it use to decrypt messages?",
+					name: "Which encryption algorithm can it use to decrypt messages?",
 			})
 			.getAttribute("data-error")
-		).toBe("Select at least one decryption content algorithm.");
+		).toBe("Select one decryption content algorithm.");
 		expect(mockedUpdateEnvironmentDecryption).not.toHaveBeenCalled();
 	});
 });

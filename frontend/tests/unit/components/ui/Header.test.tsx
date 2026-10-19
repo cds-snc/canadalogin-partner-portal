@@ -32,7 +32,7 @@ vi.mock("react-i18next", () => ({
 		t: (key: string): string => {
 			const translations: Record<string, string> = {
 					"nav.account": "Your account",
-				"nav.apiDocumentation": "API Documentation",
+				"nav.technicalDocumentation": "Technical documentation",
 				"nav.applications": "Applications",
 				"nav.backTo": "Back to",
 				"nav.dashboard": "Dashboard",
@@ -232,7 +232,7 @@ describe("Header", () => {
 			"Applications"
 		);
 		expect(document.querySelector("a[data-href='#']")?.textContent).toBe(
-			"API Documentation"
+			"Technical documentation"
 		);
 		expect(document.querySelector("a[href='/applications']")?.textContent).toBe(
 			"Applications"

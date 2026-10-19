@@ -142,6 +142,13 @@ class ApplicationEnvironmentService:
                 ],
             )
         elif environment.single_sign_out is not None:
+            if (
+                current_environment["tenant_code"] == "staging"
+                and environment.single_sign_out is False
+            ):
+                raise BadRequestException(
+                    "Single sign-out is required for staging environments"
+                )
             updated_environment = await application_environment_repository.update_environment_single_sign_out(
                 db=db,
                 application_uuid=application_uuid,
@@ -229,18 +236,6 @@ class ApplicationEnvironmentService:
                 verification_signature_algorithms=(
                     environment.verification_signature_algorithms or []
                 ),
-            )
-        elif environment.shares_identifier is not None:
-            updated_environment = await application_environment_repository.update_environment_sector_identifier(
-                db=db,
-                application_uuid=application_uuid,
-                environment_uuid=environment_uuid,
-                sector_identifier_url=(
-                    str(environment.sector_identifier_url)
-                    if environment.sector_identifier_url is not None
-                    else None
-                ),
-                shares_identifier=environment.shares_identifier,
             )
         elif environment.application_url_en is not None:
             updated_environment = await application_environment_repository.update_environment_url(

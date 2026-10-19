@@ -15,6 +15,7 @@ import {
 	Icon,
 	Link,
 	Notice,
+	Radios,
 	Text,
 } from "@/components/ui";
 import { getRequestErrorNotice } from "@/fetch";
@@ -274,17 +275,19 @@ export const EnvironmentMessagesVerifiedPage = (): FunctionComponent => {
 								control={control}
 								name="verificationSignatureAlgorithms"
 								render={({ field }) => (
-									<Checkboxes
+									<Radios
+										required
 										errorMessage={verificationAlgorithmsErrorMessage}
 										id="verification-algorithms-control"
 										name={field.name}
 										options={algorithmOptions}
-										value={field.value}
+										value={field.value[0] ?? ""}
 										legend={t(
 											"applicationEnvironmentConnect.stepFour.verificationAlgorithms"
 										)}
 										onInput={(event) => {
-											field.onChange(event.target.value);
+											const value = (event.target as HTMLInputElement).value;
+											field.onChange(value ? [value] : []);
 										}}
 									/>
 								)}
