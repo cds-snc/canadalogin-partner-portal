@@ -5,36 +5,24 @@ import Header from "@/components/ui/Header";
 import { useSession } from "@/hooks";
 
 let pathname = "/users";
-type TestBreadcrumb = {
-	href: string;
-	label: string;
-	showBackLabel?: boolean;
-};
-
-type TestRouteMatch = {
-	context: {
-		backLink?: TestBreadcrumb;
-		breadcrumbs?: Array<TestBreadcrumb>;
+let routeContext: {
+	backLink?: {
+		href: string;
+		label: string;
+		showBackLabel?: boolean;
 	};
-};
-
-const defaultRouteMatches: Array<TestRouteMatch> = [
-	{
-		context: {
-			backLink: {
-				href: "/applications",
-				label: "Applications",
-				showBackLabel: false,
-			},
-		},
+	breadcrumbs?: Array<{
+		href: string;
+		label: string;
+		showBackLabel?: boolean;
+	}>;
+} = {
+	backLink: {
+		href: "/applications",
+		label: "Applications",
+		showBackLabel: false,
 	},
-];
-let routeMatches = defaultRouteMatches;
-
-beforeEach(() => {
-	pathname = "/users";
-	routeMatches = defaultRouteMatches;
-});
+};
 
 vi.mock("react-i18next", () => ({
 	useTranslation: (): {
@@ -75,14 +63,31 @@ vi.mock("@tanstack/react-router", () => ({
 	}: {
 		select: (state: {
 			location: { pathname: string };
-			matches: Array<TestRouteMatch>;
+			matches: Array<{
+				context?: typeof routeContext;
+			}>;
 		}) => unknown;
 	}): unknown =>
 		select({
 			location: { pathname },
-			matches: routeMatches,
+			matches: [
+				{
+					context: routeContext,
+				},
+			],
 		}),
 }));
+
+beforeEach(() => {
+	pathname = "/users";
+	routeContext = {
+		backLink: {
+			href: "/applications",
+			label: "Applications",
+			showBackLabel: false,
+		},
+	};
+});
 
 vi.mock("@/hooks", () => ({
 	useSession: vi.fn(),
@@ -192,24 +197,6 @@ describe("Header", () => {
 
 	it("renders navigation for authenticated superuser", () => {
 		pathname = "/users";
-		routeMatches = [
-			{
-				context: {
-					breadcrumbs: [
-						{
-							href: "/applications",
-							label: "Applications",
-							showBackLabel: false,
-						},
-						{
-							href: "/applications/application-uuid/environments",
-							label: "Environments",
-							showBackLabel: false,
-						},
-					],
-				},
-			},
-		];
 		vi.mocked(useSession).mockReturnValue({
 			currentUser: {
 				name: "Jane Doe",
@@ -250,11 +237,6 @@ describe("Header", () => {
 		expect(document.querySelector("a[href='/applications']")?.textContent).toBe(
 			"Applications"
 		);
-		expect(
-			document.querySelector(
-				"nav[data-slot='breadcrumb'] a[href='/applications/application-uuid/environments']"
-			)?.textContent
-		).toBe("Environments");
 		expect(
 			document.querySelector(
 				"nav[aria-label='Primary navigation'] > a[data-href='/logout']"
@@ -316,5 +298,45 @@ describe("Header", () => {
 				"aria-current"
 			)
 		).toBeNull();
+	});
+
+	it("renders the application environment breadcrumb chain", () => {
+		routeContext = {
+			breadcrumbs: [
+				{
+					href: "/applications",
+					label: "Applications",
+					showBackLabel: false,
+				},
+				{
+					href: "/applications/application-uuid-1/environments",
+					label: "Environments",
+					showBackLabel: false,
+				},
+				{
+					href: "/applications/application-uuid-1/environments/environment-uuid-1",
+					label: "TEST-portal",
+					showBackLabel: false,
+				},
+			],
+		};
+		vi.mocked(useSession).mockReturnValue({
+			currentUser: null,
+			hasHydrated: true,
+			isAuthenticated: false,
+			isLoading: false,
+			login: vi.fn(),
+			logout: vi.fn((): Promise<void> => Promise.resolve()),
+			refreshSession: vi.fn((): Promise<null> => Promise.resolve(null)),
+		});
+
+		render(<Header />);
+
+		const breadcrumb = document.querySelector("nav[data-slot='breadcrumb']");
+		expect(
+			Array.from(breadcrumb?.querySelectorAll("a") ?? []).map(
+				(item) => item.textContent
+			)
+		).toEqual(["Applications", "Environments", "TEST-portal"]);
 	});
 });

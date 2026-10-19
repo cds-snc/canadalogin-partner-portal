@@ -61,15 +61,11 @@ const Checkboxes: React.FC<CheckboxProps> = React.memo(
 			required={required}
 			validateOn={validateOn}
 			value={value}
-			onInput={(event): void => {
-				const target = event.target as Element & {
-					value?: Array<string>;
-				};
-
+			onGcdsInput={(event): void => {
 				onInput?.({
 					target: {
 						name,
-						value: target.value ?? [],
+						value: event.detail,
 					},
 				});
 			}}

@@ -12,6 +12,7 @@ from ...schemas.application_environment import (
     ApplicationEnvironmentCreate,
     ApplicationEnvironmentListRead,
     ApplicationEnvironmentRead,
+    ApplicationEnvironmentUpdate,
 )
 from ...services.application_environment_service import ApplicationEnvironmentService
 
@@ -39,6 +40,32 @@ async def read_application_environment(
         db=db,
         application_uuid=application_uuid,
         environment_uuid=environment_uuid,
+    )
+
+
+@router.patch(
+    "/applications/{application_uuid}/environments/{environment_uuid}",
+    response_model=ApplicationEnvironmentRead,
+    responses=error_responses(400, 403, 404, 500),
+)
+@casbin_guard.require_application_permission("applications", "write")
+async def update_application_environment_name(
+    request: Request,
+    application_uuid: uuid_pkg.UUID,
+    environment_uuid: uuid_pkg.UUID,
+    environment: ApplicationEnvironmentUpdate,
+    db: Annotated[AsyncSession, Depends(async_get_db)],
+    service: Annotated[
+        ApplicationEnvironmentService,
+        Depends(get_application_environment_service),
+    ],
+) -> dict[str, Any]:
+    _ = request
+    return await service.update_application_environment_name(
+        db=db,
+        application_uuid=application_uuid,
+        environment_uuid=environment_uuid,
+        environment=environment,
     )
 
 

@@ -4,6 +4,11 @@ export type RouteBackLink = {
 	showBackLabel?: boolean;
 };
 
+export type RouteBreadcrumb = {
+	href: string;
+	label: string;
+};
+
 export type RouteBackLinkContext = {
 	backLink?: RouteBackLink;
 	breadcrumbs?: Array<RouteBackLink>;

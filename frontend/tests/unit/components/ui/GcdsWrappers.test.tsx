@@ -1,6 +1,7 @@
 import type { PropsWithChildren, ReactElement } from "react";
-import { render, screen } from "@testing-library/react";
+import { fireEvent, render, screen } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
+import Checkboxes from "@/components/ui/Checkboxes";
 import ErrorSummary from "@/components/ui/ErrorSummary";
 import Input from "@/components/ui/Input";
 import LangToggle from "@/components/ui/LangToggle";
@@ -39,11 +40,28 @@ vi.mock("@gcds-core/components-react", () => ({
 		GcdsRadios: ({
 			errorMessage,
 			id,
+				onGcdsInput,
 		}: {
 			errorMessage?: string;
 			id?: string;
+				onGcdsInput?: (event: { detail: string }) => void;
 		}): ReactElement => (
-			<div data-error={errorMessage} data-id={id} data-testid="gcds-radios" />
+				<div
+					data-error={errorMessage}
+					data-id={id}
+					data-testid="gcds-radios"
+					onClick={() => onGcdsInput?.({ detail: "true" })}
+				/>
+		),
+		GcdsCheckboxes: ({
+			onGcdsInput,
+		}: {
+			onGcdsInput?: (event: { detail: Array<string> }) => void;
+		}): ReactElement => (
+			<div
+				data-testid="gcds-checkboxes"
+				onClick={() => onGcdsInput?.({ detail: ["id_token"] })}
+			/>
 		),
 		GcdsSelect: ({
 			children,
@@ -207,6 +225,35 @@ describe("GCDS UI wrappers", () => {
 		expect(screen.getByTestId("gcds-radios").getAttribute("data-error")).toBe(
 			"Select an environment."
 		);
+	});
+
+	it("forwards GCDS input details through radio and checkbox wrappers", () => {
+		const onRadioInput = vi.fn();
+		const onCheckboxInput = vi.fn();
+
+		render(
+			<>
+				<Radios
+					legend="Can decrypt messages?"
+					name="canDecryptMessages"
+					onInput={onRadioInput}
+					options={[]}
+				/>
+				<Checkboxes
+					name="decryptionMessages"
+					onInput={onCheckboxInput}
+					options={[]}
+				/>
+			</>
+		);
+
+		fireEvent.click(screen.getByTestId("gcds-radios"));
+		fireEvent.click(screen.getByTestId("gcds-checkboxes"));
+
+		expect(onRadioInput).toHaveBeenCalledWith({ target: { value: "true" } });
+		expect(onCheckboxInput).toHaveBeenCalledWith({
+			target: { name: "decryptionMessages", value: ["id_token"] },
+		});
 	});
 
 	it("renders a stepper through the shared wrapper", () => {

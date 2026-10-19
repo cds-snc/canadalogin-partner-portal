@@ -1,8 +1,6 @@
-import {
-	useNavigate,
-	useParams,
-} from "@tanstack/react-router";
+import { useNavigate, useParams } from "@tanstack/react-router";
 import { useTranslation } from "react-i18next";
+import { Fragment, type ReactNode } from "react";
 import type { FunctionComponent } from "@/common/types";
 import {
 	Button,
@@ -27,8 +25,9 @@ type EnvironmentConfig = Partial<ApplicationEnvironmentCreate>;
 
 type SummaryRow = {
 	change?: boolean;
+	editHref?: string;
 	label: string;
-	value: string;
+	value: ReactNode;
 };
 
 type SummarySection = {
@@ -37,6 +36,7 @@ type SummarySection = {
 };
 
 const CONFIGURATION_FIELD_COLUMN_WIDTH = "16rem";
+const ABSOLUTE_URL_PATTERN = /^[a-z][a-z\d+.-]*:\/\//i;
 
 const isNonEmptyString = (value: unknown): value is string =>
 	typeof value === "string" && value.trim().length > 0;
@@ -55,6 +55,26 @@ const formatValue = (
 		return formatToken(value);
 	}
 	return inactiveLabel;
+};
+
+const formatUrlList = (
+	value: unknown,
+	inactiveLabel: string,
+	formatToken: (token: string) => string
+): ReactNode => {
+	if (!Array.isArray(value)) {
+		return formatValue(value, inactiveLabel, formatToken);
+	}
+
+	const urls = value.map((item) => formatToken(String(item)));
+	return urls.length > 0
+		? urls.map((url, index) => (
+				<Fragment key={`${url}-${index}`}>
+					{index > 0 ? <br /> : null}
+					{url}
+				</Fragment>
+			))
+		: inactiveLabel;
 };
 
 const formatDate = (value: string | null, language: string): string => {
@@ -95,6 +115,9 @@ export const EnvironmentManagementPage = (): FunctionComponent => {
 	});
 	const inactiveLabel = t("applicationEnvironmentManagement.inactive");
 	const formatToken = (token: string): string => {
+		if (ABSOLUTE_URL_PATTERN.test(token)) {
+			return token;
+		}
 		const translationKey = `applicationEnvironmentManagement.values.${token}`;
 		const translated = t(translationKey as never);
 		return translated === translationKey ? token : translated;
@@ -143,6 +166,7 @@ export const EnvironmentManagementPage = (): FunctionComponent => {
 	}
 
 	const config = getConfig(environment);
+	const isProduction = environment.tenantCode === "production";
 	const isStaging = environment.tenantCode === "staging";
 	const canSignMessages = config.canSignMessages === true;
 	const canEncryptRequests = config.canEncryptRequests === true;
@@ -164,6 +188,7 @@ export const EnvironmentManagementPage = (): FunctionComponent => {
 				},
 				{
 					change: true,
+					editHref: `/applications/${applicationUuid}/environments/${environmentUuid}/environment-name`,
 					label: t("applicationEnvironmentManagement.fields.environmentName"),
 					value: formatValue(
 						config.environmentName ?? environment.partnerLabel,
@@ -173,6 +198,7 @@ export const EnvironmentManagementPage = (): FunctionComponent => {
 				},
 				{
 					change: true,
+					editHref: `/applications/${applicationUuid}/environments/${environmentUuid}/english-url`,
 					label: t("applicationEnvironmentManagement.fields.englishUrl"),
 					value: formatValue(
 						config.applicationUrlEn,
@@ -182,6 +208,7 @@ export const EnvironmentManagementPage = (): FunctionComponent => {
 				},
 				{
 					change: true,
+					editHref: `/applications/${applicationUuid}/environments/${environmentUuid}/french-url`,
 					label: t("applicationEnvironmentManagement.fields.frenchUrl"),
 					value: formatValue(
 						config.applicationUrlFr,
@@ -218,15 +245,21 @@ export const EnvironmentManagementPage = (): FunctionComponent => {
 			rows: [
 				{
 					change: true,
+					editHref: `/applications/${applicationUuid}/environments/${environmentUuid}/redirect-urls`,
 					label: t("applicationEnvironmentManagement.fields.redirectUris"),
-					value: formatValue(config.redirectUris, inactiveLabel, formatToken),
+					value: formatUrlList(
+						config.redirectUris,
+						inactiveLabel,
+						formatToken
+					),
 				},
 				{
 					change: true,
+					editHref: `/applications/${applicationUuid}/environments/${environmentUuid}/post-logout-redirect-urls`,
 					label: t(
 						"applicationEnvironmentManagement.fields.postLogoutRedirectUris"
 					),
-					value: formatValue(
+					value: formatUrlList(
 						config.postLogoutRedirectUris,
 						inactiveLabel,
 						formatToken
@@ -234,6 +267,7 @@ export const EnvironmentManagementPage = (): FunctionComponent => {
 				},
 				{
 					change: true,
+					editHref: `/applications/${applicationUuid}/environments/${environmentUuid}/single-sign-out-method`,
 					label: t(
 						"applicationEnvironmentManagement.fields.singleSignOutMethod"
 					),
@@ -245,6 +279,7 @@ export const EnvironmentManagementPage = (): FunctionComponent => {
 					? [
 							{
 								change: true,
+								editHref: `/applications/${applicationUuid}/environments/${environmentUuid}/single-sign-out-method`,
 								label: t(
 									"applicationEnvironmentManagement.fields.signOutRequestUrl"
 								),
@@ -256,11 +291,17 @@ export const EnvironmentManagementPage = (): FunctionComponent => {
 							},
 						]
 					: []),
-				{
-					change: true,
-					label: t("applicationEnvironmentManagement.fields.outboundIps"),
-					value: inactiveLabel,
-				},
+				...(isProduction
+					? [
+							{
+								change: true,
+								label: t(
+									"applicationEnvironmentManagement.fields.outboundIps"
+								),
+								value: inactiveLabel,
+							},
+						]
+					: []),
 			],
 		},
 		{
@@ -268,11 +309,13 @@ export const EnvironmentManagementPage = (): FunctionComponent => {
 			rows: [
 				{
 					change: true,
+					editHref: `/applications/${applicationUuid}/environments/${environmentUuid}/client-type`,
 					label: t("applicationEnvironmentManagement.fields.clientType"),
 					value: formatValue(config.clientType, inactiveLabel, formatToken),
 				},
 				{
 					change: true,
+					editHref: `/applications/${applicationUuid}/environments/${environmentUuid}/client-type`,
 					label: t("applicationEnvironmentManagement.fields.pkce"),
 					value:
 						config.pkceSupported === true
@@ -281,6 +324,7 @@ export const EnvironmentManagementPage = (): FunctionComponent => {
 				},
 				{
 					change: true,
+					editHref: `/applications/${applicationUuid}/environments/${environmentUuid}/authentication-method`,
 					label: t(
 						"applicationEnvironmentManagement.fields.authenticationMethod"
 					),
@@ -294,6 +338,7 @@ export const EnvironmentManagementPage = (): FunctionComponent => {
 					? [
 							{
 								change: true,
+								editHref: `/applications/${applicationUuid}/environments/${environmentUuid}/authentication-method`,
 								label: t("applicationEnvironmentManagement.fields.jwksUri"),
 								value: formatValue(config.jwksUri, inactiveLabel, formatToken),
 							},
@@ -301,6 +346,7 @@ export const EnvironmentManagementPage = (): FunctionComponent => {
 					: []),
 				{
 					change: true,
+					editHref: `/applications/${applicationUuid}/environments/${environmentUuid}/sector-identifier`,
 					label: t("applicationEnvironmentManagement.fields.sectorIdentifier"),
 					value: sharesIdentifier
 						? formatValue(
@@ -317,6 +363,7 @@ export const EnvironmentManagementPage = (): FunctionComponent => {
 			rows: [
 				{
 					change: true,
+					editHref: `/applications/${applicationUuid}/environments/${environmentUuid}/messages-verified`,
 					label: t("applicationEnvironmentManagement.fields.messagesVerified"),
 					value: formatValue(
 						config.verificationMessages,
@@ -326,6 +373,7 @@ export const EnvironmentManagementPage = (): FunctionComponent => {
 				},
 				{
 					change: true,
+					editHref: `/applications/${applicationUuid}/environments/${environmentUuid}/messages-verified`,
 					label: t(
 						"applicationEnvironmentManagement.fields.verificationAlgorithms"
 					),
@@ -337,6 +385,7 @@ export const EnvironmentManagementPage = (): FunctionComponent => {
 				},
 				{
 					change: true,
+					editHref: `/applications/${applicationUuid}/environments/${environmentUuid}/messages-signed`,
 					label: t("applicationEnvironmentManagement.fields.messagesSigned"),
 					value: canSignMessages
 						? formatValue(config.signingMessages, inactiveLabel, formatToken)
@@ -346,6 +395,7 @@ export const EnvironmentManagementPage = (): FunctionComponent => {
 					? [
 							{
 								change: true,
+								editHref: `/applications/${applicationUuid}/environments/${environmentUuid}/messages-signed`,
 								label: t(
 									"applicationEnvironmentManagement.fields.signingAlgorithms"
 								),
@@ -366,15 +416,17 @@ export const EnvironmentManagementPage = (): FunctionComponent => {
 			rows: [
 				{
 					change: true,
+					editHref: `/applications/${applicationUuid}/environments/${environmentUuid}/requests-encrypted`,
 					label: t("applicationEnvironmentManagement.fields.requestsEncrypted"),
 					value: canEncryptRequests
-						? t("applicationEnvironmentManagement.values.request_object")
+						? t("applicationEnvironmentManagement.enabled")
 						: inactiveLabel,
 				},
 				...(canEncryptRequests
 					? [
 							{
 								change: true,
+								editHref: `/applications/${applicationUuid}/environments/${environmentUuid}/requests-encrypted`,
 								label: t(
 									"applicationEnvironmentManagement.fields.encryptionKeyManagement"
 								),
@@ -386,6 +438,7 @@ export const EnvironmentManagementPage = (): FunctionComponent => {
 							},
 							{
 								change: true,
+								editHref: `/applications/${applicationUuid}/environments/${environmentUuid}/requests-encrypted`,
 								label: t(
 									"applicationEnvironmentManagement.fields.encryptionAlgorithms"
 								),
@@ -399,6 +452,7 @@ export const EnvironmentManagementPage = (): FunctionComponent => {
 					: []),
 				{
 					change: true,
+					editHref: `/applications/${applicationUuid}/environments/${environmentUuid}/messages-decrypted`,
 					label: t("applicationEnvironmentManagement.fields.messagesDecrypted"),
 					value: canDecryptMessages
 						? formatValue(config.decryptionMessages, inactiveLabel, formatToken)
@@ -408,6 +462,7 @@ export const EnvironmentManagementPage = (): FunctionComponent => {
 					? [
 							{
 								change: true,
+								editHref: `/applications/${applicationUuid}/environments/${environmentUuid}/messages-decrypted`,
 								label: t(
 									"applicationEnvironmentManagement.fields.decryptionKeyManagement"
 								),
@@ -419,6 +474,7 @@ export const EnvironmentManagementPage = (): FunctionComponent => {
 							},
 							{
 								change: true,
+								editHref: `/applications/${applicationUuid}/environments/${environmentUuid}/messages-decrypted`,
 								label: t(
 									"applicationEnvironmentManagement.fields.decryptionAlgorithms"
 								),
@@ -504,14 +560,16 @@ export const EnvironmentManagementPage = (): FunctionComponent => {
 			/>
 			{sections.map((section) => (
 				<Grid key={section.title} columns="1fr" tag="section">
-					<Heading marginBottom="0" tag="h2">{section.title}</Heading>
+					<Heading marginBottom="0" tag="h2">
+						{section.title}
+					</Heading>
 					<ConfigurationGrid
 						ariaLabel={section.title}
 						fieldColumnWidth={CONFIGURATION_FIELD_COLUMN_WIDTH}
 						rows={section.rows.map((row) => ({
 							edit: row.change ? (
 								<Link
-									href="#"
+									href={row.editHref ?? "#"}
 									ariaLabel={t(
 										"applicationEnvironmentManagement.changeAccessible",
 										{ field: row.label }
