@@ -66,12 +66,6 @@ from src.app.services.application_environment_service import ApplicationEnvironm
         },
         {"clientAuthMethod": "private_key_jwt"},
         {"jwksUri": "https://example.com/jwks"},
-        {"sharesIdentifier": True},
-        {"sectorIdentifierUrl": "https://example.com/sector"},
-        {
-            "sharesIdentifier": False,
-            "sectorIdentifierUrl": "https://example.com/sector",
-        },
         {"verificationMessages": ["id_token"]},
         {"verificationSignatureAlgorithms": ["RS256"]},
         {"verificationMessages": [] , "verificationSignatureAlgorithms": ["RS256"]},
@@ -165,11 +159,6 @@ def test_application_environment_update_requires_one_valid_editable_field(payloa
             "jwksUri": "https://example.com/jwks",
         },
         {
-            "sharesIdentifier": True,
-            "sectorIdentifierUrl": "https://example.com/sector",
-        },
-        {"sharesIdentifier": False, "sectorIdentifierUrl": None},
-        {
             "verificationMessages": ["id_token", "userinfo"],
             "verificationSignatureAlgorithms": ["RS256", "PS256"],
         },
@@ -231,7 +220,6 @@ def valid_environment_create() -> ApplicationEnvironmentCreate:
         pkce_supported=True,
         post_logout_redirect_uris=["https://example.com/logout"],
         redirect_uris=["https://example.com/callback"],
-        shares_identifier=False,
         signing_messages=[],
         signing_signature_algorithms=[],
         single_sign_out=False,
@@ -239,6 +227,31 @@ def valid_environment_create() -> ApplicationEnvironmentCreate:
         verification_messages=["id_token"],
         verification_signature_algorithms=["RS256"],
     )
+
+
+@pytest.mark.parametrize(
+    "removed_field",
+    [
+        {"sharesIdentifier": False},
+        {"sectorIdentifierUrl": "https://example.com/sector"},
+    ],
+)
+def test_application_environment_create_rejects_removed_sector_identifier_fields(
+    removed_field,
+):
+    payload = valid_environment_create().model_dump(by_alias=True)
+    payload.update(removed_field)
+
+    with pytest.raises(ValidationError):
+        ApplicationEnvironmentCreate.model_validate(payload)
+
+
+def test_application_environment_create_rejects_disabled_staging_single_sign_out():
+    payload = valid_environment_create().model_dump()
+    payload.update(tenant_code="staging")
+
+    with pytest.raises(ValidationError, match="singleSignOut is required"):
+        ApplicationEnvironmentCreate.model_validate(payload)
 
 
 @pytest.mark.asyncio
@@ -638,46 +651,6 @@ async def test_update_application_environment_authentication_method_persists_set
 
 
 @pytest.mark.asyncio
-@pytest.mark.parametrize(
-    ("shares_identifier", "sector_identifier_url"),
-    [(True, "https://example.com/sector"), (False, None)],
-)
-async def test_update_application_environment_sector_identifier_persists_settings(
-    mock_db,
-    shares_identifier,
-    sector_identifier_url,
-):
-    application_uuid = uuid.uuid4()
-    environment_uuid = uuid.uuid4()
-    expected = {"uuid": environment_uuid, "sharesIdentifier": shares_identifier}
-
-    with patch("src.app.services.application_environment_service.application_environment_repository") as repository:
-        repository.get_environment = AsyncMock(return_value={"tenant_code": "test"})
-        repository.update_environment_sector_identifier = AsyncMock(
-            return_value=expected
-        )
-
-        result = await ApplicationEnvironmentService().update_application_environment_name(
-            db=mock_db,
-            application_uuid=application_uuid,
-            environment_uuid=environment_uuid,
-            environment=ApplicationEnvironmentUpdate(
-                sector_identifier_url=sector_identifier_url,
-                shares_identifier=shares_identifier,
-            ),
-        )
-
-    assert result == expected
-    repository.update_environment_sector_identifier.assert_awaited_once_with(
-        db=mock_db,
-        application_uuid=application_uuid,
-        environment_uuid=environment_uuid,
-        sector_identifier_url=sector_identifier_url,
-        shares_identifier=shares_identifier,
-    )
-
-
-@pytest.mark.asyncio
 async def test_update_application_environment_verification_persists_settings(mock_db):
     application_uuid = uuid.uuid4()
     environment_uuid = uuid.uuid4()
@@ -895,3 +868,25 @@ async def test_update_application_environment_single_sign_out_persists_selected_
         logout_method=logout_method,
         sign_out_request_url=sign_out_request_url,
     )
+
+
+@pytest.mark.asyncio
+async def test_update_application_environment_rejects_disabling_staging_single_sign_out(
+    mock_db,
+):
+    with patch("src.app.services.application_environment_service.application_environment_repository") as repository:
+        repository.get_environment = AsyncMock(return_value={"tenant_code": "staging"})
+        repository.update_environment_single_sign_out = AsyncMock()
+
+        with pytest.raises(
+            BadRequestException,
+            match="Single sign-out is required for staging environments",
+        ):
+            await ApplicationEnvironmentService().update_application_environment_name(
+                db=mock_db,
+                application_uuid=uuid.uuid4(),
+                environment_uuid=uuid.uuid4(),
+                environment=ApplicationEnvironmentUpdate(single_sign_out=False),
+            )
+
+    repository.update_environment_single_sign_out.assert_not_awaited()

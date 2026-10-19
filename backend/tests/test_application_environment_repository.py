@@ -364,60 +364,6 @@ async def test_update_environment_authentication_method_preserves_or_clears_jwks
 
 
 @pytest.mark.asyncio
-@pytest.mark.parametrize(
-    ("shares_identifier", "sector_identifier_url"),
-    [(True, "https://example.com/new-sector"), (False, None)],
-)
-async def test_update_environment_sector_identifier_preserves_or_clears_url(
-    mock_db,
-    shares_identifier,
-    sector_identifier_url,
-):
-    configuration = ApplicationConfiguration(
-        application_id=1,
-        application_configuration_status_id=2,
-        application_configuration_client_type_id=3,
-        authentication_protocol_id=4,
-        tenant_id=5,
-        partner_label="portal",
-        application_url_en="https://en.example.com/",
-        application_url_fr="https://fr.example.com/",
-        config={
-            "environmentName": "portal",
-            "redirectUris": ["https://example.com/callback"],
-            "sectorIdentifierUrl": "https://example.com/old-sector",
-        },
-    )
-    mock_db.execute = AsyncMock()
-    execute_result = Mock()
-    execute_result.scalar_one_or_none.return_value = configuration
-    mock_db.execute.return_value = execute_result
-    mock_db.commit = AsyncMock()
-    mock_db.refresh = AsyncMock()
-    repository = ApplicationEnvironmentRepository()
-    repository.get_environment = AsyncMock(return_value={"uuid": configuration.uuid})
-
-    result = await repository.update_environment_sector_identifier(
-        db=mock_db,
-        application_uuid=uuid.uuid4(),
-        environment_uuid=configuration.uuid,
-        sector_identifier_url=sector_identifier_url,
-        shares_identifier=shares_identifier,
-    )
-
-    assert result == {"uuid": configuration.uuid}
-    assert configuration.config["environmentName"] == "portal"
-    assert configuration.config["redirectUris"] == ["https://example.com/callback"]
-    assert configuration.config["sharesIdentifier"] is shares_identifier
-    if shares_identifier:
-        assert configuration.config["sectorIdentifierUrl"] == sector_identifier_url
-    else:
-        assert "sectorIdentifierUrl" not in configuration.config
-    mock_db.commit.assert_awaited_once()
-    mock_db.refresh.assert_awaited_once_with(configuration)
-
-
-@pytest.mark.asyncio
 async def test_update_environment_verification_preserves_existing_config(mock_db):
     configuration = ApplicationConfiguration(
         application_id=1,

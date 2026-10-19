@@ -39,8 +39,6 @@ class ApplicationEnvironmentCreate(BaseModel):
     pkce_supported: bool
     post_logout_redirect_uris: list[AnyHttpUrl] = Field(..., min_length=1)
     redirect_uris: list[AnyHttpUrl] = Field(..., min_length=1)
-    sector_identifier_url: AnyHttpUrl | None = None
-    shares_identifier: bool
     sign_out_request_url: AnyHttpUrl | None = None
     signing_messages: list[Literal["request_object", "token_endpoint"]]
     signing_signature_algorithms: list[
@@ -78,6 +76,8 @@ class ApplicationEnvironmentCreate(BaseModel):
     def validate_conditional_fields(self) -> Self:
         if self.copy_existing and self.source_environment_uuid is None:
             raise ValueError("sourceEnvironmentUuid is required when copyExisting is enabled")
+        if self.tenant_code == "staging" and not self.single_sign_out:
+            raise ValueError("singleSignOut is required for staging environments")
         if self.single_sign_out and (self.logout_method is None or self.sign_out_request_url is None):
             raise ValueError("logout configuration is required when singleSignOut is enabled")
         if self.client_type == "public" and not self.pkce_supported:
@@ -86,8 +86,6 @@ class ApplicationEnvironmentCreate(BaseModel):
             raise ValueError("clientAuthMethod is required for confidential clients")
         if self.client_auth_method == "private_key_jwt" and self.jwks_uri is None:
             raise ValueError("jwksUri is required for private_key_jwt clients")
-        if self.shares_identifier and self.sector_identifier_url is None:
-            raise ValueError("sectorIdentifierUrl is required when sharesIdentifier is enabled")
         if self.can_sign_messages and (not self.signing_messages or not self.signing_signature_algorithms):
             raise ValueError("signing configuration is required when canSignMessages is enabled")
         if self.can_encrypt_requests and (not self.encryption_key_algorithms or not self.encryption_content_algorithms):
@@ -140,9 +138,7 @@ class ApplicationEnvironmentUpdate(BaseModel):
     pkce_supported: bool | None = None
     post_logout_redirect_uris: list[AnyHttpUrl] | None = Field(default=None, min_length=1)
     redirect_uris: list[AnyHttpUrl] | None = Field(default=None, min_length=1)
-    sector_identifier_url: AnyHttpUrl | None = Field(default=None, max_length=512)
     sign_out_request_url: AnyHttpUrl | None = Field(default=None, max_length=512)
-    shares_identifier: bool | None = None
     single_sign_out: bool | None = None
     can_sign_messages: bool | None = None
     signing_messages: list[Literal["request_object", "token_endpoint"]] | None = None
@@ -382,24 +378,6 @@ class ApplicationEnvironmentUpdate(BaseModel):
                 "verification messages and signature algorithms must be provided together"
             )
 
-        sector_identifier_group_provided = any(
-            field_name in self.model_fields_set
-            for field_name in ("sector_identifier_url", "shares_identifier")
-        )
-        if sector_identifier_group_provided:
-            if self.shares_identifier is None:
-                raise ValueError(
-                    "sharesIdentifier must be provided with sector identifier configuration"
-                )
-            if self.shares_identifier and self.sector_identifier_url is None:
-                raise ValueError(
-                    "sectorIdentifierUrl is required when sharesIdentifier is enabled"
-                )
-            if not self.shares_identifier and self.sector_identifier_url is not None:
-                raise ValueError(
-                    "sectorIdentifierUrl must be cleared when sharesIdentifier is disabled"
-                )
-
         if (
             sum(
                 value is not None
@@ -418,7 +396,6 @@ class ApplicationEnvironmentUpdate(BaseModel):
             + int(decryption_group_provided)
             + int(authentication_method_group_provided)
             + int(verification_group_provided)
-            + int(sector_identifier_group_provided)
             != 1
         ):
             raise ValueError("Exactly one environment field must be provided")

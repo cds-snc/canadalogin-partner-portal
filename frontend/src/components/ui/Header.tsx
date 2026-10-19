@@ -101,7 +101,7 @@ const Header = (): FunctionComponent => {
 
 	const authItems: Array<NavigationItem> = [
 		{ href: "/applications", label: t("nav.applications") },
-		{ href: "#", label: t("nav.apiDocumentation") },
+		{ href: "#", label: t("nav.technicalDocumentation") },
 	];
 
 	const publicItems: Array<NavigationItem> = [

@@ -32,9 +32,9 @@ vi.mock("react-i18next", () => ({
 					"this application",
 				"applicationEnvironmentConnect.idToken": "ID token",
 				"applicationEnvironmentConnect.stepFour.verificationAlgorithms":
-					"Which signature algorithms can it use to verify messages?",
+					"Which signature algorithm can it use to verify messages?",
 				"applicationEnvironmentConnect.stepFour.validationVerificationAlgorithms":
-					"Select at least one verification algorithm.",
+					"Select one verification algorithm.",
 				"applicationEnvironmentConnect.stepFour.validationVerificationMessages":
 					"Select at least one message type to verify.",
 				"applicationEnvironmentConnect.stepFour.verificationMessages":
@@ -147,6 +147,39 @@ vi.mock("@/components/ui", () => {
 				))}
 			</fieldset>
 		),
+		Radios: ({
+			errorMessage,
+			id,
+			legend,
+			name,
+			onInput,
+			options,
+			value,
+		}: {
+			errorMessage?: string;
+			id: string;
+			legend: string;
+			name: string;
+			onInput: React.FormEventHandler<Element>;
+			options: Array<{ id: string; label: string; value: string }>;
+			value?: string;
+		}): ReactElement => (
+			<fieldset id={id} data-error={errorMessage}>
+				<legend>{legend}</legend>
+				{options.map((option) => (
+					<label key={option.id}>
+						{option.label}
+						<input
+							checked={value === option.value}
+							name={name}
+							type="radio"
+							value={option.value}
+							onChange={onInput}
+						/>
+					</label>
+				))}
+			</fieldset>
+		),
 		ErrorSummary: ({
 			errorLinks,
 		}: {
@@ -185,7 +218,7 @@ describe("EnvironmentMessagesVerifiedPage", () => {
 	const enabledEnvironment = {
 		config: {
 			verificationMessages: ["id_token" as const],
-			verificationSignatureAlgorithms: ["RS256" as const, "PS256" as const],
+				verificationSignatureAlgorithms: ["RS256" as const],
 		},
 		createdAt: "2026-09-17T00:00:00Z",
 		partnerLabel: "TEST-portal",
@@ -232,15 +265,16 @@ describe("EnvironmentMessagesVerifiedPage", () => {
 				.checked
 		).toBe(false);
 		expect(
-			(screen.getByRole("checkbox", { name: "RS256" }) as HTMLInputElement)
+			(screen.getByRole("radio", { name: "RS256" }) as HTMLInputElement)
 				.checked
 		).toBe(true);
 		expect(
-			(screen.getByRole("checkbox", { name: "PS256" }) as HTMLInputElement)
+			(screen.getByRole("radio", { name: "PS256" }) as HTMLInputElement)
 				.checked
-		).toBe(true);
+		).toBe(false);
 
 		fireEvent.click(screen.getByRole("checkbox", { name: "UserInfo" }));
+		fireEvent.click(screen.getByRole("radio", { name: "PS256" }));
 		fireEvent.submit(
 			screen
 				.getByRole("button", { name: "Save changes" })
@@ -251,7 +285,7 @@ describe("EnvironmentMessagesVerifiedPage", () => {
 			expect(mockedUpdateEnvironmentVerification).toHaveBeenCalledWith({
 				environmentUuid: "environment-uuid-1",
 				verificationMessages: ["id_token", "userinfo"],
-				verificationSignatureAlgorithms: ["RS256", "PS256"],
+				verificationSignatureAlgorithms: ["PS256"],
 			});
 		});
 		expect(mockedNavigate).toHaveBeenCalledWith({
@@ -296,7 +330,7 @@ describe("EnvironmentMessagesVerifiedPage", () => {
 		expect(
 			screen
 				.getByRole("link", {
-					name: "Select at least one verification algorithm.",
+					name: "Select one verification algorithm.",
 				})
 				.getAttribute("href")
 		).toBe("#verification-algorithms-control");

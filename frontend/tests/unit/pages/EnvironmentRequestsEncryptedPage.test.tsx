@@ -35,15 +35,15 @@ vi.mock("react-i18next", () => ({
 				"applicationEnvironmentConnect.stepFour.encryptionContentAlgorithms":
 					"Which encryption algorithm can it use to encrypt requests?",
 				"applicationEnvironmentConnect.stepFour.encryptionKeyAlgorithms":
-					"Which key management algorithms can it use to encrypt requests?",
+					"Which key management algorithm can it use to encrypt requests?",
 				"applicationEnvironmentConnect.stepFour.encryptionTitle":
 					"Encrypt requests sent to CanadaLogin",
 				"applicationEnvironmentConnect.stepFour.validationCanEncryptRequests":
 					"Select whether your environment can encrypt requests.",
 				"applicationEnvironmentConnect.stepFour.validationEncryptionContentAlgorithms":
-					"Select at least one encryption content algorithm.",
+					"Select one encryption content algorithm.",
 				"applicationEnvironmentConnect.stepFour.validationEncryptionKeyAlgorithms":
-					"Select at least one encryption key algorithm.",
+					"Select one encryption key algorithm.",
 				"applicationEnvironmentManagement.cancel": "Cancel",
 				"applicationEnvironmentManagement.changeRequestsEncrypted":
 					"Change requests encrypted",
@@ -267,15 +267,24 @@ describe("EnvironmentRequestsEncryptedPage", () => {
 			(screen.getByRole("radio", { name: "Yes" }) as HTMLInputElement).checked
 		).toBe(true);
 		expect(
-			(screen.getByRole("checkbox", { name: "RSA-OAEP" }) as HTMLInputElement)
+			(screen.getByRole("radio", { name: "RSA-OAEP" }) as HTMLInputElement)
 				.checked
 		).toBe(true);
 		expect(
-			(screen.getByRole("checkbox", { name: "A256GCM" }) as HTMLInputElement)
+			(screen.getByRole("radio", { name: "RSA-OAEP-256" }) as HTMLInputElement)
+				.checked
+		).toBe(false);
+		expect(
+			(screen.getByRole("radio", { name: "A256GCM" }) as HTMLInputElement)
 				.checked
 		).toBe(true);
+		expect(
+			(screen.getByRole("radio", { name: "A128GCM" }) as HTMLInputElement)
+				.checked
+		).toBe(false);
 
-		fireEvent.click(screen.getByRole("checkbox", { name: "RSA-OAEP-256" }));
+		fireEvent.click(screen.getByRole("radio", { name: "RSA-OAEP-256" }));
+		fireEvent.click(screen.getByRole("radio", { name: "A128GCM" }));
 		fireEvent.submit(
 			screen
 				.getByRole("button", { name: "Save changes" })
@@ -286,8 +295,8 @@ describe("EnvironmentRequestsEncryptedPage", () => {
 			expect(mockedUpdateEnvironmentEncryption).toHaveBeenCalledWith({
 				environmentUuid: "environment-uuid-1",
 				canEncryptRequests: true,
-				encryptionKeyAlgorithms: ["RSA-OAEP", "RSA-OAEP-256"],
-				encryptionContentAlgorithms: ["A256GCM"],
+				encryptionKeyAlgorithms: ["RSA-OAEP-256"],
+				encryptionContentAlgorithms: ["A128GCM"],
 			});
 		});
 		expect(mockedNavigate).toHaveBeenCalled();
@@ -376,24 +385,24 @@ describe("EnvironmentRequestsEncryptedPage", () => {
 		expect(
 			screen
 			.getByRole("link", {
-				name: "Select at least one encryption key algorithm.",
+					name: "Select one encryption key algorithm.",
 			})
 			.getAttribute("href")
 		).toBe("#encryption-key-algorithms-control");
 		expect(
 			screen
 			.getByRole("link", {
-				name: "Select at least one encryption content algorithm.",
+					name: "Select one encryption content algorithm.",
 			})
 			.getAttribute("href")
 		).toBe("#encryption-content-algorithms-control");
 		expect(
 			screen
 			.getByRole("group", {
-				name: "Which key management algorithms can it use to encrypt requests?",
+				name: "Which key management algorithm can it use to encrypt requests?",
 			})
 			.getAttribute("data-error")
-		).toBe("Select at least one encryption key algorithm.");
+		).toBe("Select one encryption key algorithm.");
 		expect(mockedUpdateEnvironmentEncryption).not.toHaveBeenCalled();
 	});
 });

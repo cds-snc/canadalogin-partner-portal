@@ -62,6 +62,7 @@ export const Route = createFileRoute(
 								{
 									href: `/applications/${params.applicationUuid}/environments/${params.environmentUuid}`,
 									label: environmentName,
+									showBackLabel: false,
 								},
 							]
 						: []),

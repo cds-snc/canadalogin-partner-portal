@@ -120,7 +120,6 @@ async def test_create_application_environment_delegates_to_service(mock_db):
         pkce_supported=True,
         post_logout_redirect_uris=["https://example.com/logout"],
         redirect_uris=["https://example.com/callback"],
-        shares_identifier=False,
         signing_messages=[],
         signing_signature_algorithms=[],
         single_sign_out=False,
@@ -235,37 +234,6 @@ async def test_update_application_environment_authentication_method_delegates_to
         environment=environment,
     )
 
-
-@pytest.mark.asyncio
-async def test_update_application_environment_sector_identifier_delegates_to_service(
-    mock_db,
-):
-    application_uuid = uuid.uuid4()
-    environment_uuid = uuid.uuid4()
-    environment = ApplicationEnvironmentUpdate(
-        sector_identifier_url="https://example.com/sector",
-        shares_identifier=True,
-    )
-    expected = {"uuid": environment_uuid, "sharesIdentifier": True}
-    mock_service = Mock()
-    mock_service.update_application_environment_name = AsyncMock(return_value=expected)
-
-    result = await unwrap_endpoint(update_application_environment_name)(
-        Mock(),
-        application_uuid,
-        environment_uuid,
-        environment,
-        mock_db,
-        mock_service,
-    )
-
-    assert result == expected
-    mock_service.update_application_environment_name.assert_awaited_once_with(
-        db=mock_db,
-        application_uuid=application_uuid,
-        environment_uuid=environment_uuid,
-        environment=environment,
-    )
 
 
 @pytest.mark.asyncio

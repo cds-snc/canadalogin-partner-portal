@@ -51,7 +51,6 @@ import { Route as ApplicationsApplicationUuidEnvironmentsEnvironmentUuidMessages
 import { Route as ApplicationsApplicationUuidEnvironmentsEnvironmentUuidPostLogoutRedirectUrlsRouteImport } from './routes/applications/$applicationUuid/environments/$environmentUuid/post-logout-redirect-urls'
 import { Route as ApplicationsApplicationUuidEnvironmentsEnvironmentUuidRedirectUrlsRouteImport } from './routes/applications/$applicationUuid/environments/$environmentUuid/redirect-urls'
 import { Route as ApplicationsApplicationUuidEnvironmentsEnvironmentUuidRequestsEncryptedRouteImport } from './routes/applications/$applicationUuid/environments/$environmentUuid/requests-encrypted'
-import { Route as ApplicationsApplicationUuidEnvironmentsEnvironmentUuidSectorIdentifierRouteImport } from './routes/applications/$applicationUuid/environments/$environmentUuid/sector-identifier'
 import { Route as ApplicationsApplicationUuidEnvironmentsEnvironmentUuidSingleSignOutMethodRouteImport } from './routes/applications/$applicationUuid/environments/$environmentUuid/single-sign-out-method'
 
 const IndexRoute = IndexRouteImport.update({
@@ -324,15 +323,6 @@ const ApplicationsApplicationUuidEnvironmentsEnvironmentUuidRequestsEncryptedRou
         ApplicationsApplicationUuidEnvironmentsEnvironmentUuidRoute,
     } as any,
   )
-const ApplicationsApplicationUuidEnvironmentsEnvironmentUuidSectorIdentifierRoute =
-  ApplicationsApplicationUuidEnvironmentsEnvironmentUuidSectorIdentifierRouteImport.update(
-    {
-      id: '/sector-identifier',
-      path: '/sector-identifier',
-      getParentRoute: () =>
-        ApplicationsApplicationUuidEnvironmentsEnvironmentUuidRoute,
-    } as any,
-  )
 const ApplicationsApplicationUuidEnvironmentsEnvironmentUuidSingleSignOutMethodRoute =
   ApplicationsApplicationUuidEnvironmentsEnvironmentUuidSingleSignOutMethodRouteImport.update(
     {
@@ -385,7 +375,6 @@ export interface FileRoutesByFullPath {
   '/applications/$applicationUuid/environments/$environmentUuid/post-logout-redirect-urls': typeof ApplicationsApplicationUuidEnvironmentsEnvironmentUuidPostLogoutRedirectUrlsRoute
   '/applications/$applicationUuid/environments/$environmentUuid/redirect-urls': typeof ApplicationsApplicationUuidEnvironmentsEnvironmentUuidRedirectUrlsRoute
   '/applications/$applicationUuid/environments/$environmentUuid/requests-encrypted': typeof ApplicationsApplicationUuidEnvironmentsEnvironmentUuidRequestsEncryptedRoute
-  '/applications/$applicationUuid/environments/$environmentUuid/sector-identifier': typeof ApplicationsApplicationUuidEnvironmentsEnvironmentUuidSectorIdentifierRoute
   '/applications/$applicationUuid/environments/$environmentUuid/single-sign-out-method': typeof ApplicationsApplicationUuidEnvironmentsEnvironmentUuidSingleSignOutMethodRoute
   '/applications/$applicationUuid/environments/$environmentUuid/': typeof ApplicationsApplicationUuidEnvironmentsEnvironmentUuidIndexRoute
 }
@@ -427,7 +416,6 @@ export interface FileRoutesByTo {
   '/applications/$applicationUuid/environments/$environmentUuid/post-logout-redirect-urls': typeof ApplicationsApplicationUuidEnvironmentsEnvironmentUuidPostLogoutRedirectUrlsRoute
   '/applications/$applicationUuid/environments/$environmentUuid/redirect-urls': typeof ApplicationsApplicationUuidEnvironmentsEnvironmentUuidRedirectUrlsRoute
   '/applications/$applicationUuid/environments/$environmentUuid/requests-encrypted': typeof ApplicationsApplicationUuidEnvironmentsEnvironmentUuidRequestsEncryptedRoute
-  '/applications/$applicationUuid/environments/$environmentUuid/sector-identifier': typeof ApplicationsApplicationUuidEnvironmentsEnvironmentUuidSectorIdentifierRoute
   '/applications/$applicationUuid/environments/$environmentUuid/single-sign-out-method': typeof ApplicationsApplicationUuidEnvironmentsEnvironmentUuidSingleSignOutMethodRoute
   '/applications/$applicationUuid/environments/$environmentUuid': typeof ApplicationsApplicationUuidEnvironmentsEnvironmentUuidIndexRoute
 }
@@ -474,7 +462,6 @@ export interface FileRoutesById {
   '/applications/$applicationUuid/environments/$environmentUuid/post-logout-redirect-urls': typeof ApplicationsApplicationUuidEnvironmentsEnvironmentUuidPostLogoutRedirectUrlsRoute
   '/applications/$applicationUuid/environments/$environmentUuid/redirect-urls': typeof ApplicationsApplicationUuidEnvironmentsEnvironmentUuidRedirectUrlsRoute
   '/applications/$applicationUuid/environments/$environmentUuid/requests-encrypted': typeof ApplicationsApplicationUuidEnvironmentsEnvironmentUuidRequestsEncryptedRoute
-  '/applications/$applicationUuid/environments/$environmentUuid/sector-identifier': typeof ApplicationsApplicationUuidEnvironmentsEnvironmentUuidSectorIdentifierRoute
   '/applications/$applicationUuid/environments/$environmentUuid/single-sign-out-method': typeof ApplicationsApplicationUuidEnvironmentsEnvironmentUuidSingleSignOutMethodRoute
   '/applications/$applicationUuid/environments/$environmentUuid/': typeof ApplicationsApplicationUuidEnvironmentsEnvironmentUuidIndexRoute
 }
@@ -522,7 +509,6 @@ export interface FileRouteTypes {
     | '/applications/$applicationUuid/environments/$environmentUuid/post-logout-redirect-urls'
     | '/applications/$applicationUuid/environments/$environmentUuid/redirect-urls'
     | '/applications/$applicationUuid/environments/$environmentUuid/requests-encrypted'
-    | '/applications/$applicationUuid/environments/$environmentUuid/sector-identifier'
     | '/applications/$applicationUuid/environments/$environmentUuid/single-sign-out-method'
     | '/applications/$applicationUuid/environments/$environmentUuid/'
   fileRoutesByTo: FileRoutesByTo
@@ -564,7 +550,6 @@ export interface FileRouteTypes {
     | '/applications/$applicationUuid/environments/$environmentUuid/post-logout-redirect-urls'
     | '/applications/$applicationUuid/environments/$environmentUuid/redirect-urls'
     | '/applications/$applicationUuid/environments/$environmentUuid/requests-encrypted'
-    | '/applications/$applicationUuid/environments/$environmentUuid/sector-identifier'
     | '/applications/$applicationUuid/environments/$environmentUuid/single-sign-out-method'
     | '/applications/$applicationUuid/environments/$environmentUuid'
   id:
@@ -610,7 +595,6 @@ export interface FileRouteTypes {
     | '/applications/$applicationUuid/environments/$environmentUuid/post-logout-redirect-urls'
     | '/applications/$applicationUuid/environments/$environmentUuid/redirect-urls'
     | '/applications/$applicationUuid/environments/$environmentUuid/requests-encrypted'
-    | '/applications/$applicationUuid/environments/$environmentUuid/sector-identifier'
     | '/applications/$applicationUuid/environments/$environmentUuid/single-sign-out-method'
     | '/applications/$applicationUuid/environments/$environmentUuid/'
   fileRoutesById: FileRoutesById
@@ -934,13 +918,6 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApplicationsApplicationUuidEnvironmentsEnvironmentUuidRequestsEncryptedRouteImport
       parentRoute: typeof ApplicationsApplicationUuidEnvironmentsEnvironmentUuidRoute
     }
-    '/applications/$applicationUuid/environments/$environmentUuid/sector-identifier': {
-      id: '/applications/$applicationUuid/environments/$environmentUuid/sector-identifier'
-      path: '/sector-identifier'
-      fullPath: '/applications/$applicationUuid/environments/$environmentUuid/sector-identifier'
-      preLoaderRoute: typeof ApplicationsApplicationUuidEnvironmentsEnvironmentUuidSectorIdentifierRouteImport
-      parentRoute: typeof ApplicationsApplicationUuidEnvironmentsEnvironmentUuidRoute
-    }
     '/applications/$applicationUuid/environments/$environmentUuid/single-sign-out-method': {
       id: '/applications/$applicationUuid/environments/$environmentUuid/single-sign-out-method'
       path: '/single-sign-out-method'
@@ -964,7 +941,6 @@ interface ApplicationsApplicationUuidEnvironmentsEnvironmentUuidRouteChildren {
   ApplicationsApplicationUuidEnvironmentsEnvironmentUuidPostLogoutRedirectUrlsRoute: typeof ApplicationsApplicationUuidEnvironmentsEnvironmentUuidPostLogoutRedirectUrlsRoute
   ApplicationsApplicationUuidEnvironmentsEnvironmentUuidRedirectUrlsRoute: typeof ApplicationsApplicationUuidEnvironmentsEnvironmentUuidRedirectUrlsRoute
   ApplicationsApplicationUuidEnvironmentsEnvironmentUuidRequestsEncryptedRoute: typeof ApplicationsApplicationUuidEnvironmentsEnvironmentUuidRequestsEncryptedRoute
-  ApplicationsApplicationUuidEnvironmentsEnvironmentUuidSectorIdentifierRoute: typeof ApplicationsApplicationUuidEnvironmentsEnvironmentUuidSectorIdentifierRoute
   ApplicationsApplicationUuidEnvironmentsEnvironmentUuidSingleSignOutMethodRoute: typeof ApplicationsApplicationUuidEnvironmentsEnvironmentUuidSingleSignOutMethodRoute
   ApplicationsApplicationUuidEnvironmentsEnvironmentUuidIndexRoute: typeof ApplicationsApplicationUuidEnvironmentsEnvironmentUuidIndexRoute
 }
@@ -995,8 +971,6 @@ const ApplicationsApplicationUuidEnvironmentsEnvironmentUuidRouteChildren: Appli
       ApplicationsApplicationUuidEnvironmentsEnvironmentUuidRedirectUrlsRoute,
     ApplicationsApplicationUuidEnvironmentsEnvironmentUuidRequestsEncryptedRoute:
       ApplicationsApplicationUuidEnvironmentsEnvironmentUuidRequestsEncryptedRoute,
-    ApplicationsApplicationUuidEnvironmentsEnvironmentUuidSectorIdentifierRoute:
-      ApplicationsApplicationUuidEnvironmentsEnvironmentUuidSectorIdentifierRoute,
     ApplicationsApplicationUuidEnvironmentsEnvironmentUuidSingleSignOutMethodRoute:
       ApplicationsApplicationUuidEnvironmentsEnvironmentUuidSingleSignOutMethodRoute,
     ApplicationsApplicationUuidEnvironmentsEnvironmentUuidIndexRoute:

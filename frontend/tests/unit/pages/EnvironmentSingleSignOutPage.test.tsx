@@ -296,6 +296,43 @@ describe("EnvironmentSingleSignOutPage", () => {
 		});
 	});
 
+	it("forces staging environments to keep single sign-out enabled", async () => {
+		mockedUseApplicationEnvironment.mockReturnValue({
+			data: {
+				...enabledEnvironment,
+				config: { singleSignOut: false },
+				tenantCode: "staging",
+			},
+			error: null,
+			isLoading: false,
+		});
+
+		render(<EnvironmentSingleSignOutPage />);
+
+		expect(screen.queryByRole("radio", { name: "Yes" })).toBeNull();
+		expect(screen.queryByRole("radio", { name: "No" })).toBeNull();
+		expect(
+			screen.getByRole("radio", { name: "Front-channel logout" })
+		).toBeTruthy();
+
+		fireEvent.input(screen.getByRole("radio", { name: "Back-channel logout" }));
+		fireEvent.input(screen.getByRole("textbox"), {
+			target: { value: "https://new.example.com/sign-out" },
+		});
+		fireEvent.submit(
+			screen.getByRole("textbox").closest("form") as HTMLFormElement
+		);
+
+		await waitFor(() => {
+			expect(mockedUpdateEnvironmentSingleSignOut).toHaveBeenCalledWith({
+				environmentUuid: "environment-uuid-1",
+				logoutMethod: "back_channel",
+				signOutRequestUrl: "https://new.example.com/sign-out",
+				singleSignOut: true,
+			});
+		});
+	});
+
 	it("shows inline errors, matching summary links, and keeps Cancel pointed at environment management", async () => {
 		render(<EnvironmentSingleSignOutPage />);
 

@@ -34,7 +34,7 @@ vi.mock("react-i18next", () => ({
 				"applicationEnvironmentConnect.stepFour.canSignMessages":
 					"Can your environment sign messages?",
 				"applicationEnvironmentConnect.stepFour.signingAlgorithms":
-					"Which signature algorithms can it use to sign messages?",
+					"Which signature algorithm can it use to sign messages?",
 				"applicationEnvironmentConnect.stepFour.signingMessages":
 					"Which messages can it sign?",
 				"applicationEnvironmentConnect.stepFour.signingTitle":
@@ -42,7 +42,7 @@ vi.mock("react-i18next", () => ({
 				"applicationEnvironmentConnect.stepFour.validationCanSignMessages":
 					"Select whether your environment can sign messages.",
 				"applicationEnvironmentConnect.stepFour.validationSigningAlgorithms":
-					"Select at least one signing algorithm.",
+					"Select one signing algorithm.",
 				"applicationEnvironmentConnect.stepFour.validationSigningMessages":
 					"Select at least one message type to sign.",
 				"applicationEnvironmentConnect.tokenEndpoint": "Token endpoint",
@@ -224,7 +224,7 @@ describe("EnvironmentMessagesSignedPage", () => {
 		config: {
 			canSignMessages: true,
 			signingMessages: ["request_object" as const],
-			signingSignatureAlgorithms: ["RS256" as const, "PS256" as const],
+			signingSignatureAlgorithms: ["RS256" as const],
 		},
 		createdAt: "2026-09-17T00:00:00Z",
 		partnerLabel: "TEST-portal",
@@ -273,10 +273,14 @@ describe("EnvironmentMessagesSignedPage", () => {
 				.checked
 		).toBe(true);
 		expect(
-			(screen.getByRole("checkbox", { name: "PS256" }) as HTMLInputElement).checked
+			(screen.getByRole("radio", { name: "RS256" }) as HTMLInputElement).checked
 		).toBe(true);
+		expect(
+			(screen.getByRole("radio", { name: "PS256" }) as HTMLInputElement).checked
+		).toBe(false);
 
 		fireEvent.click(screen.getByRole("checkbox", { name: "Token endpoint" }));
+		fireEvent.click(screen.getByRole("radio", { name: "PS256" }));
 		fireEvent.submit(
 			screen
 				.getByRole("button", { name: "Save changes" })
@@ -288,7 +292,7 @@ describe("EnvironmentMessagesSignedPage", () => {
 				environmentUuid: "environment-uuid-1",
 				canSignMessages: true,
 				signingMessages: ["request_object", "token_endpoint"],
-				signingSignatureAlgorithms: ["RS256", "PS256"],
+				signingSignatureAlgorithms: ["PS256"],
 			});
 		});
 		expect(mockedNavigate).toHaveBeenCalled();
@@ -384,7 +388,7 @@ describe("EnvironmentMessagesSignedPage", () => {
 		expect(
 			screen
 				.getByRole("link", {
-					name: "Select at least one signing algorithm.",
+					name: "Select one signing algorithm.",
 				})
 				.getAttribute("href")
 		).toBe("#signing-algorithms-control");

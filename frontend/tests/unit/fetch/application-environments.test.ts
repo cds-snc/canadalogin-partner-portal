@@ -9,7 +9,6 @@ import {
 	updateApplicationEnvironmentClientType,
 	updateApplicationEnvironmentPostLogoutRedirectUris,
 	updateApplicationEnvironmentRedirectUris,
-	updateApplicationEnvironmentSectorIdentifier,
 	updateApplicationEnvironmentSigning,
 	updateApplicationEnvironmentUrl,
 	updateApplicationEnvironmentVerification,
@@ -267,36 +266,6 @@ describe("application-environments API", () => {
 		} as Response);
 
 		await updateApplicationEnvironmentAuthenticationMethod(
-			applicationUuid,
-			environmentUuid,
-			payload
-		);
-
-		expect(fetchMock).toHaveBeenCalledWith(
-			`http://localhost:8000/api/v1/applications/${applicationUuid}/environments/${environmentUuid}`,
-			expect.objectContaining({
-				body: JSON.stringify(payload),
-				credentials: "include",
-				method: "PATCH",
-			})
-		);
-	});
-
-	it("updates application environment sector identifier atomically", async () => {
-		const applicationUuid = "application-uuid-1";
-		const environmentUuid = "environment-uuid-1";
-		const payload = {
-			sectorIdentifierUrl: "https://example.com/sector",
-			sharesIdentifier: true,
-		} as const;
-		const fetchMock = vi.spyOn(globalThis, "fetch").mockResolvedValue({
-			headers: new Headers({ "content-type": "application/json" }),
-			json: () => Promise.resolve({ uuid: environmentUuid }),
-			ok: true,
-			status: 200,
-		} as Response);
-
-		await updateApplicationEnvironmentSectorIdentifier(
 			applicationUuid,
 			environmentUuid,
 			payload

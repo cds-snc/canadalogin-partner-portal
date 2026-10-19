@@ -535,47 +535,6 @@ class ApplicationEnvironmentRepository:
             environment_uuid=environment_uuid,
         )
 
-    async def update_environment_sector_identifier(
-        self,
-        db: AsyncSession,
-        application_uuid: uuid_pkg.UUID,
-        environment_uuid: uuid_pkg.UUID,
-        sector_identifier_url: str | None,
-        shares_identifier: bool,
-    ) -> dict[str, Any] | None:
-        statement = (
-            select(ApplicationConfiguration)
-            .join(Application, Application.id == ApplicationConfiguration.application_id)
-            .where(
-                Application.uuid == application_uuid,
-                Application.is_deleted.is_(False),
-                ApplicationConfiguration.uuid == environment_uuid,
-                ApplicationConfiguration.is_deleted.is_(False),
-            )
-        )
-        configuration = (await db.execute(statement)).scalar_one_or_none()
-        if configuration is None:
-            return None
-
-        updated_config = {
-            **(configuration.config or {}),
-            "sharesIdentifier": shares_identifier,
-        }
-        if shares_identifier:
-            updated_config["sectorIdentifierUrl"] = sector_identifier_url
-        else:
-            updated_config.pop("sectorIdentifierUrl", None)
-
-        configuration.config = updated_config
-        configuration.updated_at = datetime.now(UTC)
-        await db.commit()
-        await db.refresh(configuration)
-        return await self.get_environment(
-            db=db,
-            application_uuid=application_uuid,
-            environment_uuid=environment_uuid,
-        )
-
     async def update_environment_verification(
         self,
         db: AsyncSession,

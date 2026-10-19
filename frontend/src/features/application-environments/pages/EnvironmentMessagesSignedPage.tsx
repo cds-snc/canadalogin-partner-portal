@@ -373,18 +373,19 @@ export const EnvironmentMessagesSignedPage = (): FunctionComponent => {
 										control={control}
 										name="signingSignatureAlgorithms"
 										render={({ field }) => (
-											<Checkboxes
+											<Radios
 												required
 												errorMessage={signingAlgorithmsErrorMessage}
 												id="signing-algorithms-control"
 												name={field.name}
 												options={algorithmOptions}
-												value={field.value}
+												value={field.value[0] ?? ""}
 												legend={t(
 													"applicationEnvironmentConnect.stepFour.signingAlgorithms"
 												)}
 												onInput={(event) => {
-													field.onChange(event.target.value);
+													const value = inputValue(event);
+													field.onChange(value ? [value] : []);
 													clearErrors("signingSignatureAlgorithms");
 												}}
 											/>

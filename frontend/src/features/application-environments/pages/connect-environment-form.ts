@@ -63,8 +63,6 @@ export const applicationEnvironmentSchema = z
 		pkceSupported: z.boolean().nullable(),
 		postLogoutRedirectUris: z.array(urlSchema).min(1),
 		redirectUris: z.array(urlSchema).min(1),
-		sectorIdentifierUrl: optionalUrlSchema,
-		sharesIdentifier: z.boolean(),
 		signOutRequestUrl: optionalUrlSchema,
 		signingMessages: z.array(z.enum(["request_object", "token_endpoint"])),
 		signingSignatureAlgorithms: z.array(algorithmSchema),
@@ -120,6 +118,13 @@ export const applicationEnvironmentSchema = z
 				path: ["singleSignOut"],
 			});
 		}
+		if (values.tenantCode === "staging" && values.singleSignOut !== true) {
+			context.addIssue({
+				code: "custom",
+				message: "singleSignOut",
+				path: ["singleSignOut"],
+			});
+		}
 		if (values.canSignMessages === null) {
 			context.addIssue({
 				code: "custom",
@@ -141,14 +146,16 @@ export const applicationEnvironmentSchema = z
 				path: ["canDecryptMessages"],
 			});
 		}
-		if (values.singleSignOut && !values.logoutMethod) {
+		const singleSignOutEnabled =
+			values.tenantCode === "staging" || values.singleSignOut === true;
+		if (singleSignOutEnabled && !values.logoutMethod) {
 			context.addIssue({
 				code: "custom",
 				message: "logoutMethod",
 				path: ["logoutMethod"],
 			});
 		}
-		if (values.singleSignOut && !values.signOutRequestUrl) {
+		if (singleSignOutEnabled && !values.signOutRequestUrl) {
 			context.addIssue({
 				code: "custom",
 				message: "signOutRequestUrl",
@@ -174,13 +181,6 @@ export const applicationEnvironmentSchema = z
 				code: "custom",
 				message: "jwksUri",
 				path: ["jwksUri"],
-			});
-		}
-		if (values.sharesIdentifier && !values.sectorIdentifierUrl) {
-			context.addIssue({
-				code: "custom",
-				message: "sectorIdentifierUrl",
-				path: ["sectorIdentifierUrl"],
 			});
 		}
 		const conditionalLists = [
@@ -238,8 +238,6 @@ export const DEFAULT_VALUES: ApplicationEnvironmentFormValues = {
 	pkceSupported: null,
 	postLogoutRedirectUris: [""],
 	redirectUris: [""],
-	sectorIdentifierUrl: "",
-	sharesIdentifier: false,
 	signOutRequestUrl: "",
 	signingMessages: [],
 	signingSignatureAlgorithms: [],
@@ -255,55 +253,56 @@ const optional = <T>(value: T | ""): T | undefined =>
 
 export const toPayload = (
 	values: ApplicationEnvironmentFormValues
-): ApplicationEnvironmentCreate => ({
-	...values,
-	canDecryptMessages: values.canDecryptMessages ?? false,
-	canEncryptRequests: values.canEncryptRequests ?? false,
-	canSignMessages: values.canSignMessages ?? false,
-	clientType: values.clientType ?? "confidential",
-	copyExisting: values.copyExisting ?? false,
-	sharesIdentifier: values.sharesIdentifier ?? false,
-	singleSignOut: values.singleSignOut ?? false,
-	tenantCode: tenantCodeSchema.parse(values.tenantCode),
-	clientAuthMethod:
-		values.clientType === "confidential"
-			? optional(values.clientAuthMethod ?? "")
+): ApplicationEnvironmentCreate => {
+	const singleSignOut =
+		values.tenantCode === "staging" || values.singleSignOut === true;
+
+	return {
+		...values,
+		canDecryptMessages: values.canDecryptMessages ?? false,
+		canEncryptRequests: values.canEncryptRequests ?? false,
+		canSignMessages: values.canSignMessages ?? false,
+		clientType: values.clientType ?? "confidential",
+		copyExisting: values.copyExisting ?? false,
+		singleSignOut,
+		tenantCode: tenantCodeSchema.parse(values.tenantCode),
+		clientAuthMethod:
+			values.clientType === "confidential"
+				? optional(values.clientAuthMethod ?? "")
+				: undefined,
+		decryptionContentAlgorithms: values.canDecryptMessages
+			? values.decryptionContentAlgorithms
+			: [],
+		decryptionKeyAlgorithms: values.canDecryptMessages
+			? values.decryptionKeyAlgorithms
+			: [],
+		decryptionMessages: values.canDecryptMessages
+			? values.decryptionMessages
+			: [],
+		encryptionContentAlgorithms: values.canEncryptRequests
+			? values.encryptionContentAlgorithms
+			: [],
+		encryptionKeyAlgorithms: values.canEncryptRequests
+			? values.encryptionKeyAlgorithms
+			: [],
+		jwksUri:
+			values.clientType === "confidential" &&
+			values.clientAuthMethod === "private_key_jwt"
+				? optional(values.jwksUri)
+				: undefined,
+		logoutMethod: singleSignOut ? values.logoutMethod : undefined,
+		pkceSupported:
+			values.clientType === "public" ? true : (values.pkceSupported ?? false),
+		signOutRequestUrl: singleSignOut
+			? optional(values.signOutRequestUrl)
 			: undefined,
-	decryptionContentAlgorithms: values.canDecryptMessages
-		? values.decryptionContentAlgorithms
-		: [],
-	decryptionKeyAlgorithms: values.canDecryptMessages
-		? values.decryptionKeyAlgorithms
-		: [],
-	decryptionMessages: values.canDecryptMessages
-		? values.decryptionMessages
-		: [],
-	encryptionContentAlgorithms: values.canEncryptRequests
-		? values.encryptionContentAlgorithms
-		: [],
-	encryptionKeyAlgorithms: values.canEncryptRequests
-		? values.encryptionKeyAlgorithms
-		: [],
-	jwksUri:
-		values.clientType === "confidential" &&
-		values.clientAuthMethod === "private_key_jwt"
-			? optional(values.jwksUri)
+		signingMessages: values.canSignMessages ? values.signingMessages : [],
+		signingSignatureAlgorithms: values.canSignMessages
+			? values.signingSignatureAlgorithms
+			: [],
+		sourceEnvironmentUuid: values.copyExisting
+			? optional(values.sourceEnvironmentUuid ?? "")
 			: undefined,
-	logoutMethod: values.singleSignOut ? values.logoutMethod : undefined,
-	pkceSupported:
-		values.clientType === "public" ? true : (values.pkceSupported ?? false),
-	sectorIdentifierUrl: values.sharesIdentifier
-		? optional(values.sectorIdentifierUrl)
-		: undefined,
-	signOutRequestUrl: values.singleSignOut
-		? optional(values.signOutRequestUrl)
-		: undefined,
-	signingMessages: values.canSignMessages ? values.signingMessages : [],
-	signingSignatureAlgorithms: values.canSignMessages
-		? values.signingSignatureAlgorithms
-		: [],
-	sourceEnvironmentUuid: values.copyExisting
-		? optional(values.sourceEnvironmentUuid ?? "")
-		: undefined,
-	environmentName: `${values.tenantCode.toUpperCase()}-${values.environmentName}`,
-});
+		environmentName: `${values.tenantCode.toUpperCase()}-${values.environmentName}`,
+	};
+};

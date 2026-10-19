@@ -431,18 +431,19 @@ export const EnvironmentMessagesDecryptedPage = (): FunctionComponent => {
 										control={control}
 										name="decryptionKeyAlgorithms"
 										render={({ field }) => (
-											<Checkboxes
+											<Radios
 												required
 												errorMessage={decryptionKeyAlgorithmsErrorMessage}
 												id="decryption-key-algorithms-control"
 												name={field.name}
 												options={keyAlgorithmOptions}
-												value={field.value}
+												value={field.value[0] ?? ""}
 												legend={t(
 													"applicationEnvironmentConnect.stepFour.decryptionKeyAlgorithms"
 												)}
 												onInput={(event) => {
-													field.onChange(event.target.value);
+													const value = inputValue(event);
+													field.onChange(value ? [value] : []);
 													clearErrors("decryptionKeyAlgorithms");
 												}}
 											/>
@@ -452,18 +453,19 @@ export const EnvironmentMessagesDecryptedPage = (): FunctionComponent => {
 										control={control}
 										name="decryptionContentAlgorithms"
 										render={({ field }) => (
-											<Checkboxes
+											<Radios
 												required
 												errorMessage={decryptionContentAlgorithmsErrorMessage}
 												id="decryption-content-algorithms-control"
 												name={field.name}
 												options={contentAlgorithmOptions}
-												value={field.value}
+												value={field.value[0] ?? ""}
 												legend={t(
 													"applicationEnvironmentConnect.stepFour.decryptionContentAlgorithms"
 												)}
 												onInput={(event) => {
-													field.onChange(event.target.value);
+													const value = inputValue(event);
+													field.onChange(value ? [value] : []);
 													clearErrors("decryptionContentAlgorithms");
 												}}
 											/>
