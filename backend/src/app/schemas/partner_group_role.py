@@ -7,6 +7,7 @@ from ..core.schemas import PersistentDeletion, TimestampSchema, UUIDSchema
 
 class PartnerGroupRoleCreateInternal(BaseModel):
     partner_group_id: int
+    user_id: int
     role_id: int
 
 

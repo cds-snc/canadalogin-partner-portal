@@ -7,6 +7,7 @@ import { useSession } from "@/features/auth/hooks/use-session";
 vi.mock("@/fetch/auth", () => ({
 	getCurrentUser: vi.fn(),
 	getOidcLoginUrl: vi.fn((): string => "http://localhost:8000/api/v1/auth/oidc/login"),
+	logoutAndRedirect: vi.fn(async () => undefined),
 }));
 
 type DeferredPromise<T> = {

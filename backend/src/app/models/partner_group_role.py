@@ -13,13 +13,15 @@ class PartnerGroupRole(Base):
     __table_args__ = (
         UniqueConstraint(
             "partner_group_id",
+            "user_id",
             "role_id",
-            name="uq_partner_group_role_partner_group_id_role_id",
+            name="uq_partner_group_role_partner_group_id_user_id_role_id",
         ),
     )
 
     id: Mapped[int] = mapped_column(autoincrement=True, primary_key=True, init=False)
     partner_group_id: Mapped[int] = mapped_column(ForeignKey("partner_group.id"), index=True)
+    user_id: Mapped[int] = mapped_column(ForeignKey("user.id"), index=True)
     role_id: Mapped[int] = mapped_column(ForeignKey("role.id"), index=True)
     uuid: Mapped[uuid_pkg.UUID] = mapped_column(UUID(as_uuid=True), default_factory=uuid7, unique=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default_factory=lambda: datetime.now(UTC))

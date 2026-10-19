@@ -3,8 +3,8 @@ import { fireEvent, render, screen } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { AccountNotFoundPage } from "@/features/auth/pages/AccountNotFoundPage";
 
-const { buildApiUrlMock, resetMock } = vi.hoisted(() => ({
-	buildApiUrlMock: vi.fn(() => "http://localhost:8000/api/v1/logout"),
+const { logoutAndRedirectMock, resetMock } = vi.hoisted(() => ({
+	logoutAndRedirectMock: vi.fn((): Promise<void> => Promise.resolve()),
 	resetMock: vi.fn(),
 }));
 
@@ -60,8 +60,8 @@ vi.mock("@/components/ui", () => ({
 	),
 }));
 
-vi.mock("@/fetch/base-url", () => ({
-	buildApiUrl: buildApiUrlMock,
+vi.mock("@/fetch/auth", () => ({
+	logoutAndRedirect: logoutAndRedirectMock,
 }));
 
 vi.mock("@/store", () => ({
@@ -71,12 +71,8 @@ vi.mock("@/store", () => ({
 
 describe("AccountNotFoundPage", () => {
 	beforeEach(() => {
-		buildApiUrlMock.mockClear();
+		logoutAndRedirectMock.mockReset();
 		resetMock.mockReset();
-		Object.defineProperty(window, "location", {
-			configurable: true,
-			value: { href: "" },
-		});
 	});
 
 	it("renders the account-not-found guidance from the design", () => {
@@ -106,14 +102,13 @@ describe("AccountNotFoundPage", () => {
 		).toBe("/support");
 	});
 
-	it("signs out only when the user chooses to try again", () => {
+	it("posts sign-out only when the user chooses to try again", () => {
 		render(<AccountNotFoundPage />);
 
 		expect(resetMock).not.toHaveBeenCalled();
 		fireEvent.click(screen.getByRole("button", { name: "Sign out and try again" }));
 
 		expect(resetMock).toHaveBeenCalledOnce();
-		expect(buildApiUrlMock).toHaveBeenCalledWith("/api/v1/logout");
-		expect(window.location.href).toBe("http://localhost:8000/api/v1/logout");
+		expect(logoutAndRedirectMock).toHaveBeenCalledWith("manual");
 	});
 });

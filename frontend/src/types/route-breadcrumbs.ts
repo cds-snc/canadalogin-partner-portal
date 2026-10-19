@@ -10,6 +10,6 @@ export type RouteBreadcrumb = {
 };
 
 export type RouteBackLinkContext = {
-	backLink: RouteBackLink;
-	breadcrumbs?: Array<RouteBreadcrumb>;
+	backLink?: RouteBackLink;
+	breadcrumbs?: Array<RouteBackLink>;
 };

@@ -12,6 +12,7 @@ from src.app.api.v1.application_environments import (
 from src.app.schemas.application_environment import (
     ApplicationEnvironmentCreate,
     ApplicationEnvironmentNameUpdate,
+    ApplicationEnvironmentRead,
     ApplicationEnvironmentUpdate,
 )
 
@@ -21,6 +22,21 @@ def unwrap_endpoint(endpoint):
     while hasattr(current, "__wrapped__"):
         current = current.__wrapped__
     return current
+
+
+def test_application_environment_read_includes_client_id():
+    environment = ApplicationEnvironmentRead.model_validate(
+        {
+            "client_id": "environment-client-id",
+            "created_at": "2026-09-17T00:00:00Z",
+            "partner_label": "Test environment",
+            "status_code": "draft",
+            "tenant_code": "test",
+            "uuid": uuid.uuid4(),
+        }
+    )
+
+    assert environment.model_dump(by_alias=True)["clientId"] == "environment-client-id"
 
 
 @pytest.mark.asyncio

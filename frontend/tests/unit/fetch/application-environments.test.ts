@@ -69,6 +69,7 @@ describe("application-environments API", () => {
 			headers: new Headers({ "content-type": "application/json" }),
 			json: () =>
 				Promise.resolve({
+					clientId: "environment-client-id",
 					createdAt: "2026-09-17T00:00:00Z",
 					partnerLabel: "Test environment",
 					statusCode: "draft",
@@ -94,6 +95,7 @@ describe("application-environments API", () => {
 			})
 		);
 		expect(response.uuid).toBe(environmentUuid);
+		expect(response.clientId).toBe("environment-client-id");
 	});
 
 	it("updates an application environment name", async () => {

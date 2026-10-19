@@ -25,8 +25,8 @@ export const Route = createFileRoute(
 	"/applications/$applicationUuid/environments/$environmentUuid"
 )({
 		beforeLoad: async ({ params }) => {
-				const environment = await appQueryClient
-					.ensureQueryData({
+		const environment = await appQueryClient
+			.ensureQueryData({
 					queryKey: environmentQueryKey(
 						params.applicationUuid,
 						params.environmentUuid
@@ -36,12 +36,12 @@ export const Route = createFileRoute(
 							params.applicationUuid,
 							params.environmentUuid
 						),
-				})
-				.catch(() => undefined);
+						})
+						.catch(() => undefined);
 			const environmentName = getEnvironmentName(environment);
 
 			return {
-			backLink: {
+				backLink: {
 				href: `/applications/${params.applicationUuid}/environments`,
 				label: i18n.t("applicationEnvironments.title"),
 				showBackLabel: false,
@@ -50,10 +50,12 @@ export const Route = createFileRoute(
 					{
 						href: "/applications",
 						label: i18n.t("nav.applications"),
+						showBackLabel: false,
 					},
 					{
 						href: `/applications/${params.applicationUuid}/environments`,
 						label: i18n.t("applicationEnvironments.title"),
+						showBackLabel: false,
 					},
 					...(environmentName
 						? [

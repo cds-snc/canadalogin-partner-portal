@@ -10,9 +10,11 @@ from ..models.partner_group import PartnerGroup
 from ..models.partner_group_role import PartnerGroupRole
 from ..models.role import Role
 from ..models.user import User
-from ..models.user_role import UserRole
 
-PARTNER_DEVELOPER_ROLE = "Partner Developer"
+PARTNER_APPLICATION_ROLES = (
+    "Partner Developer",
+    "Partner Production Administrator",
+)
 
 
 class ApplicationRepository:
@@ -68,8 +70,7 @@ class ApplicationRepository:
             .join(PartnerGroup, PartnerGroup.id == Application.partner_group_id)
             .join(PartnerGroupRole, PartnerGroupRole.partner_group_id == PartnerGroup.id)
             .join(Role, Role.id == PartnerGroupRole.role_id)
-            .join(UserRole, UserRole.role_id == Role.id)
-            .join(User, User.id == UserRole.user_id)
+            .join(User, User.id == PartnerGroupRole.user_id)
         )
 
     @staticmethod
@@ -77,9 +78,8 @@ class ApplicationRepository:
         return (
             User.uuid == user_uuid,
             User.is_deleted.is_(False),
-            UserRole.is_deleted.is_(False),
             PartnerGroupRole.is_deleted.is_(False),
-            Role.name == PARTNER_DEVELOPER_ROLE,
+            Role.name.in_(PARTNER_APPLICATION_ROLES),
             Role.is_deleted.is_(False),
             PartnerGroup.is_deleted.is_(False),
             Application.is_deleted.is_(False),

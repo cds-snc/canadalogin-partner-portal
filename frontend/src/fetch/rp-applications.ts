@@ -218,22 +218,6 @@ export const getCurrentUserRPOAuthSetup = async (
 	return result;
 };
 
-export const getCurrentUserRPApplicationDepartment = async (
-	rpApplicationUuid: string
-): Promise<CurrentUserRPApplicationSummaryRead> => {
-	const result = await requestJson<CurrentUserRPApplicationSummaryRead | null>(
-		`/api/v1/rp-applications/mine/${encodeURIComponent(rpApplicationUuid)}/department`,
-		{
-			cache: "no-store",
-			method: "GET",
-		}
-	);
-	if (!result) {
-		throw new Error("Failed to load RP application department");
-	}
-	return result;
-};
-
 export const assignCurrentUserRPApplicationDepartment = async (
 	rpApplicationUuid: string,
 	payload: CurrentUserRPApplicationDepartmentAssignRequest

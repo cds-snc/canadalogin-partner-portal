@@ -2,10 +2,13 @@ from unittest.mock import AsyncMock, patch
 
 import pytest
 from fastapi import APIRouter, FastAPI
+from fastapi.middleware.cors import CORSMiddleware
 from starlette.middleware.sessions import SessionMiddleware as StarletteSessionMiddleware
+from starlette.testclient import TestClient
+from starlette_csrf import CSRFMiddleware
 from starsessions import SessionAutoloadMiddleware, SessionMiddleware
 
-from src.app.core.config import settings
+from src.app.core.config import EnvironmentOption, Settings, settings
 from src.app.core.setup import create_application, lifespan_factory
 
 
@@ -17,7 +20,30 @@ class TestSessionMiddlewareSetup:
 
         assert SessionMiddleware in middleware_classes
         assert SessionAutoloadMiddleware in middleware_classes
+        csrf_middleware_index = next(
+            index for index, middleware_class in enumerate(middleware_classes) if issubclass(middleware_class, CSRFMiddleware)
+        )
+        assert middleware_classes.index(CORSMiddleware) < csrf_middleware_index
         assert StarletteSessionMiddleware not in middleware_classes
+
+    def test_cors_allows_csrf_header_for_state_changing_requests(self) -> None:
+        with (
+            patch.object(settings, "CORS_ORIGINS", ["http://localhost:3000"]),
+            patch.object(settings, "CORS_METHODS", ["PATCH"]),
+            patch.object(settings, "CORS_HEADERS", ["Content-Type"]),
+        ):
+            app = create_application(APIRouter(), settings, create_tables_on_start=False)
+
+        response = TestClient(app).options(
+            "/",
+            headers={
+                "Origin": "http://localhost:3000",
+                "Access-Control-Request-Method": "PATCH",
+                "Access-Control-Request-Headers": "content-type,x-csrftoken",
+            },
+        )
+
+        assert response.status_code == 200
 
 
 class TestSessionLifespan:

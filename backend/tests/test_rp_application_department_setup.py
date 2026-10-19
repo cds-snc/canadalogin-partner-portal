@@ -26,7 +26,7 @@ _APP_UUID = "018f6f83-0000-0000-0000-000000000333"
 
 
 class TestDepartmentPreflightEndpoint:
-    """8.1 – Owner department preflight GET endpoint."""
+    """Legacy department routes remain unavailable, including to superusers."""
 
     def test_owner_preflight_returns_200_with_department_id(self) -> None:
         service = Mock()
@@ -51,12 +51,7 @@ class TestDepartmentPreflightEndpoint:
         finally:
             app.dependency_overrides.clear()
 
-        assert response.status_code == 200
-        body = response.json()
-        assert body["id"] == 10
-        assert body["uuid"] == _APP_UUID
-        assert body["dnrAppName"] == "Benefits Portal"
-        assert body["departmentId"] == 5
+        assert response.status_code == 403
 
     def test_owner_preflight_returns_200_with_null_department_id(self) -> None:
         service = Mock()
@@ -81,8 +76,7 @@ class TestDepartmentPreflightEndpoint:
         finally:
             app.dependency_overrides.clear()
 
-        assert response.status_code == 200
-        assert response.json()["departmentId"] is None
+        assert response.status_code == 403
 
     def test_non_owner_preflight_returns_403(self) -> None:
         service = Mock()
@@ -106,7 +100,6 @@ class TestDepartmentPreflightEndpoint:
             app.dependency_overrides.clear()
 
         assert response.status_code == 403
-        assert response.json()["error"]["code"] == "forbidden"
 
     def test_missing_application_returns_404(self) -> None:
         service = Mock()
@@ -126,12 +119,11 @@ class TestDepartmentPreflightEndpoint:
         finally:
             app.dependency_overrides.clear()
 
-        assert response.status_code == 404
-        assert response.json()["error"]["code"] == "not_found"
+        assert response.status_code == 403
 
 
 class TestDepartmentAssignmentEndpoint:
-    """8.2 – Owner department assignment PATCH endpoint."""
+    """Legacy department assignment routes remain unavailable."""
 
     def test_owner_assignment_success_returns_200_with_updated_dto(self) -> None:
         service = Mock()
@@ -157,9 +149,7 @@ class TestDepartmentAssignmentEndpoint:
         finally:
             app.dependency_overrides.clear()
 
-        assert response.status_code == 200
-        body = response.json()
-        assert body["departmentId"] == 7
+        assert response.status_code == 403
 
     def test_assignment_unknown_department_returns_404(self) -> None:
         service = Mock()
@@ -180,7 +170,7 @@ class TestDepartmentAssignmentEndpoint:
         finally:
             app.dependency_overrides.clear()
 
-        assert response.status_code == 404
+        assert response.status_code == 403
 
     def test_assignment_already_set_returns_409_conflict(self) -> None:
         from fastcrud.exceptions.http_exceptions import CustomException
@@ -203,11 +193,11 @@ class TestDepartmentAssignmentEndpoint:
         finally:
             app.dependency_overrides.clear()
 
-        assert response.status_code == 409
+        assert response.status_code == 403
 
 
 class TestMissingDepartmentConflictRoutes:
-    """8.3 – Owner child routes return 409 + rp_application_department_required when department missing."""
+    """Legacy RP child routes remain unavailable."""
 
     def test_oauth_setup_missing_department_returns_409_with_code(self) -> None:
         service = Mock()
@@ -228,8 +218,7 @@ class TestMissingDepartmentConflictRoutes:
         finally:
             app.dependency_overrides.clear()
 
-        assert response.status_code == 409
-        assert response.json()["error"]["code"] == "rp_application_department_required"
+        assert response.status_code == 403
 
     def test_mau_report_missing_department_returns_409_with_code(self) -> None:
         from src.app.api.dependencies import (
@@ -264,12 +253,11 @@ class TestMissingDepartmentConflictRoutes:
         finally:
             app.dependency_overrides.clear()
 
-        assert response.status_code == 409
-        assert response.json()["error"]["code"] == "rp_application_department_required"
+        assert response.status_code == 403
 
 
 class TestOAuthSetupDepartmentFields:
-    """8.4 – OAuth setup DTO includes departmentName and departmentNameFr."""
+    """Legacy RP OAuth setup routes remain unavailable."""
 
     def test_oauth_setup_includes_department_name_fields(self) -> None:
         service = Mock()
@@ -301,10 +289,7 @@ class TestOAuthSetupDepartmentFields:
         finally:
             app.dependency_overrides.clear()
 
-        assert response.status_code == 200
-        body = response.json()
-        assert body["departmentName"] == "Treasury Board of Canada Secretariat"
-        assert body["departmentNameFr"] == "Secrétariat du Conseil du Trésor du Canada"
+        assert response.status_code == 403
 
     def test_oauth_setup_department_name_can_be_null(self) -> None:
         service = Mock()
@@ -336,10 +321,7 @@ class TestOAuthSetupDepartmentFields:
         finally:
             app.dependency_overrides.clear()
 
-        assert response.status_code == 200
-        body = response.json()
-        assert body["departmentName"] is None
-        assert body["departmentNameFr"] is None
+        assert response.status_code == 403
 
 
 class TestDepartmentPreflightServiceMethod:
@@ -406,10 +388,11 @@ class TestDepartmentPreflightServiceMethod:
 
     @pytest.mark.asyncio
     async def test_assignment_raises_not_found_for_unknown_department(self) -> None:
+        import uuid as uuid_pkg
+
         import src.app.services.rp_application_service as rp_module
         from src.app.core.exceptions.http_exceptions import NotFoundException
         from src.app.schemas.rp_application import CurrentUserRPApplicationDepartmentAssignRequest
-        import uuid as uuid_pkg
 
         service = RPApplicationService()
         db = Mock()

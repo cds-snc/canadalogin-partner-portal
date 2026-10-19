@@ -30,17 +30,12 @@ const sampleUser = {
 };
 
 describe("auth-routing", () => {
-	let assignMock: ReturnType<typeof vi.fn>;
-
 	beforeEach(() => {
 		vi.resetAllMocks();
-		assignMock = vi.fn();
-		vi.stubGlobal("location", { assign: assignMock });
 	});
 
 	afterEach(() => {
 		vi.clearAllMocks();
-		vi.unstubAllGlobals();
 	});
 
 	it("keeps internal app paths and rejects external ones", () => {
@@ -55,19 +50,27 @@ describe("auth-routing", () => {
 		await expect(requireAuthenticatedUser("/users")).resolves.toEqual(sampleUser);
 	});
 
-	it("navigates directly to OIDC when the user is not authenticated", async () => {
+	it("redirects to OIDC when the user is not authenticated", async () => {
 		vi.mocked(revalidateCurrentUser).mockResolvedValue(null);
 
-		await expect(requireAuthenticatedUser("/users")).rejects.toThrow("Redirecting to OIDC login");
-		expect(assignMock).toHaveBeenCalledWith("http://localhost:8000/api/v1/auth/oidc/login");
+		await expect(requireAuthenticatedUser("/users")).rejects.toMatchObject({
+			options: {
+				href: "http://localhost:8000/api/v1/auth/oidc/login",
+				replace: true,
+			},
+		});
 		expect(revalidateCurrentUser).toHaveBeenCalledTimes(1);
 	});
 
 	it("navigates to OIDC when session revalidation fails before route entry", async () => {
 		vi.mocked(revalidateCurrentUser).mockRejectedValue(new TypeError("Failed to fetch"));
 
-		await expect(requireAuthenticatedUser("/applications")).rejects.toThrow("Redirecting to OIDC login");
-		expect(assignMock).toHaveBeenCalledWith("http://localhost:8000/api/v1/auth/oidc/login");
+		await expect(requireAuthenticatedUser("/applications")).rejects.toMatchObject({
+			options: {
+				href: "http://localhost:8000/api/v1/auth/oidc/login",
+				replace: true,
+			},
+		});
 	});
 
 	it("redirects authenticated users away from the login page", async () => {
@@ -110,8 +113,12 @@ describe("auth-routing", () => {
 	it("navigates to OIDC when post-login revalidation finds no session", async () => {
 		vi.mocked(revalidateCurrentUser).mockResolvedValue(null);
 
-		await expect(completeLoginRedirect("/profile")).rejects.toThrow("Redirecting to OIDC login");
-		expect(assignMock).toHaveBeenCalledWith("http://localhost:8000/api/v1/auth/oidc/login");
+		await expect(completeLoginRedirect("/profile")).rejects.toMatchObject({
+			options: {
+				href: "http://localhost:8000/api/v1/auth/oidc/login",
+				replace: true,
+			},
+		});
 	});
 
 	it("redirects to accept-terms when terms have not been accepted", async () => {

@@ -79,6 +79,21 @@ class CasbinPermissionGuard:
             error_factory=casbin_error_factory,
         ).require_permission(resource, action)
 
+    def require_permission_for_subject(
+        self,
+        resource: str,
+        action: str,
+        subject: str,
+    ):
+        async def user_provider() -> str:
+            return subject
+
+        return PermissionGuard(
+            user_provider=user_provider,
+            enforcer_provider=database_enforcer_provider,
+            error_factory=casbin_error_factory,
+        ).require_permission(resource, action)
+
     def require_application_permission(self, resource: str, action: str):
         async def user_provider(
             application_uuid: str,

@@ -1,6 +1,6 @@
 import re
-from datetime import UTC, datetime
-from typing import Any
+from datetime import UTC, datetime, timedelta
+from typing import Any, cast
 
 from authlib.integrations.starlette_client import OAuth
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -95,6 +95,17 @@ async def generate_unique_username(db: AsyncSession, claims: dict[str, Any]) -> 
     raise UnauthorizedException("Unable to allocate a username for the OIDC user.")
 
 
+async def _deactivate_if_inactive(db: AsyncSession, user: dict[str, object]) -> None:
+    last_login_at = cast(datetime | None, user.get("last_login_at"))
+    if last_login_at is None:
+        return
+
+    inactivity_cutoff = datetime.now(UTC) - timedelta(days=settings.USER_INACTIVITY_DAYS)
+    if last_login_at < inactivity_cutoff:
+        await crud_users.delete(db=db, uuid=user["uuid"])
+        raise AccountNotFoundException()
+
+
 async def sync_oidc_user(db: AsyncSession, claims: dict[str, object]) -> dict[str, object]:
     subject = claims.get("sub")
     if not subject:
@@ -115,6 +126,7 @@ async def sync_oidc_user(db: AsyncSession, claims: dict[str, object]) -> dict[st
         schema_to_select=UserReadInternal,
     )
     if existing_user is not None:
+        await _deactivate_if_inactive(db, existing_user)
         await crud_users.update(
             db=db,
             object={
@@ -137,6 +149,7 @@ async def sync_oidc_user(db: AsyncSession, claims: dict[str, object]) -> dict[st
     if email:
         email_user = await crud_users.get(db=db, email=normalized_email, is_deleted=False, schema_to_select=UserReadInternal)
         if email_user is not None:
+            await _deactivate_if_inactive(db, email_user)
             await crud_users.update(
                 db=db,
                 object={

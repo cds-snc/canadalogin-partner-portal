@@ -10,10 +10,7 @@ import type { FunctionComponent } from "@/common/types";
 import Breadcrumbs from "@/components/layout/Breadcrumbs";
 import { useSession } from "@/hooks";
 import { getOidcLoginUrl } from "@/fetch/auth";
-import type {
-	RouteBackLink,
-	RouteBreadcrumb,
-} from "@/types/route-breadcrumbs";
+import type { RouteBackLink } from "@/types/route-breadcrumbs";
 import { UserNavGroup } from "./UserNavGroup";
 
 type NavigationItem = {
@@ -35,35 +32,15 @@ const isCurrentPath = (pathname: string, href: string): boolean => {
 	return pathname === href || pathname.startsWith(`${href}/`);
 };
 
-const selectBackLink = (
-	routeMatches: Array<{ context?: unknown }>
-): RouteBackLink | null => {
-	for (let index = routeMatches.length - 1; index >= 0; index -= 1) {
-		const match = routeMatches[index];
-
-		if (!match || typeof match.context !== "object" || match.context === null) {
-			continue;
-		}
-
-		const context = match.context as { backLink?: unknown };
-		const { backLink } = context;
-
-		if (
-			typeof backLink === "object" &&
-			backLink !== null &&
-			typeof (backLink as { href?: unknown }).href === "string" &&
-			typeof (backLink as { label?: unknown }).label === "string"
-		) {
-			return backLink as RouteBackLink;
-		}
-	}
-
-	return null;
-};
+const isRouteBackLink = (value: unknown): value is RouteBackLink =>
+	typeof value === "object" &&
+	value !== null &&
+	typeof (value as { href?: unknown }).href === "string" &&
+	typeof (value as { label?: unknown }).label === "string";
 
 const selectBreadcrumbs = (
 	routeMatches: Array<{ context?: unknown }>
-): Array<RouteBreadcrumb> | null => {
+): Array<RouteBackLink> => {
 	for (let index = routeMatches.length - 1; index >= 0; index -= 1) {
 		const match = routeMatches[index];
 
@@ -71,22 +48,25 @@ const selectBreadcrumbs = (
 			continue;
 		}
 
-		const { breadcrumbs } = match.context as { breadcrumbs?: unknown };
+		const context = match.context as {
+			backLink?: unknown;
+			breadcrumbs?: unknown;
+		};
+
 		if (
-			Array.isArray(breadcrumbs) &&
-			breadcrumbs.every(
-				(item): item is RouteBreadcrumb =>
-					typeof item === "object" &&
-					item !== null &&
-					typeof (item as RouteBreadcrumb).href === "string" &&
-					typeof (item as RouteBreadcrumb).label === "string"
-			)
+			Array.isArray(context.breadcrumbs) &&
+			context.breadcrumbs.length > 0 &&
+			context.breadcrumbs.every(isRouteBackLink)
 		) {
-			return breadcrumbs;
+			return context.breadcrumbs;
+		}
+
+		if (isRouteBackLink(context.backLink)) {
+			return [context.backLink];
 		}
 	}
 
-	return null;
+	return [];
 };
 
 const Header = (): FunctionComponent => {
@@ -95,9 +75,6 @@ const Header = (): FunctionComponent => {
 	const { isAuthenticated, isLoading } = useSession();
 	const pathname = useRouterState({
 		select: (state) => state.location.pathname,
-	});
-	const backLink = useRouterState({
-		select: (state) => selectBackLink(state.matches),
 	});
 	const breadcrumbs = useRouterState({
 		select: (state) => selectBreadcrumbs(state.matches),
@@ -148,20 +125,18 @@ const Header = (): FunctionComponent => {
 				slot="toggle"
 				onClick={handleLangToggle}
 			/>
-			{breadcrumbs ?? backLink ? (
+			{breadcrumbs.length > 0 ? (
 				<Breadcrumbs
 					slot="breadcrumb"
-					items={
-						breadcrumbs ?? [
-							{
-								href: backLink?.href ?? "/",
-								label:
-									backLink?.showBackLabel === false
-										? (backLink?.label ?? "")
-										: `← ${t("nav.backTo")} ${backLink?.label ?? ""}`,
-							},
-						]
-					}
+					items={[
+						...breadcrumbs.map((breadcrumb) => ({
+							href: breadcrumb.href,
+							label:
+								breadcrumb.showBackLabel === false
+									? breadcrumb.label
+									: `← ${t("nav.backTo")} ${breadcrumb.label}`,
+						})),
+					]}
 				/>
 			) : null}
 			<GcdsTopNav alignment="start" label={t("nav.label")} slot="menu">

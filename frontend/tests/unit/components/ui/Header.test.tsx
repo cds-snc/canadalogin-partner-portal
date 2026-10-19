@@ -11,7 +11,11 @@ let routeContext: {
 		label: string;
 		showBackLabel?: boolean;
 	};
-	breadcrumbs?: Array<{ href: string; label: string }>;
+	breadcrumbs?: Array<{
+		href: string;
+		label: string;
+		showBackLabel?: boolean;
+	}>;
 } = {
 	backLink: {
 		href: "/applications",
@@ -299,14 +303,20 @@ describe("Header", () => {
 	it("renders the application environment breadcrumb chain", () => {
 		routeContext = {
 			breadcrumbs: [
-				{ href: "/applications", label: "Applications" },
+				{
+					href: "/applications",
+					label: "Applications",
+					showBackLabel: false,
+				},
 				{
 					href: "/applications/application-uuid-1/environments",
 					label: "Environments",
+					showBackLabel: false,
 				},
 				{
 					href: "/applications/application-uuid-1/environments/environment-uuid-1",
 					label: "TEST-portal",
+					showBackLabel: false,
 				},
 			],
 		};

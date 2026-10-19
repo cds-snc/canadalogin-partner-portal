@@ -3,10 +3,16 @@ import { fireEvent, render, screen } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 import { EnvironmentManagementPage } from "@/features/application-environments/pages/EnvironmentManagementPage";
 
-const { mockedNavigate, mockedUseApplicationEnvironment, mockedUseNavigate } =
+const {
+	mockedLanguage,
+	mockedNavigate,
+	mockedUseApplicationEnvironment,
+	mockedUseNavigate,
+} =
 	vi.hoisted(() => {
 		const mockedNavigate = vi.fn();
 		return {
+			mockedLanguage: { value: "en" },
 			mockedNavigate,
 			mockedUseApplicationEnvironment: vi.fn(),
 			mockedUseNavigate: vi.fn(() => mockedNavigate),
@@ -23,7 +29,10 @@ vi.mock("@tanstack/react-router", () => ({
 
 vi.mock("react-i18next", () => ({
 	useTranslation: () => ({
-		i18n: { resolvedLanguage: "en" },
+		i18n: {
+			language: mockedLanguage.value,
+			resolvedLanguage: mockedLanguage.value,
+		},
 		t: (key: string, options?: { field?: string }): string => {
 			if (key === "applicationEnvironmentManagement.changeAccessible") {
 				return `Change ${options?.field ?? "field"}`;
@@ -107,6 +116,8 @@ vi.mock("react-i18next", () => ({
 				"applicationEnvironmentManagement.fields.redirectUris": "Redirect URLs",
 				"applicationEnvironmentManagement.fields.postLogoutRedirectUris":
 					"Post logout redirect URLs",
+				"applicationEnvironmentManagement.fields.created": "Created",
+				"applicationEnvironmentManagement.fields.lastModified": "Last modified",
 				"applicationEnvironmentManagement.configurationTab": "Configuration",
 				"applicationEnvironmentManagement.credentialsTab": "Credentials",
 				"applicationEnvironmentManagement.inactive": "Inactive",
@@ -121,6 +132,7 @@ vi.mock("react-i18next", () => ({
 					"Encryption and decryption",
 				"applicationEnvironmentManagement.sections.verificationSigning":
 					"Verification and signing",
+				"applicationEnvironments.switchApplication": "Switch application",
 				"applicationEnvironmentManagement.summary":
 					"Review the configuration for this environment.",
 				"applicationEnvironmentManagement.tabsLabel": "Environment views",
@@ -157,6 +169,7 @@ vi.mock("@/components/ui", () => ({
 		const HeadingTag = tag;
 		return <HeadingTag>{children}</HeadingTag>;
 	},
+	Icon: ({ name }: { name: string }): ReactElement => <span>{name}</span>,
 	Link: ({
 		ariaLabel,
 		children,
@@ -245,6 +258,23 @@ describe("EnvironmentManagementPage", () => {
 		uuid: "environment-uuid-1",
 	};
 
+	it("uses the French hour marker for French timestamps", () => {
+		mockedLanguage.value = "fr";
+		try {
+			mockedUseApplicationEnvironment.mockReturnValue({
+				data: environment,
+				error: null,
+				isLoading: false,
+			});
+
+			render(<EnvironmentManagementPage />);
+
+			expect(screen.getAllByText(/\d{1,2} h \d{2}/)).toHaveLength(2);
+		} finally {
+			mockedLanguage.value = "en";
+		}
+	});
+
 	it("renders inactive values and accessible change links without a production action for TEST", () => {
 		mockedUseApplicationEnvironment.mockReturnValue({
 			data: environment,
@@ -255,6 +285,11 @@ describe("EnvironmentManagementPage", () => {
 		render(<EnvironmentManagementPage />);
 
 		expect(screen.getAllByText("Inactive").length).toBeGreaterThan(0);
+		expect(
+			screen
+				.getByRole("link", { name: "Switch application" })
+				.getAttribute("href")
+		).toBe("/applications");
 		expect(screen.getByText("https://example.com/en")).toBeTruthy();
 		expect(screen.getByText("https://example.com/fr")).toBeTruthy();
 		expect(

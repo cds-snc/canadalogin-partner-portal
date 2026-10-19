@@ -1,7 +1,7 @@
 import { useTranslation } from "react-i18next";
 import type { FunctionComponent } from "@/common/types";
 import { Button, Container, Heading, Link, Text } from "@/components/ui";
-import { buildApiUrl } from "@/fetch/base-url";
+import { logoutAndRedirect } from "@/fetch/auth";
 import { useAuthStore } from "@/store";
 
 export const AccountNotFoundPage = (): FunctionComponent => {
@@ -10,7 +10,7 @@ export const AccountNotFoundPage = (): FunctionComponent => {
 
 	const onSignOutClick = (): void => {
 		reset();
-		window.location.href = buildApiUrl("/api/v1/logout");
+		void logoutAndRedirect("manual");
 	};
 
 	return (

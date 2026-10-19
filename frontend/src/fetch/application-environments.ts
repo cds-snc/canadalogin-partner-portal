@@ -7,6 +7,7 @@ export type ApplicationEnvironmentApplicationRead = {
 };
 
 export type ApplicationEnvironmentRead = {
+	clientId: string | null;
 	config?: Partial<ApplicationEnvironmentCreate> | null;
 	createdAt: string;
 	partnerLabel: string;

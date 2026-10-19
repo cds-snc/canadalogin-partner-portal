@@ -15,6 +15,13 @@ export const getPostLoginPath = (): string =>
 
 export { sanitizeAppPath } from "./login-search";
 
+const redirectToOidcLogin = (language?: string): never => {
+	throw redirect({
+		href: getOidcLoginUrl(language),
+		replace: true,
+	}) as unknown as Error;
+};
+
 export const requireAuthenticatedUser = async (
 	redirectTo: string
 ): Promise<UserRead> => {
@@ -27,8 +34,7 @@ export const requireAuthenticatedUser = async (
 	}
 
 	if (!currentUser) {
-		window.location.assign(getOidcLoginUrl());
-		throw new Error("Redirecting to OIDC login");
+		return redirectToOidcLogin();
 	}
 
 	// Enforce terms acceptance before allowing access to any authenticated page.
@@ -95,9 +101,7 @@ export const completeLoginRedirect = async (
 	const targetPath = sanitizeAppPath(redirectTo, getPostLoginPath());
 
 	if (!currentUser) {
-		const { language } = appPreferencesStore.getState();
-		window.location.assign(getOidcLoginUrl(language));
-		throw new Error("Redirecting to OIDC login");
+		return redirectToOidcLogin(appPreferencesStore.getState().language);
 	}
 
 	if (uiLocales) {

@@ -732,5 +732,36 @@ class ApplicationEnvironmentRepository:
             environment_uuid=environment_uuid,
         )
 
+    async def get_client_secret_context(
+        self,
+        db: AsyncSession,
+        application_uuid: uuid_pkg.UUID,
+        environment_uuid: uuid_pkg.UUID,
+    ) -> dict[str, Any] | None:
+        statement = (
+            select(
+                ApplicationConfiguration.uuid,
+                ApplicationConfiguration.partner_label,
+                ApplicationConfiguration.ibm_application_id,
+                ApplicationConfiguration.ibm_client_id,
+                Tenant.code.label("tenant_code"),
+            )
+            .select_from(Application)
+            .join(
+                ApplicationConfiguration,
+                ApplicationConfiguration.application_id == Application.id,
+            )
+            .join(Tenant, Tenant.id == ApplicationConfiguration.tenant_id)
+            .where(
+                Application.uuid == application_uuid,
+                Application.is_deleted.is_(False),
+                ApplicationConfiguration.uuid == environment_uuid,
+                ApplicationConfiguration.is_deleted.is_(False),
+                Tenant.is_deleted.is_(False),
+            )
+        )
+        environment = (await db.execute(statement)).mappings().one_or_none()
+        return dict(environment) if environment is not None else None
+
 
 application_environment_repository = ApplicationEnvironmentRepository()

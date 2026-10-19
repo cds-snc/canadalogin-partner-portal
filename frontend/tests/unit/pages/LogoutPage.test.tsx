@@ -22,12 +22,13 @@ vi.mock("@gcds-core/components-react", () => ({
 	GcdsText: ({ children }: { children?: ReactNode }): ReactElement => <p>{children}</p>,
 }));
 
-const { resetMock } = vi.hoisted(() => ({
+	const { logoutAndRedirectMock, resetMock } = vi.hoisted(() => ({
+	logoutAndRedirectMock: vi.fn((): Promise<void> => Promise.resolve()),
 	resetMock: vi.fn(),
 }));
 
-vi.mock("@/fetch/base-url", () => ({
-	buildApiUrl: (path: string): string => `http://localhost:8000${path}`,
+vi.mock("@/fetch/auth", () => ({
+	logoutAndRedirect: logoutAndRedirectMock,
 }));
 
 vi.mock("@/store", () => ({
@@ -39,6 +40,7 @@ describe("LogoutPage", (): void => {
 	let locationHref = "";
 
 	beforeEach(() => {
+		logoutAndRedirectMock.mockReset();
 		resetMock.mockReset();
 		locationHref = "";
 
@@ -79,25 +81,21 @@ describe("LogoutPage", (): void => {
 		});
 	});
 
-	it("navigates to backend logout with manual state after 2 seconds", async (): Promise<void> => {
+	it("posts manual logout after 2 seconds", async (): Promise<void> => {
 		vi.useFakeTimers();
 		render(<LogoutPage />);
 
 		await vi.advanceTimersByTimeAsync(2000);
 
-		expect(locationHref).toBe(
-			"http://localhost:8000/api/v1/logout?reason=manual"
-		);
+		expect(logoutAndRedirectMock).toHaveBeenCalledWith("manual");
 	});
 
-	it("navigates to backend logout with expired session state", async (): Promise<void> => {
+	it("posts expired-session logout after 2 seconds", async (): Promise<void> => {
 		vi.useFakeTimers();
 		render(<LogoutPage reason="session-expired" />);
 
 		await vi.advanceTimersByTimeAsync(2000);
 
-		expect(locationHref).toBe(
-			"http://localhost:8000/api/v1/logout?reason=session-expired"
-		);
+		expect(logoutAndRedirectMock).toHaveBeenCalledWith("session-expired");
 	});
 });

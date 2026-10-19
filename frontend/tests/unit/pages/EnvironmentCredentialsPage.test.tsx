@@ -1,13 +1,38 @@
-import type { PropsWithChildren, ReactElement, ReactNode } from "react";
-import { render, screen } from "@testing-library/react";
-import { describe, expect, it, vi } from "vitest";
+import {
+	createElement,
+	type PropsWithChildren,
+	type ReactElement,
+	type ReactNode,
+} from "react";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { EnvironmentCredentialsPage } from "@/features/application-environments/pages/EnvironmentCredentialsPage";
 
-const { mockedUseApplicationEnvironment } = vi.hoisted(() => ({
+const {
+	mockedDeleteApplicationEnvironmentRotatedClientSecret,
+	mockedGetApplicationEnvironmentClientCredentials,
+	mockedGetApplicationEnvironmentClientSecretPermissions,
+	mockedGetApplicationEnvironmentRotatedClientSecrets,
+	mockedRotateApplicationEnvironmentClientSecret,
+	mockedClipboardWriteText,
+	mockedNavigate,
+	mockedToastSuccess,
+	mockedUseApplicationEnvironment,
+} = vi.hoisted(() => ({
+	mockedDeleteApplicationEnvironmentRotatedClientSecret: vi.fn(),
+	mockedGetApplicationEnvironmentClientCredentials: vi.fn(),
+	mockedGetApplicationEnvironmentClientSecretPermissions: vi.fn(),
+	mockedGetApplicationEnvironmentRotatedClientSecrets: vi.fn(),
+	mockedRotateApplicationEnvironmentClientSecret: vi.fn(),
+	mockedClipboardWriteText: vi.fn(),
+	mockedNavigate: vi.fn(),
+	mockedToastSuccess: vi.fn(),
 	mockedUseApplicationEnvironment: vi.fn(),
 }));
 
 vi.mock("@tanstack/react-router", () => ({
+	useNavigate: () => mockedNavigate,
 	useParams: () => ({
 		applicationUuid: "application-uuid-1",
 		environmentUuid: "environment-uuid-1",
@@ -16,16 +41,80 @@ vi.mock("@tanstack/react-router", () => ({
 
 vi.mock("react-i18next", () => ({
 	useTranslation: () => ({
+		i18n: { resolvedLanguage: "en" },
 		t: (key: string): string => {
 			const translations: Record<string, string> = {
 				"applicationEnvironmentManagement.configurationTab": "Configuration",
-				"applicationEnvironmentManagement.credentialsComingSoonBody":
-					"Credentials are coming soon.",
-				"applicationEnvironmentManagement.credentialsComingSoonTitle":
-					"Credentials coming soon",
+				"applicationEnvironmentManagement.copyAction": "Copy",
+				"applicationEnvironmentManagement.copySecretAction": "Copy secret",
+				"applicationEnvironmentManagement.productionSecretAccessDenied":
+					"You don't have permission to access the production secret.",
+				"applicationEnvironmentManagement.productionSecretRequestAccess":
+					"Request access to production secrets",
+				"applicationEnvironmentManagement.productionRotateSecretHelpPrefix":
+					"Production secrets cannot be rotated directly in the Partner Portal. To rotate this secret, contact the",
+				"applicationEnvironmentManagement.productionExpiringSecretsHelpPrefix":
+					"These secrets are still active and will stop working on the date and time shown. To expire a secret early,",
+				"applicationEnvironmentManagement.productionSupportLink":
+					"CanadaLogin support team",
+				"applicationEnvironmentManagement.publicClientCredentialsBody":
+					"Public clients do not have a client secret. They use PKCE to protect the sign-in flow.",
+				"applicationEnvironmentManagement.publicClientCredentialsTitle":
+					"Public client",
 				"applicationEnvironmentManagement.credentialsTab": "Credentials",
 				"applicationEnvironmentManagement.credentialsTitle":
 					"Environment credentials",
+				"applicationEnvironmentManagement.clientIdCopiedSuccess":
+					"Client ID copied",
+				"applicationEnvironmentManagement.currentCredentialsTitle":
+					"Current credentials",
+				"applicationEnvironmentManagement.authenticationMethod":
+					"Authentication method",
+				"applicationEnvironmentManagement.clientIdLabel": "Client ID",
+				"applicationEnvironmentManagement.clientIdHelp":
+					"Used to identify this environment when connecting to CanadaLogin.",
+				"applicationEnvironmentManagement.jwksUriLabel": "JWKS URI",
+				"applicationEnvironmentManagement.jwksUriHelp":
+					"The location CanadaLogin uses to retrieve your application's public keys.",
+				"applicationEnvironmentManagement.jwksUriCopiedSuccess":
+					"JWKS URI copied to clipboard.",
+				"applicationEnvironmentManagement.change": "Change",
+				"applicationEnvironmentManagement.clientSecretCopiedSuccess":
+					"Secret copied",
+				"applicationEnvironmentManagement.expireConfirmTitle":
+					"Expire secret now?",
+				"applicationEnvironmentManagement.expireNowAction": "Expire now",
+				"applicationEnvironmentManagement.expireSecretAction": "Expire secret",
+				"applicationEnvironmentManagement.expireSuccessBody":
+					"The secret is no longer active.",
+				"applicationEnvironmentManagement.expireSuccessTitle":
+					"Secret expired successfully",
+				"applicationEnvironmentManagement.expireFailureBody":
+					"The secret is still active. Try again. If the problem continues, contact support.",
+				"applicationEnvironmentManagement.expireFailureTitle":
+					"Secret could not be expired",
+				"applicationEnvironmentManagement.retrieveFailureBody":
+					"Try again. If the problem continues, contact support.",
+				"applicationEnvironmentManagement.retrieveFailureTitle":
+					"Secret could not be retrieved",
+				"applicationEnvironmentManagement.revealAction": "Reveal",
+				"applicationEnvironmentManagement.rotateConfirmTitle": "Rotate secret?",
+				"applicationEnvironmentManagement.rotateFailureBody":
+					"Try again. If the problem continues, contact support.",
+				"applicationEnvironmentManagement.rotateFailureTitle":
+					"Secret could not be rotated",
+				"applicationEnvironmentManagement.rotateSecretAction": "Rotate",
+				"applicationEnvironmentManagement.rotateSecretTitle": "Rotate secret",
+				"applicationEnvironmentManagement.rotateSuccessTitle":
+					"Secret rotated successfully",
+				"applicationEnvironmentManagement.rotationReasonLabel":
+					"Reason for rotation",
+				"applicationEnvironmentManagement.rotationReasonRequired":
+					"Reason for rotation is a required field.",
+				"applicationEnvironmentManagement.rotateConfirmBody":
+					"Confirm secret rotation.",
+				"applicationEnvironmentManagement.expireConfirmBody":
+					"Confirm secret expiry.",
 				"applicationEnvironmentManagement.tabsLabel": "Environment views",
 			};
 			return translations[key] ?? key;
@@ -37,22 +126,167 @@ vi.mock("@/fetch", () => ({
 	getRequestErrorNotice: () => null,
 }));
 
+vi.mock("@/components/ui/Toast", () => ({
+	useToast: () => ({ success: mockedToastSuccess }),
+}));
+
+vi.mock("@/fetch/application-environment-client-secrets", () => ({
+	deleteApplicationEnvironmentRotatedClientSecret:
+		mockedDeleteApplicationEnvironmentRotatedClientSecret,
+	getApplicationEnvironmentClientCredentials:
+		mockedGetApplicationEnvironmentClientCredentials,
+	getApplicationEnvironmentClientSecretPermissions:
+		mockedGetApplicationEnvironmentClientSecretPermissions,
+	getApplicationEnvironmentRotatedClientSecrets:
+		mockedGetApplicationEnvironmentRotatedClientSecrets,
+	rotateApplicationEnvironmentClientSecret:
+		mockedRotateApplicationEnvironmentClientSecret,
+}));
+
 vi.mock(
 	"@/features/application-environments/hooks/use-application-environment",
 	() => ({ useApplicationEnvironment: mockedUseApplicationEnvironment })
 );
 
 vi.mock("@/components/ui", () => ({
-	Grid: ({ children }: PropsWithChildren): ReactElement => <div>{children}</div>,
+	Alert: ({
+		alertRole,
+		children,
+		container,
+		heading,
+		onDismiss,
+	}: PropsWithChildren<{
+		alertRole: "danger" | "info" | "success" | "warning";
+		container?: "full" | "xl" | "lg" | "md" | "sm" | "xs";
+		heading: string;
+		onDismiss?: () => void;
+	}>): ReactElement => (
+		<section data-alert-container={container} data-alert-role={alertRole}>
+			<h3>{heading}</h3>
+			{children}
+			<button type="button" onClick={onDismiss}>
+				Dismiss
+			</button>
+		</section>
+	),
+	ErrorSummary: ({
+		errorLinks,
+	}: {
+		errorLinks?: Record<string, string>;
+	}): ReactElement | null =>
+		errorLinks && Object.keys(errorLinks).length > 0 ? (
+			<section aria-label="There was a problem" data-error-summary>
+				<h2>There was a problem</h2>
+				{Object.entries(errorLinks).map(([href, message]) => (
+					<a href={href} key={href}>
+						{message}
+					</a>
+				))}
+			</section>
+		) : null,
+	Button: ({
+		children,
+		disabled,
+		onGcdsClick,
+		size,
+		type = "button",
+	}: PropsWithChildren<{
+		disabled?: boolean;
+		onGcdsClick?: (event: Event) => void;
+		size?: "regular" | "small";
+		type?: "button" | "submit";
+	}>): ReactElement => (
+		<button
+			data-size={size}
+			disabled={disabled}
+			type={type}
+			onClick={() => onGcdsClick?.(new Event("click"))}
+		>
+			{children}
+		</button>
+	),
+	Grid: ({ children, className, columns, tag = "div" }: PropsWithChildren<{
+		className?: string;
+		columns?: string;
+		tag?: string;
+	}>): ReactElement =>
+		createElement(
+			tag,
+			{ className, "data-grid-columns": columns, "data-grid-tag": tag },
+			children
+		),
 	Heading: ({
 		children,
 		tag,
-	}: PropsWithChildren<{ tag: "h1" | "h2" }>): ReactElement => {
+	}: PropsWithChildren<{ tag: "h1" | "h2" | "h3" }>): ReactElement => {
 		const HeadingTag = tag;
 		return <HeadingTag>{children}</HeadingTag>;
 	},
-	Notice: ({ children }: PropsWithChildren): ReactElement => (
-		<section>{children}</section>
+	Input: ({
+		errorMessage,
+		id,
+		inputId,
+		label,
+		name,
+		onInput,
+		value,
+	}: {
+		errorMessage?: string;
+		id?: string;
+		inputId: string;
+		label: string;
+		name: string;
+		onInput?: React.FormEventHandler<Element>;
+		value?: string;
+	}): ReactElement => (
+		<label data-error-message={errorMessage} id={id}>
+			{label}
+			<input
+				id={inputId}
+				name={name}
+				value={value}
+				onInput={(event) => onInput?.(event)}
+			/>
+		</label>
+	),
+	Link: ({
+		children,
+		href,
+	}: PropsWithChildren<{ href: string }>): ReactElement => (
+		<a href={href}>{children}</a>
+	),
+	Modal: ({
+		children,
+		description,
+		footer,
+		isOpen,
+		title,
+	}: PropsWithChildren<{
+		description?: string;
+		footer?: ReactNode;
+		isOpen: boolean;
+		title: string;
+	}>): ReactElement | null =>
+		isOpen ? (
+			<div aria-label={title} role="dialog">
+				<h2>{title}</h2>
+				{description ? <p>{description}</p> : null}
+				{children}
+				{footer}
+			</div>
+		) : null,
+	Notice: ({
+		children,
+		noticeRole,
+		noticeTitle,
+	}: PropsWithChildren<{
+		noticeRole: "danger" | "info" | "success" | "warning";
+		noticeTitle: string;
+	}>): ReactElement => (
+		<section data-notice-role={noticeRole}>
+			<h2>{noticeTitle}</h2>
+			{children}
+		</section>
 	),
 	Tabs: ({
 		ariaLabel,
@@ -80,7 +314,58 @@ vi.mock("@/components/ui", () => ({
 	Text: ({ children }: PropsWithChildren): ReactElement => <p>{children}</p>,
 }));
 
+const renderPage = (): void => {
+	const queryClient = new QueryClient({
+		defaultOptions: { queries: { retry: false } },
+	});
+	render(
+		<QueryClientProvider client={queryClient}>
+			<EnvironmentCredentialsPage />
+		</QueryClientProvider>
+	);
+};
+
+const eligibleEnvironment = {
+	clientId: "environment-client-id",
+	config: { clientAuthMethod: "client_secret_basic" },
+	partnerLabel: "Test environment",
+	tenantCode: "test",
+};
+
 describe("EnvironmentCredentialsPage", () => {
+	afterEach(() => {
+		vi.restoreAllMocks();
+		vi.unstubAllGlobals();
+	});
+
+	beforeEach(() => {
+		vi.clearAllMocks();
+		vi.stubGlobal("navigator", {
+			clipboard: { writeText: mockedClipboardWriteText },
+		});
+		mockedClipboardWriteText.mockResolvedValue(undefined);
+		mockedGetApplicationEnvironmentClientCredentials.mockResolvedValue({
+			clientId: "environment-client-id",
+			clientSecret: "environment-client-secret",
+			clientSecretId: "secret-id",
+		});
+		mockedGetApplicationEnvironmentClientSecretPermissions.mockResolvedValue({
+			canRevealSecret: true,
+			canViewRotatedSecrets: true,
+			canRotateSecret: true,
+			canExpireRotatedSecrets: true,
+		});
+		mockedGetApplicationEnvironmentRotatedClientSecrets.mockResolvedValue([]);
+		mockedDeleteApplicationEnvironmentRotatedClientSecret.mockResolvedValue({
+			message: "Rotated client secret deleted",
+		});
+		mockedRotateApplicationEnvironmentClientSecret.mockResolvedValue({
+			clientId: "environment-client-id",
+			clientSecret: "replacement-secret",
+			clientSecretId: "replacement-secret-id",
+		});
+	});
+
 	it("renders shared tabs with Credentials active", () => {
 		mockedUseApplicationEnvironment.mockReturnValue({
 			data: { partnerLabel: "Test environment" },
@@ -88,7 +373,7 @@ describe("EnvironmentCredentialsPage", () => {
 			isLoading: false,
 		});
 
-		render(<EnvironmentCredentialsPage />);
+		renderPage();
 
 		expect(
 			screen.getByRole("navigation", { name: "Environment views" })
@@ -99,11 +384,617 @@ describe("EnvironmentCredentialsPage", () => {
 				.getAttribute("aria-current")
 		).toBe("page");
 		expect(
+			screen.getByRole("link", { name: "Configuration" }).getAttribute("href")
+		).toBe("/applications/application-uuid-1/environments/environment-uuid-1");
+	});
+
+	it("loads rotated secrets but not the active secret on page entry", async () => {
+		mockedUseApplicationEnvironment.mockReturnValue({
+			data: {
+				...eligibleEnvironment,
+				config: { clientAuthMethod: "none" },
+			},
+			error: null,
+			isLoading: false,
+		});
+
+		renderPage();
+
+		expect(await screen.findByText("environment-client-id")).toBeTruthy();
+		await waitFor(() => {
+			expect(
+				mockedGetApplicationEnvironmentRotatedClientSecrets
+			).toHaveBeenCalledWith("application-uuid-1", "environment-uuid-1");
+		});
+		expect(
+			mockedGetApplicationEnvironmentClientCredentials
+		).not.toHaveBeenCalled();
+	});
+
+	it("shows a public-client notice without secret-management controls", async () => {
+		mockedUseApplicationEnvironment.mockReturnValue({
+			data: {
+				...eligibleEnvironment,
+				config: { clientType: "public", pkceSupported: true },
+			},
+			error: null,
+			isLoading: false,
+		});
+
+		renderPage();
+
+		expect(
+			await screen.findByRole("heading", { name: "Public client" })
+		).toBeTruthy();
+		expect(
+			screen.getByText(
+				"Public clients do not have a client secret. They use PKCE to protect the sign-in flow."
+			)
+		).toBeTruthy();
+		expect(screen.queryByRole("button", { name: "Reveal" })).toBeNull();
+		expect(
+			mockedGetApplicationEnvironmentRotatedClientSecrets
+		).not.toHaveBeenCalled();
+		expect(
+			mockedGetApplicationEnvironmentClientCredentials
+		).not.toHaveBeenCalled();
+	});
+
+	it("does not load production secrets when the user has no production role", async () => {
+		mockedUseApplicationEnvironment.mockReturnValue({
+			data: { ...eligibleEnvironment, tenantCode: "production" },
+			error: null,
+			isLoading: false,
+		});
+		mockedGetApplicationEnvironmentClientSecretPermissions.mockResolvedValue({
+			canRevealSecret: false,
+			canViewRotatedSecrets: false,
+			canRotateSecret: false,
+			canExpireRotatedSecrets: false,
+		});
+
+		renderPage();
+
+		await waitFor(() => {
+			expect(
+				mockedGetApplicationEnvironmentClientSecretPermissions
+			).toHaveBeenCalledWith("application-uuid-1", "environment-uuid-1");
+		});
+		expect(screen.queryByRole("button", { name: "Reveal" })).toBeNull();
+		expect(
+			mockedGetApplicationEnvironmentRotatedClientSecrets
+		).not.toHaveBeenCalled();
+		expect(
+			mockedGetApplicationEnvironmentClientCredentials
+		).not.toHaveBeenCalled();
+	});
+
+	it("allows Production Administrators to reveal secrets but not rotate or expire", async () => {
+		mockedUseApplicationEnvironment.mockReturnValue({
+			data: { ...eligibleEnvironment, tenantCode: "production" },
+			error: null,
+			isLoading: false,
+		});
+		mockedGetApplicationEnvironmentClientSecretPermissions.mockResolvedValue({
+			canRevealSecret: true,
+			canViewRotatedSecrets: true,
+			canRotateSecret: false,
+			canExpireRotatedSecrets: false,
+		});
+		mockedGetApplicationEnvironmentRotatedClientSecrets.mockResolvedValue([
+			{
+				description: "annual rotation",
+				expiredAt: 1_800_000_000,
+				rotatedAt: 1_799_000_000,
+				secretId: "rotated-secret-id",
+				value: "rotated-secret-value",
+			},
+		]);
+
+		renderPage();
+
+		expect(
+			(await screen.findByRole("button", { name: "Reveal" })).hasAttribute(
+				"disabled"
+			)
+		).toBe(false);
+		expect(
+			screen.getByRole("button", { name: "Copy secret" }).hasAttribute("disabled")
+		).toBe(false);
+		await screen.findByRole("listitem");
+		expect(
+			await screen.findByRole("heading", { name: "Rotate secret" })
+		).toBeTruthy();
+		expect(
 			screen
-				.getByRole("link", { name: "Configuration" })
+				.getAllByRole("link", { name: "CanadaLogin support team" })
+				.every((link) => link.getAttribute("href") === "/support")
+		).toBe(true);
+		expect(screen.queryByLabelText("Reason for rotation")).toBeNull();
+		expect(screen.queryByRole("button", { name: "Rotate" })).toBeNull();
+		expect(screen.queryByRole("button", { name: "Expire now" })).toBeNull();
+	});
+
+	it("denies active-secret controls to Production Developers", async () => {
+		mockedUseApplicationEnvironment.mockReturnValue({
+			data: { ...eligibleEnvironment, tenantCode: "production" },
+			error: null,
+			isLoading: false,
+		});
+		mockedGetApplicationEnvironmentClientSecretPermissions.mockResolvedValue({
+			canRevealSecret: false,
+			canViewRotatedSecrets: true,
+			canRotateSecret: false,
+			canExpireRotatedSecrets: false,
+		});
+		mockedGetApplicationEnvironmentRotatedClientSecrets.mockResolvedValue([
+			{
+				description: "incident #21213",
+				expiredAt: 1_800_000_000,
+				rotatedAt: 1_799_000_000,
+				secretId: "rotated-secret-id",
+				value: "rotated-secret-value",
+			},
+		]);
+
+		renderPage();
+
+		expect(
+			await screen.findByText(
+				"You don't have permission to access the production secret."
+			)
+		).toBeTruthy();
+		expect(
+			screen.getByRole("link", { name: "Request access to production secrets" })
 				.getAttribute("href")
-		).toBe(
-			"/applications/application-uuid-1/environments/environment-uuid-1"
+		).toBe("/support");
+		expect(screen.queryByRole("button", { name: "Reveal" })).toBeNull();
+		expect(screen.queryByRole("button", { name: "Copy secret" })).toBeNull();
+		await screen.findByRole("listitem");
+		expect(
+			await screen.findByRole("heading", { name: "Rotate secret" })
+		).toBeTruthy();
+		expect(
+			screen
+				.getAllByRole("link", { name: "CanadaLogin support team" })
+				.every((link) => link.getAttribute("href") === "/support")
+		).toBe(true);
+		expect(screen.queryByLabelText("Reason for rotation")).toBeNull();
+		expect(screen.queryByRole("button", { name: "Rotate" })).toBeNull();
+		expect(screen.queryByRole("button", { name: "Expire now" })).toBeNull();
+	});
+
+	it("shows private-key credentials for production without loading secrets", async () => {
+		const jwksUri = "https://example.gov/.well-known/jwks.json";
+		mockedUseApplicationEnvironment.mockReturnValue({
+			data: {
+				...eligibleEnvironment,
+				config: { clientAuthMethod: "private_key_jwt", jwksUri },
+				tenantCode: "production",
+			},
+			error: null,
+			isLoading: false,
+		});
+
+		renderPage();
+
+		expect(
+			await screen.findByRole("heading", { name: "Current credentials" })
+		).toBeTruthy();
+		expect(screen.getByText("private_key_jwt")).toBeTruthy();
+		expect(screen.getByText("environment-client-id")).toBeTruthy();
+		expect(screen.getByText(jwksUri)).toBeTruthy();
+		expect(screen.queryByRole("button", { name: "Change" })).toBeNull();
+		expect(
+			screen
+				.getAllByRole("button", { name: "Copy" })[1]
+				?.closest(".environment-credentials__actions")
+		).toBeTruthy();
+		expect(screen.getAllByRole("button", { name: "Copy" })).toHaveLength(2);
+		const copyButtons = screen.getAllByRole("button", { name: "Copy" });
+		expect(copyButtons[1]?.getAttribute("data-size")).toBe("small");
+		fireEvent.click(copyButtons[0]!);
+		fireEvent.click(copyButtons[1]!);
+		await waitFor(() => {
+			expect(mockedClipboardWriteText.mock.calls.map(([value]) => value)).toEqual([
+				"environment-client-id",
+				jwksUri,
+			]);
+		});
+		await waitFor(() => {
+			expect(mockedToastSuccess).toHaveBeenCalledWith("Client ID copied");
+			expect(mockedToastSuccess).toHaveBeenCalledWith(
+				"JWKS URI copied to clipboard."
+			);
+		});
+		expect(
+			mockedGetApplicationEnvironmentRotatedClientSecrets
+		).not.toHaveBeenCalled();
+		expect(
+			mockedGetApplicationEnvironmentClientCredentials
+		).not.toHaveBeenCalled();
+	});
+
+	it("allows changing private-key credentials outside production", async () => {
+		mockedUseApplicationEnvironment.mockReturnValue({
+			data: {
+				...eligibleEnvironment,
+				config: {
+					clientAuthMethod: "private_key_jwt",
+					jwksUri: "https://example.gov/.well-known/jwks.json",
+				},
+			},
+		error: null,
+			isLoading: false,
+		});
+
+		renderPage();
+
+		fireEvent.click(await screen.findByRole("button", { name: "Change" }));
+		expect(mockedNavigate).toHaveBeenCalledWith({
+			to: "/applications/$applicationUuid/environments/$environmentUuid",
+			params: {
+				applicationUuid: "application-uuid-1",
+				environmentUuid: "environment-uuid-1",
+			},
+		});
+	});
+
+	it("disables JWKS copying when the configured URI is missing", async () => {
+		mockedUseApplicationEnvironment.mockReturnValue({
+			data: {
+				...eligibleEnvironment,
+				config: { clientAuthMethod: "private_key_jwt" },
+			},
+			error: null,
+			isLoading: false,
+		});
+
+		renderPage();
+
+		await screen.findByRole("heading", { name: "Current credentials" });
+		const copyButtons = screen.getAllByRole("button", { name: "Copy" });
+		expect(copyButtons).toHaveLength(2);
+		expect(copyButtons[1]?.hasAttribute("disabled")).toBe(true);
+	});
+
+	it("loads the active secret only after the user selects Reveal", async () => {
+		mockedUseApplicationEnvironment.mockReturnValue({
+			data: eligibleEnvironment,
+			error: null,
+			isLoading: false,
+		});
+
+		renderPage();
+
+		fireEvent.click(await screen.findByRole("button", { name: "Reveal" }));
+
+		expect(await screen.findByText("environment-client-secret")).toBeTruthy();
+		expect(
+			mockedGetApplicationEnvironmentClientCredentials
+		).toHaveBeenCalledWith("application-uuid-1", "environment-uuid-1");
+		expect(mockedToastSuccess).not.toHaveBeenCalled();
+	});
+
+	it("shows a linked error summary and inline message when the rotation reason is missing", async () => {
+		mockedUseApplicationEnvironment.mockReturnValue({
+			data: eligibleEnvironment,
+			error: null,
+			isLoading: false,
+		});
+
+		renderPage();
+		fireEvent.submit(
+			screen.getByLabelText("Reason for rotation").closest("form") as HTMLFormElement
 		);
+
+		expect(await screen.findByLabelText("There was a problem")).toBeTruthy();
+		expect(
+			screen.getByRole("link", {
+				name: "Reason for rotation is a required field.",
+			}).getAttribute("href")
+		).toBe("#environment-rotation-reason-control");
+		expect(
+			screen
+				.getByLabelText("Reason for rotation")
+				.closest("label")
+				?.getAttribute("data-error-message")
+		).toBe("Reason for rotation is a required field.");
+	});
+
+	it("shows an alert when retrieving the secret fails from Reveal", async () => {
+		mockedUseApplicationEnvironment.mockReturnValue({
+			data: eligibleEnvironment,
+			error: null,
+			isLoading: false,
+		});
+		mockedGetApplicationEnvironmentClientCredentials.mockRejectedValue(
+			new Error("request failed")
+		);
+
+		renderPage();
+		fireEvent.click(await screen.findByRole("button", { name: "Reveal" }));
+
+		const alert = await screen.findByText("Secret could not be retrieved");
+		expect(alert.closest("[data-alert-role]")?.getAttribute("data-alert-role"))
+			.toBe("danger");
+		expect(
+			alert
+				.closest("[data-alert-role]")
+				?.parentElement?.getAttribute("data-grid-columns")
+		).toBe("1fr 1fr");
+	});
+
+	it("shows an alert when retrieving the secret fails from Copy secret", async () => {
+		mockedUseApplicationEnvironment.mockReturnValue({
+			data: eligibleEnvironment,
+			error: null,
+			isLoading: false,
+		});
+		mockedGetApplicationEnvironmentClientCredentials.mockRejectedValue(
+			new Error("request failed")
+		);
+
+		renderPage();
+		fireEvent.click(await screen.findByRole("button", { name: "Copy secret" }));
+
+		const alert = await screen.findByText("Secret could not be retrieved");
+		expect(alert).toBeTruthy();
+		expect(
+			alert
+				.closest("[data-alert-role]")
+				?.parentElement?.getAttribute("data-grid-columns")
+		).toBe("1fr 1fr");
+	});
+
+	it("shows grey backgrounds for the three displayed credential values", async () => {
+		mockedUseApplicationEnvironment.mockReturnValue({
+			data: eligibleEnvironment,
+			error: null,
+			isLoading: false,
+		});
+
+		renderPage();
+
+		const authMethod = await screen.findByText("client_secret_basic");
+		const clientId = screen.getByText("environment-client-id");
+		const maskedSecret = screen.getByText("****************");
+		expect(authMethod.closest(".environment-credentials__value")).toBeTruthy();
+		expect(clientId.closest(".environment-credentials__value")).toBeTruthy();
+		expect(maskedSecret.closest(".environment-credentials__value")).toBeTruthy();
+	});
+
+	it("shows a success toast after copying the client ID", async () => {
+		mockedUseApplicationEnvironment.mockReturnValue({
+			data: eligibleEnvironment,
+			error: null,
+			isLoading: false,
+		});
+
+		renderPage();
+		fireEvent.click(await screen.findByRole("button", { name: "Copy" }));
+
+		await waitFor(() => {
+			expect(mockedClipboardWriteText).toHaveBeenCalledWith(
+				"environment-client-id"
+			);
+			expect(mockedToastSuccess).toHaveBeenCalledWith("Client ID copied");
+		});
+	});
+
+	it("shows a success toast after copying the client secret", async () => {
+		mockedUseApplicationEnvironment.mockReturnValue({
+			data: eligibleEnvironment,
+			error: null,
+			isLoading: false,
+		});
+
+		renderPage();
+		fireEvent.click(
+			await screen.findByRole("button", { name: "Copy secret" })
+		);
+
+		await waitFor(() => {
+			expect(mockedClipboardWriteText).toHaveBeenCalledWith(
+				"environment-client-secret"
+			);
+			expect(mockedToastSuccess).toHaveBeenCalledWith("Secret copied");
+		});
+	});
+
+	it("rotates with the required reason and a seven-day expiry", async () => {
+		const now = 1_800_000_000_000;
+		vi.spyOn(Date, "now").mockReturnValue(now);
+		mockedUseApplicationEnvironment.mockReturnValue({
+			data: eligibleEnvironment,
+			error: null,
+			isLoading: false,
+		});
+
+		renderPage();
+		const reasonInput = screen.getByLabelText("Reason for rotation");
+		fireEvent.input(reasonInput, { target: { value: "annual rotation" } });
+		fireEvent.submit(reasonInput.closest("form") as HTMLFormElement);
+
+		expect(
+			await screen.findByRole("dialog", { name: "Rotate secret?" })
+		).toBeTruthy();
+		fireEvent.click(screen.getAllByRole("button", { name: "Rotate" })[1]!);
+
+		await waitFor(() => {
+			expect(
+				mockedRotateApplicationEnvironmentClientSecret
+			).toHaveBeenCalledWith("application-uuid-1", "environment-uuid-1", {
+				description: "annual rotation",
+				rotatedSecretExpiredAt: now / 1000 + 7 * 24 * 60 * 60,
+			});
+		});
+		expect(await screen.findByText("Secret rotated successfully")).toBeTruthy();
+		expect(
+			screen
+				.getByText("Secret rotated successfully")
+				.closest("section")
+				?.getAttribute("data-alert-role")
+		).toBe("success");
+		const rotationAlert = screen
+			.getByText("Secret rotated successfully")
+			.closest("[data-alert-role]");
+		expect(rotationAlert?.getAttribute("data-alert-container")).toBe("full");
+		expect(
+			rotationAlert?.parentElement?.getAttribute("data-grid-columns")
+		).toBe("1fr 1fr");
+		const rotationSection = screen
+			.getByRole("heading", {
+				name: "Rotate secret",
+			})
+			.closest('[data-grid-tag="section"]');
+		expect(
+			rotationSection?.contains(
+				screen
+					.getByText("Secret rotated successfully")
+					.closest("[data-alert-role]")
+			)
+		).toBe(true);
+		expect(
+			mockedGetApplicationEnvironmentClientCredentials
+		).not.toHaveBeenCalled();
+	});
+
+	it("shows an alert when rotating the secret fails", async () => {
+		mockedUseApplicationEnvironment.mockReturnValue({
+			data: eligibleEnvironment,
+			error: null,
+			isLoading: false,
+		});
+		mockedRotateApplicationEnvironmentClientSecret.mockRejectedValue(
+			new Error("request failed")
+		);
+
+		renderPage();
+		const reasonInput = screen.getByLabelText("Reason for rotation");
+		fireEvent.input(reasonInput, { target: { value: "annual rotation" } });
+		fireEvent.submit(reasonInput.closest("form") as HTMLFormElement);
+		const rotationDialog = await screen.findByRole("dialog", {
+			name: "Rotate secret?",
+		});
+		fireEvent.click(within(rotationDialog).getByRole("button", { name: "Rotate" }));
+
+		const alert = await screen.findByRole("heading", {
+			name: "Secret could not be rotated",
+		});
+		expect(alert.closest("[data-alert-role]")?.getAttribute("data-alert-role"))
+			.toBe("danger");
+		expect(
+			alert
+				.closest("[data-alert-role]")
+				?.parentElement?.getAttribute("data-grid-columns")
+		).toBe("1fr 1fr");
+		expect(await screen.findByLabelText("There was a problem")).toBeTruthy();
+		expect(
+			screen.getByRole("link", { name: "Secret could not be rotated" })
+				.getAttribute("href")
+		).toBe("#environment-rotation-form");
+		expect(screen.queryByRole("dialog", { name: "Rotate secret?" })).toBeNull();
+	});
+
+	it("expires only the selected rotated secret after confirmation", async () => {
+		mockedUseApplicationEnvironment.mockReturnValue({
+			data: eligibleEnvironment,
+			error: null,
+			isLoading: false,
+		});
+		mockedGetApplicationEnvironmentRotatedClientSecrets.mockResolvedValue([
+			{
+				description: "incident #21213",
+				expiredAt: 1_800_000_000,
+				rotatedAt: 1_799_000_000,
+				secretId: "rotated-secret-id",
+				value: "rotated-secret-value",
+			},
+		]);
+
+		renderPage();
+		const secretRow = await screen.findByRole("listitem");
+		const secretDetails = secretRow.querySelector(
+			".environment-credentials__secret-details"
+		);
+		expect(secretRow.querySelector("strong")?.textContent).toBe(
+			"incident #21213"
+		);
+		expect(secretDetails?.querySelector("button")?.textContent).toBe("Expire now");
+		fireEvent.click(await screen.findByRole("button", { name: "Expire now" }));
+		expect(
+			await screen.findByRole("dialog", { name: "Expire secret now?" })
+		).toBeTruthy();
+		fireEvent.click(screen.getByRole("button", { name: "Expire secret" }));
+
+		await waitFor(() => {
+			expect(
+				mockedDeleteApplicationEnvironmentRotatedClientSecret
+			).toHaveBeenCalledWith(
+				"application-uuid-1",
+				"environment-uuid-1",
+				"rotated-secret-value"
+			);
+		});
+		expect(await screen.findByText("Secret expired successfully")).toBeTruthy();
+		const expiryAlert = screen
+			.getByText("Secret expired successfully")
+			.closest("[data-alert-role]");
+		expect(expiryAlert?.getAttribute("data-alert-container")).toBe("full");
+		expect(
+			expiryAlert?.parentElement?.getAttribute("data-grid-columns")
+		).toBe("1fr 1fr");
+		const expiringSecretsSection = screen
+			.getByRole("heading", {
+				name: "applicationEnvironmentManagement.expiringSecretsTitle",
+			})
+			.closest('[data-grid-tag="section"]');
+		expect(
+			expiringSecretsSection?.contains(
+				screen
+					.getByText("Secret expired successfully")
+					.closest("[data-alert-role]")
+			)
+		).toBe(true);
+		expect(
+			mockedGetApplicationEnvironmentClientCredentials
+		).not.toHaveBeenCalled();
+	});
+
+	it("shows an alert when expiring the selected secret fails", async () => {
+		mockedUseApplicationEnvironment.mockReturnValue({
+			data: eligibleEnvironment,
+			error: null,
+			isLoading: false,
+		});
+		mockedGetApplicationEnvironmentRotatedClientSecrets.mockResolvedValue([
+			{
+				description: "incident #21213",
+				expiredAt: 1_800_000_000,
+				rotatedAt: 1_799_000_000,
+				secretId: "rotated-secret-id",
+				value: "rotated-secret-value",
+			},
+		]);
+		mockedDeleteApplicationEnvironmentRotatedClientSecret.mockRejectedValue(
+			new Error("request failed")
+		);
+
+		renderPage();
+		fireEvent.click(await screen.findByRole("button", { name: "Expire now" }));
+		fireEvent.click(
+			await screen.findByRole("button", { name: "Expire secret" })
+		);
+
+		const alert = await screen.findByText("Secret could not be expired");
+		expect(alert.closest("[data-alert-role]")?.getAttribute("data-alert-role"))
+			.toBe("danger");
+		expect(
+			alert
+				.closest("[data-alert-role]")
+				?.parentElement?.getAttribute("data-grid-columns")
+		).toBe("1fr 1fr");
+		expect(screen.queryByRole("dialog", { name: "Expire secret now?" })).toBeNull();
 	});
 });

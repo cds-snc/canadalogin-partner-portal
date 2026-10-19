@@ -13,6 +13,11 @@ import {
 const unauthorizedPaths = new Set(["/auth-complete", "/login"]);
 const forbiddenPaths = new Set(["/access-denied"]);
 const errorPath = "/error?kind=unexpected";
+const csrfCookieName = "csrftoken";
+const csrfHeaderName = "x-csrftoken";
+const safeMethods = new Set(["GET", "HEAD", "OPTIONS", "TRACE"]);
+
+let csrfBootstrapPromise: Promise<string> | null = null;
 
 type RequestJsonOptions = {
 	redirectOnUnauthorized?: boolean;
@@ -20,6 +25,58 @@ type RequestJsonOptions = {
 
 const isRecord = (value: unknown): value is Record<string, unknown> =>
 	typeof value === "object" && value !== null;
+
+const readCsrfCookie = (): string | null => {
+	if (typeof document === "undefined") {
+		return null;
+	}
+
+	const cookiePrefix = `${csrfCookieName}=`;
+	const cookie = document.cookie
+		.split(";")
+		.map((part) => part.trim())
+		.find((part) => part.startsWith(cookiePrefix));
+
+	return cookie ? decodeURIComponent(cookie.slice(cookiePrefix.length)) : null;
+};
+
+const getCsrfToken = async (): Promise<string> => {
+	const existingToken = readCsrfCookie();
+	if (existingToken) {
+		return existingToken;
+	}
+
+	if (!csrfBootstrapPromise) {
+		csrfBootstrapPromise = (async (): Promise<string> => {
+			const response = await fetch(buildApiUrl("/api/v1/csrf"), {
+				cache: "no-store",
+				credentials: "include",
+				headers: { Accept: "application/json" },
+				method: "GET",
+			});
+
+			if (!response.ok) {
+				throw new Error("Unable to retrieve CSRF token");
+			}
+
+			const token = readCsrfCookie();
+			if (!token) {
+				throw new Error("CSRF token cookie was not set");
+			}
+
+			return token;
+		})();
+	}
+
+	const bootstrapPromise = csrfBootstrapPromise;
+	try {
+		return await bootstrapPromise;
+	} finally {
+		if (csrfBootstrapPromise === bootstrapPromise) {
+			csrfBootstrapPromise = null;
+		}
+	}
+};
 
 const parseResponseData = async (response: Response): Promise<unknown> => {
 	const responseContentType = response.headers?.get?.("content-type");
@@ -175,14 +232,23 @@ export const requestJson = async <ResponseType>(
 	let response: Response;
 
 	try {
+		const method = (requestInit.method ?? "GET").toUpperCase();
+		const headers = new Headers({
+			Accept: "application/json",
+			"Content-Type": "application/json",
+		});
+		new Headers(requestInit.headers).forEach((value, key) => {
+			headers.set(key, value);
+		});
+
+		if (!safeMethods.has(method) && !headers.has(csrfHeaderName)) {
+			headers.set(csrfHeaderName, await getCsrfToken());
+		}
+
 		response = await fetch(buildApiUrl(path), {
 			...requestInit,
 			credentials: requestInit.credentials ?? "include",
-			headers: {
-				Accept: "application/json",
-			"Content-Type": "application/json",
-				...(requestInit.headers ?? {}),
-			},
+			headers,
 		});
 	} catch (error) {
 		if (!(error instanceof Error && error.name === "AbortError")) {
@@ -215,7 +281,10 @@ export const requestJson = async <ResponseType>(
 			redirectToLogin();
 		}
 
-		if (requestError instanceof ForbiddenRequestError) {
+		if (
+			requestError instanceof ForbiddenRequestError &&
+			getApiErrorDetail(responseData)?.code !== "csrf_error"
+		) {
 			redirectToAccessDenied();
 		}
 
