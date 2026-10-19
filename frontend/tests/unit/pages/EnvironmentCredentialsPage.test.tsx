@@ -248,6 +248,7 @@ vi.mock("@/components/ui", () => ({
 		label,
 		name,
 		onInput,
+		validateOn,
 		value,
 	}: {
 		errorMessage?: string;
@@ -256,9 +257,14 @@ vi.mock("@/components/ui", () => ({
 		label: string;
 		name: string;
 		onInput?: React.FormEventHandler<Element>;
+		validateOn?: "blur" | "submit" | "other";
 		value?: string;
 	}): ReactElement => (
-		<label data-error-message={errorMessage} id={id}>
+		<label
+			data-error-message={errorMessage}
+			data-validate-on={validateOn}
+			id={id}
+		>
 			{label}
 			<input
 				id={inputId}
@@ -896,7 +902,7 @@ describe("EnvironmentCredentialsPage", () => {
 		});
 	});
 
-	it("rotates with the required reason and a seven-day expiry", async () => {
+	it("clears the reason validation state after correcting an empty submission and rotating with a seven-day expiry", async () => {
 		const now = 1_800_000_000_000;
 		vi.spyOn(Date, "now").mockReturnValue(now);
 		mockedUseApplicationEnvironment.mockReturnValue({
@@ -907,7 +913,18 @@ describe("EnvironmentCredentialsPage", () => {
 
 		renderPage();
 		const reasonInput = screen.getByLabelText("Reason for rotation");
+		const reasonControl = reasonInput.closest("label");
+		expect(reasonControl?.getAttribute("data-validate-on")).toBe("other");
+		fireEvent.submit(reasonInput.closest("form") as HTMLFormElement);
+		expect(reasonControl?.getAttribute("data-error-message")).toBe(
+			"Reason for rotation is a required field."
+		);
+		expect(screen.queryByRole("dialog", { name: "Rotate secret?" })).toBeNull();
+		expect(mockedRotateApplicationEnvironmentClientSecret).not.toHaveBeenCalled();
+
 		fireEvent.input(reasonInput, { target: { value: "annual rotation" } });
+		expect(reasonControl?.getAttribute("data-error-message")).toBe("");
+		expect(screen.queryByLabelText("There was a problem")).toBeNull();
 		fireEvent.submit(reasonInput.closest("form") as HTMLFormElement);
 
 		expect(
@@ -924,6 +941,9 @@ describe("EnvironmentCredentialsPage", () => {
 			});
 		});
 		expect(await screen.findByText("Secret rotated successfully")).toBeTruthy();
+		expect((reasonInput as HTMLInputElement).value).toBe("");
+		expect(reasonControl?.getAttribute("data-error-message")).toBe("");
+		expect(screen.queryByLabelText("There was a problem")).toBeNull();
 		expect(
 			screen
 				.getByText("Secret rotated successfully")

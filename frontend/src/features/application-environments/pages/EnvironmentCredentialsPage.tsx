@@ -648,11 +648,12 @@ export const EnvironmentCredentialsPage = (): FunctionComponent => {
 									<Grid columns="1fr" gap="200" tag="div">
 										<Input
 											required
-											errorMessage={rotationReasonError || undefined}
+											errorMessage={rotationReasonError}
 											id="environment-rotation-reason-control"
 											inputId="environment-rotation-reason"
 											name="rotation-reason"
 											type="text"
+											validateOn="other"
 											value={rotationReason}
 											hint={t(
 												"applicationEnvironmentManagement.rotationReasonHint"
