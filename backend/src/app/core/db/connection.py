@@ -3,27 +3,31 @@ from typing import Any
 
 import boto3
 from sqlalchemy import event
-from sqlalchemy.engine import URL
+from sqlalchemy.engine import URL, make_url
 from sqlalchemy.ext.asyncio import AsyncEngine, create_async_engine
 
 from ..config import PostgresSettings
 
 
-def get_database_url(db_settings: PostgresSettings) -> URL | str:
+def get_database_url(db_settings: PostgresSettings, *, reader: bool = False) -> URL | str:
     if db_settings.POSTGRES_IAM_AUTH_ENABLED:
-        return URL.create(
+        url: URL | str = URL.create(
             "postgresql+asyncpg",
             username=db_settings.POSTGRES_USER,
             host=db_settings.POSTGRES_SERVER,
             port=db_settings.POSTGRES_PORT,
             database=db_settings.POSTGRES_DB,
         )
-    return f"{db_settings.POSTGRES_ASYNC_PREFIX}{db_settings.POSTGRES_URI}"
+    else:
+        url = f"{db_settings.POSTGRES_ASYNC_PREFIX}{db_settings.POSTGRES_URI}"
+    if reader and db_settings.POSTGRES_READER_SERVER:
+        return make_url(url).set(host=db_settings.POSTGRES_READER_SERVER)
+    return url
 
 
-def build_async_engine(db_settings: PostgresSettings, **engine_options: Any) -> AsyncEngine:
-    """Use the writer for runtime and migrations; sign each new IAM connection."""
-    url = get_database_url(db_settings)
+def build_async_engine(db_settings: PostgresSettings, *, reader: bool = False, **engine_options: Any) -> AsyncEngine:
+    """Default to the writer; sign each new IAM connection for its actual host."""
+    url = get_database_url(db_settings, reader=reader)
     connect_args: dict[str, Any] = {}
     if db_settings.POSTGRES_IAM_AUTH_ENABLED:
         # RDS Proxy uses public certificates, not the direct-RDS-only CA bundle.

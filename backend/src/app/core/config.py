@@ -157,6 +157,17 @@ class PostgresSettings(DatabaseSettings):
     AWS_REGION: str | None = None
 
     @model_validator(mode="after")
+    def _validate_postgres_reader(self) -> "PostgresSettings":
+        if self.POSTGRES_READER_SERVER is not None:
+            hostname = self.POSTGRES_READER_SERVER
+            if len(hostname) > 253 or not all(
+                re.fullmatch(r"[A-Za-z0-9](?:[A-Za-z0-9-]{0,61}[A-Za-z0-9])?", label)
+                for label in hostname.split(".")
+            ):
+                raise ValueError("POSTGRES_READER_SERVER must be a hostname without a scheme, port or path")
+        return self
+
+    @model_validator(mode="after")
     def _validate_postgres_iam(self) -> "PostgresSettings":
         if not self.POSTGRES_IAM_AUTH_ENABLED:
             return self

@@ -58,6 +58,10 @@ POSTGRES_DB="your_database_name"
 - `POSTGRES_SERVER`: Hostname or IP of PostgreSQL server
 - `POSTGRES_PORT`: PostgreSQL port (default: 5432)
 - `POSTGRES_DB`: Name of the database to connect to
+- `POSTGRES_READER_SERVER`: Optional reader endpoint hostname supplied by Terraform. Omit it to reuse the writer engine and session factory. If set, use a bare DNS hostname, not an empty string, URL, port or path. Only explicitly opted-in stale-safe GET data queries use it; authentication and authorization always use the writer. See [Database routing](../database/index.md#reader-and-writer-routing) for the exact route policy.
+- `POSTGRES_IAM_AUTH_ENABLED`: Defaults to `false`. When enabled, each new physical writer or reader connection receives a fresh IAM token signed for its actual host and uses verified TLS with the system trust store. Configure `AWS_REGION`, `POSTGRES_SERVER`, `POSTGRES_USER` and `POSTGRES_DB` explicitly; `POSTGRES_URL` is not supported in IAM mode.
+
+The reader changes only the host of the existing async database URL. The driver, credentials, port, database and query options are preserved. A configured reader connection failure is not silently retried on the writer. Removing the reader setting requires the usual application restart for environment changes.
 
 **Environment-Specific Values:**
 
