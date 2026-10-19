@@ -131,11 +131,11 @@
 		width: 100%;
 	}
 
-	.government-modal__footer {
+	.government-modal__footer:not(.government-modal__footer--start) {
 		justify-content: stretch;
 	}
 
-	.government-modal__footer > * {
+	.government-modal__footer:not(.government-modal__footer--start) > * {
 		width: 100%;
 	}
 

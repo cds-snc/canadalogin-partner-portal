@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { ServerRequestError, getApiBaseUrl } from "@/fetch";
-import { getCurrentUser, getOidcLoginUrl } from "@/fetch/auth";
+import { getCurrentUser, getOidcLoginUrl, logoutAndRedirect } from "@/fetch/auth";
 
 const createUserFixture = (): Record<string, string | number> => ({
 	uuid: "018f6f83-0f2b-7b0f-b2fb-96c4d8a4b102",
@@ -19,10 +19,12 @@ describe("fetch auth", () => {
 	beforeEach(() => {
 		vi.unstubAllEnvs();
 		vi.stubEnv("VITE_API_BASE_URL", "http://localhost:8000");
+		document.cookie = "csrftoken=logout-token; path=/";
 	});
 
 	afterEach(() => {
 		globalThis.fetch = originalFetch;
+		document.cookie = "csrftoken=; Max-Age=0; path=/";
 		vi.unstubAllGlobals();
 		vi.restoreAllMocks();
 	});
@@ -120,5 +122,42 @@ describe("fetch auth", () => {
 
 	it("builds the backend OIDC login URL from the configured origin", () => {
 		expect(getOidcLoginUrl()).toBe("http://localhost:8000/api/v1/auth/oidc/login");
+	});
+
+	it("posts logout with a reason and follows the backend redirect URL", async () => {
+		let locationHref = "";
+		Object.defineProperty(window, "location", {
+			configurable: true,
+			value: {
+			get href(): string {
+				return locationHref;
+			},
+			set href(value: string) {
+				locationHref = value;
+			},
+			pathname: "/logout",
+			replace: vi.fn(),
+			},
+		});
+		globalThis.fetch = vi.fn().mockResolvedValue({
+			headers: new Headers({ "content-type": "application/json" }),
+			json: () =>
+				Promise.resolve({
+					message: "Logged out successfully",
+					redirectUrl: "https://identity.example/logout?state=manual.state",
+				}),
+			ok: true,
+			status: 200,
+		} as Response);
+
+		await logoutAndRedirect("manual");
+
+		expect(globalThis.fetch).toHaveBeenCalledWith(
+			"http://localhost:8000/api/v1/logout?reason=manual",
+			expect.objectContaining({ method: "POST" })
+		);
+		const requestInit = vi.mocked(globalThis.fetch).mock.calls[0]?.[1];
+		expect(new Headers(requestInit?.headers).get("x-csrftoken")).toBe("logout-token");
+		expect(locationHref).toBe("https://identity.example/logout?state=manual.state");
 	});
 });

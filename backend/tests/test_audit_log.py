@@ -1,3 +1,4 @@
+import logging
 from datetime import datetime, timezone
 
 import uuid as uuid_pkg
@@ -68,6 +69,35 @@ class TestAuditLogRoutes:
 
 
 class TestAuditService:
+    @pytest.mark.asyncio
+    async def test_log_action_emits_log_after_repository_insert(self, mock_db, caplog):
+        user_uuid = uuid_pkg.UUID("018f6f83-0f2b-7b0f-b2fb-96c4d8a4b301")
+        target_uuid = uuid_pkg.UUID("018f6f83-0f2b-7b0f-b2fb-96c4d8a4b302")
+        service = AuditService()
+        caplog.set_level(logging.INFO, logger="src.app.services.audit_service")
+
+        with patch(
+            "src.app.services.audit_service.crud_audit_log.create",
+            new=AsyncMock(),
+        ):
+            await service.log_action(
+                db=mock_db,
+                user="Test User",
+                user_uuid=user_uuid,
+                target="rp_application",
+                target_uuid=target_uuid,
+                operation="CREATE",
+                description="Contains details that should not be logged",
+            )
+
+        assert "Audit action recorded" in caplog.text
+        assert "Test User" in caplog.text
+        assert "rp_application" in caplog.text
+        assert "CREATE" in caplog.text
+        assert str(user_uuid) in caplog.text
+        assert str(target_uuid) in caplog.text
+        assert "Contains details that should not be logged" not in caplog.text
+
     @pytest.mark.asyncio
     async def test_log_action_delegates_to_repository(self, mock_db):
         user_uuid = uuid_pkg.UUID("018f6f83-0f2b-7b0f-b2fb-96c4d8a4b301")

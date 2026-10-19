@@ -13,7 +13,6 @@ from src.app.models.authentication_protocol import AuthenticationProtocol
 from src.app.models.department import Department
 from src.app.models.partner_group import PartnerGroup
 from src.app.models.partner_group_role import PartnerGroupRole
-from src.app.models.role import Role
 from src.app.models.tenant import Tenant
 from src.scripts.seed_local_application_erd import (
     LOCAL_APPLICATION,
@@ -21,7 +20,6 @@ from src.scripts.seed_local_application_erd import (
     LOCAL_APPLICATION_CONFIGURATIONS,
     LOCAL_APPLICATIONS,
     LOCAL_DEPARTMENT_GC_ORG_ID,
-    LOCAL_PARTNER_DEVELOPER_ROLE_NAME,
     ensure_local_environment,
     seed_local_application_erd,
 )
@@ -40,14 +38,10 @@ class _SeedSession:
         self.department = Department(name="Example department", gc_org_id=LOCAL_DEPARTMENT_GC_ORG_ID)
         self.department.id = 7
         self.partner_group: PartnerGroup | None = None
-        self.partner_group_role: PartnerGroupRole | None = None
+        self.added_partner_group_roles = 0
         self.application: Application | None = None
         self.applications: dict[UUID, Application] = {}
         self.application_configurations: dict[UUID, ApplicationConfiguration] = {}
-        self.partner_developer_role = Role(
-            name=LOCAL_PARTNER_DEVELOPER_ROLE_NAME,
-        )
-        self.partner_developer_role.id = 21
         self.lookup_rows = {
             ApplicationConfigurationStatus: {
                 "draft": ApplicationConfigurationStatus(code="draft", display_order=1),
@@ -90,10 +84,6 @@ class _SeedSession:
                 if isinstance(value, UUID)
             )
             return _ScalarResult(self.applications.get(application_uuid))
-        if entity is Role:
-            return _ScalarResult(self.partner_developer_role)
-        if entity is PartnerGroupRole:
-            return _ScalarResult(self.partner_group_role)
         if entity in self.lookup_rows:
             lookup_code = next(
                 value
@@ -115,8 +105,7 @@ class _SeedSession:
             value.id = 11
             self.partner_group = value
         elif isinstance(value, PartnerGroupRole):
-            value.id = 12
-            self.partner_group_role = value
+            self.added_partner_group_roles += 1
         elif isinstance(value, Application):
             value.id = 22 + len(self.applications)
             self.applications[value.uuid] = value
@@ -149,14 +138,12 @@ async def test_local_seed_is_repeatable() -> None:
 
     assert session.partner_group is first_partner_group
     assert session.partner_group is not None
-    assert session.partner_group_role is not None
     assert session.application is not None
+    assert session.added_partner_group_roles == 0
     assert len(session.applications) == len(LOCAL_APPLICATIONS) == 15
     assert session.applications == first_applications
     assert len(session.application_configurations) == 11
     assert session.partner_group.department_id == session.department.id
-    assert session.partner_group_role.partner_group_id == session.partner_group.id
-    assert session.partner_group_role.role_id == session.partner_developer_role.id
     for application_seed in LOCAL_APPLICATIONS:
         application = session.applications[application_seed.uuid]
         assert application.name_en == application_seed.name_en

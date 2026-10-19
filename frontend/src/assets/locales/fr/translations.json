@@ -303,6 +303,7 @@
 		}
 	},
 	"applicationEnvironmentManagement": {
+<<<<<<< HEAD
 		"cancel": "Annuler",
 		"change": "Modifier",
 		"changeAccessible": "Modifier {{field}}",
@@ -322,6 +323,66 @@
 		"credentialsComingSoonTitle": "Justificatifs",
 		"credentialsTab": "Justificatifs",
 		"credentialsTitle": "Justificatifs de l’environnement",
+=======
+		"change": "Modifier",
+		"changeAccessible": "Modifier {{field}}",
+		"configurationTab": "Configuration",
+		"copyConfiguration": "Copier la configuration",
+		"credentialsIntro": "Gérez les justificatifs utilisés pour connecter cet environnement à CanadaLogin.",
+		"credentialsLearnLink": "la gestion des justificatifs",
+		"credentialsLearnPrefix": "En savoir plus sur",
+		"credentialsSecurityNote": "Protégez vos justificatifs. Ne partagez pas vos secrets et ne les stockez pas dans des référentiels publics. Traitez les justificatifs comme des renseignements Protégé B.",
+		"publicClientCredentialsBody": "Les clients publics n’ont pas de secret client. Ils utilisent PKCE pour protéger le processus de connexion.",
+		"publicClientCredentialsTitle": "Client public",
+		"credentialsTab": "Justificatifs",
+		"credentialsTitle": "Justificatifs de l’environnement",
+		"currentCredentialsTitle": "Justificatifs actuels",
+		"authenticationMethod": "Méthode d’authentification",
+		"clientIdLabel": "ID client",
+		"clientIdHelp": "Utilisé pour identifier cet environnement lors de la connexion à CanadaLogin.",
+		"clientIdCopiedSuccess": "ID client copié dans le presse-papiers.",
+		"jwksUriLabel": "URI JWKS",
+		"jwksUriHelp": "L’emplacement que CanadaLogin utilise pour récupérer les clés publiques de votre application.",
+		"jwksUriCopiedSuccess": "URI JWKS copiée dans le presse-papiers.",
+		"clientSecretCopiedSuccess": "Secret client copié dans le presse-papiers.",
+		"copyAction": "Copier",
+		"secretLabel": "Secret",
+		"revealAction": "Afficher",
+		"hideAction": "Masquer",
+		"copySecretAction": "Copier le secret",
+		"productionSecretAccessDenied": "Vous n’avez pas l’autorisation d’accéder au secret de production.",
+		"productionSecretRequestAccess": "Demander l’accès aux secrets de production",
+		"rotateSecretTitle": "Faire pivoter le secret",
+		"rotateSecretHelp": "Générez un nouveau secret pour remplacer le secret actuel. Votre secret actuel restera actif pendant 7 jours avant d’expirer.",
+		"productionRotateSecretHelpPrefix": "Les secrets de production ne peuvent pas être renouvelés directement dans le Portail partenaire. Pour renouveler ce secret, soumettez une demande à l’équipe de soutien de",
+		"productionExpiringSecretsHelpPrefix": "Ces secrets sont toujours actifs et cesseront de fonctionner à la date et à l’heure indiquées. Pour expirer un secret plus tôt, communiquez avec l’équipe de soutien de",
+		"productionSupportLink": "CanadaLogin",
+		"rotationReasonLabel": "Motif de la rotation",
+		"rotationReasonHint": "Par exemple, rotation annuelle ou incident nº 21213",
+		"rotationReasonRequired": "Le motif de la rotation est un champ obligatoire.",
+		"rotateSecretAction": "Faire pivoter le secret",
+		"rotateConfirmTitle": "Faire pivoter le secret?",
+		"rotateConfirmBody": "Un nouveau secret remplacera votre secret actuel. Votre secret actuel restera actif pendant 7 jours avant d’expirer.\n\nCette action est irréversible.",
+		"rotateSuccessTitle": "Le secret a été renouvelé avec succès",
+		"expiringSecretsTitle": "Secrets qui expirent",
+		"expiringSecretsHelp": "Ces secrets sont toujours actifs et cesseront de fonctionner à la date et à l’heure indiquées.",
+		"loadingRotatedSecrets": "Chargement des secrets qui expirent.",
+		"noExpiringSecrets": "Aucun secret n’expire.",
+		"expiresAt": "Expire le {{date}}.",
+		"expireNowAction": "Expirer maintenant",
+		"expireConfirmTitle": "Expirer le secret maintenant?",
+		"expireConfirmBody": "Ce secret cessera de fonctionner immédiatement au lieu d’expirer le {{expiry}}.\n\nCette action est irréversible.",
+		"expireSecretAction": "Expirer le secret",
+		"expireSuccessTitle": "Le secret a expiré avec succès",
+		"expireSuccessBody": "Le secret n’est plus actif.",
+		"expireFailureTitle": "Le secret n’a pas pu expirer",
+		"expireFailureBody": "Le secret est toujours actif. Réessayez. Si le problème persiste, communiquez avec le soutien.",
+		"retrieveFailureTitle": "Le secret n’a pas pu être récupéré",
+		"retrieveFailureBody": "Réessayez. Si le problème persiste, communiquez avec le soutien.",
+		"rotateFailureTitle": "Le secret n’a pas pu être renouvelé",
+		"rotateFailureBody": "Réessayez. Si le problème persiste, communiquez avec le soutien.",
+		"dismissAction": "Fermer",
+>>>>>>> origin/main
 		"disabled": "Désactivé",
 		"enabled": "Activé",
 		"errorBody": "L’environnement n’a pas pu être chargé.",
@@ -333,12 +394,20 @@
 			"copiedFrom": "Copié de",
 			"decryptionAlgorithms": "Algorithmes de contenu pour le déchiffrement",
 			"decryptionKeyManagement": "Gestion des clés de déchiffrement",
+<<<<<<< HEAD
 			"englishUrl": "URL de l’environnement en anglais",
+=======
+			"englishUrl": "URL de l’application en anglais",
+>>>>>>> origin/main
 			"environmentName": "Nom de l’environnement",
 			"environmentType": "Type d’environnement",
 			"encryptionAlgorithms": "Algorithmes de contenu pour le chiffrement",
 			"encryptionKeyManagement": "Gestion des clés de chiffrement",
+<<<<<<< HEAD
 			"frenchUrl": "URL de l’environnement en français",
+=======
+			"frenchUrl": "URL de l’application en français",
+>>>>>>> origin/main
 			"jwksUri": "URI de l’ensemble de clés Web JSON (JWKS)",
 			"lastModified": "Dernière modification",
 			"messagesDecrypted": "Messages déchiffrés",
@@ -361,14 +430,18 @@
 		"guidePrefix": "Découvrez comment",
 		"loadingBody": "Chargement de la configuration de l’environnement.",
 		"loadingTitle": "Chargement de l’environnement",
+<<<<<<< HEAD
 		"redirectUrlsIntro": "CanadaLogin redirige uniquement les utilisateurs vers les URL enregistrées pour cet environnement.",
 		"redirectUrlsRequirementsLink": "En savoir plus sur les exigences relatives aux URL de redirection.",
 		"postLogoutRedirectUrlsIntro": "CanadaLogin utilise les URL de redirection après la déconnexion pour ramener les utilisateurs à votre application après leur déconnexion.",
 		"postLogoutRedirectUrlsRequirementsLink": "En savoir plus sur les exigences relatives aux URL de redirection après la déconnexion.",
+=======
+>>>>>>> origin/main
 		"requestProduction": "Demander la production",
 		"summaryActions": "Actions",
 		"summaryLabel": "Champ",
 		"summaryValue": "Valeur",
+<<<<<<< HEAD
 		"updateRedirectUrlsErrorBody": "Les URL de redirection n’ont pas pu être mises à jour.",
 		"updateRedirectUrlsErrorTitle": "Impossible de mettre à jour les URL de redirection",
 		"updatePostLogoutRedirectUrlsErrorBody": "Les URL de redirection après la déconnexion n’ont pas pu être mises à jour.",
@@ -404,6 +477,8 @@
 		"changeMessagesDecrypted": "Modifier les messages déchiffrés",
 		"changeMessagesSigned": "Modifier les messages signés",
 		"changeRequestsEncrypted": "Modifier les demandes chiffrées",
+=======
+>>>>>>> origin/main
 		"sections": {
 			"authentication": "Authentification",
 			"connection": "Connexion",
@@ -414,11 +489,14 @@
 		"summary": "Examinez la configuration de cet environnement.",
 		"tabsLabel": "Vues de gestion de l’environnement",
 		"title": "Configuration de l’environnement",
+<<<<<<< HEAD
 		"saveChanges": "Enregistrer les modifications",
 		"updateUrlErrorBody": "L’URL de l’environnement n’a pas pu être mise à jour.",
 		"updateUrlErrorTitle": "Impossible de mettre à jour l’URL de l’environnement",
 		"updateErrorBody": "Le nom de l’environnement n’a pas pu être mis à jour.",
 		"updateErrorTitle": "Impossible de mettre à jour le nom de l’environnement",
+=======
+>>>>>>> origin/main
 		"values": {
 			"A128GCM": "A128GCM",
 			"A192GCM": "A192GCM",

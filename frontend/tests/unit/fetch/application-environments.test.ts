@@ -2,6 +2,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import {
 	getApplicationEnvironment,
 	getApplicationEnvironments,
+<<<<<<< HEAD
 	updateApplicationEnvironmentAuthenticationMethod,
 	updateApplicationEnvironmentDecryption,
 	updateApplicationEnvironmentEncryption,
@@ -17,6 +18,8 @@ import {
 	type ApplicationEnvironmentEncryptionUpdate,
 	type ApplicationEnvironmentDecryptionUpdate,
 	type ApplicationEnvironmentVerificationUpdate,
+=======
+>>>>>>> origin/main
 } from "@/fetch/application-environments";
 
 describe("application-environments API", () => {
@@ -69,6 +72,10 @@ describe("application-environments API", () => {
 			headers: new Headers({ "content-type": "application/json" }),
 			json: () =>
 				Promise.resolve({
+<<<<<<< HEAD
+=======
+					clientId: "environment-client-id",
+>>>>>>> origin/main
 					createdAt: "2026-09-17T00:00:00Z",
 					partnerLabel: "Test environment",
 					statusCode: "draft",
@@ -94,6 +101,7 @@ describe("application-environments API", () => {
 			})
 		);
 		expect(response.uuid).toBe(environmentUuid);
+<<<<<<< HEAD
 	});
 
 	it("updates an application environment name", async () => {
@@ -479,4 +487,8 @@ describe("application-environments API", () => {
 			);
 		}
 	);
+=======
+		expect(response.clientId).toBe("environment-client-id");
+	});
+>>>>>>> origin/main
 });

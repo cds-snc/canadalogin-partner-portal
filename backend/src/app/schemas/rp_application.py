@@ -136,61 +136,6 @@ class RPApplicationDelete(PersistentDeletion):
     pass
 
 
-class RPApplicationClientCredentialsRead(BaseModel):
-    model_config = ConfigDict(
-        validate_by_name=True,
-        validate_by_alias=True,
-        alias_generator=to_camel,
-        populate_by_name=True,
-    )
-
-    client_id: str
-    client_secret: str | None = None
-    client_secret_id: str | None = None
-
-
-class RPApplicationClientRotatedSecretRead(BaseModel):
-    model_config = ConfigDict(
-        validate_by_name=True,
-        validate_by_alias=True,
-        alias_generator=to_camel,
-        populate_by_name=True,
-    )
-
-    description: str | None = None
-    expired_at: int | None = Field(None, alias="expiredAt")
-    rotated_at: int | None = Field(None, alias="rotatedAt")
-    value: str | None = Field(None, alias="value")
-    secret_id: str | None = Field(None, alias="secretId")
-
-
-class RPApplicationClientRotatedSecretCreateRequest(BaseModel):
-    model_config = ConfigDict(
-        extra="forbid",
-        validate_by_name=True,
-        validate_by_alias=True,
-        alias_generator=to_camel,
-        populate_by_name=True,
-    )
-
-    description: str = Field(..., min_length=1)
-    rotated_secret_expired_at: int = Field(..., alias="rotatedSecretExpiredAt", ge=1)
-
-
-class RPApplicationClientSecretRotateRequest(BaseModel):
-    model_config = ConfigDict(
-        extra="forbid",
-        validate_by_name=True,
-        validate_by_alias=True,
-        alias_generator=to_camel,
-        populate_by_name=True,
-    )
-
-    delete_rotated_secrets: bool = Field(False, alias="deleteRotatedSecrets")
-    description: str = ""
-    rotated_secret_expired_at: int = Field(0, alias="rotatedSecretExpiredAt")
-
-
 class RPApplicationUsageSummaryRead(BaseModel):
     model_config = ConfigDict(
         validate_by_name=True,

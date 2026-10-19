@@ -39,6 +39,7 @@ import { Route as ApplicationsApplicationUuidMauReportRouteImport } from './rout
 import { Route as ApplicationsApplicationUuidEnvironmentsIndexRouteImport } from './routes/applications/$applicationUuid/environments/index'
 import { Route as ApplicationsApplicationUuidEnvironmentsEnvironmentUuidRouteImport } from './routes/applications/$applicationUuid/environments/$environmentUuid'
 import { Route as ApplicationsApplicationUuidEnvironmentsEnvironmentUuidIndexRouteImport } from './routes/applications/$applicationUuid/environments/$environmentUuid/index'
+<<<<<<< HEAD
 import { Route as ApplicationsApplicationUuidEnvironmentsEnvironmentUuidAuthenticationMethodRouteImport } from './routes/applications/$applicationUuid/environments/$environmentUuid/authentication-method'
 import { Route as ApplicationsApplicationUuidEnvironmentsEnvironmentUuidClientTypeRouteImport } from './routes/applications/$applicationUuid/environments/$environmentUuid/client-type'
 import { Route as ApplicationsApplicationUuidEnvironmentsEnvironmentUuidCredentialsRouteImport } from './routes/applications/$applicationUuid/environments/$environmentUuid/credentials'
@@ -53,6 +54,9 @@ import { Route as ApplicationsApplicationUuidEnvironmentsEnvironmentUuidRedirect
 import { Route as ApplicationsApplicationUuidEnvironmentsEnvironmentUuidRequestsEncryptedRouteImport } from './routes/applications/$applicationUuid/environments/$environmentUuid/requests-encrypted'
 import { Route as ApplicationsApplicationUuidEnvironmentsEnvironmentUuidSectorIdentifierRouteImport } from './routes/applications/$applicationUuid/environments/$environmentUuid/sector-identifier'
 import { Route as ApplicationsApplicationUuidEnvironmentsEnvironmentUuidSingleSignOutMethodRouteImport } from './routes/applications/$applicationUuid/environments/$environmentUuid/single-sign-out-method'
+=======
+import { Route as ApplicationsApplicationUuidEnvironmentsEnvironmentUuidCredentialsRouteImport } from './routes/applications/$applicationUuid/environments/$environmentUuid/credentials'
+>>>>>>> origin/main
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
@@ -216,6 +220,7 @@ const ApplicationsApplicationUuidEnvironmentsEnvironmentUuidIndexRoute =
         ApplicationsApplicationUuidEnvironmentsEnvironmentUuidRoute,
     } as any,
   )
+<<<<<<< HEAD
 const ApplicationsApplicationUuidEnvironmentsEnvironmentUuidAuthenticationMethodRoute =
   ApplicationsApplicationUuidEnvironmentsEnvironmentUuidAuthenticationMethodRouteImport.update(
     {
@@ -234,6 +239,8 @@ const ApplicationsApplicationUuidEnvironmentsEnvironmentUuidClientTypeRoute =
         ApplicationsApplicationUuidEnvironmentsEnvironmentUuidRoute,
     } as any,
   )
+=======
+>>>>>>> origin/main
 const ApplicationsApplicationUuidEnvironmentsEnvironmentUuidCredentialsRoute =
   ApplicationsApplicationUuidEnvironmentsEnvironmentUuidCredentialsRouteImport.update(
     {
@@ -243,6 +250,7 @@ const ApplicationsApplicationUuidEnvironmentsEnvironmentUuidCredentialsRoute =
         ApplicationsApplicationUuidEnvironmentsEnvironmentUuidRoute,
     } as any,
   )
+<<<<<<< HEAD
 const ApplicationsApplicationUuidEnvironmentsEnvironmentUuidEnglishUrlRoute =
   ApplicationsApplicationUuidEnvironmentsEnvironmentUuidEnglishUrlRouteImport.update(
     {
@@ -342,6 +350,8 @@ const ApplicationsApplicationUuidEnvironmentsEnvironmentUuidSingleSignOutMethodR
         ApplicationsApplicationUuidEnvironmentsEnvironmentUuidRoute,
     } as any,
   )
+=======
+>>>>>>> origin/main
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -373,6 +383,7 @@ export interface FileRoutesByFullPath {
   '/applications/$applicationUuid/': typeof ApplicationsApplicationUuidIndexRoute
   '/applications/$applicationUuid/environments/$environmentUuid': typeof ApplicationsApplicationUuidEnvironmentsEnvironmentUuidRouteWithChildren
   '/applications/$applicationUuid/environments/': typeof ApplicationsApplicationUuidEnvironmentsIndexRoute
+<<<<<<< HEAD
   '/applications/$applicationUuid/environments/$environmentUuid/authentication-method': typeof ApplicationsApplicationUuidEnvironmentsEnvironmentUuidAuthenticationMethodRoute
   '/applications/$applicationUuid/environments/$environmentUuid/client-type': typeof ApplicationsApplicationUuidEnvironmentsEnvironmentUuidClientTypeRoute
   '/applications/$applicationUuid/environments/$environmentUuid/credentials': typeof ApplicationsApplicationUuidEnvironmentsEnvironmentUuidCredentialsRoute
@@ -387,6 +398,9 @@ export interface FileRoutesByFullPath {
   '/applications/$applicationUuid/environments/$environmentUuid/requests-encrypted': typeof ApplicationsApplicationUuidEnvironmentsEnvironmentUuidRequestsEncryptedRoute
   '/applications/$applicationUuid/environments/$environmentUuid/sector-identifier': typeof ApplicationsApplicationUuidEnvironmentsEnvironmentUuidSectorIdentifierRoute
   '/applications/$applicationUuid/environments/$environmentUuid/single-sign-out-method': typeof ApplicationsApplicationUuidEnvironmentsEnvironmentUuidSingleSignOutMethodRoute
+=======
+  '/applications/$applicationUuid/environments/$environmentUuid/credentials': typeof ApplicationsApplicationUuidEnvironmentsEnvironmentUuidCredentialsRoute
+>>>>>>> origin/main
   '/applications/$applicationUuid/environments/$environmentUuid/': typeof ApplicationsApplicationUuidEnvironmentsEnvironmentUuidIndexRoute
 }
 export interface FileRoutesByTo {
@@ -415,6 +429,7 @@ export interface FileRoutesByTo {
   '/applications/$applicationUuid/mau-report': typeof ApplicationsApplicationUuidMauReportRoute
   '/applications/$applicationUuid': typeof ApplicationsApplicationUuidIndexRoute
   '/applications/$applicationUuid/environments': typeof ApplicationsApplicationUuidEnvironmentsIndexRoute
+<<<<<<< HEAD
   '/applications/$applicationUuid/environments/$environmentUuid/authentication-method': typeof ApplicationsApplicationUuidEnvironmentsEnvironmentUuidAuthenticationMethodRoute
   '/applications/$applicationUuid/environments/$environmentUuid/client-type': typeof ApplicationsApplicationUuidEnvironmentsEnvironmentUuidClientTypeRoute
   '/applications/$applicationUuid/environments/$environmentUuid/credentials': typeof ApplicationsApplicationUuidEnvironmentsEnvironmentUuidCredentialsRoute
@@ -429,6 +444,9 @@ export interface FileRoutesByTo {
   '/applications/$applicationUuid/environments/$environmentUuid/requests-encrypted': typeof ApplicationsApplicationUuidEnvironmentsEnvironmentUuidRequestsEncryptedRoute
   '/applications/$applicationUuid/environments/$environmentUuid/sector-identifier': typeof ApplicationsApplicationUuidEnvironmentsEnvironmentUuidSectorIdentifierRoute
   '/applications/$applicationUuid/environments/$environmentUuid/single-sign-out-method': typeof ApplicationsApplicationUuidEnvironmentsEnvironmentUuidSingleSignOutMethodRoute
+=======
+  '/applications/$applicationUuid/environments/$environmentUuid/credentials': typeof ApplicationsApplicationUuidEnvironmentsEnvironmentUuidCredentialsRoute
+>>>>>>> origin/main
   '/applications/$applicationUuid/environments/$environmentUuid': typeof ApplicationsApplicationUuidEnvironmentsEnvironmentUuidIndexRoute
 }
 export interface FileRoutesById {
@@ -462,6 +480,7 @@ export interface FileRoutesById {
   '/applications/$applicationUuid/': typeof ApplicationsApplicationUuidIndexRoute
   '/applications/$applicationUuid/environments/$environmentUuid': typeof ApplicationsApplicationUuidEnvironmentsEnvironmentUuidRouteWithChildren
   '/applications/$applicationUuid/environments/': typeof ApplicationsApplicationUuidEnvironmentsIndexRoute
+<<<<<<< HEAD
   '/applications/$applicationUuid/environments/$environmentUuid/authentication-method': typeof ApplicationsApplicationUuidEnvironmentsEnvironmentUuidAuthenticationMethodRoute
   '/applications/$applicationUuid/environments/$environmentUuid/client-type': typeof ApplicationsApplicationUuidEnvironmentsEnvironmentUuidClientTypeRoute
   '/applications/$applicationUuid/environments/$environmentUuid/credentials': typeof ApplicationsApplicationUuidEnvironmentsEnvironmentUuidCredentialsRoute
@@ -476,6 +495,9 @@ export interface FileRoutesById {
   '/applications/$applicationUuid/environments/$environmentUuid/requests-encrypted': typeof ApplicationsApplicationUuidEnvironmentsEnvironmentUuidRequestsEncryptedRoute
   '/applications/$applicationUuid/environments/$environmentUuid/sector-identifier': typeof ApplicationsApplicationUuidEnvironmentsEnvironmentUuidSectorIdentifierRoute
   '/applications/$applicationUuid/environments/$environmentUuid/single-sign-out-method': typeof ApplicationsApplicationUuidEnvironmentsEnvironmentUuidSingleSignOutMethodRoute
+=======
+  '/applications/$applicationUuid/environments/$environmentUuid/credentials': typeof ApplicationsApplicationUuidEnvironmentsEnvironmentUuidCredentialsRoute
+>>>>>>> origin/main
   '/applications/$applicationUuid/environments/$environmentUuid/': typeof ApplicationsApplicationUuidEnvironmentsEnvironmentUuidIndexRoute
 }
 export interface FileRouteTypes {
@@ -510,6 +532,7 @@ export interface FileRouteTypes {
     | '/applications/$applicationUuid/'
     | '/applications/$applicationUuid/environments/$environmentUuid'
     | '/applications/$applicationUuid/environments/'
+<<<<<<< HEAD
     | '/applications/$applicationUuid/environments/$environmentUuid/authentication-method'
     | '/applications/$applicationUuid/environments/$environmentUuid/client-type'
     | '/applications/$applicationUuid/environments/$environmentUuid/credentials'
@@ -524,6 +547,9 @@ export interface FileRouteTypes {
     | '/applications/$applicationUuid/environments/$environmentUuid/requests-encrypted'
     | '/applications/$applicationUuid/environments/$environmentUuid/sector-identifier'
     | '/applications/$applicationUuid/environments/$environmentUuid/single-sign-out-method'
+=======
+    | '/applications/$applicationUuid/environments/$environmentUuid/credentials'
+>>>>>>> origin/main
     | '/applications/$applicationUuid/environments/$environmentUuid/'
   fileRoutesByTo: FileRoutesByTo
   to:
@@ -552,6 +578,7 @@ export interface FileRouteTypes {
     | '/applications/$applicationUuid/mau-report'
     | '/applications/$applicationUuid'
     | '/applications/$applicationUuid/environments'
+<<<<<<< HEAD
     | '/applications/$applicationUuid/environments/$environmentUuid/authentication-method'
     | '/applications/$applicationUuid/environments/$environmentUuid/client-type'
     | '/applications/$applicationUuid/environments/$environmentUuid/credentials'
@@ -566,6 +593,9 @@ export interface FileRouteTypes {
     | '/applications/$applicationUuid/environments/$environmentUuid/requests-encrypted'
     | '/applications/$applicationUuid/environments/$environmentUuid/sector-identifier'
     | '/applications/$applicationUuid/environments/$environmentUuid/single-sign-out-method'
+=======
+    | '/applications/$applicationUuid/environments/$environmentUuid/credentials'
+>>>>>>> origin/main
     | '/applications/$applicationUuid/environments/$environmentUuid'
   id:
     | '__root__'
@@ -598,6 +628,7 @@ export interface FileRouteTypes {
     | '/applications/$applicationUuid/'
     | '/applications/$applicationUuid/environments/$environmentUuid'
     | '/applications/$applicationUuid/environments/'
+<<<<<<< HEAD
     | '/applications/$applicationUuid/environments/$environmentUuid/authentication-method'
     | '/applications/$applicationUuid/environments/$environmentUuid/client-type'
     | '/applications/$applicationUuid/environments/$environmentUuid/credentials'
@@ -612,6 +643,9 @@ export interface FileRouteTypes {
     | '/applications/$applicationUuid/environments/$environmentUuid/requests-encrypted'
     | '/applications/$applicationUuid/environments/$environmentUuid/sector-identifier'
     | '/applications/$applicationUuid/environments/$environmentUuid/single-sign-out-method'
+=======
+    | '/applications/$applicationUuid/environments/$environmentUuid/credentials'
+>>>>>>> origin/main
     | '/applications/$applicationUuid/environments/$environmentUuid/'
   fileRoutesById: FileRoutesById
 }
@@ -850,6 +884,7 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApplicationsApplicationUuidEnvironmentsEnvironmentUuidIndexRouteImport
       parentRoute: typeof ApplicationsApplicationUuidEnvironmentsEnvironmentUuidRoute
     }
+<<<<<<< HEAD
     '/applications/$applicationUuid/environments/$environmentUuid/authentication-method': {
       id: '/applications/$applicationUuid/environments/$environmentUuid/authentication-method'
       path: '/authentication-method'
@@ -864,6 +899,8 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApplicationsApplicationUuidEnvironmentsEnvironmentUuidClientTypeRouteImport
       parentRoute: typeof ApplicationsApplicationUuidEnvironmentsEnvironmentUuidRoute
     }
+=======
+>>>>>>> origin/main
     '/applications/$applicationUuid/environments/$environmentUuid/credentials': {
       id: '/applications/$applicationUuid/environments/$environmentUuid/credentials'
       path: '/credentials'
@@ -871,6 +908,7 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApplicationsApplicationUuidEnvironmentsEnvironmentUuidCredentialsRouteImport
       parentRoute: typeof ApplicationsApplicationUuidEnvironmentsEnvironmentUuidRoute
     }
+<<<<<<< HEAD
     '/applications/$applicationUuid/environments/$environmentUuid/english-url': {
       id: '/applications/$applicationUuid/environments/$environmentUuid/english-url'
       path: '/english-url'
@@ -948,10 +986,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApplicationsApplicationUuidEnvironmentsEnvironmentUuidSingleSignOutMethodRouteImport
       parentRoute: typeof ApplicationsApplicationUuidEnvironmentsEnvironmentUuidRoute
     }
+=======
+>>>>>>> origin/main
   }
 }
 
 interface ApplicationsApplicationUuidEnvironmentsEnvironmentUuidRouteChildren {
+<<<<<<< HEAD
   ApplicationsApplicationUuidEnvironmentsEnvironmentUuidAuthenticationMethodRoute: typeof ApplicationsApplicationUuidEnvironmentsEnvironmentUuidAuthenticationMethodRoute
   ApplicationsApplicationUuidEnvironmentsEnvironmentUuidClientTypeRoute: typeof ApplicationsApplicationUuidEnvironmentsEnvironmentUuidClientTypeRoute
   ApplicationsApplicationUuidEnvironmentsEnvironmentUuidCredentialsRoute: typeof ApplicationsApplicationUuidEnvironmentsEnvironmentUuidCredentialsRoute
@@ -966,11 +1007,15 @@ interface ApplicationsApplicationUuidEnvironmentsEnvironmentUuidRouteChildren {
   ApplicationsApplicationUuidEnvironmentsEnvironmentUuidRequestsEncryptedRoute: typeof ApplicationsApplicationUuidEnvironmentsEnvironmentUuidRequestsEncryptedRoute
   ApplicationsApplicationUuidEnvironmentsEnvironmentUuidSectorIdentifierRoute: typeof ApplicationsApplicationUuidEnvironmentsEnvironmentUuidSectorIdentifierRoute
   ApplicationsApplicationUuidEnvironmentsEnvironmentUuidSingleSignOutMethodRoute: typeof ApplicationsApplicationUuidEnvironmentsEnvironmentUuidSingleSignOutMethodRoute
+=======
+  ApplicationsApplicationUuidEnvironmentsEnvironmentUuidCredentialsRoute: typeof ApplicationsApplicationUuidEnvironmentsEnvironmentUuidCredentialsRoute
+>>>>>>> origin/main
   ApplicationsApplicationUuidEnvironmentsEnvironmentUuidIndexRoute: typeof ApplicationsApplicationUuidEnvironmentsEnvironmentUuidIndexRoute
 }
 
 const ApplicationsApplicationUuidEnvironmentsEnvironmentUuidRouteChildren: ApplicationsApplicationUuidEnvironmentsEnvironmentUuidRouteChildren =
   {
+<<<<<<< HEAD
     ApplicationsApplicationUuidEnvironmentsEnvironmentUuidAuthenticationMethodRoute:
       ApplicationsApplicationUuidEnvironmentsEnvironmentUuidAuthenticationMethodRoute,
     ApplicationsApplicationUuidEnvironmentsEnvironmentUuidClientTypeRoute:
@@ -999,6 +1044,10 @@ const ApplicationsApplicationUuidEnvironmentsEnvironmentUuidRouteChildren: Appli
       ApplicationsApplicationUuidEnvironmentsEnvironmentUuidSectorIdentifierRoute,
     ApplicationsApplicationUuidEnvironmentsEnvironmentUuidSingleSignOutMethodRoute:
       ApplicationsApplicationUuidEnvironmentsEnvironmentUuidSingleSignOutMethodRoute,
+=======
+    ApplicationsApplicationUuidEnvironmentsEnvironmentUuidCredentialsRoute:
+      ApplicationsApplicationUuidEnvironmentsEnvironmentUuidCredentialsRoute,
+>>>>>>> origin/main
     ApplicationsApplicationUuidEnvironmentsEnvironmentUuidIndexRoute:
       ApplicationsApplicationUuidEnvironmentsEnvironmentUuidIndexRoute,
   }

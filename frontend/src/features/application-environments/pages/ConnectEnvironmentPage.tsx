@@ -42,6 +42,7 @@ import {
 	toPayload,
 	type ApplicationEnvironmentFormValues,
 } from "./connect-environment-form";
+import "./environments-page.css";
 
 const inputValue = (event: FormEvent<Element>): string =>
 	(event.target as HTMLInputElement).value;
@@ -72,9 +73,7 @@ type StepThreeFieldName =
 	| "clientType"
 	| "pkceSupported"
 	| "clientAuthMethod"
-	| "jwksUri"
-	| "sharesIdentifier"
-	| "sectorIdentifierUrl";
+	| "jwksUri";
 
 type StepFourFieldName =
 	| "verificationMessages"
@@ -189,16 +188,6 @@ const STEP_THREE_FIELD_CONFIG: Record<
 	pkceSupported: {
 		errorKey: "applicationEnvironmentConnect.stepThree.validationPkceSupported",
 		hostId: "pkce-supported-control",
-	},
-	sectorIdentifierUrl: {
-		errorKey:
-			"applicationEnvironmentConnect.stepThree.validationSectorIdentifierUrl",
-		hostId: "sector-identifier-url-control",
-	},
-	sharesIdentifier: {
-		errorKey:
-			"applicationEnvironmentConnect.stepThree.validationSharesIdentifier",
-		hostId: "shares-identifier-control",
 	},
 };
 
@@ -430,8 +419,6 @@ export const ConnectEnvironmentPage = (): FunctionComponent => {
 		"pkceSupported",
 		"clientAuthMethod",
 		"jwksUri",
-		"sharesIdentifier",
-		"sectorIdentifierUrl",
 	] as const satisfies ReadonlyArray<StepThreeFieldName>;
 	const stepThreeErrorFields = stepThreeFieldNames.filter(
 		(fieldName) => errors[fieldName]
@@ -596,8 +583,6 @@ export const ConnectEnvironmentPage = (): FunctionComponent => {
 			"pkceSupported",
 			"clientAuthMethod",
 			"jwksUri",
-			"sharesIdentifier",
-			"sectorIdentifierUrl",
 		],
 		[
 			"verificationMessages",
@@ -646,8 +631,11 @@ export const ConnectEnvironmentPage = (): FunctionComponent => {
 			const result = await createEnvironment(toPayload(formValues));
 			if (result) {
 				void navigate({
-					to: "/applications/$applicationUuid/environments",
-					params: { applicationUuid },
+					to: "/applications/$applicationUuid/environments/$environmentUuid",
+					params: {
+						applicationUuid,
+						environmentUuid: result.uuid,
+					},
 				});
 			}
 		} catch {
@@ -663,7 +651,9 @@ export const ConnectEnvironmentPage = (): FunctionComponent => {
 				<Text marginBottom="0">
 					<strong>{applicationName}</strong>
 				</Text>
-				<Icon name="arrow-up-down" size="text" />
+				<div className="application-switch-icon">
+					<Icon name="arrow-up-down" size="text" />
+				</div>
 				<Link href="/applications">
 					{t("applicationEnvironmentConnect.switchApplication")}
 				</Link>
@@ -1491,11 +1481,6 @@ export const ConnectEnvironmentPage = (): FunctionComponent => {
 										onInput={(event) => {
 											const selectedClientType = inputValue(event);
 											field.onChange(selectedClientType);
-											if (selectedClientType === "public") {
-												setValue("pkceSupported", true, {
-													shouldValidate: true,
-												});
-											}
 											clearErrors([
 												"clientType",
 												"pkceSupported",
@@ -1613,68 +1598,6 @@ export const ConnectEnvironmentPage = (): FunctionComponent => {
 										/>
 									)}
 								</>
-							)}
-							<Controller
-								control={control}
-								name="sharesIdentifier"
-								render={({ field }) => (
-									<Radios
-										required
-										errorMessage={stepThreeErrorMessage("sharesIdentifier")}
-										id={STEP_THREE_FIELD_CONFIG.sharesIdentifier.hostId}
-										name={field.name}
-										legend={t(
-											"applicationEnvironmentConnect.stepThree.sharesIdentifier"
-										)}
-										options={[
-											{
-												id: "identifier-yes",
-												label: t("common.yes"),
-												value: "true",
-											},
-											{
-													id: "identifier-no",
-													label: t("common.no"),
-													value: "false",
-											},
-										]}
-										value={
-											field.value === null ? undefined : String(field.value)
-										}
-										onInput={(event) => {
-											const sharesIdentifier = boolValue(event);
-											field.onChange(sharesIdentifier);
-											clearErrors("sharesIdentifier");
-											if (!sharesIdentifier) {
-												clearErrors("sectorIdentifierUrl");
-											}
-										}}
-									/>
-								)}
-							/>
-							{values.sharesIdentifier && (
-								<Controller
-									control={control}
-									name="sectorIdentifierUrl"
-									render={({ field }) => (
-										<Input
-											required
-											id={STEP_THREE_FIELD_CONFIG.sectorIdentifierUrl.hostId}
-											inputId="sector-identifier-url"
-											name={field.name}
-											value={field.value}
-											errorMessage={stepThreeErrorMessage(
-												"sectorIdentifierUrl"
-											)}
-											label={t(
-												"applicationEnvironmentConnect.stepThree.sectorIdentifierUrl"
-											)}
-											onInput={(event) => {
-												field.onChange(inputValue(event));
-											}}
-										/>
-									)}
-								/>
 							)}
 						</Grid>
 					</Grid>

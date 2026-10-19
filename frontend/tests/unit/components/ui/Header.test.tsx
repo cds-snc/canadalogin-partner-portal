@@ -5,6 +5,7 @@ import Header from "@/components/ui/Header";
 import { useSession } from "@/hooks";
 
 let pathname = "/users";
+<<<<<<< HEAD
 let routeContext: {
 	backLink?: {
 		href: string;
@@ -19,6 +20,38 @@ let routeContext: {
 		showBackLabel: false,
 	},
 };
+=======
+type TestBreadcrumb = {
+	href: string;
+	label: string;
+	showBackLabel?: boolean;
+};
+
+type TestRouteMatch = {
+	context: {
+		backLink?: TestBreadcrumb;
+		breadcrumbs?: Array<TestBreadcrumb>;
+	};
+};
+
+const defaultRouteMatches: Array<TestRouteMatch> = [
+	{
+		context: {
+			backLink: {
+				href: "/applications",
+				label: "Applications",
+				showBackLabel: false,
+			},
+		},
+	},
+];
+let routeMatches = defaultRouteMatches;
+
+beforeEach(() => {
+	pathname = "/users";
+	routeMatches = defaultRouteMatches;
+});
+>>>>>>> origin/main
 
 vi.mock("react-i18next", () => ({
 	useTranslation: (): {
@@ -59,18 +92,26 @@ vi.mock("@tanstack/react-router", () => ({
 	}: {
 		select: (state: {
 			location: { pathname: string };
+<<<<<<< HEAD
 			matches: Array<{
 				context?: typeof routeContext;
 			}>;
+=======
+			matches: Array<TestRouteMatch>;
+>>>>>>> origin/main
 		}) => unknown;
 	}): unknown =>
 		select({
 			location: { pathname },
+<<<<<<< HEAD
 			matches: [
 				{
 					context: routeContext,
 				},
 			],
+=======
+			matches: routeMatches,
+>>>>>>> origin/main
 		}),
 }));
 
@@ -193,6 +234,24 @@ describe("Header", () => {
 
 	it("renders navigation for authenticated superuser", () => {
 		pathname = "/users";
+		routeMatches = [
+			{
+				context: {
+					breadcrumbs: [
+						{
+							href: "/applications",
+							label: "Applications",
+							showBackLabel: false,
+						},
+						{
+							href: "/applications/application-uuid/environments",
+							label: "Environments",
+							showBackLabel: false,
+						},
+					],
+				},
+			},
+		];
 		vi.mocked(useSession).mockReturnValue({
 			currentUser: {
 				name: "Jane Doe",
@@ -233,6 +292,11 @@ describe("Header", () => {
 		expect(document.querySelector("a[href='/applications']")?.textContent).toBe(
 			"Applications"
 		);
+		expect(
+			document.querySelector(
+				"nav[data-slot='breadcrumb'] a[href='/applications/application-uuid/environments']"
+			)?.textContent
+		).toBe("Environments");
 		expect(
 			document.querySelector(
 				"nav[aria-label='Primary navigation'] > a[data-href='/logout']"

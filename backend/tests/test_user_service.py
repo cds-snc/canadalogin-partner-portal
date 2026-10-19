@@ -16,6 +16,24 @@ from src.app.services.user_service import UserService
 
 class TestUserService:
     @pytest.mark.asyncio
+    async def test_accept_terms_does_not_create_audit_log(self, mock_db, current_user_dict) -> None:
+        service = UserService()
+
+        with patch("src.app.services.user_service.crud_users") as mock_users:
+            mock_users.get = AsyncMock(return_value=current_user_dict)
+            mock_users.update = AsyncMock()
+
+            with patch(
+                "src.app.repositories.crud_audit_log.crud_audit_log.create",
+                new_callable=AsyncMock,
+            ) as mock_audit_create:
+                result = await service.accept_terms(db=mock_db, current_user=current_user_dict)
+
+        assert result == {"message": "Terms accepted"}
+        mock_users.update.assert_awaited_once()
+        mock_audit_create.assert_not_awaited()
+
+    @pytest.mark.asyncio
     async def test_create_user_rejects_duplicate_email(self, mock_db, sample_user_data) -> None:
         service = UserService()
         user = UserCreate(**sample_user_data)

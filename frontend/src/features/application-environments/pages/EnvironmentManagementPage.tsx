@@ -1,12 +1,24 @@
+<<<<<<< HEAD
 import { useNavigate, useParams } from "@tanstack/react-router";
 import { useTranslation } from "react-i18next";
 import { Fragment, type ReactNode } from "react";
+=======
+import {
+	useNavigate,
+	useParams,
+} from "@tanstack/react-router";
+import { useTranslation } from "react-i18next";
+>>>>>>> origin/main
 import type { FunctionComponent } from "@/common/types";
 import {
 	Button,
 	ConfigurationGrid,
 	Grid,
 	Heading,
+<<<<<<< HEAD
+=======
+	Icon,
+>>>>>>> origin/main
 	Link,
 	Notice,
 	Tabs,
@@ -24,9 +36,14 @@ type EnvironmentConfig = Partial<ApplicationEnvironmentCreate>;
 
 type SummaryRow = {
 	change?: boolean;
+<<<<<<< HEAD
 	editHref?: string;
 	label: string;
 	value: ReactNode;
+=======
+	label: string;
+	value: string;
+>>>>>>> origin/main
 };
 
 type SummarySection = {
@@ -35,7 +52,10 @@ type SummarySection = {
 };
 
 const CONFIGURATION_FIELD_COLUMN_WIDTH = "16rem";
+<<<<<<< HEAD
 const ABSOLUTE_URL_PATTERN = /^[a-z][a-z\d+.-]*:\/\//i;
+=======
+>>>>>>> origin/main
 
 const isNonEmptyString = (value: unknown): value is string =>
 	typeof value === "string" && value.trim().length > 0;
@@ -56,6 +76,7 @@ const formatValue = (
 	return inactiveLabel;
 };
 
+<<<<<<< HEAD
 const formatUrlList = (
 	value: unknown,
 	inactiveLabel: string,
@@ -76,13 +97,26 @@ const formatUrlList = (
 		: inactiveLabel;
 };
 
+=======
+>>>>>>> origin/main
 const formatDate = (value: string | null, language: string): string => {
 	if (!value) {
 		return "";
 	}
+<<<<<<< HEAD
 	return new Intl.DateTimeFormat(language, {
 		dateStyle: "long",
 		timeStyle: "short",
+=======
+	const locale = language.startsWith("fr") ? "fr-CA" : language;
+	return new Intl.DateTimeFormat(locale, {
+		year: "numeric",
+		month: "long",
+		day: "numeric",
+		hour: "numeric",
+		minute: "2-digit",
+		timeZoneName: "short",
+>>>>>>> origin/main
 	}).format(new Date(value));
 };
 
@@ -109,9 +143,12 @@ export const EnvironmentManagementPage = (): FunctionComponent => {
 	});
 	const inactiveLabel = t("applicationEnvironmentManagement.inactive");
 	const formatToken = (token: string): string => {
+<<<<<<< HEAD
 		if (ABSOLUTE_URL_PATTERN.test(token)) {
 			return token;
 		}
+=======
+>>>>>>> origin/main
 		const translationKey = `applicationEnvironmentManagement.values.${token}`;
 		const translated = t(translationKey as never);
 		return translated === translationKey ? token : translated;
@@ -160,7 +197,10 @@ export const EnvironmentManagementPage = (): FunctionComponent => {
 	}
 
 	const config = getConfig(environment);
+<<<<<<< HEAD
 	const isProduction = environment.tenantCode === "production";
+=======
+>>>>>>> origin/main
 	const isStaging = environment.tenantCode === "staging";
 	const canSignMessages = config.canSignMessages === true;
 	const canEncryptRequests = config.canEncryptRequests === true;
@@ -182,7 +222,10 @@ export const EnvironmentManagementPage = (): FunctionComponent => {
 				},
 				{
 					change: true,
+<<<<<<< HEAD
 					editHref: `/applications/${applicationUuid}/environments/${environmentUuid}/environment-name`,
+=======
+>>>>>>> origin/main
 					label: t("applicationEnvironmentManagement.fields.environmentName"),
 					value: formatValue(
 						config.environmentName ?? environment.partnerLabel,
@@ -192,7 +235,10 @@ export const EnvironmentManagementPage = (): FunctionComponent => {
 				},
 				{
 					change: true,
+<<<<<<< HEAD
 					editHref: `/applications/${applicationUuid}/environments/${environmentUuid}/english-url`,
+=======
+>>>>>>> origin/main
 					label: t("applicationEnvironmentManagement.fields.englishUrl"),
 					value: formatValue(
 						config.applicationUrlEn,
@@ -202,7 +248,10 @@ export const EnvironmentManagementPage = (): FunctionComponent => {
 				},
 				{
 					change: true,
+<<<<<<< HEAD
 					editHref: `/applications/${applicationUuid}/environments/${environmentUuid}/french-url`,
+=======
+>>>>>>> origin/main
 					label: t("applicationEnvironmentManagement.fields.frenchUrl"),
 					value: formatValue(
 						config.applicationUrlFr,
@@ -239,6 +288,7 @@ export const EnvironmentManagementPage = (): FunctionComponent => {
 			rows: [
 				{
 					change: true,
+<<<<<<< HEAD
 					editHref: `/applications/${applicationUuid}/environments/${environmentUuid}/redirect-urls`,
 					label: t("applicationEnvironmentManagement.fields.redirectUris"),
 					value: formatUrlList(
@@ -254,6 +304,17 @@ export const EnvironmentManagementPage = (): FunctionComponent => {
 						"applicationEnvironmentManagement.fields.postLogoutRedirectUris"
 					),
 					value: formatUrlList(
+=======
+					label: t("applicationEnvironmentManagement.fields.redirectUris"),
+					value: formatValue(config.redirectUris, inactiveLabel, formatToken),
+				},
+				{
+					change: true,
+					label: t(
+						"applicationEnvironmentManagement.fields.postLogoutRedirectUris"
+					),
+					value: formatValue(
+>>>>>>> origin/main
 						config.postLogoutRedirectUris,
 						inactiveLabel,
 						formatToken
@@ -261,7 +322,10 @@ export const EnvironmentManagementPage = (): FunctionComponent => {
 				},
 				{
 					change: true,
+<<<<<<< HEAD
 					editHref: `/applications/${applicationUuid}/environments/${environmentUuid}/single-sign-out-method`,
+=======
+>>>>>>> origin/main
 					label: t(
 						"applicationEnvironmentManagement.fields.singleSignOutMethod"
 					),
@@ -273,7 +337,10 @@ export const EnvironmentManagementPage = (): FunctionComponent => {
 					? [
 							{
 								change: true,
+<<<<<<< HEAD
 								editHref: `/applications/${applicationUuid}/environments/${environmentUuid}/single-sign-out-method`,
+=======
+>>>>>>> origin/main
 								label: t(
 									"applicationEnvironmentManagement.fields.signOutRequestUrl"
 								),
@@ -285,6 +352,7 @@ export const EnvironmentManagementPage = (): FunctionComponent => {
 							},
 						]
 					: []),
+<<<<<<< HEAD
 				...(isProduction
 					? [
 							{
@@ -296,6 +364,13 @@ export const EnvironmentManagementPage = (): FunctionComponent => {
 							},
 						]
 					: []),
+=======
+				{
+					change: true,
+					label: t("applicationEnvironmentManagement.fields.outboundIps"),
+					value: inactiveLabel,
+				},
+>>>>>>> origin/main
 			],
 		},
 		{
@@ -303,13 +378,19 @@ export const EnvironmentManagementPage = (): FunctionComponent => {
 			rows: [
 				{
 					change: true,
+<<<<<<< HEAD
 					editHref: `/applications/${applicationUuid}/environments/${environmentUuid}/client-type`,
+=======
+>>>>>>> origin/main
 					label: t("applicationEnvironmentManagement.fields.clientType"),
 					value: formatValue(config.clientType, inactiveLabel, formatToken),
 				},
 				{
 					change: true,
+<<<<<<< HEAD
 					editHref: `/applications/${applicationUuid}/environments/${environmentUuid}/client-type`,
+=======
+>>>>>>> origin/main
 					label: t("applicationEnvironmentManagement.fields.pkce"),
 					value:
 						config.pkceSupported === true
@@ -318,7 +399,10 @@ export const EnvironmentManagementPage = (): FunctionComponent => {
 				},
 				{
 					change: true,
+<<<<<<< HEAD
 					editHref: `/applications/${applicationUuid}/environments/${environmentUuid}/authentication-method`,
+=======
+>>>>>>> origin/main
 					label: t(
 						"applicationEnvironmentManagement.fields.authenticationMethod"
 					),
@@ -332,7 +416,10 @@ export const EnvironmentManagementPage = (): FunctionComponent => {
 					? [
 							{
 								change: true,
+<<<<<<< HEAD
 								editHref: `/applications/${applicationUuid}/environments/${environmentUuid}/authentication-method`,
+=======
+>>>>>>> origin/main
 								label: t("applicationEnvironmentManagement.fields.jwksUri"),
 								value: formatValue(config.jwksUri, inactiveLabel, formatToken),
 							},
@@ -340,7 +427,10 @@ export const EnvironmentManagementPage = (): FunctionComponent => {
 					: []),
 				{
 					change: true,
+<<<<<<< HEAD
 					editHref: `/applications/${applicationUuid}/environments/${environmentUuid}/sector-identifier`,
+=======
+>>>>>>> origin/main
 					label: t("applicationEnvironmentManagement.fields.sectorIdentifier"),
 					value: sharesIdentifier
 						? formatValue(
@@ -357,7 +447,10 @@ export const EnvironmentManagementPage = (): FunctionComponent => {
 			rows: [
 				{
 					change: true,
+<<<<<<< HEAD
 					editHref: `/applications/${applicationUuid}/environments/${environmentUuid}/messages-verified`,
+=======
+>>>>>>> origin/main
 					label: t("applicationEnvironmentManagement.fields.messagesVerified"),
 					value: formatValue(
 						config.verificationMessages,
@@ -367,7 +460,10 @@ export const EnvironmentManagementPage = (): FunctionComponent => {
 				},
 				{
 					change: true,
+<<<<<<< HEAD
 					editHref: `/applications/${applicationUuid}/environments/${environmentUuid}/messages-verified`,
+=======
+>>>>>>> origin/main
 					label: t(
 						"applicationEnvironmentManagement.fields.verificationAlgorithms"
 					),
@@ -379,7 +475,10 @@ export const EnvironmentManagementPage = (): FunctionComponent => {
 				},
 				{
 					change: true,
+<<<<<<< HEAD
 					editHref: `/applications/${applicationUuid}/environments/${environmentUuid}/messages-signed`,
+=======
+>>>>>>> origin/main
 					label: t("applicationEnvironmentManagement.fields.messagesSigned"),
 					value: canSignMessages
 						? formatValue(config.signingMessages, inactiveLabel, formatToken)
@@ -389,7 +488,10 @@ export const EnvironmentManagementPage = (): FunctionComponent => {
 					? [
 							{
 								change: true,
+<<<<<<< HEAD
 								editHref: `/applications/${applicationUuid}/environments/${environmentUuid}/messages-signed`,
+=======
+>>>>>>> origin/main
 								label: t(
 									"applicationEnvironmentManagement.fields.signingAlgorithms"
 								),
@@ -410,17 +512,26 @@ export const EnvironmentManagementPage = (): FunctionComponent => {
 			rows: [
 				{
 					change: true,
+<<<<<<< HEAD
 					editHref: `/applications/${applicationUuid}/environments/${environmentUuid}/requests-encrypted`,
 					label: t("applicationEnvironmentManagement.fields.requestsEncrypted"),
 					value: canEncryptRequests
 						? t("applicationEnvironmentManagement.enabled")
+=======
+					label: t("applicationEnvironmentManagement.fields.requestsEncrypted"),
+					value: canEncryptRequests
+						? t("applicationEnvironmentManagement.values.request_object")
+>>>>>>> origin/main
 						: inactiveLabel,
 				},
 				...(canEncryptRequests
 					? [
 							{
 								change: true,
+<<<<<<< HEAD
 								editHref: `/applications/${applicationUuid}/environments/${environmentUuid}/requests-encrypted`,
+=======
+>>>>>>> origin/main
 								label: t(
 									"applicationEnvironmentManagement.fields.encryptionKeyManagement"
 								),
@@ -432,7 +543,10 @@ export const EnvironmentManagementPage = (): FunctionComponent => {
 							},
 							{
 								change: true,
+<<<<<<< HEAD
 								editHref: `/applications/${applicationUuid}/environments/${environmentUuid}/requests-encrypted`,
+=======
+>>>>>>> origin/main
 								label: t(
 									"applicationEnvironmentManagement.fields.encryptionAlgorithms"
 								),
@@ -446,7 +560,10 @@ export const EnvironmentManagementPage = (): FunctionComponent => {
 					: []),
 				{
 					change: true,
+<<<<<<< HEAD
 					editHref: `/applications/${applicationUuid}/environments/${environmentUuid}/messages-decrypted`,
+=======
+>>>>>>> origin/main
 					label: t("applicationEnvironmentManagement.fields.messagesDecrypted"),
 					value: canDecryptMessages
 						? formatValue(config.decryptionMessages, inactiveLabel, formatToken)
@@ -456,7 +573,10 @@ export const EnvironmentManagementPage = (): FunctionComponent => {
 					? [
 							{
 								change: true,
+<<<<<<< HEAD
 								editHref: `/applications/${applicationUuid}/environments/${environmentUuid}/messages-decrypted`,
+=======
+>>>>>>> origin/main
 								label: t(
 									"applicationEnvironmentManagement.fields.decryptionKeyManagement"
 								),
@@ -468,7 +588,10 @@ export const EnvironmentManagementPage = (): FunctionComponent => {
 							},
 							{
 								change: true,
+<<<<<<< HEAD
 								editHref: `/applications/${applicationUuid}/environments/${environmentUuid}/messages-decrypted`,
+=======
+>>>>>>> origin/main
 								label: t(
 									"applicationEnvironmentManagement.fields.decryptionAlgorithms"
 								),
@@ -486,6 +609,20 @@ export const EnvironmentManagementPage = (): FunctionComponent => {
 	return (
 		<Grid columns="1fr" container="xl" tag="div">
 			<Grid columns="minmax(0, 46.5rem)" tag="div">
+<<<<<<< HEAD
+=======
+				<Grid alignItems="center" columns="auto auto 1fr" tag="div">
+					<Text marginBottom="0">
+						<strong>{environment.partnerLabel}</strong>
+					</Text>
+					<div className="application-switch-icon">
+						<Icon name="arrow-up-down" size="text" />
+					</div>
+					<Link href="/applications">
+						{t("applicationEnvironments.switchApplication")}
+					</Link>
+				</Grid>
+>>>>>>> origin/main
 				<Heading tag="h1">{environment.partnerLabel}</Heading>
 				<Text marginBottom="0">
 					{t("applicationEnvironmentManagement.intro")}
@@ -543,16 +680,24 @@ export const EnvironmentManagementPage = (): FunctionComponent => {
 			/>
 			{sections.map((section) => (
 				<Grid key={section.title} columns="1fr" tag="section">
+<<<<<<< HEAD
 					<Heading marginBottom="0" tag="h2">
 						{section.title}
 					</Heading>
+=======
+					<Heading marginBottom="0" tag="h2">{section.title}</Heading>
+>>>>>>> origin/main
 					<ConfigurationGrid
 						ariaLabel={section.title}
 						fieldColumnWidth={CONFIGURATION_FIELD_COLUMN_WIDTH}
 						rows={section.rows.map((row) => ({
 							edit: row.change ? (
 								<Link
+<<<<<<< HEAD
 									href={row.editHref ?? "#"}
+=======
+									href="#"
+>>>>>>> origin/main
 									ariaLabel={t(
 										"applicationEnvironmentManagement.changeAccessible",
 										{ field: row.label }

@@ -4,8 +4,10 @@ import pytest
 from fastapi import APIRouter, FastAPI
 from starlette.middleware.sessions import SessionMiddleware as StarletteSessionMiddleware
 from starsessions import SessionAutoloadMiddleware, SessionMiddleware
+from fastapi.middleware.cors import CORSMiddleware
+from starlette_csrf import CSRFMiddleware
 
-from src.app.core.config import settings
+from src.app.core.config import EnvironmentOption, Settings, settings
 from src.app.core.setup import create_application, lifespan_factory
 
 
@@ -17,6 +19,10 @@ class TestSessionMiddlewareSetup:
 
         assert SessionMiddleware in middleware_classes
         assert SessionAutoloadMiddleware in middleware_classes
+        csrf_middleware_index = next(
+            index for index, middleware_class in enumerate(middleware_classes) if issubclass(middleware_class, CSRFMiddleware)
+        )
+        assert middleware_classes.index(CORSMiddleware) < csrf_middleware_index
         assert StarletteSessionMiddleware not in middleware_classes
 
 

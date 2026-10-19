@@ -303,6 +303,7 @@
 		}
 	},
 	"applicationEnvironmentManagement": {
+<<<<<<< HEAD
 		"cancel": "Cancel",
 		"change": "Change",
 		"changeAccessible": "Change {{field}}",
@@ -322,6 +323,66 @@
 		"credentialsComingSoonTitle": "Credentials",
 		"credentialsTab": "Credentials",
 		"credentialsTitle": "Environment credentials",
+=======
+		"change": "Change",
+		"changeAccessible": "Change {{field}}",
+		"configurationTab": "Configuration",
+		"copyConfiguration": "Copy configuration",
+		"credentialsIntro": "Manage the credentials used to connect this environment to CanadaLogin.",
+		"credentialsLearnLink": "managing credentials",
+		"credentialsLearnPrefix": "Learn more about",
+		"credentialsSecurityNote": "Keep credentials secure. Do not share secrets or store them in public repositories. Treat credentials as Protected B information.",
+		"publicClientCredentialsBody": "Public clients do not have a client secret. They use PKCE to protect the sign-in flow.",
+		"publicClientCredentialsTitle": "Public client",
+		"credentialsTab": "Credentials",
+		"credentialsTitle": "Environment credentials",
+		"currentCredentialsTitle": "Current credentials",
+		"authenticationMethod": "Authentication method",
+		"clientIdLabel": "Client ID",
+		"clientIdHelp": "Used to identify this environment when connecting to CanadaLogin.",
+		"clientIdCopiedSuccess": "Client ID copied to clipboard.",
+		"jwksUriLabel": "JWKS URI",
+		"jwksUriHelp": "The location CanadaLogin uses to retrieve your application's public keys.",
+		"jwksUriCopiedSuccess": "JWKS URI copied to clipboard.",
+		"clientSecretCopiedSuccess": "Client secret copied to clipboard.",
+		"copyAction": "Copy",
+		"secretLabel": "Secret",
+		"revealAction": "Reveal",
+		"hideAction": "Hide",
+		"copySecretAction": "Copy secret",
+		"productionSecretAccessDenied": "You don't have permission to access the production secret.",
+		"productionSecretRequestAccess": "Request access to production secrets",
+		"rotateSecretTitle": "Rotate secret",
+		"rotateSecretHelp": "Generate a new secret to replace your current secret. Your current secret will remain active for 7 days before it expires.",
+		"productionRotateSecretHelpPrefix": "Production secrets cannot be rotated directly in the Partner Portal. To rotate this secret, submit a request to the",
+		"productionExpiringSecretsHelpPrefix": "These secrets are still active and will stop working on the date and time shown. To expire a secret early, contact",
+		"productionSupportLink": "CanadaLogin support team",
+		"rotationReasonLabel": "Reason for rotation",
+		"rotationReasonHint": "For example, annual rotation or incident #21213",
+		"rotationReasonRequired": "Reason for rotation is a required field.",
+		"rotateSecretAction": "Rotate secret",
+		"rotateConfirmTitle": "Rotate secret?",
+		"rotateConfirmBody": "A new secret will replace your current secret. Your current secret will remain active for 7 days before it expires.\n\nYou cannot undo this action.",
+		"rotateSuccessTitle": "Secret rotated successfully",
+		"expiringSecretsTitle": "Expiring secrets",
+		"expiringSecretsHelp": "These secrets are still active and will stop working on the date and time shown.",
+		"loadingRotatedSecrets": "Loading expiring secrets.",
+		"noExpiringSecrets": "There are no expiring secrets.",
+		"expiresAt": "Expires {{date}}.",
+		"expireNowAction": "Expire now",
+		"expireConfirmTitle": "Expire secret now?",
+		"expireConfirmBody": "This secret will stop working immediately instead of on {{expiry}}.\n\nYou cannot undo this action.",
+		"expireSecretAction": "Expire secret",
+		"expireSuccessTitle": "Secret expired successfully",
+		"expireSuccessBody": "The secret is no longer active.",
+		"expireFailureTitle": "Secret could not be expired",
+		"expireFailureBody": "The secret is still active. Try again. If the problem continues, contact support.",
+		"retrieveFailureTitle": "Secret could not be retrieved",
+		"retrieveFailureBody": "Try again. If the problem continues, contact support.",
+		"rotateFailureTitle": "Secret could not be rotated",
+		"rotateFailureBody": "Try again. If the problem continues, contact support.",
+		"dismissAction": "Dismiss",
+>>>>>>> origin/main
 		"disabled": "Disabled",
 		"enabled": "Enabled",
 		"errorBody": "The environment could not be loaded.",
@@ -333,12 +394,20 @@
 			"copiedFrom": "Copied from",
 			"decryptionAlgorithms": "Decryption content algorithms",
 			"decryptionKeyManagement": "Decryption key management",
+<<<<<<< HEAD
 			"englishUrl": "English environment URL",
+=======
+			"englishUrl": "English application URL",
+>>>>>>> origin/main
 			"environmentName": "Environment name",
 			"environmentType": "Environment type",
 			"encryptionAlgorithms": "Encryption content algorithms",
 			"encryptionKeyManagement": "Encryption key management",
+<<<<<<< HEAD
 			"frenchUrl": "French environment URL",
+=======
+			"frenchUrl": "French application URL",
+>>>>>>> origin/main
 			"jwksUri": "JSON Web Key Set (JWKS) URI",
 			"lastModified": "Last modified",
 			"messagesDecrypted": "Messages decrypted",
@@ -361,14 +430,18 @@
 		"guidePrefix": "Learn how to",
 		"loadingBody": "Loading the environment configuration.",
 		"loadingTitle": "Loading environment",
+<<<<<<< HEAD
 		"redirectUrlsIntro": "CanadaLogin only redirects users to URLs registered for this environment.",
 		"redirectUrlsRequirementsLink": "Learn more about redirect URL requirements.",
 		"postLogoutRedirectUrlsIntro": "CanadaLogin uses post logout redirect URLs to return users to your application after sign-out.",
 		"postLogoutRedirectUrlsRequirementsLink": "Learn more about post logout redirect URL requirements.",
+=======
+>>>>>>> origin/main
 		"requestProduction": "Request production",
 		"summaryActions": "Actions",
 		"summaryLabel": "Field",
 		"summaryValue": "Value",
+<<<<<<< HEAD
 		"updateRedirectUrlsErrorBody": "The redirect URLs could not be updated.",
 		"updateRedirectUrlsErrorTitle": "Unable to update redirect URLs",
 		"updatePostLogoutRedirectUrlsErrorBody": "The post logout redirect URLs could not be updated.",
@@ -404,6 +477,8 @@
 		"changeMessagesDecrypted": "Change messages decrypted",
 		"changeMessagesSigned": "Change messages signed",
 		"changeRequestsEncrypted": "Change requests encrypted",
+=======
+>>>>>>> origin/main
 		"sections": {
 			"authentication": "Authentication",
 			"connection": "Connection",
@@ -414,11 +489,14 @@
 		"summary": "Review the configuration for this environment.",
 		"tabsLabel": "Environment management views",
 		"title": "Environment configuration",
+<<<<<<< HEAD
 		"saveChanges": "Save changes",
 		"updateUrlErrorBody": "The environment URL could not be updated.",
 		"updateUrlErrorTitle": "Unable to update environment URL",
 		"updateErrorBody": "The environment name could not be updated.",
 		"updateErrorTitle": "Unable to update environment name",
+=======
+>>>>>>> origin/main
 		"values": {
 			"A128GCM": "A128GCM",
 			"A192GCM": "A192GCM",

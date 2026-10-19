@@ -17,8 +17,6 @@ from ..app.models.application_configuration_status import ApplicationConfigurati
 from ..app.models.authentication_protocol import AuthenticationProtocol
 from ..app.models.department import Department
 from ..app.models.partner_group import PartnerGroup
-from ..app.models.partner_group_role import PartnerGroupRole
-from ..app.models.role import Role
 from ..app.models.tenant import Tenant
 
 logger = logging.getLogger(__name__)
@@ -27,7 +25,6 @@ LOCAL_DEPARTMENT_GC_ORG_ID = 2222
 LOCAL_PARTNER_GROUP_UUID = UUID("00000000-0000-7000-8000-000000000001")
 LOCAL_APPLICATION_UUID = UUID("00000000-0000-7000-8000-000000000002")
 LOCAL_APPLICATION_CONFIGURATION_UUID = UUID("00000000-0000-7000-8000-000000000003")
-LOCAL_PARTNER_DEVELOPER_ROLE_NAME = "Partner Developer"
 
 
 @dataclass(frozen=True)
@@ -249,43 +246,6 @@ async def _upsert_application(
     return application
 
 
-async def _upsert_partner_developer_role(
-    session: AsyncSession,
-    partner_group_id: int,
-) -> PartnerGroupRole:
-    result = await session.execute(
-        select(Role).where(
-            Role.name == LOCAL_PARTNER_DEVELOPER_ROLE_NAME,
-            Role.is_deleted.is_(False),
-        )
-    )
-    role = result.scalar_one_or_none()
-    if role is None:
-        raise RuntimeError(
-            f"Role {LOCAL_PARTNER_DEVELOPER_ROLE_NAME!r} was not found. Run database migrations first."
-        )
-
-    result = await session.execute(
-        select(PartnerGroupRole).where(
-            PartnerGroupRole.partner_group_id == partner_group_id,
-            PartnerGroupRole.role_id == role.id,
-        )
-    )
-    partner_group_role = result.scalar_one_or_none()
-    if partner_group_role is None:
-        partner_group_role = PartnerGroupRole(
-            partner_group_id=partner_group_id,
-            role_id=role.id,
-        )
-        session.add(partner_group_role)
-    else:
-        partner_group_role.deleted_at = None
-        partner_group_role.is_deleted = False
-
-    await session.flush()
-    return partner_group_role
-
-
 async def _get_lookup_id(session: AsyncSession, model: type[Base], code: str) -> int:
     lookup_table = model.__table__
     result = await session.execute(
@@ -355,7 +315,6 @@ async def seed_local_application_erd(session: AsyncSession, environment: Environ
     ensure_local_environment(environment)
     department = await _get_local_department(session)
     partner_group = await _upsert_partner_group(session, department.id)
-    await _upsert_partner_developer_role(session, partner_group.id)
     for application_seed in LOCAL_APPLICATIONS:
         application = await _upsert_application(
             session,

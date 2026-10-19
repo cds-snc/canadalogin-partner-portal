@@ -230,6 +230,10 @@ class ApplicationEnvironmentRepository:
         statement = (
             select(
                 ApplicationConfiguration.uuid,
+<<<<<<< HEAD
+=======
+                ApplicationConfiguration.ibm_client_id.label("client_id"),
+>>>>>>> origin/main
                 ApplicationConfiguration.partner_label,
                 Tenant.code.label("tenant_code"),
                 ApplicationConfigurationStatus.code.label("status_code"),
@@ -244,7 +248,12 @@ class ApplicationEnvironmentRepository:
             )
             .join(
                 ApplicationConfigurationStatus,
+<<<<<<< HEAD
                 ApplicationConfigurationStatus.id == ApplicationConfiguration.application_configuration_status_id,
+=======
+                ApplicationConfigurationStatus.id
+                == ApplicationConfiguration.application_configuration_status_id,
+>>>>>>> origin/main
             )
             .join(Tenant, Tenant.id == ApplicationConfiguration.tenant_id)
             .where(
@@ -259,21 +268,44 @@ class ApplicationEnvironmentRepository:
         environment = (await db.execute(statement)).mappings().one_or_none()
         return dict(environment) if environment is not None else None
 
+<<<<<<< HEAD
     async def update_environment_name(
+=======
+    async def get_client_secret_context(
+>>>>>>> origin/main
         self,
         db: AsyncSession,
         application_uuid: uuid_pkg.UUID,
         environment_uuid: uuid_pkg.UUID,
+<<<<<<< HEAD
         environment_name: str,
     ) -> dict[str, Any] | None:
         statement = (
             select(ApplicationConfiguration)
             .join(Application, Application.id == ApplicationConfiguration.application_id)
+=======
+    ) -> dict[str, Any] | None:
+        statement = (
+            select(
+                ApplicationConfiguration.uuid,
+                ApplicationConfiguration.partner_label,
+                ApplicationConfiguration.ibm_application_id,
+                ApplicationConfiguration.ibm_client_id,
+                Tenant.code.label("tenant_code"),
+            )
+            .select_from(Application)
+            .join(
+                ApplicationConfiguration,
+                ApplicationConfiguration.application_id == Application.id,
+            )
+            .join(Tenant, Tenant.id == ApplicationConfiguration.tenant_id)
+>>>>>>> origin/main
             .where(
                 Application.uuid == application_uuid,
                 Application.is_deleted.is_(False),
                 ApplicationConfiguration.uuid == environment_uuid,
                 ApplicationConfiguration.is_deleted.is_(False),
+<<<<<<< HEAD
             )
         )
         configuration = (await db.execute(statement)).scalar_one_or_none()
@@ -731,6 +763,13 @@ class ApplicationEnvironmentRepository:
             application_uuid=application_uuid,
             environment_uuid=environment_uuid,
         )
+=======
+                Tenant.is_deleted.is_(False),
+            )
+        )
+        environment = (await db.execute(statement)).mappings().one_or_none()
+        return dict(environment) if environment is not None else None
+>>>>>>> origin/main
 
 
 application_environment_repository = ApplicationEnvironmentRepository()

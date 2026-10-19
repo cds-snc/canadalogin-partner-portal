@@ -3,10 +3,22 @@ import { fireEvent, render, screen } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 import { EnvironmentManagementPage } from "@/features/application-environments/pages/EnvironmentManagementPage";
 
+<<<<<<< HEAD
 const { mockedNavigate, mockedUseApplicationEnvironment, mockedUseNavigate } =
 	vi.hoisted(() => {
 		const mockedNavigate = vi.fn();
 		return {
+=======
+const {
+	mockedLanguage,
+	mockedNavigate,
+	mockedUseApplicationEnvironment,
+	mockedUseNavigate,
+} = vi.hoisted(() => {
+		const mockedNavigate = vi.fn();
+		return {
+			mockedLanguage: { value: "en" },
+>>>>>>> origin/main
 			mockedNavigate,
 			mockedUseApplicationEnvironment: vi.fn(),
 			mockedUseNavigate: vi.fn(() => mockedNavigate),
@@ -23,12 +35,17 @@ vi.mock("@tanstack/react-router", () => ({
 
 vi.mock("react-i18next", () => ({
 	useTranslation: () => ({
+<<<<<<< HEAD
 		i18n: { resolvedLanguage: "en" },
+=======
+		i18n: { resolvedLanguage: mockedLanguage.value },
+>>>>>>> origin/main
 		t: (key: string, options?: { field?: string }): string => {
 			if (key === "applicationEnvironmentManagement.changeAccessible") {
 				return `Change ${options?.field ?? "field"}`;
 			}
 			if (key === "applicationEnvironmentManagement.fields.englishUrl") {
+<<<<<<< HEAD
 				return "English environment URL";
 			}
 			if (key === "applicationEnvironmentManagement.fields.frenchUrl") {
@@ -111,6 +128,17 @@ vi.mock("react-i18next", () => ({
 				"applicationEnvironmentManagement.credentialsTab": "Credentials",
 				"applicationEnvironmentManagement.inactive": "Inactive",
 				"applicationEnvironmentManagement.enabled": "Enabled",
+=======
+				return "English application URL";
+			}
+			const translations: Record<string, string> = {
+				"applicationEnvironmentManagement.change": "Change",
+				"applicationEnvironmentManagement.configurationTab": "Configuration",
+				"applicationEnvironmentManagement.credentialsTab": "Credentials",
+				"applicationEnvironmentManagement.inactive": "Inactive",
+				"applicationEnvironmentManagement.fields.created": "Created",
+				"applicationEnvironmentManagement.fields.lastModified": "Last modified",
+>>>>>>> origin/main
 				"applicationEnvironmentManagement.requestProduction":
 					"Request production",
 				"applicationEnvironmentManagement.sections.authentication":
@@ -121,6 +149,10 @@ vi.mock("react-i18next", () => ({
 					"Encryption and decryption",
 				"applicationEnvironmentManagement.sections.verificationSigning":
 					"Verification and signing",
+<<<<<<< HEAD
+=======
+				"applicationEnvironments.switchApplication": "Switch application",
+>>>>>>> origin/main
 				"applicationEnvironmentManagement.summary":
 					"Review the configuration for this environment.",
 				"applicationEnvironmentManagement.tabsLabel": "Environment views",
@@ -166,6 +198,10 @@ vi.mock("@/components/ui", () => ({
 			{children}
 		</a>
 	),
+<<<<<<< HEAD
+=======
+	Icon: ({ name }: { name: string }): ReactElement => <span>{name}</span>,
+>>>>>>> origin/main
 	Tabs: ({
 		ariaLabel,
 		items,
@@ -216,7 +252,10 @@ describe("EnvironmentManagementPage", () => {
 			canDecryptMessages: false,
 			canEncryptRequests: false,
 			canSignMessages: false,
+<<<<<<< HEAD
 			clientAuthMethod: "private_key_jwt" as const,
+=======
+>>>>>>> origin/main
 			clientType: "public" as const,
 			copyExisting: false,
 			decryptionContentAlgorithms: [],
@@ -225,7 +264,10 @@ describe("EnvironmentManagementPage", () => {
 			encryptionContentAlgorithms: [],
 			encryptionKeyAlgorithms: [],
 			environmentName: "portal",
+<<<<<<< HEAD
 			jwksUri: "https://example.com/jwks",
+=======
+>>>>>>> origin/main
 			pkceSupported: true,
 			postLogoutRedirectUris: [],
 			redirectUris: [],
@@ -245,6 +287,25 @@ describe("EnvironmentManagementPage", () => {
 		uuid: "environment-uuid-1",
 	};
 
+<<<<<<< HEAD
+=======
+	it("uses the French hour marker for French timestamps", () => {
+		mockedLanguage.value = "fr";
+		try {
+			mockedUseApplicationEnvironment.mockReturnValue({
+				data: environment,
+				error: null,
+				isLoading: false,
+			});
+			render(<EnvironmentManagementPage />);
+
+			expect(screen.getAllByText(/\d{1,2} h \d{2}/)).toHaveLength(2);
+		} finally {
+			mockedLanguage.value = "en";
+		}
+	});
+
+>>>>>>> origin/main
 	it("renders inactive values and accessible change links without a production action for TEST", () => {
 		mockedUseApplicationEnvironment.mockReturnValue({
 			data: environment,
@@ -255,6 +316,7 @@ describe("EnvironmentManagementPage", () => {
 		render(<EnvironmentManagementPage />);
 
 		expect(screen.getAllByText("Inactive").length).toBeGreaterThan(0);
+<<<<<<< HEAD
 		expect(screen.getByText("https://example.com/en")).toBeTruthy();
 		expect(screen.getByText("https://example.com/fr")).toBeTruthy();
 		expect(
@@ -341,6 +403,30 @@ describe("EnvironmentManagementPage", () => {
 		).toBe(
 				"/applications/application-uuid-1/environments/environment-uuid-1/messages-signed"
 		);
+=======
+		expect(
+			screen.getByRole("heading", {
+				level: 1,
+				name: "Test environment",
+			})
+		).toBeTruthy();
+		const expectedCreatedDate = new Intl.DateTimeFormat("en", {
+			year: "numeric",
+			month: "long",
+			day: "numeric",
+			hour: "numeric",
+			minute: "2-digit",
+			timeZoneName: "short",
+		}).format(new Date(environment.createdAt));
+		expect(screen.getAllByText(expectedCreatedDate)).toHaveLength(2);
+		expect(screen.getByText("arrow-up-down")).toBeTruthy();
+		expect(
+			screen.getByRole("link", { name: "Switch application" }).getAttribute("href")
+		).toBe("/applications");
+		expect(
+			screen.getByRole("link", { name: "Change English application URL" })
+		).toBeTruthy();
+>>>>>>> origin/main
 		expect(screen.getAllByText("Change").length).toBeGreaterThan(0);
 		expect(
 			screen.getAllByRole("link", { name: /^Change / }).length
@@ -348,7 +434,10 @@ describe("EnvironmentManagementPage", () => {
 		expect(
 			screen.queryByRole("button", { name: "Request production" })
 		).toBeNull();
+<<<<<<< HEAD
 		expect(screen.queryByText("Outbound IP addresses")).toBeNull();
+=======
+>>>>>>> origin/main
 		expect(
 			screen.getByRole("link", { name: "Credentials" }).getAttribute("href")
 		).toBe(
@@ -375,12 +464,16 @@ describe("EnvironmentManagementPage", () => {
 			name: "Request production",
 		});
 		expect(requestButton).toBeTruthy();
+<<<<<<< HEAD
 		expect(screen.queryByText("Outbound IP addresses")).toBeNull();
+=======
+>>>>>>> origin/main
 
 		fireEvent.click(requestButton);
 
 		expect(mockedNavigate).not.toHaveBeenCalled();
 	});
+<<<<<<< HEAD
 
 	it("shows outbound IP addresses only for PRODUCTION", () => {
 		mockedUseApplicationEnvironment.mockReturnValue({
@@ -551,4 +644,6 @@ describe("EnvironmentManagementPage", () => {
 				.getAttribute("href")
 		).toBe(decryptionHref);
 	});
+=======
+>>>>>>> origin/main
 });

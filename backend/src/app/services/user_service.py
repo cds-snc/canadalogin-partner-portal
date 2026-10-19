@@ -9,14 +9,12 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from ..core.config import settings
 from ..core.exceptions.http_exceptions import DuplicateValueException, ForbiddenException, NotFoundException
 from ..core.security import blacklist_token
-from ..repositories.crud_audit_log import crud_audit_log
 from ..repositories.crud_departments import crud_departments
 from ..repositories.crud_rate_limit import crud_rate_limits
 from ..repositories.crud_roles import crud_roles
 from ..repositories.crud_tier import crud_tiers
 from ..repositories.crud_user_roles import crud_user_roles
 from ..repositories.crud_users import crud_users
-from ..schemas.audit_log import AuditLogCreateInternal
 from ..schemas.department import DepartmentRead
 from ..schemas.rate_limit import RateLimitRead
 from ..schemas.role import RoleRead
@@ -44,16 +42,6 @@ class UserService:
                 "terms_version": settings.TERMS_VERSION,
             },
             uuid=current_user["uuid"],
-        )
-        await crud_audit_log.create(
-            db=db,
-            object=AuditLogCreateInternal(
-                user=current_user.get("name", ""),
-                user_uuid=current_user["uuid"],
-                target="terms",
-                operation="ACCEPT",
-                description=f"User accepted terms version {settings.TERMS_VERSION}",
-            ),
         )
         return {"message": "Terms accepted"}
 
