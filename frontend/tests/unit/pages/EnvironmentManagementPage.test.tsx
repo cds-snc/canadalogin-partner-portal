@@ -29,13 +29,88 @@ vi.mock("react-i18next", () => ({
 				return `Change ${options?.field ?? "field"}`;
 			}
 			if (key === "applicationEnvironmentManagement.fields.englishUrl") {
-				return "English application URL";
+				return "English environment URL";
+			}
+			if (key === "applicationEnvironmentManagement.fields.frenchUrl") {
+				return "French environment URL";
+			}
+			if (
+				key === "applicationEnvironmentManagement.fields.authenticationMethod"
+			) {
+				return "Client authentication method";
+			}
+			if (key === "applicationEnvironmentManagement.fields.messagesVerified") {
+				return "Messages verified";
+			}
+			if (key === "applicationEnvironmentManagement.fields.messagesSigned") {
+				return "Messages signed";
+			}
+			if (
+				key === "applicationEnvironmentManagement.fields.requestsEncrypted"
+			) {
+				return "Requests encrypted";
+			}
+			if (
+				key === "applicationEnvironmentManagement.fields.messagesDecrypted"
+			) {
+				return "Messages decrypted";
+			}
+			if (
+				key === "applicationEnvironmentManagement.fields.decryptionKeyManagement"
+			) {
+				return "Decryption key management";
+			}
+			if (
+				key === "applicationEnvironmentManagement.fields.decryptionAlgorithms"
+			) {
+				return "Decryption algorithms";
+			}
+			if (key === "applicationEnvironmentManagement.fields.outboundIps") {
+				return "Outbound IP addresses";
+			}
+			if (
+				key === "applicationEnvironmentManagement.fields.signOutRequestUrl"
+			) {
+				return "Sign-out request URL";
+			}
+			if (key.startsWith("applicationEnvironmentManagement.values.https://")) {
+				return key.replace("https:", "");
+			}
+			if (
+				key === "applicationEnvironmentManagement.fields.encryptionKeyManagement"
+			) {
+				return "Encryption key management";
+			}
+			if (key === "applicationEnvironmentManagement.fields.encryptionAlgorithms") {
+				return "Encryption algorithms";
+			}
+			if (key === "applicationEnvironmentManagement.fields.jwksUri") {
+				return "JSON Web Key Set (JWKS) URI";
+			}
+			if (
+				key === "applicationEnvironmentManagement.fields.verificationAlgorithms"
+			) {
+				return "Verification algorithms";
+			}
+			if (
+				key === "applicationEnvironmentManagement.fields.signingAlgorithms"
+			) {
+				return "Signing algorithms";
 			}
 			const translations: Record<string, string> = {
 				"applicationEnvironmentManagement.change": "Change",
+				"applicationEnvironmentManagement.fields.environmentName":
+					"Environment name",
+				"applicationEnvironmentManagement.fields.clientType": "Client type",
+				"applicationEnvironmentManagement.fields.pkce":
+					"Proof Key for Code Exchange (PKCE)",
+				"applicationEnvironmentManagement.fields.redirectUris": "Redirect URLs",
+				"applicationEnvironmentManagement.fields.postLogoutRedirectUris":
+					"Post logout redirect URLs",
 				"applicationEnvironmentManagement.configurationTab": "Configuration",
 				"applicationEnvironmentManagement.credentialsTab": "Credentials",
 				"applicationEnvironmentManagement.inactive": "Inactive",
+				"applicationEnvironmentManagement.enabled": "Enabled",
 				"applicationEnvironmentManagement.requestProduction":
 					"Request production",
 				"applicationEnvironmentManagement.sections.authentication":
@@ -141,6 +216,7 @@ describe("EnvironmentManagementPage", () => {
 			canDecryptMessages: false,
 			canEncryptRequests: false,
 			canSignMessages: false,
+			clientAuthMethod: "private_key_jwt" as const,
 			clientType: "public" as const,
 			copyExisting: false,
 			decryptionContentAlgorithms: [],
@@ -149,6 +225,7 @@ describe("EnvironmentManagementPage", () => {
 			encryptionContentAlgorithms: [],
 			encryptionKeyAlgorithms: [],
 			environmentName: "portal",
+			jwksUri: "https://example.com/jwks",
 			pkceSupported: true,
 			postLogoutRedirectUris: [],
 			redirectUris: [],
@@ -178,9 +255,92 @@ describe("EnvironmentManagementPage", () => {
 		render(<EnvironmentManagementPage />);
 
 		expect(screen.getAllByText("Inactive").length).toBeGreaterThan(0);
+		expect(screen.getByText("https://example.com/en")).toBeTruthy();
+		expect(screen.getByText("https://example.com/fr")).toBeTruthy();
 		expect(
-			screen.getByRole("link", { name: "Change English application URL" })
+			screen.getByRole("link", { name: "Change English environment URL" })
 		).toBeTruthy();
+		expect(
+			screen
+				.getByRole("link", { name: "Change French environment URL" })
+				.getAttribute("href")
+		).toBe(
+			"/applications/application-uuid-1/environments/environment-uuid-1/french-url"
+		);
+		expect(
+			screen
+				.getByRole("link", { name: "Change Environment name" })
+				.getAttribute("href")
+		).toBe(
+			"/applications/application-uuid-1/environments/environment-uuid-1/environment-name"
+		);
+		expect(
+			screen
+				.getByRole("link", { name: "Change Client type" })
+				.getAttribute("href")
+		).toBe(
+			"/applications/application-uuid-1/environments/environment-uuid-1/client-type"
+		);
+		expect(
+			screen
+				.getByRole("link", {
+					name: "Change Proof Key for Code Exchange (PKCE)",
+				})
+				.getAttribute("href")
+		).toBe(
+			"/applications/application-uuid-1/environments/environment-uuid-1/client-type"
+		);
+		expect(
+			screen
+				.getByRole("link", { name: "Change Client authentication method" })
+				.getAttribute("href")
+		).toBe(
+			"/applications/application-uuid-1/environments/environment-uuid-1/authentication-method"
+		);
+		expect(
+			screen
+				.getByRole("link", {
+					name: "Change JSON Web Key Set (JWKS) URI",
+				})
+				.getAttribute("href")
+		).toBe(
+			"/applications/application-uuid-1/environments/environment-uuid-1/authentication-method"
+		);
+		expect(
+			screen
+				.getByRole("link", { name: "Change Redirect URLs" })
+				.getAttribute("href")
+		).toBe(
+			"/applications/application-uuid-1/environments/environment-uuid-1/redirect-urls"
+		);
+		expect(
+			screen
+				.getByRole("link", { name: "Change Post logout redirect URLs" })
+				.getAttribute("href")
+		).toBe(
+			"/applications/application-uuid-1/environments/environment-uuid-1/post-logout-redirect-urls"
+		);
+		expect(
+			screen
+				.getByRole("link", { name: "Change Messages verified" })
+				.getAttribute("href")
+		).toBe(
+			"/applications/application-uuid-1/environments/environment-uuid-1/messages-verified"
+		);
+		expect(
+			screen
+				.getByRole("link", { name: "Change Verification algorithms" })
+				.getAttribute("href")
+		).toBe(
+			"/applications/application-uuid-1/environments/environment-uuid-1/messages-verified"
+		);
+		expect(
+			screen
+				.getByRole("link", { name: "Change Messages signed" })
+				.getAttribute("href")
+		).toBe(
+				"/applications/application-uuid-1/environments/environment-uuid-1/messages-signed"
+		);
 		expect(screen.getAllByText("Change").length).toBeGreaterThan(0);
 		expect(
 			screen.getAllByRole("link", { name: /^Change / }).length
@@ -188,6 +348,7 @@ describe("EnvironmentManagementPage", () => {
 		expect(
 			screen.queryByRole("button", { name: "Request production" })
 		).toBeNull();
+		expect(screen.queryByText("Outbound IP addresses")).toBeNull();
 		expect(
 			screen.getByRole("link", { name: "Credentials" }).getAttribute("href")
 		).toBe(
@@ -214,9 +375,180 @@ describe("EnvironmentManagementPage", () => {
 			name: "Request production",
 		});
 		expect(requestButton).toBeTruthy();
+		expect(screen.queryByText("Outbound IP addresses")).toBeNull();
 
 		fireEvent.click(requestButton);
 
 		expect(mockedNavigate).not.toHaveBeenCalled();
+	});
+
+	it("shows outbound IP addresses only for PRODUCTION", () => {
+		mockedUseApplicationEnvironment.mockReturnValue({
+			data: { ...environment, tenantCode: "production" },
+			error: null,
+			isLoading: false,
+		});
+
+		render(<EnvironmentManagementPage />);
+
+		expect(screen.getByText("Outbound IP addresses")).toBeTruthy();
+		expect(
+			screen
+				.getByRole("link", { name: "Change Outbound IP addresses" })
+				.getAttribute("href")
+		).toBe("#");
+	});
+
+	it("renders URL lists on separate lines", () => {
+		mockedUseApplicationEnvironment.mockReturnValue({
+			data: {
+				...environment,
+				config: {
+					...environment.config,
+					postLogoutRedirectUris: [
+						"https://example.com/logout-one",
+						"https://example.com/logout-two",
+					],
+					redirectUris: [
+						"https://example.com/redirect-one",
+						"https://example.com/redirect-two",
+					],
+				},
+			},
+			error: null,
+			isLoading: false,
+		});
+
+		render(<EnvironmentManagementPage />);
+
+		for (const label of ["Redirect URLs", "Post logout redirect URLs"]) {
+			const row = screen.getByText(label).parentElement?.parentElement;
+			expect(row?.children[1]?.querySelectorAll("br") ?? []).toHaveLength(1);
+		}
+	});
+
+	it("links the sign-out request URL to the single sign-out editor", () => {
+		mockedUseApplicationEnvironment.mockReturnValue({
+			data: {
+				...environment,
+				config: {
+					...environment.config,
+					signOutRequestUrl: "https://example.com/sign-out",
+					singleSignOut: true,
+				},
+			},
+			error: null,
+			isLoading: false,
+		});
+
+		render(<EnvironmentManagementPage />);
+
+		expect(
+			screen
+				.getByRole("link", { name: "Change Sign-out request URL" })
+				.getAttribute("href")
+		).toBe(
+			"/applications/application-uuid-1/environments/environment-uuid-1/single-sign-out-method"
+		);
+	});
+
+	it("links signing algorithms to the signing editor when signing is enabled", () => {
+		mockedUseApplicationEnvironment.mockReturnValue({
+			data: {
+				...environment,
+				config: {
+					...environment.config,
+					canSignMessages: true,
+					signingMessages: ["request_object" as const],
+					signingSignatureAlgorithms: ["RS256" as const],
+				},
+			},
+			error: null,
+			isLoading: false,
+		});
+
+		render(<EnvironmentManagementPage />);
+
+		expect(
+			screen
+				.getByRole("link", { name: "Change Signing algorithms" })
+				.getAttribute("href")
+		).toBe(
+				"/applications/application-uuid-1/environments/environment-uuid-1/messages-signed"
+		);
+	});
+
+	it("links request-encryption settings to the encryption editor", () => {
+		mockedUseApplicationEnvironment.mockReturnValue({
+			data: {
+				...environment,
+				config: {
+					...environment.config,
+					canEncryptRequests: true,
+					encryptionKeyAlgorithms: ["RSA-OAEP" as const],
+					encryptionContentAlgorithms: ["A256GCM" as const],
+				},
+			},
+			error: null,
+			isLoading: false,
+		});
+
+		render(<EnvironmentManagementPage />);
+
+		const encryptionHref =
+			"/applications/application-uuid-1/environments/environment-uuid-1/requests-encrypted";
+		expect(
+			screen
+				.getByRole("link", { name: "Change Requests encrypted" })
+				.getAttribute("href")
+		).toBe(encryptionHref);
+		expect(
+			screen
+				.getByRole("link", { name: "Change Encryption key management" })
+				.getAttribute("href")
+		).toBe(encryptionHref);
+		expect(
+			screen
+				.getByRole("link", { name: "Change Encryption algorithms" })
+				.getAttribute("href")
+		).toBe(encryptionHref);
+		expect(screen.getAllByText("Enabled")).toHaveLength(2);
+	});
+
+	it("links message-decryption settings to the decryption editor", () => {
+		mockedUseApplicationEnvironment.mockReturnValue({
+			data: {
+				...environment,
+				config: {
+					...environment.config,
+					canDecryptMessages: true,
+					decryptionMessages: ["id_token" as const],
+					decryptionKeyAlgorithms: ["RSA-OAEP" as const],
+					decryptionContentAlgorithms: ["A256GCM" as const],
+				},
+			},
+			error: null,
+			isLoading: false,
+		});
+
+		render(<EnvironmentManagementPage />);
+
+		const decryptionHref =
+			"/applications/application-uuid-1/environments/environment-uuid-1/messages-decrypted";
+		expect(
+			screen
+				.getByRole("link", { name: "Change Messages decrypted" })
+				.getAttribute("href")
+		).toBe(decryptionHref);
+		expect(
+			screen
+				.getByRole("link", { name: "Change Decryption key management" })
+				.getAttribute("href")
+		).toBe(decryptionHref);
+		expect(
+			screen
+				.getByRole("link", { name: "Change Decryption algorithms" })
+				.getAttribute("href")
+		).toBe(decryptionHref);
 	});
 });

@@ -27,6 +27,17 @@ const encryptionContentSchema = z.enum(ENCRYPTION_CONTENT_ALGORITHMS);
 const tenantCodeSchema = z.enum(["test", "staging"]);
 const clientTypeSchema = z.enum(["public", "confidential"]);
 
+export const environmentNameSchema = z
+	.string()
+	.min(1)
+	.max(64)
+	.regex(/^[A-Za-z0-9](?:[A-Za-z0-9-]*[A-Za-z0-9])?$/);
+
+export const isEnvironmentNameWithinLimit = (
+	environmentName: string,
+	tenantCode: string
+): boolean => environmentName.length + tenantCode.length + 1 <= 64;
+
 export const applicationEnvironmentSchema = z
 	.object({
 		applicationUrlEn: urlSchema,
@@ -46,11 +57,7 @@ export const applicationEnvironmentSchema = z
 		),
 		encryptionContentAlgorithms: z.array(encryptionContentSchema),
 		encryptionKeyAlgorithms: z.array(encryptionKeySchema),
-		environmentName: z
-			.string()
-			.min(1)
-			.max(64)
-			.regex(/^[A-Za-z0-9](?:[A-Za-z0-9-]*[A-Za-z0-9])?$/),
+		environmentName: environmentNameSchema,
 		jwksUri: optionalUrlSchema,
 		logoutMethod: z.enum(["front_channel", "back_channel"]).optional(),
 		pkceSupported: z.boolean().nullable(),
@@ -70,7 +77,7 @@ export const applicationEnvironmentSchema = z
 	.superRefine((values, context) => {
 		if (
 			values.tenantCode &&
-			values.environmentName.length + values.tenantCode.length + 1 > 64
+			!isEnvironmentNameWithinLimit(values.environmentName, values.tenantCode)
 		) {
 			context.addIssue({
 				code: "custom",

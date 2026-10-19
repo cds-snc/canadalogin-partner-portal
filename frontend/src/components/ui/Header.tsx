@@ -10,7 +10,10 @@ import type { FunctionComponent } from "@/common/types";
 import Breadcrumbs from "@/components/layout/Breadcrumbs";
 import { useSession } from "@/hooks";
 import { getOidcLoginUrl } from "@/fetch/auth";
-import type { RouteBackLink } from "@/types/route-breadcrumbs";
+import type {
+	RouteBackLink,
+	RouteBreadcrumb,
+} from "@/types/route-breadcrumbs";
 import { UserNavGroup } from "./UserNavGroup";
 
 type NavigationItem = {
@@ -58,6 +61,34 @@ const selectBackLink = (
 	return null;
 };
 
+const selectBreadcrumbs = (
+	routeMatches: Array<{ context?: unknown }>
+): Array<RouteBreadcrumb> | null => {
+	for (let index = routeMatches.length - 1; index >= 0; index -= 1) {
+		const match = routeMatches[index];
+
+		if (!match || typeof match.context !== "object" || match.context === null) {
+			continue;
+		}
+
+		const { breadcrumbs } = match.context as { breadcrumbs?: unknown };
+		if (
+			Array.isArray(breadcrumbs) &&
+			breadcrumbs.every(
+				(item): item is RouteBreadcrumb =>
+					typeof item === "object" &&
+					item !== null &&
+					typeof (item as RouteBreadcrumb).href === "string" &&
+					typeof (item as RouteBreadcrumb).label === "string"
+			)
+		) {
+			return breadcrumbs;
+		}
+	}
+
+	return null;
+};
+
 const Header = (): FunctionComponent => {
 	const { t, i18n } = useTranslation();
 	const navigate = useNavigate();
@@ -67,6 +98,9 @@ const Header = (): FunctionComponent => {
 	});
 	const backLink = useRouterState({
 		select: (state) => selectBackLink(state.matches),
+	});
+	const breadcrumbs = useRouterState({
+		select: (state) => selectBreadcrumbs(state.matches),
 	});
 	const showNavigation = pathname !== "/logout";
 	const serviceName = t("home.title");
@@ -114,18 +148,20 @@ const Header = (): FunctionComponent => {
 				slot="toggle"
 				onClick={handleLangToggle}
 			/>
-			{backLink ? (
+			{breadcrumbs ?? backLink ? (
 				<Breadcrumbs
 					slot="breadcrumb"
-					items={[
-						{
-							href: backLink.href,
-							label:
-								backLink.showBackLabel === false
-									? backLink.label
-									: `← ${t("nav.backTo")} ${backLink.label}`,
-						},
-					]}
+					items={
+						breadcrumbs ?? [
+							{
+								href: backLink?.href ?? "/",
+								label:
+									backLink?.showBackLabel === false
+										? (backLink?.label ?? "")
+										: `← ${t("nav.backTo")} ${backLink?.label ?? ""}`,
+							},
+						]
+					}
 				/>
 			) : null}
 			<GcdsTopNav alignment="start" label={t("nav.label")} slot="menu">

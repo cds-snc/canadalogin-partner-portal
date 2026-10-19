@@ -48,7 +48,11 @@ const Radios: React.FC<RadiosProps> = React.memo(
 			required={required}
 			validateOn={validateOn}
 			value={value}
-			onInput={onInput}
+			onGcdsInput={(event): void => {
+				onInput?.({
+					target: { value: event.detail },
+				} as unknown as React.FormEvent<Element>);
+			}}
 		></GcdsRadios>
 	)
 );

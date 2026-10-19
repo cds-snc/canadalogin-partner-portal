@@ -1,10 +1,24 @@
 import type { ReactElement, ReactNode } from "react";
 import { render } from "@testing-library/react";
-import { describe, expect, it, vi } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import Header from "@/components/ui/Header";
 import { useSession } from "@/hooks";
 
 let pathname = "/users";
+let routeContext: {
+	backLink?: {
+		href: string;
+		label: string;
+		showBackLabel?: boolean;
+	};
+	breadcrumbs?: Array<{ href: string; label: string }>;
+} = {
+	backLink: {
+		href: "/applications",
+		label: "Applications",
+		showBackLabel: false,
+	},
+};
 
 vi.mock("react-i18next", () => ({
 	useTranslation: (): {
@@ -46,13 +60,7 @@ vi.mock("@tanstack/react-router", () => ({
 		select: (state: {
 			location: { pathname: string };
 			matches: Array<{
-				context?: {
-					backLink?: {
-						href: string;
-						label: string;
-						showBackLabel?: boolean;
-					};
-				};
+				context?: typeof routeContext;
 			}>;
 		}) => unknown;
 	}): unknown =>
@@ -60,17 +68,22 @@ vi.mock("@tanstack/react-router", () => ({
 			location: { pathname },
 			matches: [
 				{
-					context: {
-						backLink: {
-							href: "/applications",
-							label: "Applications",
-							showBackLabel: false,
-						},
-					},
+					context: routeContext,
 				},
 			],
 		}),
 }));
+
+beforeEach(() => {
+	pathname = "/users";
+	routeContext = {
+		backLink: {
+			href: "/applications",
+			label: "Applications",
+			showBackLabel: false,
+		},
+	};
+});
 
 vi.mock("@/hooks", () => ({
 	useSession: vi.fn(),
@@ -281,5 +294,39 @@ describe("Header", () => {
 				"aria-current"
 			)
 		).toBeNull();
+	});
+
+	it("renders the application environment breadcrumb chain", () => {
+		routeContext = {
+			breadcrumbs: [
+				{ href: "/applications", label: "Applications" },
+				{
+					href: "/applications/application-uuid-1/environments",
+					label: "Environments",
+				},
+				{
+					href: "/applications/application-uuid-1/environments/environment-uuid-1",
+					label: "TEST-portal",
+				},
+			],
+		};
+		vi.mocked(useSession).mockReturnValue({
+			currentUser: null,
+			hasHydrated: true,
+			isAuthenticated: false,
+			isLoading: false,
+			login: vi.fn(),
+			logout: vi.fn((): Promise<void> => Promise.resolve()),
+			refreshSession: vi.fn((): Promise<null> => Promise.resolve(null)),
+		});
+
+		render(<Header />);
+
+		const breadcrumb = document.querySelector("nav[data-slot='breadcrumb']");
+		expect(
+			Array.from(breadcrumb?.querySelectorAll("a") ?? []).map(
+				(item) => item.textContent
+			)
+		).toEqual(["Applications", "Environments", "TEST-portal"]);
 	});
 });

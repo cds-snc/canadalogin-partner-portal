@@ -39,7 +39,20 @@ import { Route as ApplicationsApplicationUuidMauReportRouteImport } from './rout
 import { Route as ApplicationsApplicationUuidEnvironmentsIndexRouteImport } from './routes/applications/$applicationUuid/environments/index'
 import { Route as ApplicationsApplicationUuidEnvironmentsEnvironmentUuidRouteImport } from './routes/applications/$applicationUuid/environments/$environmentUuid'
 import { Route as ApplicationsApplicationUuidEnvironmentsEnvironmentUuidIndexRouteImport } from './routes/applications/$applicationUuid/environments/$environmentUuid/index'
+import { Route as ApplicationsApplicationUuidEnvironmentsEnvironmentUuidAuthenticationMethodRouteImport } from './routes/applications/$applicationUuid/environments/$environmentUuid/authentication-method'
+import { Route as ApplicationsApplicationUuidEnvironmentsEnvironmentUuidClientTypeRouteImport } from './routes/applications/$applicationUuid/environments/$environmentUuid/client-type'
 import { Route as ApplicationsApplicationUuidEnvironmentsEnvironmentUuidCredentialsRouteImport } from './routes/applications/$applicationUuid/environments/$environmentUuid/credentials'
+import { Route as ApplicationsApplicationUuidEnvironmentsEnvironmentUuidEnglishUrlRouteImport } from './routes/applications/$applicationUuid/environments/$environmentUuid/english-url'
+import { Route as ApplicationsApplicationUuidEnvironmentsEnvironmentUuidEnvironmentNameRouteImport } from './routes/applications/$applicationUuid/environments/$environmentUuid/environment-name'
+import { Route as ApplicationsApplicationUuidEnvironmentsEnvironmentUuidFrenchUrlRouteImport } from './routes/applications/$applicationUuid/environments/$environmentUuid/french-url'
+import { Route as ApplicationsApplicationUuidEnvironmentsEnvironmentUuidMessagesDecryptedRouteImport } from './routes/applications/$applicationUuid/environments/$environmentUuid/messages-decrypted'
+import { Route as ApplicationsApplicationUuidEnvironmentsEnvironmentUuidMessagesSignedRouteImport } from './routes/applications/$applicationUuid/environments/$environmentUuid/messages-signed'
+import { Route as ApplicationsApplicationUuidEnvironmentsEnvironmentUuidMessagesVerifiedRouteImport } from './routes/applications/$applicationUuid/environments/$environmentUuid/messages-verified'
+import { Route as ApplicationsApplicationUuidEnvironmentsEnvironmentUuidPostLogoutRedirectUrlsRouteImport } from './routes/applications/$applicationUuid/environments/$environmentUuid/post-logout-redirect-urls'
+import { Route as ApplicationsApplicationUuidEnvironmentsEnvironmentUuidRedirectUrlsRouteImport } from './routes/applications/$applicationUuid/environments/$environmentUuid/redirect-urls'
+import { Route as ApplicationsApplicationUuidEnvironmentsEnvironmentUuidRequestsEncryptedRouteImport } from './routes/applications/$applicationUuid/environments/$environmentUuid/requests-encrypted'
+import { Route as ApplicationsApplicationUuidEnvironmentsEnvironmentUuidSectorIdentifierRouteImport } from './routes/applications/$applicationUuid/environments/$environmentUuid/sector-identifier'
+import { Route as ApplicationsApplicationUuidEnvironmentsEnvironmentUuidSingleSignOutMethodRouteImport } from './routes/applications/$applicationUuid/environments/$environmentUuid/single-sign-out-method'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
@@ -203,11 +216,128 @@ const ApplicationsApplicationUuidEnvironmentsEnvironmentUuidIndexRoute =
         ApplicationsApplicationUuidEnvironmentsEnvironmentUuidRoute,
     } as any,
   )
+const ApplicationsApplicationUuidEnvironmentsEnvironmentUuidAuthenticationMethodRoute =
+  ApplicationsApplicationUuidEnvironmentsEnvironmentUuidAuthenticationMethodRouteImport.update(
+    {
+      id: '/authentication-method',
+      path: '/authentication-method',
+      getParentRoute: () =>
+        ApplicationsApplicationUuidEnvironmentsEnvironmentUuidRoute,
+    } as any,
+  )
+const ApplicationsApplicationUuidEnvironmentsEnvironmentUuidClientTypeRoute =
+  ApplicationsApplicationUuidEnvironmentsEnvironmentUuidClientTypeRouteImport.update(
+    {
+      id: '/client-type',
+      path: '/client-type',
+      getParentRoute: () =>
+        ApplicationsApplicationUuidEnvironmentsEnvironmentUuidRoute,
+    } as any,
+  )
 const ApplicationsApplicationUuidEnvironmentsEnvironmentUuidCredentialsRoute =
   ApplicationsApplicationUuidEnvironmentsEnvironmentUuidCredentialsRouteImport.update(
     {
       id: '/credentials',
       path: '/credentials',
+      getParentRoute: () =>
+        ApplicationsApplicationUuidEnvironmentsEnvironmentUuidRoute,
+    } as any,
+  )
+const ApplicationsApplicationUuidEnvironmentsEnvironmentUuidEnglishUrlRoute =
+  ApplicationsApplicationUuidEnvironmentsEnvironmentUuidEnglishUrlRouteImport.update(
+    {
+      id: '/english-url',
+      path: '/english-url',
+      getParentRoute: () =>
+        ApplicationsApplicationUuidEnvironmentsEnvironmentUuidRoute,
+    } as any,
+  )
+const ApplicationsApplicationUuidEnvironmentsEnvironmentUuidEnvironmentNameRoute =
+  ApplicationsApplicationUuidEnvironmentsEnvironmentUuidEnvironmentNameRouteImport.update(
+    {
+      id: '/environment-name',
+      path: '/environment-name',
+      getParentRoute: () =>
+        ApplicationsApplicationUuidEnvironmentsEnvironmentUuidRoute,
+    } as any,
+  )
+const ApplicationsApplicationUuidEnvironmentsEnvironmentUuidFrenchUrlRoute =
+  ApplicationsApplicationUuidEnvironmentsEnvironmentUuidFrenchUrlRouteImport.update(
+    {
+      id: '/french-url',
+      path: '/french-url',
+      getParentRoute: () =>
+        ApplicationsApplicationUuidEnvironmentsEnvironmentUuidRoute,
+    } as any,
+  )
+const ApplicationsApplicationUuidEnvironmentsEnvironmentUuidMessagesDecryptedRoute =
+  ApplicationsApplicationUuidEnvironmentsEnvironmentUuidMessagesDecryptedRouteImport.update(
+    {
+      id: '/messages-decrypted',
+      path: '/messages-decrypted',
+      getParentRoute: () =>
+        ApplicationsApplicationUuidEnvironmentsEnvironmentUuidRoute,
+    } as any,
+  )
+const ApplicationsApplicationUuidEnvironmentsEnvironmentUuidMessagesSignedRoute =
+  ApplicationsApplicationUuidEnvironmentsEnvironmentUuidMessagesSignedRouteImport.update(
+    {
+      id: '/messages-signed',
+      path: '/messages-signed',
+      getParentRoute: () =>
+        ApplicationsApplicationUuidEnvironmentsEnvironmentUuidRoute,
+    } as any,
+  )
+const ApplicationsApplicationUuidEnvironmentsEnvironmentUuidMessagesVerifiedRoute =
+  ApplicationsApplicationUuidEnvironmentsEnvironmentUuidMessagesVerifiedRouteImport.update(
+    {
+      id: '/messages-verified',
+      path: '/messages-verified',
+      getParentRoute: () =>
+        ApplicationsApplicationUuidEnvironmentsEnvironmentUuidRoute,
+    } as any,
+  )
+const ApplicationsApplicationUuidEnvironmentsEnvironmentUuidPostLogoutRedirectUrlsRoute =
+  ApplicationsApplicationUuidEnvironmentsEnvironmentUuidPostLogoutRedirectUrlsRouteImport.update(
+    {
+      id: '/post-logout-redirect-urls',
+      path: '/post-logout-redirect-urls',
+      getParentRoute: () =>
+        ApplicationsApplicationUuidEnvironmentsEnvironmentUuidRoute,
+    } as any,
+  )
+const ApplicationsApplicationUuidEnvironmentsEnvironmentUuidRedirectUrlsRoute =
+  ApplicationsApplicationUuidEnvironmentsEnvironmentUuidRedirectUrlsRouteImport.update(
+    {
+      id: '/redirect-urls',
+      path: '/redirect-urls',
+      getParentRoute: () =>
+        ApplicationsApplicationUuidEnvironmentsEnvironmentUuidRoute,
+    } as any,
+  )
+const ApplicationsApplicationUuidEnvironmentsEnvironmentUuidRequestsEncryptedRoute =
+  ApplicationsApplicationUuidEnvironmentsEnvironmentUuidRequestsEncryptedRouteImport.update(
+    {
+      id: '/requests-encrypted',
+      path: '/requests-encrypted',
+      getParentRoute: () =>
+        ApplicationsApplicationUuidEnvironmentsEnvironmentUuidRoute,
+    } as any,
+  )
+const ApplicationsApplicationUuidEnvironmentsEnvironmentUuidSectorIdentifierRoute =
+  ApplicationsApplicationUuidEnvironmentsEnvironmentUuidSectorIdentifierRouteImport.update(
+    {
+      id: '/sector-identifier',
+      path: '/sector-identifier',
+      getParentRoute: () =>
+        ApplicationsApplicationUuidEnvironmentsEnvironmentUuidRoute,
+    } as any,
+  )
+const ApplicationsApplicationUuidEnvironmentsEnvironmentUuidSingleSignOutMethodRoute =
+  ApplicationsApplicationUuidEnvironmentsEnvironmentUuidSingleSignOutMethodRouteImport.update(
+    {
+      id: '/single-sign-out-method',
+      path: '/single-sign-out-method',
       getParentRoute: () =>
         ApplicationsApplicationUuidEnvironmentsEnvironmentUuidRoute,
     } as any,
@@ -243,7 +373,20 @@ export interface FileRoutesByFullPath {
   '/applications/$applicationUuid/': typeof ApplicationsApplicationUuidIndexRoute
   '/applications/$applicationUuid/environments/$environmentUuid': typeof ApplicationsApplicationUuidEnvironmentsEnvironmentUuidRouteWithChildren
   '/applications/$applicationUuid/environments/': typeof ApplicationsApplicationUuidEnvironmentsIndexRoute
+  '/applications/$applicationUuid/environments/$environmentUuid/authentication-method': typeof ApplicationsApplicationUuidEnvironmentsEnvironmentUuidAuthenticationMethodRoute
+  '/applications/$applicationUuid/environments/$environmentUuid/client-type': typeof ApplicationsApplicationUuidEnvironmentsEnvironmentUuidClientTypeRoute
   '/applications/$applicationUuid/environments/$environmentUuid/credentials': typeof ApplicationsApplicationUuidEnvironmentsEnvironmentUuidCredentialsRoute
+  '/applications/$applicationUuid/environments/$environmentUuid/english-url': typeof ApplicationsApplicationUuidEnvironmentsEnvironmentUuidEnglishUrlRoute
+  '/applications/$applicationUuid/environments/$environmentUuid/environment-name': typeof ApplicationsApplicationUuidEnvironmentsEnvironmentUuidEnvironmentNameRoute
+  '/applications/$applicationUuid/environments/$environmentUuid/french-url': typeof ApplicationsApplicationUuidEnvironmentsEnvironmentUuidFrenchUrlRoute
+  '/applications/$applicationUuid/environments/$environmentUuid/messages-decrypted': typeof ApplicationsApplicationUuidEnvironmentsEnvironmentUuidMessagesDecryptedRoute
+  '/applications/$applicationUuid/environments/$environmentUuid/messages-signed': typeof ApplicationsApplicationUuidEnvironmentsEnvironmentUuidMessagesSignedRoute
+  '/applications/$applicationUuid/environments/$environmentUuid/messages-verified': typeof ApplicationsApplicationUuidEnvironmentsEnvironmentUuidMessagesVerifiedRoute
+  '/applications/$applicationUuid/environments/$environmentUuid/post-logout-redirect-urls': typeof ApplicationsApplicationUuidEnvironmentsEnvironmentUuidPostLogoutRedirectUrlsRoute
+  '/applications/$applicationUuid/environments/$environmentUuid/redirect-urls': typeof ApplicationsApplicationUuidEnvironmentsEnvironmentUuidRedirectUrlsRoute
+  '/applications/$applicationUuid/environments/$environmentUuid/requests-encrypted': typeof ApplicationsApplicationUuidEnvironmentsEnvironmentUuidRequestsEncryptedRoute
+  '/applications/$applicationUuid/environments/$environmentUuid/sector-identifier': typeof ApplicationsApplicationUuidEnvironmentsEnvironmentUuidSectorIdentifierRoute
+  '/applications/$applicationUuid/environments/$environmentUuid/single-sign-out-method': typeof ApplicationsApplicationUuidEnvironmentsEnvironmentUuidSingleSignOutMethodRoute
   '/applications/$applicationUuid/environments/$environmentUuid/': typeof ApplicationsApplicationUuidEnvironmentsEnvironmentUuidIndexRoute
 }
 export interface FileRoutesByTo {
@@ -272,7 +415,20 @@ export interface FileRoutesByTo {
   '/applications/$applicationUuid/mau-report': typeof ApplicationsApplicationUuidMauReportRoute
   '/applications/$applicationUuid': typeof ApplicationsApplicationUuidIndexRoute
   '/applications/$applicationUuid/environments': typeof ApplicationsApplicationUuidEnvironmentsIndexRoute
+  '/applications/$applicationUuid/environments/$environmentUuid/authentication-method': typeof ApplicationsApplicationUuidEnvironmentsEnvironmentUuidAuthenticationMethodRoute
+  '/applications/$applicationUuid/environments/$environmentUuid/client-type': typeof ApplicationsApplicationUuidEnvironmentsEnvironmentUuidClientTypeRoute
   '/applications/$applicationUuid/environments/$environmentUuid/credentials': typeof ApplicationsApplicationUuidEnvironmentsEnvironmentUuidCredentialsRoute
+  '/applications/$applicationUuid/environments/$environmentUuid/english-url': typeof ApplicationsApplicationUuidEnvironmentsEnvironmentUuidEnglishUrlRoute
+  '/applications/$applicationUuid/environments/$environmentUuid/environment-name': typeof ApplicationsApplicationUuidEnvironmentsEnvironmentUuidEnvironmentNameRoute
+  '/applications/$applicationUuid/environments/$environmentUuid/french-url': typeof ApplicationsApplicationUuidEnvironmentsEnvironmentUuidFrenchUrlRoute
+  '/applications/$applicationUuid/environments/$environmentUuid/messages-decrypted': typeof ApplicationsApplicationUuidEnvironmentsEnvironmentUuidMessagesDecryptedRoute
+  '/applications/$applicationUuid/environments/$environmentUuid/messages-signed': typeof ApplicationsApplicationUuidEnvironmentsEnvironmentUuidMessagesSignedRoute
+  '/applications/$applicationUuid/environments/$environmentUuid/messages-verified': typeof ApplicationsApplicationUuidEnvironmentsEnvironmentUuidMessagesVerifiedRoute
+  '/applications/$applicationUuid/environments/$environmentUuid/post-logout-redirect-urls': typeof ApplicationsApplicationUuidEnvironmentsEnvironmentUuidPostLogoutRedirectUrlsRoute
+  '/applications/$applicationUuid/environments/$environmentUuid/redirect-urls': typeof ApplicationsApplicationUuidEnvironmentsEnvironmentUuidRedirectUrlsRoute
+  '/applications/$applicationUuid/environments/$environmentUuid/requests-encrypted': typeof ApplicationsApplicationUuidEnvironmentsEnvironmentUuidRequestsEncryptedRoute
+  '/applications/$applicationUuid/environments/$environmentUuid/sector-identifier': typeof ApplicationsApplicationUuidEnvironmentsEnvironmentUuidSectorIdentifierRoute
+  '/applications/$applicationUuid/environments/$environmentUuid/single-sign-out-method': typeof ApplicationsApplicationUuidEnvironmentsEnvironmentUuidSingleSignOutMethodRoute
   '/applications/$applicationUuid/environments/$environmentUuid': typeof ApplicationsApplicationUuidEnvironmentsEnvironmentUuidIndexRoute
 }
 export interface FileRoutesById {
@@ -306,7 +462,20 @@ export interface FileRoutesById {
   '/applications/$applicationUuid/': typeof ApplicationsApplicationUuidIndexRoute
   '/applications/$applicationUuid/environments/$environmentUuid': typeof ApplicationsApplicationUuidEnvironmentsEnvironmentUuidRouteWithChildren
   '/applications/$applicationUuid/environments/': typeof ApplicationsApplicationUuidEnvironmentsIndexRoute
+  '/applications/$applicationUuid/environments/$environmentUuid/authentication-method': typeof ApplicationsApplicationUuidEnvironmentsEnvironmentUuidAuthenticationMethodRoute
+  '/applications/$applicationUuid/environments/$environmentUuid/client-type': typeof ApplicationsApplicationUuidEnvironmentsEnvironmentUuidClientTypeRoute
   '/applications/$applicationUuid/environments/$environmentUuid/credentials': typeof ApplicationsApplicationUuidEnvironmentsEnvironmentUuidCredentialsRoute
+  '/applications/$applicationUuid/environments/$environmentUuid/english-url': typeof ApplicationsApplicationUuidEnvironmentsEnvironmentUuidEnglishUrlRoute
+  '/applications/$applicationUuid/environments/$environmentUuid/environment-name': typeof ApplicationsApplicationUuidEnvironmentsEnvironmentUuidEnvironmentNameRoute
+  '/applications/$applicationUuid/environments/$environmentUuid/french-url': typeof ApplicationsApplicationUuidEnvironmentsEnvironmentUuidFrenchUrlRoute
+  '/applications/$applicationUuid/environments/$environmentUuid/messages-decrypted': typeof ApplicationsApplicationUuidEnvironmentsEnvironmentUuidMessagesDecryptedRoute
+  '/applications/$applicationUuid/environments/$environmentUuid/messages-signed': typeof ApplicationsApplicationUuidEnvironmentsEnvironmentUuidMessagesSignedRoute
+  '/applications/$applicationUuid/environments/$environmentUuid/messages-verified': typeof ApplicationsApplicationUuidEnvironmentsEnvironmentUuidMessagesVerifiedRoute
+  '/applications/$applicationUuid/environments/$environmentUuid/post-logout-redirect-urls': typeof ApplicationsApplicationUuidEnvironmentsEnvironmentUuidPostLogoutRedirectUrlsRoute
+  '/applications/$applicationUuid/environments/$environmentUuid/redirect-urls': typeof ApplicationsApplicationUuidEnvironmentsEnvironmentUuidRedirectUrlsRoute
+  '/applications/$applicationUuid/environments/$environmentUuid/requests-encrypted': typeof ApplicationsApplicationUuidEnvironmentsEnvironmentUuidRequestsEncryptedRoute
+  '/applications/$applicationUuid/environments/$environmentUuid/sector-identifier': typeof ApplicationsApplicationUuidEnvironmentsEnvironmentUuidSectorIdentifierRoute
+  '/applications/$applicationUuid/environments/$environmentUuid/single-sign-out-method': typeof ApplicationsApplicationUuidEnvironmentsEnvironmentUuidSingleSignOutMethodRoute
   '/applications/$applicationUuid/environments/$environmentUuid/': typeof ApplicationsApplicationUuidEnvironmentsEnvironmentUuidIndexRoute
 }
 export interface FileRouteTypes {
@@ -341,7 +510,20 @@ export interface FileRouteTypes {
     | '/applications/$applicationUuid/'
     | '/applications/$applicationUuid/environments/$environmentUuid'
     | '/applications/$applicationUuid/environments/'
+    | '/applications/$applicationUuid/environments/$environmentUuid/authentication-method'
+    | '/applications/$applicationUuid/environments/$environmentUuid/client-type'
     | '/applications/$applicationUuid/environments/$environmentUuid/credentials'
+    | '/applications/$applicationUuid/environments/$environmentUuid/english-url'
+    | '/applications/$applicationUuid/environments/$environmentUuid/environment-name'
+    | '/applications/$applicationUuid/environments/$environmentUuid/french-url'
+    | '/applications/$applicationUuid/environments/$environmentUuid/messages-decrypted'
+    | '/applications/$applicationUuid/environments/$environmentUuid/messages-signed'
+    | '/applications/$applicationUuid/environments/$environmentUuid/messages-verified'
+    | '/applications/$applicationUuid/environments/$environmentUuid/post-logout-redirect-urls'
+    | '/applications/$applicationUuid/environments/$environmentUuid/redirect-urls'
+    | '/applications/$applicationUuid/environments/$environmentUuid/requests-encrypted'
+    | '/applications/$applicationUuid/environments/$environmentUuid/sector-identifier'
+    | '/applications/$applicationUuid/environments/$environmentUuid/single-sign-out-method'
     | '/applications/$applicationUuid/environments/$environmentUuid/'
   fileRoutesByTo: FileRoutesByTo
   to:
@@ -370,7 +552,20 @@ export interface FileRouteTypes {
     | '/applications/$applicationUuid/mau-report'
     | '/applications/$applicationUuid'
     | '/applications/$applicationUuid/environments'
+    | '/applications/$applicationUuid/environments/$environmentUuid/authentication-method'
+    | '/applications/$applicationUuid/environments/$environmentUuid/client-type'
     | '/applications/$applicationUuid/environments/$environmentUuid/credentials'
+    | '/applications/$applicationUuid/environments/$environmentUuid/english-url'
+    | '/applications/$applicationUuid/environments/$environmentUuid/environment-name'
+    | '/applications/$applicationUuid/environments/$environmentUuid/french-url'
+    | '/applications/$applicationUuid/environments/$environmentUuid/messages-decrypted'
+    | '/applications/$applicationUuid/environments/$environmentUuid/messages-signed'
+    | '/applications/$applicationUuid/environments/$environmentUuid/messages-verified'
+    | '/applications/$applicationUuid/environments/$environmentUuid/post-logout-redirect-urls'
+    | '/applications/$applicationUuid/environments/$environmentUuid/redirect-urls'
+    | '/applications/$applicationUuid/environments/$environmentUuid/requests-encrypted'
+    | '/applications/$applicationUuid/environments/$environmentUuid/sector-identifier'
+    | '/applications/$applicationUuid/environments/$environmentUuid/single-sign-out-method'
     | '/applications/$applicationUuid/environments/$environmentUuid'
   id:
     | '__root__'
@@ -403,7 +598,20 @@ export interface FileRouteTypes {
     | '/applications/$applicationUuid/'
     | '/applications/$applicationUuid/environments/$environmentUuid'
     | '/applications/$applicationUuid/environments/'
+    | '/applications/$applicationUuid/environments/$environmentUuid/authentication-method'
+    | '/applications/$applicationUuid/environments/$environmentUuid/client-type'
     | '/applications/$applicationUuid/environments/$environmentUuid/credentials'
+    | '/applications/$applicationUuid/environments/$environmentUuid/english-url'
+    | '/applications/$applicationUuid/environments/$environmentUuid/environment-name'
+    | '/applications/$applicationUuid/environments/$environmentUuid/french-url'
+    | '/applications/$applicationUuid/environments/$environmentUuid/messages-decrypted'
+    | '/applications/$applicationUuid/environments/$environmentUuid/messages-signed'
+    | '/applications/$applicationUuid/environments/$environmentUuid/messages-verified'
+    | '/applications/$applicationUuid/environments/$environmentUuid/post-logout-redirect-urls'
+    | '/applications/$applicationUuid/environments/$environmentUuid/redirect-urls'
+    | '/applications/$applicationUuid/environments/$environmentUuid/requests-encrypted'
+    | '/applications/$applicationUuid/environments/$environmentUuid/sector-identifier'
+    | '/applications/$applicationUuid/environments/$environmentUuid/single-sign-out-method'
     | '/applications/$applicationUuid/environments/$environmentUuid/'
   fileRoutesById: FileRoutesById
 }
@@ -642,6 +850,20 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApplicationsApplicationUuidEnvironmentsEnvironmentUuidIndexRouteImport
       parentRoute: typeof ApplicationsApplicationUuidEnvironmentsEnvironmentUuidRoute
     }
+    '/applications/$applicationUuid/environments/$environmentUuid/authentication-method': {
+      id: '/applications/$applicationUuid/environments/$environmentUuid/authentication-method'
+      path: '/authentication-method'
+      fullPath: '/applications/$applicationUuid/environments/$environmentUuid/authentication-method'
+      preLoaderRoute: typeof ApplicationsApplicationUuidEnvironmentsEnvironmentUuidAuthenticationMethodRouteImport
+      parentRoute: typeof ApplicationsApplicationUuidEnvironmentsEnvironmentUuidRoute
+    }
+    '/applications/$applicationUuid/environments/$environmentUuid/client-type': {
+      id: '/applications/$applicationUuid/environments/$environmentUuid/client-type'
+      path: '/client-type'
+      fullPath: '/applications/$applicationUuid/environments/$environmentUuid/client-type'
+      preLoaderRoute: typeof ApplicationsApplicationUuidEnvironmentsEnvironmentUuidClientTypeRouteImport
+      parentRoute: typeof ApplicationsApplicationUuidEnvironmentsEnvironmentUuidRoute
+    }
     '/applications/$applicationUuid/environments/$environmentUuid/credentials': {
       id: '/applications/$applicationUuid/environments/$environmentUuid/credentials'
       path: '/credentials'
@@ -649,18 +871,134 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApplicationsApplicationUuidEnvironmentsEnvironmentUuidCredentialsRouteImport
       parentRoute: typeof ApplicationsApplicationUuidEnvironmentsEnvironmentUuidRoute
     }
+    '/applications/$applicationUuid/environments/$environmentUuid/english-url': {
+      id: '/applications/$applicationUuid/environments/$environmentUuid/english-url'
+      path: '/english-url'
+      fullPath: '/applications/$applicationUuid/environments/$environmentUuid/english-url'
+      preLoaderRoute: typeof ApplicationsApplicationUuidEnvironmentsEnvironmentUuidEnglishUrlRouteImport
+      parentRoute: typeof ApplicationsApplicationUuidEnvironmentsEnvironmentUuidRoute
+    }
+    '/applications/$applicationUuid/environments/$environmentUuid/environment-name': {
+      id: '/applications/$applicationUuid/environments/$environmentUuid/environment-name'
+      path: '/environment-name'
+      fullPath: '/applications/$applicationUuid/environments/$environmentUuid/environment-name'
+      preLoaderRoute: typeof ApplicationsApplicationUuidEnvironmentsEnvironmentUuidEnvironmentNameRouteImport
+      parentRoute: typeof ApplicationsApplicationUuidEnvironmentsEnvironmentUuidRoute
+    }
+    '/applications/$applicationUuid/environments/$environmentUuid/french-url': {
+      id: '/applications/$applicationUuid/environments/$environmentUuid/french-url'
+      path: '/french-url'
+      fullPath: '/applications/$applicationUuid/environments/$environmentUuid/french-url'
+      preLoaderRoute: typeof ApplicationsApplicationUuidEnvironmentsEnvironmentUuidFrenchUrlRouteImport
+      parentRoute: typeof ApplicationsApplicationUuidEnvironmentsEnvironmentUuidRoute
+    }
+    '/applications/$applicationUuid/environments/$environmentUuid/messages-decrypted': {
+      id: '/applications/$applicationUuid/environments/$environmentUuid/messages-decrypted'
+      path: '/messages-decrypted'
+      fullPath: '/applications/$applicationUuid/environments/$environmentUuid/messages-decrypted'
+      preLoaderRoute: typeof ApplicationsApplicationUuidEnvironmentsEnvironmentUuidMessagesDecryptedRouteImport
+      parentRoute: typeof ApplicationsApplicationUuidEnvironmentsEnvironmentUuidRoute
+    }
+    '/applications/$applicationUuid/environments/$environmentUuid/messages-signed': {
+      id: '/applications/$applicationUuid/environments/$environmentUuid/messages-signed'
+      path: '/messages-signed'
+      fullPath: '/applications/$applicationUuid/environments/$environmentUuid/messages-signed'
+      preLoaderRoute: typeof ApplicationsApplicationUuidEnvironmentsEnvironmentUuidMessagesSignedRouteImport
+      parentRoute: typeof ApplicationsApplicationUuidEnvironmentsEnvironmentUuidRoute
+    }
+    '/applications/$applicationUuid/environments/$environmentUuid/messages-verified': {
+      id: '/applications/$applicationUuid/environments/$environmentUuid/messages-verified'
+      path: '/messages-verified'
+      fullPath: '/applications/$applicationUuid/environments/$environmentUuid/messages-verified'
+      preLoaderRoute: typeof ApplicationsApplicationUuidEnvironmentsEnvironmentUuidMessagesVerifiedRouteImport
+      parentRoute: typeof ApplicationsApplicationUuidEnvironmentsEnvironmentUuidRoute
+    }
+    '/applications/$applicationUuid/environments/$environmentUuid/post-logout-redirect-urls': {
+      id: '/applications/$applicationUuid/environments/$environmentUuid/post-logout-redirect-urls'
+      path: '/post-logout-redirect-urls'
+      fullPath: '/applications/$applicationUuid/environments/$environmentUuid/post-logout-redirect-urls'
+      preLoaderRoute: typeof ApplicationsApplicationUuidEnvironmentsEnvironmentUuidPostLogoutRedirectUrlsRouteImport
+      parentRoute: typeof ApplicationsApplicationUuidEnvironmentsEnvironmentUuidRoute
+    }
+    '/applications/$applicationUuid/environments/$environmentUuid/redirect-urls': {
+      id: '/applications/$applicationUuid/environments/$environmentUuid/redirect-urls'
+      path: '/redirect-urls'
+      fullPath: '/applications/$applicationUuid/environments/$environmentUuid/redirect-urls'
+      preLoaderRoute: typeof ApplicationsApplicationUuidEnvironmentsEnvironmentUuidRedirectUrlsRouteImport
+      parentRoute: typeof ApplicationsApplicationUuidEnvironmentsEnvironmentUuidRoute
+    }
+    '/applications/$applicationUuid/environments/$environmentUuid/requests-encrypted': {
+      id: '/applications/$applicationUuid/environments/$environmentUuid/requests-encrypted'
+      path: '/requests-encrypted'
+      fullPath: '/applications/$applicationUuid/environments/$environmentUuid/requests-encrypted'
+      preLoaderRoute: typeof ApplicationsApplicationUuidEnvironmentsEnvironmentUuidRequestsEncryptedRouteImport
+      parentRoute: typeof ApplicationsApplicationUuidEnvironmentsEnvironmentUuidRoute
+    }
+    '/applications/$applicationUuid/environments/$environmentUuid/sector-identifier': {
+      id: '/applications/$applicationUuid/environments/$environmentUuid/sector-identifier'
+      path: '/sector-identifier'
+      fullPath: '/applications/$applicationUuid/environments/$environmentUuid/sector-identifier'
+      preLoaderRoute: typeof ApplicationsApplicationUuidEnvironmentsEnvironmentUuidSectorIdentifierRouteImport
+      parentRoute: typeof ApplicationsApplicationUuidEnvironmentsEnvironmentUuidRoute
+    }
+    '/applications/$applicationUuid/environments/$environmentUuid/single-sign-out-method': {
+      id: '/applications/$applicationUuid/environments/$environmentUuid/single-sign-out-method'
+      path: '/single-sign-out-method'
+      fullPath: '/applications/$applicationUuid/environments/$environmentUuid/single-sign-out-method'
+      preLoaderRoute: typeof ApplicationsApplicationUuidEnvironmentsEnvironmentUuidSingleSignOutMethodRouteImport
+      parentRoute: typeof ApplicationsApplicationUuidEnvironmentsEnvironmentUuidRoute
+    }
   }
 }
 
 interface ApplicationsApplicationUuidEnvironmentsEnvironmentUuidRouteChildren {
+  ApplicationsApplicationUuidEnvironmentsEnvironmentUuidAuthenticationMethodRoute: typeof ApplicationsApplicationUuidEnvironmentsEnvironmentUuidAuthenticationMethodRoute
+  ApplicationsApplicationUuidEnvironmentsEnvironmentUuidClientTypeRoute: typeof ApplicationsApplicationUuidEnvironmentsEnvironmentUuidClientTypeRoute
   ApplicationsApplicationUuidEnvironmentsEnvironmentUuidCredentialsRoute: typeof ApplicationsApplicationUuidEnvironmentsEnvironmentUuidCredentialsRoute
+  ApplicationsApplicationUuidEnvironmentsEnvironmentUuidEnglishUrlRoute: typeof ApplicationsApplicationUuidEnvironmentsEnvironmentUuidEnglishUrlRoute
+  ApplicationsApplicationUuidEnvironmentsEnvironmentUuidEnvironmentNameRoute: typeof ApplicationsApplicationUuidEnvironmentsEnvironmentUuidEnvironmentNameRoute
+  ApplicationsApplicationUuidEnvironmentsEnvironmentUuidFrenchUrlRoute: typeof ApplicationsApplicationUuidEnvironmentsEnvironmentUuidFrenchUrlRoute
+  ApplicationsApplicationUuidEnvironmentsEnvironmentUuidMessagesDecryptedRoute: typeof ApplicationsApplicationUuidEnvironmentsEnvironmentUuidMessagesDecryptedRoute
+  ApplicationsApplicationUuidEnvironmentsEnvironmentUuidMessagesSignedRoute: typeof ApplicationsApplicationUuidEnvironmentsEnvironmentUuidMessagesSignedRoute
+  ApplicationsApplicationUuidEnvironmentsEnvironmentUuidMessagesVerifiedRoute: typeof ApplicationsApplicationUuidEnvironmentsEnvironmentUuidMessagesVerifiedRoute
+  ApplicationsApplicationUuidEnvironmentsEnvironmentUuidPostLogoutRedirectUrlsRoute: typeof ApplicationsApplicationUuidEnvironmentsEnvironmentUuidPostLogoutRedirectUrlsRoute
+  ApplicationsApplicationUuidEnvironmentsEnvironmentUuidRedirectUrlsRoute: typeof ApplicationsApplicationUuidEnvironmentsEnvironmentUuidRedirectUrlsRoute
+  ApplicationsApplicationUuidEnvironmentsEnvironmentUuidRequestsEncryptedRoute: typeof ApplicationsApplicationUuidEnvironmentsEnvironmentUuidRequestsEncryptedRoute
+  ApplicationsApplicationUuidEnvironmentsEnvironmentUuidSectorIdentifierRoute: typeof ApplicationsApplicationUuidEnvironmentsEnvironmentUuidSectorIdentifierRoute
+  ApplicationsApplicationUuidEnvironmentsEnvironmentUuidSingleSignOutMethodRoute: typeof ApplicationsApplicationUuidEnvironmentsEnvironmentUuidSingleSignOutMethodRoute
   ApplicationsApplicationUuidEnvironmentsEnvironmentUuidIndexRoute: typeof ApplicationsApplicationUuidEnvironmentsEnvironmentUuidIndexRoute
 }
 
 const ApplicationsApplicationUuidEnvironmentsEnvironmentUuidRouteChildren: ApplicationsApplicationUuidEnvironmentsEnvironmentUuidRouteChildren =
   {
+    ApplicationsApplicationUuidEnvironmentsEnvironmentUuidAuthenticationMethodRoute:
+      ApplicationsApplicationUuidEnvironmentsEnvironmentUuidAuthenticationMethodRoute,
+    ApplicationsApplicationUuidEnvironmentsEnvironmentUuidClientTypeRoute:
+      ApplicationsApplicationUuidEnvironmentsEnvironmentUuidClientTypeRoute,
     ApplicationsApplicationUuidEnvironmentsEnvironmentUuidCredentialsRoute:
       ApplicationsApplicationUuidEnvironmentsEnvironmentUuidCredentialsRoute,
+    ApplicationsApplicationUuidEnvironmentsEnvironmentUuidEnglishUrlRoute:
+      ApplicationsApplicationUuidEnvironmentsEnvironmentUuidEnglishUrlRoute,
+    ApplicationsApplicationUuidEnvironmentsEnvironmentUuidEnvironmentNameRoute:
+      ApplicationsApplicationUuidEnvironmentsEnvironmentUuidEnvironmentNameRoute,
+    ApplicationsApplicationUuidEnvironmentsEnvironmentUuidFrenchUrlRoute:
+      ApplicationsApplicationUuidEnvironmentsEnvironmentUuidFrenchUrlRoute,
+    ApplicationsApplicationUuidEnvironmentsEnvironmentUuidMessagesDecryptedRoute:
+      ApplicationsApplicationUuidEnvironmentsEnvironmentUuidMessagesDecryptedRoute,
+    ApplicationsApplicationUuidEnvironmentsEnvironmentUuidMessagesSignedRoute:
+      ApplicationsApplicationUuidEnvironmentsEnvironmentUuidMessagesSignedRoute,
+    ApplicationsApplicationUuidEnvironmentsEnvironmentUuidMessagesVerifiedRoute:
+      ApplicationsApplicationUuidEnvironmentsEnvironmentUuidMessagesVerifiedRoute,
+    ApplicationsApplicationUuidEnvironmentsEnvironmentUuidPostLogoutRedirectUrlsRoute:
+      ApplicationsApplicationUuidEnvironmentsEnvironmentUuidPostLogoutRedirectUrlsRoute,
+    ApplicationsApplicationUuidEnvironmentsEnvironmentUuidRedirectUrlsRoute:
+      ApplicationsApplicationUuidEnvironmentsEnvironmentUuidRedirectUrlsRoute,
+    ApplicationsApplicationUuidEnvironmentsEnvironmentUuidRequestsEncryptedRoute:
+      ApplicationsApplicationUuidEnvironmentsEnvironmentUuidRequestsEncryptedRoute,
+    ApplicationsApplicationUuidEnvironmentsEnvironmentUuidSectorIdentifierRoute:
+      ApplicationsApplicationUuidEnvironmentsEnvironmentUuidSectorIdentifierRoute,
+    ApplicationsApplicationUuidEnvironmentsEnvironmentUuidSingleSignOutMethodRoute:
+      ApplicationsApplicationUuidEnvironmentsEnvironmentUuidSingleSignOutMethodRoute,
     ApplicationsApplicationUuidEnvironmentsEnvironmentUuidIndexRoute:
       ApplicationsApplicationUuidEnvironmentsEnvironmentUuidIndexRoute,
   }
