@@ -7,7 +7,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from ...api.dependencies import get_current_user, get_department_service
 from ...core.access_control import casbin_guard
-from ...core.db.database import async_get_db
+from ...core.db.database import async_get_db, async_get_reader_db
 from ...schemas.department import DepartmentCreate, DepartmentRead, DepartmentUpdate
 from ...services.department_service import DepartmentService
 
@@ -28,7 +28,7 @@ async def write_department(
 @router.get("/departments", response_model=PaginatedListResponse[DepartmentRead])
 async def read_departments(
     request: Request,
-    db: Annotated[AsyncSession, Depends(async_get_db)],
+    db: Annotated[AsyncSession, Depends(async_get_reader_db)],
     service: Annotated[DepartmentService, Depends(get_department_service)],
     current_user: Annotated[dict | None, Depends(get_current_user)] = None,
     page: int = 1,
@@ -41,7 +41,7 @@ async def read_departments(
 async def read_department(
     request: Request,
     department_uuid: uuid_pkg.UUID,
-    db: Annotated[AsyncSession, Depends(async_get_db)],
+    db: Annotated[AsyncSession, Depends(async_get_reader_db)],
     service: Annotated[DepartmentService, Depends(get_department_service)],
     current_user: Annotated[dict | None, Depends(get_current_user)] = None,
 ) -> dict[str, Any]:
@@ -53,7 +53,7 @@ async def read_department(
 async def read_department_by_id(
     request: Request,
     department_id: int,
-    db: Annotated[AsyncSession, Depends(async_get_db)],
+    db: Annotated[AsyncSession, Depends(async_get_reader_db)],
     service: Annotated[DepartmentService, Depends(get_department_service)],
     current_user: Annotated[dict | None, Depends(get_current_user)] = None,
 ) -> dict[str, Any]:

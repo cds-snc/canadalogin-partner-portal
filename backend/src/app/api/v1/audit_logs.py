@@ -8,7 +8,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from ...api.dependencies import get_audit_service, get_current_user
 from ...core.access_control import casbin_guard
-from ...core.db.database import async_get_db
+from ...core.db.database import async_get_reader_db
 from ...schemas.audit_log import AuditLogRead
 from ...services.audit_service import AuditService
 
@@ -19,7 +19,7 @@ router = APIRouter(tags=["audit-logs"])
 @casbin_guard.require_permission("audit_log", "read")
 async def read_audit_logs(
     request: Request,
-    db: Annotated[AsyncSession, Depends(async_get_db)],
+    db: Annotated[AsyncSession, Depends(async_get_reader_db)],
     service: Annotated[AuditService, Depends(get_audit_service)],
     current_user: Annotated[dict, Depends(get_current_user)],
     page: int = Query(1, ge=1),
