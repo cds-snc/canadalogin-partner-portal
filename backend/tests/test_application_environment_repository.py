@@ -1,4 +1,5 @@
 import uuid
+from datetime import UTC, datetime
 from unittest.mock import AsyncMock, Mock
 
 import pytest
@@ -7,6 +8,53 @@ from src.app.models.application_configuration import ApplicationConfiguration
 from src.app.repositories.application_environment_repository import (
     ApplicationEnvironmentRepository,
 )
+from src.app.schemas.application_environment import ApplicationEnvironmentRead
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize("client_id", ["stored-client-id", None])
+@pytest.mark.parametrize("read_list", [False, True])
+async def test_environment_reads_select_stored_client_id(mock_db, client_id, read_list):
+    environment = {
+        "uuid": uuid.uuid4(),
+        "client_id": client_id,
+        "partner_label": "Test environment",
+        "tenant_code": "test",
+        "status_code": "active",
+        "created_at": datetime.now(UTC),
+    }
+    query_result = Mock()
+    query_result.mappings.return_value.one_or_none.return_value = environment
+    query_result.mappings.return_value.all.return_value = [environment]
+    count_result = Mock()
+    count_result.scalar_one.return_value = 1
+    mock_db.execute = AsyncMock(side_effect=[query_result, count_result])
+    repository = ApplicationEnvironmentRepository()
+    application_uuid = uuid.uuid4()
+
+    if read_list:
+        result = await repository.list_environments(
+            db=mock_db,
+            application_uuid=application_uuid,
+            offset=0,
+            limit=10,
+        )
+        assert result["total_count"] == 1
+        result = result["data"][0]
+    else:
+        result = await repository.get_environment(
+            db=mock_db,
+            application_uuid=application_uuid,
+            environment_uuid=environment["uuid"],
+        )
+
+    statement = mock_db.execute.await_args_list[0].args[0]
+    assert "client_id" in statement.selected_columns
+    assert statement.selected_columns["client_id"].element.compare(
+        ApplicationConfiguration.__table__.c.ibm_client_id
+    )
+    assert result["client_id"] == client_id
+    assert ApplicationEnvironmentRead.model_validate(result).model_dump(by_alias=True)["clientId"] == client_id
 
 
 @pytest.mark.asyncio
@@ -37,6 +85,7 @@ async def test_create_environment_commits_and_returns_created_configuration(mock
     assert result["tenant_code"] == "test"
     assert result["status_code"] == "submitted"
     assert result["config"] == {"environmentName": "portal"}
+    assert result["client_id"] is None
 
 
 @pytest.mark.asyncio
