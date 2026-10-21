@@ -70,10 +70,7 @@ type StepOneFieldName =
 type StepTwoArrayFieldName = "redirectUris" | "postLogoutRedirectUris";
 
 type StepThreeFieldName =
-	| "clientType"
-	| "pkceSupported"
-	| "clientAuthMethod"
-	| "jwksUri";
+	"clientType" | "pkceSupported" | "clientAuthMethod" | "jwksUri";
 
 type StepFourFieldName =
 	| "verificationMessages"
@@ -263,6 +260,9 @@ export const ConnectEnvironmentPage = (): FunctionComponent => {
 		from: "/applications/$applicationUuid/environments",
 	});
 	const {
+		productionApplicationUrlEn,
+		productionApplicationUrlFr,
+		productionEnvironmentName,
 		requestProduction = false,
 		sourceEnvironmentUuid: initialSourceEnvironmentUuid,
 	} = useSearch({
@@ -271,7 +271,7 @@ export const ConnectEnvironmentPage = (): FunctionComponent => {
 	const navigate = useNavigate({
 		from: "/applications/$applicationUuid/environments",
 	});
-	const [step, setStep] = useState(0);
+	const [step, setStep] = useState(requestProduction ? 1 : 0);
 	const formRef = useRef<HTMLFormElement>(null);
 	const previousStep = useRef(step);
 	const actionInitialized = useRef(false);
@@ -487,7 +487,10 @@ export const ConnectEnvironmentPage = (): FunctionComponent => {
 		const initialSource = environments.data.find(
 			(environment) => environment.uuid === initialSourceEnvironmentUuid
 		);
-		if (!initialSource || (requestProduction && initialSource.tenantCode !== "staging")) {
+		if (
+			!initialSource ||
+			(requestProduction && initialSource.tenantCode !== "staging")
+		) {
 			actionInitialized.current = true;
 			return;
 		}
@@ -496,6 +499,22 @@ export const ConnectEnvironmentPage = (): FunctionComponent => {
 		reset({
 			...DEFAULT_VALUES,
 			...initialSource.config,
+			applicationUrlEn:
+				requestProduction && productionApplicationUrlEn !== undefined
+					? productionApplicationUrlEn
+					: (initialSource.config?.applicationUrlEn ??
+						DEFAULT_VALUES.applicationUrlEn),
+			applicationUrlFr:
+				requestProduction && productionApplicationUrlFr !== undefined
+					? productionApplicationUrlFr
+					: (initialSource.config?.applicationUrlFr ??
+						DEFAULT_VALUES.applicationUrlFr),
+			environmentName:
+				requestProduction && productionEnvironmentName
+					? productionEnvironmentName
+					: initialSource.config?.environmentName
+						? stripEnvironmentTypePrefix(initialSource.config.environmentName)
+						: DEFAULT_VALUES.environmentName,
 			copyExisting: true,
 			sourceEnvironmentUuid: initialSource.uuid,
 			tenantCode:
@@ -509,6 +528,9 @@ export const ConnectEnvironmentPage = (): FunctionComponent => {
 	}, [
 		environments,
 		initialSourceEnvironmentUuid,
+		productionApplicationUrlEn,
+		productionApplicationUrlFr,
+		productionEnvironmentName,
 		requestProduction,
 		reset,
 	]);
@@ -542,9 +564,20 @@ export const ConnectEnvironmentPage = (): FunctionComponent => {
 		reset({
 			...DEFAULT_VALUES,
 			...sourceConfig,
-			environmentName: sourceConfig.environmentName
-				? stripEnvironmentTypePrefix(sourceConfig.environmentName)
-				: DEFAULT_VALUES.environmentName,
+			applicationUrlEn:
+				requestProduction && productionApplicationUrlEn !== undefined
+					? productionApplicationUrlEn
+					: (sourceConfig.applicationUrlEn ?? DEFAULT_VALUES.applicationUrlEn),
+			applicationUrlFr:
+				requestProduction && productionApplicationUrlFr !== undefined
+					? productionApplicationUrlFr
+					: (sourceConfig.applicationUrlFr ?? DEFAULT_VALUES.applicationUrlFr),
+			environmentName:
+				requestProduction && productionEnvironmentName
+					? productionEnvironmentName
+					: sourceConfig.environmentName
+						? stripEnvironmentTypePrefix(sourceConfig.environmentName)
+						: DEFAULT_VALUES.environmentName,
 			copyExisting: true,
 			sourceEnvironmentUuid: values.sourceEnvironmentUuid,
 			tenantCode: values.tenantCode,
@@ -552,6 +585,10 @@ export const ConnectEnvironmentPage = (): FunctionComponent => {
 		});
 	}, [
 		reset,
+		productionApplicationUrlEn,
+		productionApplicationUrlFr,
+		productionEnvironmentName,
+		requestProduction,
 		sourceConfig,
 		values.copyExisting,
 		values.sourceEnvironmentUuid,
@@ -591,12 +628,7 @@ export const ConnectEnvironmentPage = (): FunctionComponent => {
 			"logoutMethod",
 			"signOutRequestUrl",
 		],
-		[
-			"clientType",
-			"pkceSupported",
-			"clientAuthMethod",
-			"jwksUri",
-		],
+		["clientType", "pkceSupported", "clientAuthMethod", "jwksUri"],
 		[
 			"verificationMessages",
 			"verificationSignatureAlgorithms",
@@ -692,11 +724,7 @@ export const ConnectEnvironmentPage = (): FunctionComponent => {
 					<Text>{t(requestError.bodyKey as never)}</Text>
 				</Notice>
 			)}
-			<form
-				ref={formRef}
-				noValidate
-				onSubmit={handleSubmit(handleCreate)}
-			>
+			<form ref={formRef} noValidate onSubmit={handleSubmit(handleCreate)}>
 				<Stepper currentStep={step + 1} tabIndex={0} tag="h2" totalSteps={4}>
 					<SrOnly>{t("applicationEnvironmentConnect.title")}</SrOnly>
 				</Stepper>
@@ -1199,17 +1227,21 @@ export const ConnectEnvironmentPage = (): FunctionComponent => {
 														)
 													);
 												}}
-													>
-													<span
-														style={{
-															alignItems: "center",
-															display: "inline-flex",
-															gap: "var(--gcds-spacing-100)",
-														}}
-													>
-														<TrashIcon aria-hidden="true" height="1em" width="1em" />
-														{t("common.remove")}
-													</span>
+											>
+												<span
+													style={{
+														alignItems: "center",
+														display: "inline-flex",
+														gap: "var(--gcds-spacing-100)",
+													}}
+												>
+													<TrashIcon
+														aria-hidden="true"
+														height="1em"
+														width="1em"
+													/>
+													{t("common.remove")}
+												</span>
 											</Link>
 										)}
 									</Grid>
@@ -1248,8 +1280,7 @@ export const ConnectEnvironmentPage = (): FunctionComponent => {
 									setValue("redirectUris", [...redirectUris, ""]);
 								}}
 							>
-								<span aria-hidden="true">+</span>
-											{" "}
+								<span aria-hidden="true">+</span>{" "}
 								{t("applicationEnvironmentConnect.stepTwo.addRedirectUri")}
 							</Button>
 						</Fieldset>
@@ -1289,7 +1320,7 @@ export const ConnectEnvironmentPage = (): FunctionComponent => {
 											{postLogoutRedirectUriRowCount > 1 && index > 0 && (
 												<Link
 													href={`#post-logout-redirect-uri-${index}`}
-														size="small"
+													size="small"
 													onGcdsClick={(event) => {
 														event.preventDefault();
 														setValue(
@@ -1299,17 +1330,21 @@ export const ConnectEnvironmentPage = (): FunctionComponent => {
 															)
 														);
 													}}
-														>
-														<span
-															style={{
-																alignItems: "center",
-																display: "inline-flex",
-																gap: "var(--gcds-spacing-100)",
-															}}
-														>
-															<TrashIcon aria-hidden="true" height="1em" width="1em" />
-															{t("common.remove")}
-														</span>
+												>
+													<span
+														style={{
+															alignItems: "center",
+															display: "inline-flex",
+															gap: "var(--gcds-spacing-100)",
+														}}
+													>
+														<TrashIcon
+															aria-hidden="true"
+															height="1em"
+															width="1em"
+														/>
+														{t("common.remove")}
+													</span>
 												</Link>
 											)}
 										</Grid>
@@ -1318,7 +1353,7 @@ export const ConnectEnvironmentPage = (): FunctionComponent => {
 											name={`postLogoutRedirectUris.${index}` as const}
 											render={({ field: inputField }) => (
 												<Input
-														hideLabel
+													hideLabel
 													id={`post-logout-redirect-uri-control-${index}`}
 													inputId={`post-logout-redirect-uri-${index}`}
 													name={inputField.name}
@@ -1352,8 +1387,7 @@ export const ConnectEnvironmentPage = (): FunctionComponent => {
 									]);
 								}}
 							>
-								<span aria-hidden="true">+</span>
-											{" "}
+								<span aria-hidden="true">+</span>{" "}
 								{t(
 									"applicationEnvironmentConnect.stepTwo.addPostLogoutRedirectUri"
 								)}
@@ -1386,7 +1420,7 @@ export const ConnectEnvironmentPage = (): FunctionComponent => {
 												setValue("signOutRequestUrl", "");
 												clearErrors(["logoutMethod", "signOutRequestUrl"]);
 											}
-									}}
+										}}
 									/>
 								)}
 							/>
@@ -1455,7 +1489,9 @@ export const ConnectEnvironmentPage = (): FunctionComponent => {
 						<Heading tag="h1">
 							{t("applicationEnvironmentConnect.stepThree.title")}
 						</Heading>
-						<Text marginBottom="0">{t("applicationEnvironmentConnect.stepThree.intro")}</Text>
+						<Text marginBottom="0">
+							{t("applicationEnvironmentConnect.stepThree.intro")}
+						</Text>
 						<Text marginBottom="0">
 							{t("applicationEnvironmentConnect.stepThree.learnMorePrefix")}{" "}
 							<Link href="/support">
@@ -1628,7 +1664,9 @@ export const ConnectEnvironmentPage = (): FunctionComponent => {
 						<Heading tag="h1">
 							{t("applicationEnvironmentConnect.stepFour.title")}
 						</Heading>
-						<Text marginBottom="0">{t("applicationEnvironmentConnect.stepFour.intro")}</Text>
+						<Text marginBottom="0">
+							{t("applicationEnvironmentConnect.stepFour.intro")}
+						</Text>
 						<Text marginBottom="0">
 							{t(
 								"applicationEnvironmentConnect.stepFour.verificationRequirement"
@@ -1795,7 +1833,8 @@ export const ConnectEnvironmentPage = (): FunctionComponent => {
 													(value) => value
 												)}
 												onInput={(event) => {
-													const value = (event.target as HTMLInputElement).value;
+													const value = (event.target as HTMLInputElement)
+														.value;
 													field.onChange(value ? [value] : []);
 												}}
 											/>
@@ -1829,9 +1868,9 @@ export const ConnectEnvironmentPage = (): FunctionComponent => {
 												value: "true",
 											},
 											{
-													id: "encrypt-no",
-													label: t("common.no"),
-													value: "false",
+												id: "encrypt-no",
+												label: t("common.no"),
+												value: "false",
 											},
 										]}
 										value={
@@ -1868,7 +1907,8 @@ export const ConnectEnvironmentPage = (): FunctionComponent => {
 													(value) => value
 												)}
 												onInput={(event) => {
-													const value = (event.target as HTMLInputElement).value;
+													const value = (event.target as HTMLInputElement)
+														.value;
 													field.onChange(value ? [value] : []);
 												}}
 											/>
@@ -1897,7 +1937,8 @@ export const ConnectEnvironmentPage = (): FunctionComponent => {
 													(value) => value
 												)}
 												onInput={(event) => {
-													const value = (event.target as HTMLInputElement).value;
+													const value = (event.target as HTMLInputElement)
+														.value;
 													field.onChange(value ? [value] : []);
 												}}
 											/>
@@ -1931,9 +1972,9 @@ export const ConnectEnvironmentPage = (): FunctionComponent => {
 												value: "true",
 											},
 											{
-													id: "decrypt-no",
-													label: t("common.no"),
-													value: "false",
+												id: "decrypt-no",
+												label: t("common.no"),
+												value: "false",
 											},
 										]}
 										value={
@@ -2010,7 +2051,8 @@ export const ConnectEnvironmentPage = (): FunctionComponent => {
 													(value) => value
 												)}
 												onInput={(event) => {
-													const value = (event.target as HTMLInputElement).value;
+													const value = (event.target as HTMLInputElement)
+														.value;
 													field.onChange(value ? [value] : []);
 												}}
 											/>
@@ -2039,7 +2081,8 @@ export const ConnectEnvironmentPage = (): FunctionComponent => {
 													(value) => value
 												)}
 												onInput={(event) => {
-													const value = (event.target as HTMLInputElement).value;
+													const value = (event.target as HTMLInputElement)
+														.value;
 													field.onChange(value ? [value] : []);
 												}}
 											/>

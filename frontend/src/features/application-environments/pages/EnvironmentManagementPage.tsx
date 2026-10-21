@@ -195,6 +195,20 @@ export const EnvironmentManagementPage = (): FunctionComponent => {
 						formatToken
 					),
 				},
+				...(isProduction
+					? [
+							{
+								label: t(
+									"applicationEnvironmentManagement.fields.productionStatus"
+								),
+								value: formatValue(
+									environment.statusCode,
+									inactiveLabel,
+									formatToken
+								),
+							},
+						]
+					: []),
 				{
 					change: true,
 					editHref: `/applications/${applicationUuid}/environments/${environmentUuid}/english-url`,
@@ -507,25 +521,36 @@ export const EnvironmentManagementPage = (): FunctionComponent => {
 					gap="400"
 					tag="div"
 				>
-					<Button
-						buttonRole="secondary"
-						type="button"
-						onGcdsClick={() => {
-							void navigate({
-								to: "/applications/$applicationUuid/environments",
-								params: { applicationUuid },
-								search: {
-									connect: true,
-									page: 1,
-									sourceEnvironmentUuid: environmentUuid,
-								},
-							});
-						}}
-					>
-						{t("applicationEnvironmentManagement.copyConfiguration")}
-					</Button>
+					{!isProduction && (
+						<Button
+							buttonRole="secondary"
+							type="button"
+							onGcdsClick={() => {
+								void navigate({
+									to: "/applications/$applicationUuid/environments",
+									params: { applicationUuid },
+									search: {
+										connect: true,
+										page: 1,
+										sourceEnvironmentUuid: environmentUuid,
+									},
+								});
+							}}
+						>
+							{t("applicationEnvironmentManagement.copyConfiguration")}
+						</Button>
+					)}
 					{isStaging ? (
-						<Button buttonRole="primary" type="button">
+						<Button
+							buttonRole="primary"
+							type="button"
+							onGcdsClick={() => {
+								void navigate({
+									to: "/applications/$applicationUuid/environments/$environmentUuid/request-production",
+									params: { applicationUuid, environmentUuid },
+								});
+							}}
+						>
 							{t("applicationEnvironmentManagement.requestProduction")}
 						</Button>
 					) : null}
@@ -554,7 +579,7 @@ export const EnvironmentManagementPage = (): FunctionComponent => {
 						ariaLabel={section.title}
 						fieldColumnWidth={CONFIGURATION_FIELD_COLUMN_WIDTH}
 						rows={section.rows.map((row) => ({
-							edit: row.change ? (
+							edit: !isProduction && row.change ? (
 								<Link
 									href={row.editHref ?? "#"}
 									ariaLabel={t(

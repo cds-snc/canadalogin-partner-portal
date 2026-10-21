@@ -7,6 +7,9 @@ import type { RouteBackLinkContext } from "../../../types/route-breadcrumbs";
 const searchSchema = z.object({
 	connect: z.coerce.boolean().optional(),
 	page: z.coerce.number().int().positive().optional(),
+	productionApplicationUrlEn: z.string().url().optional(),
+	productionApplicationUrlFr: z.string().url().optional(),
+	productionEnvironmentName: z.string().optional(),
 	requestProduction: z.coerce.boolean().optional(),
 	sourceEnvironmentUuid: z.string().uuid().optional(),
 });

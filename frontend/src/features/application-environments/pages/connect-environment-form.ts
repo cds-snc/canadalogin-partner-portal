@@ -21,10 +21,31 @@ export const ENCRYPTION_CONTENT_ALGORITHMS = [
 
 const urlSchema = z.string().url();
 const optionalUrlSchema = urlSchema.or(z.literal(""));
+const ipAddressSchema = z.string().refine((value) => {
+	if (value.includes(":")) {
+		try {
+			new URL(`http://[${value}]`);
+			return true;
+		} catch {
+			return false;
+		}
+	}
+
+	const octets = value.split(".");
+	return (
+		octets.length === 4 &&
+		octets.every(
+			(octet) =>
+				/^\d{1,3}$/.test(octet) &&
+				Number(octet) >= 0 &&
+				Number(octet) <= 255
+		)
+	);
+});
 const algorithmSchema = z.enum(SIGNING_ALGORITHMS);
 const encryptionKeySchema = z.enum(ENCRYPTION_KEY_ALGORITHMS);
 const encryptionContentSchema = z.enum(ENCRYPTION_CONTENT_ALGORITHMS);
-const tenantCodeSchema = z.enum(["test", "staging"]);
+const tenantCodeSchema = z.enum(["test", "staging", "production"]);
 const clientTypeSchema = z.enum(["public", "confidential"]);
 
 export const environmentNameSchema = z
@@ -42,6 +63,7 @@ export const applicationEnvironmentSchema = z
 	.object({
 		applicationUrlEn: urlSchema,
 		applicationUrlFr: urlSchema,
+		outboundIps: z.array(ipAddressSchema).min(1).optional(),
 		canDecryptMessages: z.boolean().nullable(),
 		canEncryptRequests: z.boolean().nullable(),
 		canSignMessages: z.boolean().nullable(),
@@ -218,7 +240,7 @@ export type ApplicationEnvironmentFormValues = z.infer<
 >;
 
 export const stripEnvironmentTypePrefix = (environmentName: string): string =>
-	environmentName.replace(/^(?:TEST|STAGING)-/, "");
+	environmentName.replace(/^(?:TEST|STAGING|PRODUCTION)-/, "");
 
 export const DEFAULT_VALUES: ApplicationEnvironmentFormValues = {
 	applicationUrlEn: "",
@@ -254,11 +276,13 @@ const optional = <T>(value: T | ""): T | undefined =>
 export const toPayload = (
 	values: ApplicationEnvironmentFormValues
 ): ApplicationEnvironmentCreate => {
+	const { outboundIps, ...payloadValues } = values;
+	void outboundIps;
 	const singleSignOut =
 		values.tenantCode === "staging" || values.singleSignOut === true;
 
 	return {
-		...values,
+		...payloadValues,
 		canDecryptMessages: values.canDecryptMessages ?? false,
 		canEncryptRequests: values.canEncryptRequests ?? false,
 		canSignMessages: values.canSignMessages ?? false,

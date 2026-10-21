@@ -113,6 +113,8 @@ class ApplicationEnvironmentService:
         )
         if current_environment is None:
             raise NotFoundException("Application environment not found")
+        if current_environment["tenant_code"] == "production":
+            raise BadRequestException("Production environments cannot be modified")
 
         if environment.environment_name is not None:
             environment_name = f"{current_environment['tenant_code'].upper()}-{environment.environment_name}"

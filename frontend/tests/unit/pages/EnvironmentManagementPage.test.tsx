@@ -108,8 +108,12 @@ vi.mock("react-i18next", () => ({
 			}
 			const translations: Record<string, string> = {
 				"applicationEnvironmentManagement.change": "Change",
+				"applicationEnvironmentManagement.copyConfiguration":
+					"Copy configuration",
 				"applicationEnvironmentManagement.fields.environmentName":
 					"Environment name",
+				"applicationEnvironmentManagement.fields.productionStatus":
+					"Production status",
 				"applicationEnvironmentManagement.fields.clientType": "Client type",
 				"applicationEnvironmentManagement.fields.pkce":
 					"Proof Key for Code Exchange (PKCE)",
@@ -122,6 +126,7 @@ vi.mock("react-i18next", () => ({
 				"applicationEnvironmentManagement.credentialsTab": "Credentials",
 				"applicationEnvironmentManagement.inactive": "Inactive",
 				"applicationEnvironmentManagement.enabled": "Enabled",
+				"applicationEnvironmentManagement.values.submitted": "Requested",
 				"applicationEnvironmentManagement.requestProduction":
 					"Request production",
 				"applicationEnvironmentManagement.sections.authentication":
@@ -409,16 +414,25 @@ describe("EnvironmentManagementPage", () => {
 			name: "Request production",
 		});
 		expect(requestButton).toBeTruthy();
+		expect(
+			screen.getByRole("button", { name: "Copy configuration" })
+		).toBeTruthy();
 		expect(screen.queryByText("Outbound IP addresses")).toBeNull();
 
 		fireEvent.click(requestButton);
 
-		expect(mockedNavigate).not.toHaveBeenCalled();
+		expect(mockedNavigate).toHaveBeenCalledWith({
+			to: "/applications/$applicationUuid/environments/$environmentUuid/request-production",
+			params: {
+				applicationUuid: "application-uuid-1",
+				environmentUuid: "environment-uuid-1",
+			},
+		});
 	});
 
 	it("shows outbound IP addresses only for PRODUCTION", () => {
 		mockedUseApplicationEnvironment.mockReturnValue({
-			data: { ...environment, tenantCode: "production" },
+			data: { ...environment, statusCode: "submitted", tenantCode: "production" },
 			error: null,
 			isLoading: false,
 		});
@@ -426,11 +440,12 @@ describe("EnvironmentManagementPage", () => {
 		render(<EnvironmentManagementPage />);
 
 		expect(screen.getByText("Outbound IP addresses")).toBeTruthy();
-		expect(
-			screen
-				.getByRole("link", { name: "Change Outbound IP addresses" })
-				.getAttribute("href")
-		).toBe("#");
+		expect(screen.getByText("Production status")).toBeTruthy();
+		expect(screen.getByText("Requested")).toBeTruthy();
+	expect(
+		screen.queryByRole("button", { name: "Copy configuration" })
+	).toBeNull();
+		expect(screen.queryByRole("link", { name: /^Change / })).toBeNull();
 	});
 
 	it("renders URL lists on separate lines", () => {
