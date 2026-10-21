@@ -3,25 +3,27 @@ import { fireEvent, render, screen } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { SignedOutPage } from "@/features/auth/pages/SignedOutPage";
 
-const { loginMock } = vi.hoisted(() => ({
+const { loginMock, translateMock } = vi.hoisted(() => ({
 	loginMock: vi.fn(),
+	translateMock: vi.fn(),
 }));
 
-vi.mock("react-i18next", () => ({
-	useTranslation: (): { t: (key: string) => string } => ({
-		t: (key: string): string => {
-			const translations: Record<string, string> = {
-				"signedOut.action": "Sign in again",
-				"signedOut.expiredSummary": "You were signed out of the CanadaLogin Partner Portal because your session was inactive.",
-				"signedOut.securityReminder": "For your security, close your browser if you're using a shared or public device.",
-				"signedOut.summary": "You have successfully signed out of the CanadaLogin Partner Portal.",
-				"signedOut.title": "You have signed out",
-			};
+vi.mock("react-i18next", () => {
+	const translations: Record<string, string> = {
+		"signedOut.action": "Sign in again",
+		"signedOut.expiredSummary": "You were signed out of the CanadaLogin Partner Portal because your session was inactive.",
+		"signedOut.expiredTitle": "You have signed out",
+		"signedOut.securityReminder": "For your security, close your browser if you're using a shared or public device.",
+		"signedOut.summary": "You have successfully signed out of the CanadaLogin Partner Portal.",
+		"signedOut.title": "You have signed out",
+	};
 
-			return translations[key] ?? key;
-		},
-	}),
-}));
+	translateMock.mockImplementation((key: string): string => translations[key] ?? key);
+
+	return {
+		useTranslation: (): { t: (key: string) => string } => ({ t: translateMock }),
+	};
+});
 
 vi.mock("@/components/ui", () => ({
 	Button: ({
@@ -44,6 +46,7 @@ vi.mock("@/store", () => ({
 describe("SignedOutPage", (): void => {
 	beforeEach((): void => {
 		loginMock.mockReset();
+		translateMock.mockClear();
 	});
 
 	it("shows the normal logout content when no reason is provided", (): void => {
@@ -63,6 +66,7 @@ describe("SignedOutPage", (): void => {
 	it("shows the inactivity message for an expired session", (): void => {
 		render(<SignedOutPage reason="session-expired" />);
 
+		expect(translateMock).toHaveBeenCalledWith("signedOut.expiredTitle");
 		expect(
 			screen.getByText(
 				"You were signed out of the CanadaLogin Partner Portal because your session was inactive."
