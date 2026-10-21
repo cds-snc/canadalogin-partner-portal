@@ -93,6 +93,7 @@ class ApplicationEnvironmentRepository:
         await db.refresh(configuration)
         return {
             "uuid": configuration.uuid,
+            "client_id": configuration.ibm_client_id,
             "partner_label": configuration.partner_label,
             "tenant_code": tenant_code,
             "status_code": status_code,
@@ -172,6 +173,7 @@ class ApplicationEnvironmentRepository:
         statement = (
             select(
                 ApplicationConfiguration.uuid,
+                ApplicationConfiguration.ibm_client_id.label("client_id"),
                 ApplicationConfiguration.partner_label,
                 Tenant.code.label("tenant_code"),
                 ApplicationConfigurationStatus.code.label("status_code"),
@@ -230,6 +232,7 @@ class ApplicationEnvironmentRepository:
         statement = (
             select(
                 ApplicationConfiguration.uuid,
+                ApplicationConfiguration.ibm_client_id.label("client_id"),
                 ApplicationConfiguration.partner_label,
                 Tenant.code.label("tenant_code"),
                 ApplicationConfigurationStatus.code.label("status_code"),

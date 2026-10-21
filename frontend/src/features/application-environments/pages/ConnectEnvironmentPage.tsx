@@ -1403,6 +1403,7 @@ export const ConnectEnvironmentPage = (): FunctionComponent => {
 										errorMessage={singleSignOutErrorMessage}
 										id="single-sign-out-control"
 										name={field.name}
+										value={field.value === null ? undefined : String(field.value)}
 										legend={t(
 											"applicationEnvironmentConnect.stepTwo.singleSignOut"
 										)}
@@ -1410,9 +1411,6 @@ export const ConnectEnvironmentPage = (): FunctionComponent => {
 											{ id: "sso-yes", label: t("common.yes"), value: "true" },
 											{ id: "sso-no", label: t("common.no"), value: "false" },
 										]}
-										value={
-											field.value === null ? undefined : String(field.value)
-										}
 										onInput={(event) => {
 											const singleSignOut = boolValue(event);
 											field.onChange(singleSignOut);

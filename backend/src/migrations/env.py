@@ -2,6 +2,7 @@ import asyncio
 import importlib
 import os
 import pkgutil
+from datetime import UTC, datetime
 from logging.config import fileConfig
 
 from alembic import context
@@ -41,6 +42,31 @@ import_models("app.models")
 target_metadata = Base.metadata
 
 
+def process_revision_directives(context, revision, directives) -> None:
+    """Give new revisions a UTC timestamp ID (e.g. ``20261021163000``).
+
+    Sequential, hand-picked IDs collide when two branches add a migration at
+    the same time. Timestamps don't, and they sort in creation order. An
+    explicit ``--rev-id`` on the command line is still respected.
+    """
+    if getattr(config.cmd_opts, "rev_id", None):
+        return
+    for directive in directives:
+        directive.rev_id = datetime.now(UTC).strftime("%Y%m%d%H%M%S")
+
+
+def _is_plain_revision_command() -> bool:
+    """True for ``alembic revision`` without ``--autogenerate``.
+
+    ``revision_environment = true`` runs this file for every ``alembic
+    revision`` so the hook above applies. A plain revision only renders a
+    template, so it shouldn't need a database connection.
+    """
+    cmd_opts = config.cmd_opts
+    cmd = getattr(cmd_opts, "cmd", None)
+    return bool(cmd) and cmd[0].__name__ == "revision" and not getattr(cmd_opts, "autogenerate", False)
+
+
 def run_migrations_offline() -> None:
     """Run migrations in 'offline' mode.
 
@@ -54,6 +80,7 @@ def run_migrations_offline() -> None:
         target_metadata=target_metadata,
         literal_binds=True,
         dialect_opts={"paramstyle": "named"},
+        process_revision_directives=process_revision_directives,
     )
 
     with context.begin_transaction():
@@ -61,7 +88,11 @@ def run_migrations_offline() -> None:
 
 
 def do_run_migrations(connection: Connection) -> None:
-    context.configure(connection=connection, target_metadata=target_metadata)
+    context.configure(
+        connection=connection,
+        target_metadata=target_metadata,
+        process_revision_directives=process_revision_directives,
+    )
 
     with context.begin_transaction():
         context.run_migrations()
@@ -81,6 +112,16 @@ async def run_async_migrations() -> None:
 
 def run_migrations_online() -> None:
     """Run migrations in 'online' mode."""
+
+    if _is_plain_revision_command():
+        context.configure(
+            url=database_url,
+            as_sql=True,
+            target_metadata=target_metadata,
+            process_revision_directives=process_revision_directives,
+        )
+        context.run_migrations()
+        return
 
     # Support a dry-run sync flow to autogenerate migrations against an
     # in-memory SQLite DB without requiring async drivers. When

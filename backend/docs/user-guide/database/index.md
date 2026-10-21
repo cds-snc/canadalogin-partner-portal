@@ -132,6 +132,38 @@ async def get_users(db: Annotated[AsyncSession, Depends(async_get_db)]):
     return await crud_users.get_multi(db=db)
 ```
 
+### Reader and writer routing
+
+Database routing is explicit, not based on the HTTP method globally. `async_get_db()`, `local_session()` and `get_async_engine()` default to the writer. Stale-safe route handlers opt in with `Depends(async_get_reader_db)`; their authentication and Casbin dependencies retain independent writer sessions. Engines and session factories are cached separately per event loop. Without `POSTGRES_READER_SERVER`, the reader dependency dynamically reuses the writer engine and session factory instead of creating a second pool.
+
+The audited reader allowlist is:
+
+| GET path (under `/api/v1`) | Why replication lag is acceptable |
+| --- | --- |
+| `/departments` | Reference catalog, not a user's department assignment or an authorization decision. |
+| `/department/{department_uuid}` | Reference catalog lookup. |
+| `/departments/by-id/{department_id}` | Reference catalog lookup; Casbin authorization still uses the writer. |
+| `/audit-logs` | Historical reporting may briefly omit recent events; recording an audit event always uses the writer. |
+| `/applications/{application_uuid}/environments` | Listing only, after writer-backed application permission checks; no service-layer authorization or writes. Creation returns the new environment directly. |
+| `/rp-applications` | Generic catalog listing has no service-layer authorization or writes. The existing fixed-subject legacy API denial remains unchanged. |
+
+These reads provide eventual consistency, not guaranteed read-after-write visibility. Department catalog edits and new environment/audit records may briefly be absent from listings. If a future workflow needs immediate confirmation, keep its queries on the writer rather than expanding this allowlist automatically.
+
+Writer exceptions, including GETs:
+
+- All mutations, OIDC callbacks (including user creation/update), migrations, seeds, background tasks and readiness probes. Readiness must test the writer, not hide a writer outage behind a healthy replica.
+- `get_current_user`, `get_optional_user`, bearer-token/blacklist checks, Casbin subject resolution, application permission checks, the Casbin policy provider (`local_session`) and rate limiter. Reader route opt-in must never change these dependencies.
+- All user reads, including `/user/me/`, individual users, search/list responses and role/tier/department/rate-limit reads. Public user responses include live role/tier/department assignments, so even their list/search services are security-sensitive.
+- Policies, roles, tiers and rate-limit GETs: live security administration and read-after-change confirmation, not stale-safe reference catalogs.
+- `/applications/mine`: `ApplicationRepository.list_for_user` performs membership/role authorization in its query, not in a separate writer dependency.
+- Environment detail GET: immediate read-after-create and security configuration. All environment client permissions/credentials/rotated-secret GETs: service-layer production-role and tenant checks require current data. Credential reveal and rotated-secret reads also **write audit events**.
+- Legacy `/rp-applications/mine` and its department/OAuth/MAU GETs: ownership filtering and authorization happen inside the service; OAuth/security setup and department assignment preflight also require current state. Individual `/rp-application/{rp_application_uuid}` remains on the writer for read-after-edit confirmation. Legacy denial remains intact on every legacy endpoint.
+- Workspace/partner-group membership and authorization must stay on the writer. This revision has no workspace routes; current application guards and membership-filtered services use partner groups.
+
+IBM Verify admin, MAU reporting and task-status endpoints read external APIs, S3 or Redis rather than using a route-level PostgreSQL data session. CSRF, OIDC login and liveness likewise have no route-level database data dependency. Their existing auth/permission checks are unchanged.
+
+Before opting in another GET, inspect its full service/repository call chain for writes (including get-or-create and audit logging), ownership/membership/tenant checks and read-after-write requirements. Switch only the route's data dependency, then update the allowlist tests in `tests/test_database_routing.py`.
+
 ## Included Models
 
 The boilerplate includes four example models:

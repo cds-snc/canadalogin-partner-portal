@@ -771,8 +771,8 @@ describe("ConnectEnvironmentPage", () => {
 		).toBeNull();
 		expect(
 			screen.getByRole("group", {
-				name: "applicationEnvironmentConnect.stepTwo.logoutMethod",
-			})
+			name: "applicationEnvironmentConnect.stepTwo.logoutMethod",
+		})
 		).toBeTruthy();
 		expect(
 			screen.getByLabelText(

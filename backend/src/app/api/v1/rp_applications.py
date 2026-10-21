@@ -13,7 +13,7 @@ from ...api.dependencies import (
     get_rp_application_service,
 )
 from ...core.access_control import casbin_guard
-from ...core.db.database import async_get_db
+from ...core.db.database import async_get_db, async_get_reader_db
 from ...core.exceptions.http_exceptions import BadRequestException
 from ...core.exceptions.openapi import error_responses
 from ...repositories.crud_departments import crud_departments
@@ -62,7 +62,7 @@ async def write_rp_application(
 @legacy_rp_api_deny
 async def read_rp_applications(
     request: Request,
-    db: Annotated[AsyncSession, Depends(async_get_db)],
+    db: Annotated[AsyncSession, Depends(async_get_reader_db)],
     service: Annotated[RPApplicationService, Depends(get_rp_application_service)],
     page: int = 1,
     items_per_page: int = 10,

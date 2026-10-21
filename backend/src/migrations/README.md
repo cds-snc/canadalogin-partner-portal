@@ -43,6 +43,22 @@ Migration notes
      if you need slug uniqueness scoped to department (e.g.
      `(department_id, slug)`).
 
+Adding a migration
+------------------
+
+- Create it with `alembic revision -m "..."` (add `--autogenerate` to diff
+  against the models). New revisions get a UTC timestamp ID such as
+  `20261021163000`, so migrations created on parallel branches never share
+  an ID. Don't hand-pick sequential IDs like `0014_...`; revisions
+  `0001`–`0013` predate this convention and stay as they are.
+- History must stay linear (exactly one head). CI runs
+  `.github/workflows/scripts/check-alembic-heads.sh` on every PR and fails if
+  there are multiple heads or a duplicate revision ID.
+- If another migration merged to `main` after you branched, CI will report
+  two heads. Rebase on `main`, then set your migration's `down_revision`
+  (and the `Revises:` line in its docstring) to the revision that is now
+  the head on `main` (`alembic heads` shows it).
+
 Applying migrations (example)
 -----------------------------
 

@@ -6,7 +6,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from ...api.dependencies import get_application_environment_service
 from ...core.access_control import casbin_guard
-from ...core.db.database import async_get_db
+from ...core.db.database import async_get_db, async_get_reader_db
 from ...core.exceptions.openapi import error_responses
 from ...schemas.application_environment import (
     ApplicationEnvironmentCreate,
@@ -103,7 +103,7 @@ async def create_application_environment(
 async def read_application_environments(
     request: Request,
     application_uuid: uuid_pkg.UUID,
-    db: Annotated[AsyncSession, Depends(async_get_db)],
+    db: Annotated[AsyncSession, Depends(async_get_reader_db)],
     service: Annotated[
         ApplicationEnvironmentService,
         Depends(get_application_environment_service),

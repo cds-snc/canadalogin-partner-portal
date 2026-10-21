@@ -122,7 +122,8 @@ async def test_password_mode_retains_legacy_configuration_and_escapes_credential
 
 @pytest.mark.asyncio
 @pytest.mark.parametrize("poolclass", [None, pool.NullPool])
-async def test_tokens_only_for_new_physical_connections_with_verified_tls(monkeypatch, poolclass, caplog):
+@pytest.mark.parametrize("reader", [False, True])
+async def test_tokens_only_for_new_physical_connections_with_verified_tls(monkeypatch, poolclass, reader, caplog):
     rds = Mock()
     rds.generate_db_auth_token.side_effect = ["token-one", "token-two", "token-three"]
     client = Mock(return_value=rds)
@@ -141,7 +142,8 @@ async def test_tokens_only_for_new_physical_connections_with_verified_tls(monkey
     monkeypatch.setattr(asyncpg, "connect", connect)
     settings = iam_settings(POSTGRES_READER_SERVER="reader.proxy.example.ca", POSTGRES_PASSWORD="unused-password")
     options = {"poolclass": poolclass} if poolclass else {}
-    engine = connection.build_async_engine(settings, **options)
+    engine = connection.build_async_engine(settings, reader=reader, **options)
+    expected_host = settings.POSTGRES_READER_SERVER if reader else settings.POSTGRES_SERVER
     # Avoid server-version/schema queries; retain real SQLAlchemy pool, hook and asyncpg adapter.
     monkeypatch.setattr(engine.sync_engine.dialect, "initialize", Mock())
     try:
@@ -165,12 +167,12 @@ async def test_tokens_only_for_new_physical_connections_with_verified_tls(monkey
         expected_connections += 1
         assert connect.await_count == expected_connections
         assert rds.generate_db_auth_token.call_args_list == [
-            call(DBHostname=settings.POSTGRES_SERVER, Port=6432, DBUsername="partner_portal_app", Region="ca-central-1")
+            call(DBHostname=expected_host, Port=6432, DBUsername="partner_portal_app", Region="ca-central-1")
         ] * expected_connections
         client.assert_called_once_with("rds", region_name="ca-central-1")
         for index, invocation in enumerate(connect.await_args_list):
             params = invocation.kwargs
-            assert params["host"] == settings.POSTGRES_SERVER
+            assert params["host"] == expected_host
             assert params["port"] == 6432
             assert params["user"] == settings.POSTGRES_USER
             assert params["database"] == settings.POSTGRES_DB
@@ -187,13 +189,14 @@ async def test_tokens_only_for_new_physical_connections_with_verified_tls(monkey
 
 
 @pytest.mark.asyncio
-async def test_token_failure_does_not_fall_back_to_password(monkeypatch):
+@pytest.mark.parametrize("reader", [False, True])
+async def test_token_failure_does_not_fall_back_to_password(monkeypatch, reader):
     rds = Mock()
     rds.generate_db_auth_token.side_effect = RuntimeError("Signing failed")
     monkeypatch.setattr(connection.boto3, "client", Mock(return_value=rds))
     connect = AsyncMock()
     monkeypatch.setattr(asyncpg, "connect", connect)
-    engine = connection.build_async_engine(iam_settings())
+    engine = connection.build_async_engine(iam_settings(POSTGRES_READER_SERVER="reader.proxy.example.ca"), reader=reader)
     try:
         with pytest.raises(RuntimeError, match="Signing failed"):
             await engine.connect()
