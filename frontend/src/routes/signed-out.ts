@@ -1,5 +1,7 @@
 import { createFileRoute, useSearch } from "@tanstack/react-router";
 import { createElement } from "react";
+import i18n from "@/common/i18n";
+import type { RouteBackLinkContext } from "@/types/route-breadcrumbs";
 import { SignedOutPage } from "../features/auth/pages/SignedOutPage";
 
 type SignedOutSearch = {
@@ -22,6 +24,14 @@ const SignedOutRouteComponent = (): ReturnType<typeof SignedOutPage> => {
 };
 
 export const Route = createFileRoute("/signed-out")({
+	beforeLoad: () =>
+		({
+			backLink: {
+				href: "/",
+				label: i18n.t("nav.home"),
+				showBackLabel: false,
+			},
+		}) satisfies RouteBackLinkContext,
 	component: SignedOutRouteComponent,
 	validateSearch,
 });

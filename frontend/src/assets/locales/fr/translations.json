@@ -32,17 +32,17 @@
 		"referenceSectionBody": "Informations supplémentaires sur le Portail partenaire CanadaLogin et les services connexes.",
 		"referenceSectionTitle": "En savoir plus",
 		"rolesPageLink": "Roles",
-		"signInAction": "Se connecter avec CanadaLogin",
+		"signInAction": "Se connecter avec ConnexionCanada",
 		"signOutAction": "Fermer la session",
 		"signedInBody": "Session ouverte sous le nom de {{name}}.",
 		"signedInEmail": "Courriel : {{email}}",
 		"signedInTitle": "Vous êtes connecté",
 		"signedOutBody": "Ouvrez une session avec votre compte de fournisseur d'identité du GC pour accéder au portail partenaire.",
 		"signedOutTitle": "Ouvrez une session pour continuer",
-		"summary": "Utilisez le Portail partenaire CanadaLogin pour gérer les environnements de votre organisation connectés à CanadaLogin.",
-		"eligibility": "Vous devez disposer d'une adresse courriel du gouvernement du Canada et de l'approbation de l'équipe CanadaLogin pour utiliser ce portail.",
-		"accessRequestPrefix": "Si vous n'avez pas accès, ",
-		"accessRequestLink": "demandez l'accès à l'équipe CanadaLogin",
+		"summary": "Utilisez le portail des partenaires pour gérer les environnements de votre organisme qui sont connectés à ConnexionCanada.",
+		"eligibility": "Pour pouvoir utiliser le portail, vous devez posséder une adresse courriel du gouvernement du Canada et obtenir l’approbation de l’équipe ConnexionCanada.",
+		"accessRequestPrefix": "Si vous n’avez pas accès au portail, ",
+		"accessRequestLink": "faites une demande d’accès auprès de l’équipe ConnexionCanada",
 		"accessRequestSuffix": ".",
 		"summaryTermsPrefix": "Consultez les ",
 		"summaryTermsLink": "conditions d'utilisation",
@@ -50,7 +50,7 @@
 		"aboutSectionTitle": "À propos de ce portail",
 		"aboutSectionBody": "Le Portail partenaire CanadaLogin vous permet de configurer, gérer et surveiller vos applications connectées à CanadaLogin.",
 		"supportingLinksTitle": "Actions courantes",
-		"title": "Portail partenaire CanadaLogin",
+		"title": "Portail des partenaires de ConnexionCanada",
 		"tiersPageLink": "Paliers",
 		"usersPageLink": "Utilisateurs",
 		"statusPanelTitle": "État de la session"
@@ -104,15 +104,15 @@
 	},
 	"accountNotFound": {
 		"title": "Nous n'avons pas trouvé votre compte",
-		"summary": "Vous avez ouvert une session avec succès, mais nous n'avons pas trouvé de compte du Portail partenaire CanadaLogin associé à cette adresse courriel.",
-		"reasonIntro": "Cela peut se produire si :",
-		"reasonDifferentEmail": "vous avez utilisé une autre adresse courriel du gouvernement du Canada lorsque votre accès au portail a été configuré",
-		"reasonAccessNotSetUp": "votre accès au portail n'a pas encore été configuré",
+		"summary": "Votre connexion a réussi, mais nous n’avons trouvé aucun compte associé à cette adresse courriel sur le portail des partenaires de ConnexionCanada.",
+		"reasonIntro": "Il peut y avoir deux raisons à cela :",
+		"reasonDifferentEmail": "Vous avez utilisé une autre adresse courriel gouvernementale lors de la configuration de votre accès au portail.",
+		"reasonAccessNotSetUp": "Votre accès au portail n’a pas encore été configuré.",
 		"existingAccessTitle": "Si vous avez déjà accès au portail",
-		"existingAccessBody": "Vous avez peut-être ouvert une session avec une adresse courriel du gouvernement du Canada différente de celle associée à votre compte du portail.",
-		"signOutAction": "Fermer la session et réessayer",
-		"noAccessTitle": "Si vous n'avez pas encore reçu l'accès",
-		"requestAccess": "Demander l'accès à l'équipe CanadaLogin."
+		"existingAccessBody": "Vous avez peut-être utilisé une adresse courriel gouvernementale différente pour votre connexion et pour la configuration de votre compte.",
+		"signOutAction": "Se déconnecter et réessayer",
+		"noAccessTitle": "Si vous n’avez pas encore accès au portail",
+		"requestAccess": "Faites une demande d’accès auprès de l’équipe ConnexionCanada."
 	},
 	"genericError": {
 		"notFoundApplicationsAction": "Aller aux applications",
@@ -194,7 +194,7 @@
 	"nav": {
 		"account": "Votre compte",
 		"applications": "Applications",
-		"technicalDocumentation": "Documentation technique",
+		"technicalDocumentation": "Documentation API",
 		"backTo": "Retour à",
 		"manageProfile": "Gérer le profil",
 		"organization": "Organisation",
@@ -203,8 +203,8 @@
 		"health": "Etat du systeme",
 		"home": "Accueil",
 		"label": "Navigation principale",
-		"login": "Ouvrir une session",
-		"logout": "Fermer la session",
+		"login": "Se connecter",
+		"logout": "Se déconnecter",
 		"support": "Soutien",
 		"policies": "Politiques",
 		"profile": "Profil",
@@ -692,36 +692,37 @@
 		"unknownApplication": "application inconnue"
 	},
 	"logout": {
-		"summary": "Veuillez patienter pendant que nous vous déconnectons en toute sécurité du Portail partenaire de CanadaLogin.",
-		"title": "Fermeture de votre session"
+		"summary": "Veuillez patienter pendant que nous vous déconnectons du portail des partenaires ConnexionCanada de manière sécurisée.",
+		"title": "Déconnexion en cours"
 	},
 	"signedOut": {
-		"action": "Ouvrir une session de nouveau",
-		"expiredSummary": "Vous avez fermé votre session du Portail partenaire CanadaLogin parce que votre session était inactive.",
+		"action": "Se reconnecter",
+		"expiredSummary": "Nous avons procédé à votre déconnexion du portail des partenaires ConnexionCanada pour cause d’inactivité.",
+		"expiredTitle": "Déconnexion effectuée",
 		"securityReminder": "Pour votre sécurité, fermez votre navigateur si vous utilisez un appareil partagé ou public.",
-		"summary": "Vous avez fermé votre session du Portail partenaire CanadaLogin avec succès.",
-		"title": "Vous avez fermé votre session"
+		"summary": "La déconnexion du portail des partenaires de ConnexionCanada a réussi.",
+		"title": "Déconnexion réussie"
 	},
 	"sessionTimeout": {
-		"continueAction": "Rester connecté",
+		"continueAction": "Prolonger la session",
 		"continuingAction": "Maintien de la session...",
 		"countdownLabel": "Temps restant :",
 		"loggingOutAction": "Déconnexion...",
 		"logoutAction": "Se déconnecter",
-		"warningDescription": "Si vous ne poursuivez pas votre session, votre session prendra automatiquement fin.",
-		"warningTitle": "Votre session est sur le point de prendre fin en raison de l’inactivité"
+		"warningDescription": "Si vous ne prolongez pas votre session, celle-ci sera automatiquement fermée.",
+		"warningTitle": "Votre session va être fermée pour cause d’inactivité"
 	},
 	"header": {
 		"switchLanguageEnglish": "English",
 		"switchLanguageFrench": "Français"
 	},
 	"footer": {
-		"apiDocumentation": "Documentation de l’API",
+		"apiDocumentation": "Documentation API",
 		"contextualHeading": "Service numérique canadien",
 		"privacy": "Confidentialité",
 		"support": "Soutien",
 		"systemStatus": "État du système",
-		"terms": "Conditions d'utilisation"
+		"terms": "Conditions d’utilisation"
 	},
 	"health": {
 		"cardTitle": "Point de terminaison de santé",
@@ -1250,14 +1251,14 @@
 	},
 	"termsAndConditions": {
 		"title": "Avant de continuer",
-		"intro": "Pour continuer à utiliser le Portail des partenaires CanadaLogin, vous devez accepter les <termsLink>conditions d'utilisation</termsLink>.",
-		"agreementIntro": "En sélectionnant <acceptAction>Accepter et continuer</acceptAction>, vous acceptez de :",
-		"responsibility1": "utiliser le portail uniquement pour les activités autorisées du gouvernement du Canada",
-		"responsibility2": "protéger votre compte et vos identifiants",
-		"responsibility3": "protéger les renseignements auxquels vous accédez au moyen du portail",
-		"responsibility4": "configurer et gérer vos environnements CanadaLogin de façon responsable",
-		"responsibility5": "respecter les exigences du gouvernement du Canada en matière de sécurité et de protection des renseignements personnels",
-		"responsibility6": "signaler tout problème de sécurité ou accès non autorisé présumé",
+		"intro": "Pour accéder au portail des partenaires de ConnexionCanada, vous devez accepter les <termsLink>conditions d’utilisation</termsLink>.",
+		"agreementIntro": "En sélectionnant « <acceptAction>accepter et continuer</acceptAction> », vous acceptez les engagements suivants :",
+		"responsibility1": "utiliser le portail uniquement pour des activités autorisées par le gouvernement du Canada",
+		"responsibility2": "veiller à la sécurité de votre compte et de vos renseignements de connexion",
+		"responsibility3": "protéger les renseignements auxquels vous accédez par l’entremise du portail",
+		"responsibility4": "configurer et gérer vos environnements ConnexionCanada de manière responsable",
+		"responsibility5": "respecter les exigences du gouvernement du Canada en matière de sécurité et de confidentialité",
+		"responsibility6": "signaler les problèmes de sécurité ou les suspicions d’accès non autorisés",
 		"acceptButton": "Accepter et continuer",
 		"signOutButton": "Se déconnecter",
 		"accepting": "Traitement en cours...",
