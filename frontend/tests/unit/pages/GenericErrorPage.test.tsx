@@ -19,6 +19,7 @@ vi.mock("react-i18next", () => ({
 				"genericError.notFoundSupportPrefix": "If the problem continues, contact",
 				"genericError.notFoundTitle": "We could not find that page",
 				"genericError.unexpectedBody": "There was a problem loading the page. You can return to CanadaLogin or try again later.",
+				"genericError.unexpectedPartnerPortalAction": "Go to CanadaLogin",
 				"genericError.unexpectedTitle": "We're having trouble loading this page",
 			};
 			return map[key] ?? key;
@@ -85,7 +86,7 @@ describe("GenericErrorPage", () => {
 			screen.getByRole("link", { name: "Go to Applications" }).getAttribute("href")
 		).toBe("/applications");
 		expect(
-			screen.queryByRole("link", { name: "Go to CanadaLogin Partner Portal" })
+			screen.queryByRole("link", { name: "Go to CanadaLogin" })
 		).toBeNull();
 	});
 
@@ -103,7 +104,7 @@ describe("GenericErrorPage", () => {
 
 		expect(
 			screen.getByRole("link", {
-				name: "Go to CanadaLogin Partner Portal",
+				name: "Go to CanadaLogin",
 			}).getAttribute("href")
 		).toBe("/");
 	});

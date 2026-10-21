@@ -24,7 +24,9 @@ export const GenericErrorPage = ({
 	const actionHref = isAuthenticated ? "/applications" : "/";
 	const actionKey = isAuthenticated
 		? "genericError.notFoundApplicationsAction"
-		: "genericError.notFoundPartnerPortalAction";
+		: isNotFound
+			? "genericError.notFoundPartnerPortalAction"
+			: "genericError.unexpectedPartnerPortalAction";
 
 	return (
 		<Container alignment="start" id="generic-error-page-content" size="md">
