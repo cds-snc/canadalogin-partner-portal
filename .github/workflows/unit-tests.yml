@@ -36,6 +36,9 @@ jobs:
       - name: Set up uv
         uses: astral-sh/setup-uv@d0cc045d04ccac9d8b7881df0226f9e82c39688e # v6.8.0
 
+      - name: Check Alembic history is linear
+        run: .github/workflows/scripts/check-alembic-heads.sh
+
       - name: Run backend unit tests
         run: |
           cd backend/src
