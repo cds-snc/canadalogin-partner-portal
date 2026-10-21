@@ -12,6 +12,10 @@ type SignedOutPageProps = {
 export const SignedOutPage = ({ reason }: SignedOutPageProps): FunctionComponent => {
 	const { t } = useTranslation();
 	const login = useAuthStore((state) => state.login);
+	const title =
+		reason === "session-expired"
+			? t("signedOut.expiredTitle")
+			: t("signedOut.title");
 	const summary =
 		reason === "session-expired"
 			? t("signedOut.expiredSummary")
@@ -19,7 +23,7 @@ export const SignedOutPage = ({ reason }: SignedOutPageProps): FunctionComponent
 
 	return (
 		<>
-			<Heading tag="h1">{t("signedOut.title")}</Heading>
+			<Heading tag="h1">{title}</Heading>
 			<Text>{summary}</Text>
 			<Text>{t("signedOut.securityReminder")}</Text>
 			<Button buttonRole="primary" type="button" onGcdsClick={login}>
