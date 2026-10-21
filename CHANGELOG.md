@@ -6,6 +6,18 @@
 
 * Bump PyJWT to >=2.15.0,<3.0 (locked to 2.15.1) to fix CVE-2026-102268 (authentication bypass via improper public key), GHSA-42vr-xj54-vc7v (recursive payload parsing), and GHSA-x33g-cr3x-6449 (inconsistent OKP JWKs).
 
+## [2.1.0](https://github.com/cds-snc/canadalogin-partner-portal/compare/v2.0.0...v2.1.0) (2026-10-21)
+
+
+### Features
+
+* route stale-safe reads to database reader ([#291](https://github.com/cds-snc/canadalogin-partner-portal/issues/291)) ([4a7a875](https://github.com/cds-snc/canadalogin-partner-portal/commit/4a7a875535e9aada20f8e397eae7fab543a841cd))
+
+
+### Miscellaneous Chores
+
+* Update dependencies in Partner Portal ([#293](https://github.com/cds-snc/canadalogin-partner-portal/issues/293)) ([31c515b](https://github.com/cds-snc/canadalogin-partner-portal/commit/31c515bd5907a5d90f20a35cd77e24f1c0ec1834))
+
 ## [2.0.0](https://github.com/cds-snc/canadalogin-partner-portal/compare/v1.4.0...v2.0.0) (2026-10-20)
 
 
