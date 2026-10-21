@@ -382,9 +382,80 @@ describe("ConnectEnvironmentPage", () => {
 		expect(screen.getByRole("link", { name: "common.cancel" })).toBeTruthy();
 
 		await enterStepTwo();
+		expect(screen.queryByRole("link", { name: "common.cancel" })).toBeNull();
+	});
+
+	it("starts production requests on Step 2 with the edited name", async () => {
+		mockedUseSearch.mockReturnValue({
+			productionApplicationUrlEn: "https://prod.example.com/en",
+			productionApplicationUrlFr: "https://prod.example.com/fr",
+			productionEnvironmentName: "portal-prod",
+			requestProduction: true,
+			sourceEnvironmentUuid: "environment-1",
+		});
+		mockedUseApplicationEnvironments.mockReturnValue({
+			data: {
+				...applicationSummary,
+				data: [
+					{
+						config: {
+							applicationUrlEn: "https://en.example.com",
+							applicationUrlFr: "https://fr.example.com",
+							canDecryptMessages: false,
+							canEncryptRequests: false,
+							canSignMessages: false,
+							clientAuthMethod: "private_key_jwt" as const,
+							clientType: "confidential" as const,
+							environmentName: "STAGING-portal",
+							pkceSupported: true,
+							postLogoutRedirectUris: ["https://example.com/logout"],
+							redirectUris: ["https://example.com/callback"],
+							singleSignOut: true,
+						},
+						createdAt: "2026-09-17T00:00:00Z",
+						partnerLabel: "STAGING-portal",
+						statusCode: "submitted",
+						tenantCode: "staging" as const,
+						updatedAt: null,
+						uuid: "environment-1",
+					},
+				],
+				totalCount: 1,
+			},
+			error: null,
+			isLoading: false,
+		});
+
+		render(<ConnectEnvironmentPage />);
+
 		expect(
-			screen.queryByRole("link", { name: "common.cancel" })
-		).toBeNull();
+			await screen.findByRole("heading", {
+				name: "applicationEnvironmentConnect.stepTwo.title",
+			})
+		).toBeTruthy();
+
+		fireEvent.click(screen.getByRole("button", { name: "common.back" }));
+		expect(
+			(
+				screen.getByLabelText(
+					"applicationEnvironmentConnect.stepOne.environmentName"
+				) as HTMLInputElement
+			).value
+		).toBe("portal-prod");
+		expect(
+			(
+				screen.getByLabelText(
+					"applicationEnvironmentConnect.stepOne.applicationUrlEn"
+				) as HTMLInputElement
+			).value
+		).toBe("https://prod.example.com/en");
+		expect(
+			(
+				screen.getByLabelText(
+					"applicationEnvironmentConnect.stepOne.applicationUrlFr"
+				) as HTMLInputElement
+			).value
+		).toBe("https://prod.example.com/fr");
 	});
 
 	it("lists Yes before No for boolean choices", async () => {
@@ -396,9 +467,7 @@ describe("ConnectEnvironmentPage", () => {
 
 		render(<ConnectEnvironmentPage />);
 		await enterStepTwo();
-		expectYesFirst(
-			"applicationEnvironmentConnect.stepTwo.singleSignOut"
-		);
+		expectYesFirst("applicationEnvironmentConnect.stepTwo.singleSignOut");
 
 		fireEvent.input(
 			screen.getByLabelText(
@@ -426,9 +495,7 @@ describe("ConnectEnvironmentPage", () => {
 			).toBeTruthy();
 		});
 
-		expectYesFirst(
-			"applicationEnvironmentConnect.stepThree.pkceSupported"
-		);
+		expectYesFirst("applicationEnvironmentConnect.stepThree.pkceSupported");
 		fireEvent.click(
 			within(
 				screen.getByRole("group", {
@@ -458,15 +525,9 @@ describe("ConnectEnvironmentPage", () => {
 			).toBeTruthy();
 		});
 
-		expectYesFirst(
-			"applicationEnvironmentConnect.stepFour.canSignMessages"
-		);
-		expectYesFirst(
-			"applicationEnvironmentConnect.stepFour.canEncryptRequests"
-		);
-		expectYesFirst(
-			"applicationEnvironmentConnect.stepFour.canDecryptMessages"
-		);
+		expectYesFirst("applicationEnvironmentConnect.stepFour.canSignMessages");
+		expectYesFirst("applicationEnvironmentConnect.stepFour.canEncryptRequests");
+		expectYesFirst("applicationEnvironmentConnect.stepFour.canDecryptMessages");
 	});
 
 	it("reveals the conditional Step 1 fields in order", () => {
@@ -588,13 +649,13 @@ describe("ConnectEnvironmentPage", () => {
 
 		expect(
 			screen.queryByRole("group", {
-			name: "applicationEnvironmentConnect.stepOne.copyExisting",
-		})
+				name: "applicationEnvironmentConnect.stepOne.copyExisting",
+			})
 		).toBeNull();
 		expect(
 			screen.queryByLabelText(
-			"applicationEnvironmentConnect.stepOne.sourceEnvironment"
-		)
+				"applicationEnvironmentConnect.stepOne.sourceEnvironment"
+			)
 		).toBeNull();
 	});
 
@@ -630,9 +691,9 @@ describe("ConnectEnvironmentPage", () => {
 				name: "applicationEnvironmentConnect.stepTwo.addRedirectUri",
 			})
 		);
-		expect(
-			screen.getAllByRole("link", { name: "common.remove" })
-		).toHaveLength(1);
+		expect(screen.getAllByRole("link", { name: "common.remove" })).toHaveLength(
+			1
+		);
 		expect(document.getElementById("redirect-uri-1")).toBeTruthy();
 
 		expect(
@@ -705,13 +766,13 @@ describe("ConnectEnvironmentPage", () => {
 		});
 		expect(
 			screen.queryByRole("group", {
-			name: "applicationEnvironmentConnect.stepTwo.singleSignOut",
-		})
+				name: "applicationEnvironmentConnect.stepTwo.singleSignOut",
+			})
 		).toBeNull();
 		expect(
 			screen.getByRole("group", {
-			name: "applicationEnvironmentConnect.stepTwo.logoutMethod",
-		})
+				name: "applicationEnvironmentConnect.stepTwo.logoutMethod",
+			})
 		).toBeTruthy();
 		expect(
 			screen.getByLabelText(
@@ -1720,13 +1781,11 @@ describe("ConnectEnvironmentPage", () => {
 		await waitFor(() => {
 			for (const [errorKey, hostId] of invalidFields) {
 				expect(
-					screen
-						.getByRole("link", { name: errorKey })
-						.getAttribute("href")
+					screen.getByRole("link", { name: errorKey }).getAttribute("href")
 				).toBe(`#${hostId}`);
-				expect(document.getElementById(hostId)?.getAttribute("data-error")).toBe(
-					errorKey
-				);
+				expect(
+					document.getElementById(hostId)?.getAttribute("data-error")
+				).toBe(errorKey);
 			}
 		});
 	});

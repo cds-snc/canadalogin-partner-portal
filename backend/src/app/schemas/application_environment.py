@@ -56,7 +56,7 @@ class ApplicationEnvironmentCreate(BaseModel):
     ]
     single_sign_out: bool
     source_environment_uuid: uuid_pkg.UUID | None = None
-    tenant_code: Literal["test", "staging"]
+    tenant_code: Literal["test", "staging", "production"]
     verification_messages: list[Literal["id_token", "userinfo"]] = Field(..., min_length=1)
     verification_signature_algorithms: list[
         Literal[

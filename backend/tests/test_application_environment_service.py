@@ -254,6 +254,13 @@ def test_application_environment_create_rejects_disabled_staging_single_sign_out
         ApplicationEnvironmentCreate.model_validate(payload)
 
 
+def test_application_environment_create_accepts_production():
+    payload = valid_environment_create().model_dump()
+    payload.update(tenant_code="production")
+
+    assert ApplicationEnvironmentCreate.model_validate(payload).tenant_code == "production"
+
+
 @pytest.mark.asyncio
 async def test_list_application_environments_returns_application_and_page(mock_db):
     application_uuid = uuid.uuid4()
@@ -420,6 +427,26 @@ async def test_update_application_environment_name_updates_prefixed_name(mock_db
         environment_uuid=environment_uuid,
         environment_name="TEST-portal-renamed",
     )
+
+
+@pytest.mark.asyncio
+async def test_update_application_environment_rejects_production_environment(mock_db):
+    with patch("src.app.services.application_environment_service.application_environment_repository") as repository:
+        repository.get_environment = AsyncMock(return_value={"tenant_code": "production"})
+        repository.update_environment_name = AsyncMock()
+
+        with pytest.raises(
+            BadRequestException,
+            match="Production environments cannot be modified",
+        ):
+            await ApplicationEnvironmentService().update_application_environment_name(
+                db=mock_db,
+                application_uuid=uuid.uuid4(),
+                environment_uuid=uuid.uuid4(),
+                environment=ApplicationEnvironmentNameUpdate(environment_name="portal-renamed"),
+            )
+
+    repository.update_environment_name.assert_not_awaited()
 
 
 @pytest.mark.asyncio

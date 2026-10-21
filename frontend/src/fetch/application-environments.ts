@@ -55,7 +55,7 @@ export type ApplicationEnvironmentCreate = {
 	>;
 	singleSignOut: boolean;
 	sourceEnvironmentUuid?: string;
-	tenantCode: "test" | "staging";
+	tenantCode: "test" | "staging" | "production";
 	verificationMessages: Array<"id_token" | "userinfo">;
 	verificationSignatureAlgorithms: Array<
 		| "RS256"

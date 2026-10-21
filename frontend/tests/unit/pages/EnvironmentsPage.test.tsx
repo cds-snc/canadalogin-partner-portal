@@ -50,8 +50,8 @@ vi.mock("react-i18next", () => ({
 				"applicationEnvironments.productionStatuses":
 					"Production environment statuses",
 				"applicationEnvironments.sectionTitle": "Application environments",
-				"applicationEnvironments.statusInProduction": "In production",
-				"applicationEnvironments.statusSubmitted": "Submitted",
+				"applicationEnvironments.statusInProduction": "In Production",
+				"applicationEnvironments.statusSubmitted": "Requested",
 				"applicationEnvironments.submittedDescription":
 					"Your production environment request has been submitted to CanadaLogin for review.",
 				"applicationEnvironments.summary":
@@ -198,8 +198,8 @@ describe("EnvironmentsPage", () => {
 
 		render(<EnvironmentsPage />);
 
-		expect(screen.getByText("Submitted")).toBeTruthy();
-		const inProductionBadge = screen.getByText("In production");
+		expect(screen.getByText("Requested")).toBeTruthy();
+		const inProductionBadge = screen.getByText("In Production");
 		expect(inProductionBadge).toBeTruthy();
 		expect(
 			inProductionBadge

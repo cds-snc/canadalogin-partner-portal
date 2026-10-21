@@ -50,6 +50,7 @@ import { Route as ApplicationsApplicationUuidEnvironmentsEnvironmentUuidMessages
 import { Route as ApplicationsApplicationUuidEnvironmentsEnvironmentUuidMessagesVerifiedRouteImport } from './routes/applications/$applicationUuid/environments/$environmentUuid/messages-verified'
 import { Route as ApplicationsApplicationUuidEnvironmentsEnvironmentUuidPostLogoutRedirectUrlsRouteImport } from './routes/applications/$applicationUuid/environments/$environmentUuid/post-logout-redirect-urls'
 import { Route as ApplicationsApplicationUuidEnvironmentsEnvironmentUuidRedirectUrlsRouteImport } from './routes/applications/$applicationUuid/environments/$environmentUuid/redirect-urls'
+import { Route as ApplicationsApplicationUuidEnvironmentsEnvironmentUuidRequestProductionRouteImport } from './routes/applications/$applicationUuid/environments/$environmentUuid/request-production'
 import { Route as ApplicationsApplicationUuidEnvironmentsEnvironmentUuidRequestsEncryptedRouteImport } from './routes/applications/$applicationUuid/environments/$environmentUuid/requests-encrypted'
 import { Route as ApplicationsApplicationUuidEnvironmentsEnvironmentUuidSingleSignOutMethodRouteImport } from './routes/applications/$applicationUuid/environments/$environmentUuid/single-sign-out-method'
 
@@ -314,6 +315,15 @@ const ApplicationsApplicationUuidEnvironmentsEnvironmentUuidRedirectUrlsRoute =
         ApplicationsApplicationUuidEnvironmentsEnvironmentUuidRoute,
     } as any,
   )
+const ApplicationsApplicationUuidEnvironmentsEnvironmentUuidRequestProductionRoute =
+  ApplicationsApplicationUuidEnvironmentsEnvironmentUuidRequestProductionRouteImport.update(
+    {
+      id: '/request-production',
+      path: '/request-production',
+      getParentRoute: () =>
+        ApplicationsApplicationUuidEnvironmentsEnvironmentUuidRoute,
+    } as any,
+  )
 const ApplicationsApplicationUuidEnvironmentsEnvironmentUuidRequestsEncryptedRoute =
   ApplicationsApplicationUuidEnvironmentsEnvironmentUuidRequestsEncryptedRouteImport.update(
     {
@@ -374,6 +384,7 @@ export interface FileRoutesByFullPath {
   '/applications/$applicationUuid/environments/$environmentUuid/messages-verified': typeof ApplicationsApplicationUuidEnvironmentsEnvironmentUuidMessagesVerifiedRoute
   '/applications/$applicationUuid/environments/$environmentUuid/post-logout-redirect-urls': typeof ApplicationsApplicationUuidEnvironmentsEnvironmentUuidPostLogoutRedirectUrlsRoute
   '/applications/$applicationUuid/environments/$environmentUuid/redirect-urls': typeof ApplicationsApplicationUuidEnvironmentsEnvironmentUuidRedirectUrlsRoute
+  '/applications/$applicationUuid/environments/$environmentUuid/request-production': typeof ApplicationsApplicationUuidEnvironmentsEnvironmentUuidRequestProductionRoute
   '/applications/$applicationUuid/environments/$environmentUuid/requests-encrypted': typeof ApplicationsApplicationUuidEnvironmentsEnvironmentUuidRequestsEncryptedRoute
   '/applications/$applicationUuid/environments/$environmentUuid/single-sign-out-method': typeof ApplicationsApplicationUuidEnvironmentsEnvironmentUuidSingleSignOutMethodRoute
   '/applications/$applicationUuid/environments/$environmentUuid/': typeof ApplicationsApplicationUuidEnvironmentsEnvironmentUuidIndexRoute
@@ -415,6 +426,7 @@ export interface FileRoutesByTo {
   '/applications/$applicationUuid/environments/$environmentUuid/messages-verified': typeof ApplicationsApplicationUuidEnvironmentsEnvironmentUuidMessagesVerifiedRoute
   '/applications/$applicationUuid/environments/$environmentUuid/post-logout-redirect-urls': typeof ApplicationsApplicationUuidEnvironmentsEnvironmentUuidPostLogoutRedirectUrlsRoute
   '/applications/$applicationUuid/environments/$environmentUuid/redirect-urls': typeof ApplicationsApplicationUuidEnvironmentsEnvironmentUuidRedirectUrlsRoute
+  '/applications/$applicationUuid/environments/$environmentUuid/request-production': typeof ApplicationsApplicationUuidEnvironmentsEnvironmentUuidRequestProductionRoute
   '/applications/$applicationUuid/environments/$environmentUuid/requests-encrypted': typeof ApplicationsApplicationUuidEnvironmentsEnvironmentUuidRequestsEncryptedRoute
   '/applications/$applicationUuid/environments/$environmentUuid/single-sign-out-method': typeof ApplicationsApplicationUuidEnvironmentsEnvironmentUuidSingleSignOutMethodRoute
   '/applications/$applicationUuid/environments/$environmentUuid': typeof ApplicationsApplicationUuidEnvironmentsEnvironmentUuidIndexRoute
@@ -461,6 +473,7 @@ export interface FileRoutesById {
   '/applications/$applicationUuid/environments/$environmentUuid/messages-verified': typeof ApplicationsApplicationUuidEnvironmentsEnvironmentUuidMessagesVerifiedRoute
   '/applications/$applicationUuid/environments/$environmentUuid/post-logout-redirect-urls': typeof ApplicationsApplicationUuidEnvironmentsEnvironmentUuidPostLogoutRedirectUrlsRoute
   '/applications/$applicationUuid/environments/$environmentUuid/redirect-urls': typeof ApplicationsApplicationUuidEnvironmentsEnvironmentUuidRedirectUrlsRoute
+  '/applications/$applicationUuid/environments/$environmentUuid/request-production': typeof ApplicationsApplicationUuidEnvironmentsEnvironmentUuidRequestProductionRoute
   '/applications/$applicationUuid/environments/$environmentUuid/requests-encrypted': typeof ApplicationsApplicationUuidEnvironmentsEnvironmentUuidRequestsEncryptedRoute
   '/applications/$applicationUuid/environments/$environmentUuid/single-sign-out-method': typeof ApplicationsApplicationUuidEnvironmentsEnvironmentUuidSingleSignOutMethodRoute
   '/applications/$applicationUuid/environments/$environmentUuid/': typeof ApplicationsApplicationUuidEnvironmentsEnvironmentUuidIndexRoute
@@ -508,6 +521,7 @@ export interface FileRouteTypes {
     | '/applications/$applicationUuid/environments/$environmentUuid/messages-verified'
     | '/applications/$applicationUuid/environments/$environmentUuid/post-logout-redirect-urls'
     | '/applications/$applicationUuid/environments/$environmentUuid/redirect-urls'
+    | '/applications/$applicationUuid/environments/$environmentUuid/request-production'
     | '/applications/$applicationUuid/environments/$environmentUuid/requests-encrypted'
     | '/applications/$applicationUuid/environments/$environmentUuid/single-sign-out-method'
     | '/applications/$applicationUuid/environments/$environmentUuid/'
@@ -549,6 +563,7 @@ export interface FileRouteTypes {
     | '/applications/$applicationUuid/environments/$environmentUuid/messages-verified'
     | '/applications/$applicationUuid/environments/$environmentUuid/post-logout-redirect-urls'
     | '/applications/$applicationUuid/environments/$environmentUuid/redirect-urls'
+    | '/applications/$applicationUuid/environments/$environmentUuid/request-production'
     | '/applications/$applicationUuid/environments/$environmentUuid/requests-encrypted'
     | '/applications/$applicationUuid/environments/$environmentUuid/single-sign-out-method'
     | '/applications/$applicationUuid/environments/$environmentUuid'
@@ -594,6 +609,7 @@ export interface FileRouteTypes {
     | '/applications/$applicationUuid/environments/$environmentUuid/messages-verified'
     | '/applications/$applicationUuid/environments/$environmentUuid/post-logout-redirect-urls'
     | '/applications/$applicationUuid/environments/$environmentUuid/redirect-urls'
+    | '/applications/$applicationUuid/environments/$environmentUuid/request-production'
     | '/applications/$applicationUuid/environments/$environmentUuid/requests-encrypted'
     | '/applications/$applicationUuid/environments/$environmentUuid/single-sign-out-method'
     | '/applications/$applicationUuid/environments/$environmentUuid/'
@@ -911,6 +927,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApplicationsApplicationUuidEnvironmentsEnvironmentUuidRedirectUrlsRouteImport
       parentRoute: typeof ApplicationsApplicationUuidEnvironmentsEnvironmentUuidRoute
     }
+    '/applications/$applicationUuid/environments/$environmentUuid/request-production': {
+      id: '/applications/$applicationUuid/environments/$environmentUuid/request-production'
+      path: '/request-production'
+      fullPath: '/applications/$applicationUuid/environments/$environmentUuid/request-production'
+      preLoaderRoute: typeof ApplicationsApplicationUuidEnvironmentsEnvironmentUuidRequestProductionRouteImport
+      parentRoute: typeof ApplicationsApplicationUuidEnvironmentsEnvironmentUuidRoute
+    }
     '/applications/$applicationUuid/environments/$environmentUuid/requests-encrypted': {
       id: '/applications/$applicationUuid/environments/$environmentUuid/requests-encrypted'
       path: '/requests-encrypted'
@@ -940,6 +963,7 @@ interface ApplicationsApplicationUuidEnvironmentsEnvironmentUuidRouteChildren {
   ApplicationsApplicationUuidEnvironmentsEnvironmentUuidMessagesVerifiedRoute: typeof ApplicationsApplicationUuidEnvironmentsEnvironmentUuidMessagesVerifiedRoute
   ApplicationsApplicationUuidEnvironmentsEnvironmentUuidPostLogoutRedirectUrlsRoute: typeof ApplicationsApplicationUuidEnvironmentsEnvironmentUuidPostLogoutRedirectUrlsRoute
   ApplicationsApplicationUuidEnvironmentsEnvironmentUuidRedirectUrlsRoute: typeof ApplicationsApplicationUuidEnvironmentsEnvironmentUuidRedirectUrlsRoute
+  ApplicationsApplicationUuidEnvironmentsEnvironmentUuidRequestProductionRoute: typeof ApplicationsApplicationUuidEnvironmentsEnvironmentUuidRequestProductionRoute
   ApplicationsApplicationUuidEnvironmentsEnvironmentUuidRequestsEncryptedRoute: typeof ApplicationsApplicationUuidEnvironmentsEnvironmentUuidRequestsEncryptedRoute
   ApplicationsApplicationUuidEnvironmentsEnvironmentUuidSingleSignOutMethodRoute: typeof ApplicationsApplicationUuidEnvironmentsEnvironmentUuidSingleSignOutMethodRoute
   ApplicationsApplicationUuidEnvironmentsEnvironmentUuidIndexRoute: typeof ApplicationsApplicationUuidEnvironmentsEnvironmentUuidIndexRoute
@@ -969,6 +993,8 @@ const ApplicationsApplicationUuidEnvironmentsEnvironmentUuidRouteChildren: Appli
       ApplicationsApplicationUuidEnvironmentsEnvironmentUuidPostLogoutRedirectUrlsRoute,
     ApplicationsApplicationUuidEnvironmentsEnvironmentUuidRedirectUrlsRoute:
       ApplicationsApplicationUuidEnvironmentsEnvironmentUuidRedirectUrlsRoute,
+    ApplicationsApplicationUuidEnvironmentsEnvironmentUuidRequestProductionRoute:
+      ApplicationsApplicationUuidEnvironmentsEnvironmentUuidRequestProductionRoute,
     ApplicationsApplicationUuidEnvironmentsEnvironmentUuidRequestsEncryptedRoute:
       ApplicationsApplicationUuidEnvironmentsEnvironmentUuidRequestsEncryptedRoute,
     ApplicationsApplicationUuidEnvironmentsEnvironmentUuidSingleSignOutMethodRoute:
