@@ -122,6 +122,7 @@
 		"notFoundSupportPrefix": "If the problem continues, contact",
 		"notFoundTitle": "We cannot find that page",
 		"unexpectedBody": "There was a problem loading the page. You can return to CanadaLogin or try again later.",
+		"unexpectedPartnerPortalAction": "Go to CanadaLogin",
 		"unexpectedTitle": "We’re having trouble loading this page"
 	},
 	"rpDepartmentSetup": {
