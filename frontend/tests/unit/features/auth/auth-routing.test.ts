@@ -55,6 +55,18 @@ describe("auth-routing", () => {
 		await expect(requireAuthenticatedUser("/users")).resolves.toEqual(sampleUser);
 	});
 
+	it.each([null, ""])(
+		"allows protected routes when the user's department is %s",
+		async (departmentAbbreviation) => {
+			const userWithoutDepartment = { ...sampleUser, departmentAbbreviation };
+			vi.mocked(revalidateCurrentUser).mockResolvedValue(userWithoutDepartment);
+
+			await expect(requireAuthenticatedUser("/applications")).resolves.toEqual(
+				userWithoutDepartment
+			);
+		}
+	);
+
 	it("navigates directly to OIDC when the user is not authenticated", async () => {
 		vi.mocked(revalidateCurrentUser).mockResolvedValue(null);
 

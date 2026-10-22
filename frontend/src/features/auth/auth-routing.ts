@@ -44,18 +44,6 @@ export const requireAuthenticatedUser = async (
 		}) as unknown as Error;
 	}
 
-	// Enforce department selection for all first-time users.
-	// Redirect to /profile/setup when department is not set (except when already on onboarding pages).
-	if (
-		!isOnboardingPath &&
-		(currentUser.departmentAbbreviation == null ||
-			currentUser.departmentAbbreviation === "")
-	) {
-		// Redirect to the dedicated profile setup page so first-time users
-		// select their department from a focused flow.
-		throw redirect({ replace: true, to: "/profile/setup" }) as unknown as Error;
-	}
-
 	return currentUser;
 };
 

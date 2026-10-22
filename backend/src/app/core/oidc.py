@@ -133,6 +133,7 @@ async def sync_oidc_user(db: AsyncSession, claims: dict[str, object]) -> dict[st
                 "last_login_at": datetime.now(UTC),
                 "email": normalized_email,
                 "username": normalized_email,
+                "enabled": True,
             },
             uuid=existing_user["uuid"],
         )
@@ -158,6 +159,7 @@ async def sync_oidc_user(db: AsyncSession, claims: dict[str, object]) -> dict[st
                     "last_login_at": datetime.now(UTC),
                     "username": normalized_email,
                     "email": normalized_email,
+                    "enabled": True,
                 },
                 uuid=email_user["uuid"],
             )

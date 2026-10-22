@@ -122,9 +122,10 @@ class TestSyncOidcUser:
 
         assert result == existing_user
         update_values = mock_crud.update.await_args.kwargs["object"]
-        assert set(update_values) == {"last_login_at", "email", "username"}
+        assert set(update_values) == {"last_login_at", "email", "username", "enabled"}
         assert update_values["email"] == "oidc.user@example.com"
         assert update_values["username"] == "oidc.user@example.com"
+        assert update_values["enabled"] is True
 
     @pytest.mark.asyncio
     async def test_sync_oidc_user_links_local_user_by_email_without_roles(self, mock_db):
@@ -144,7 +145,15 @@ class TestSyncOidcUser:
 
         assert result == local_user
         update_values = mock_crud.update.await_args.kwargs["object"]
-        assert set(update_values) == {"auth_provider", "auth_subject", "last_login_at", "username", "email"}
+        assert set(update_values) == {
+            "auth_provider",
+            "auth_subject",
+            "last_login_at",
+            "username",
+            "email",
+            "enabled",
+        }
+        assert update_values["enabled"] is True
 
     @pytest.mark.asyncio
     async def test_sync_oidc_user_rejects_an_unknown_local_user_without_creating_one(self, mock_db):
