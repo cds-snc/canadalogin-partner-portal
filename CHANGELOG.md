@@ -6,6 +6,27 @@
 
 * Bump PyJWT to >=2.15.0,<3.0 (locked to 2.15.1) to fix CVE-2026-102268 (authentication bypass via improper public key), GHSA-42vr-xj54-vc7v (recursive payload parsing), and GHSA-x33g-cr3x-6449 (inconsistent OKP JWKs).
 
+## [2.2.0](https://github.com/cds-snc/canadalogin-partner-portal/compare/v2.1.0...v2.2.0) (2026-10-22)
+
+
+### Features
+
+* **application-environments:** add production request flow ([#296](https://github.com/cds-snc/canadalogin-partner-portal/issues/296)) ([4c8e446](https://github.com/cds-snc/canadalogin-partner-portal/commit/4c8e4463fbdb4297e6e8ec0388790b861e9ef44a))
+
+
+### Bug Fixes
+
+* 298 french content for supporting and system pages ([#299](https://github.com/cds-snc/canadalogin-partner-portal/issues/299)) ([f33ab12](https://github.com/cds-snc/canadalogin-partner-portal/commit/f33ab124589a89ec87e45018b82926b0b937e0c2))
+* disable user choose department ([#302](https://github.com/cds-snc/canadalogin-partner-portal/issues/302)) ([397fe33](https://github.com/cds-snc/canadalogin-partner-portal/commit/397fe33b29edeb1da43d8e166ab27ac0716a94d5))
+* fr implementation auth session page ([#297](https://github.com/cds-snc/canadalogin-partner-portal/issues/297)) ([5050194](https://github.com/cds-snc/canadalogin-partner-portal/commit/505019443c3487e5768d63dc495f5e5b2af7195a))
+* **navigation:** expose technical documentation publicly ([#301](https://github.com/cds-snc/canadalogin-partner-portal/issues/301)) ([f72fb1b](https://github.com/cds-snc/canadalogin-partner-portal/commit/f72fb1b2ab8743698a4e7fec79dd337b984d4f6d))
+
+
+### Miscellaneous Chores
+
+* **migrations:** timestamp revision IDs and single-head CI check ([#294](https://github.com/cds-snc/canadalogin-partner-portal/issues/294)) ([e48e906](https://github.com/cds-snc/canadalogin-partner-portal/commit/e48e9062d85755659470a3d6260feeb88518fc7f))
+* upgrade release pipeline to v2.0.0 ([#303](https://github.com/cds-snc/canadalogin-partner-portal/issues/303)) ([31f93c2](https://github.com/cds-snc/canadalogin-partner-portal/commit/31f93c22176e20f2265bfc90e48e907e9e74b681))
+
 ## [2.1.0](https://github.com/cds-snc/canadalogin-partner-portal/compare/v2.0.0...v2.1.0) (2026-10-21)
 
 
