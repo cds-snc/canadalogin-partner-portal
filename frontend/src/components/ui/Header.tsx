@@ -92,6 +92,7 @@ const Header = (): FunctionComponent => {
 
 	const commonItems: Array<NavigationItem> = [
 		{ href: "/", label: t("nav.home") },
+		{ href: "#", label: t("nav.technicalDocumentation") },
 	];
 
 	const supportItem: NavigationItem = {

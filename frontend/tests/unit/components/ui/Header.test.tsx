@@ -267,6 +267,9 @@ describe("Header", () => {
 		expect(
 			document.querySelector("nav[aria-label='Primary navigation']")
 		).toBeTruthy();
+		expect(document.querySelector("a[data-href='#']")?.textContent).toBe(
+			"Technical documentation"
+		);
 	});
 
 	it("does not mark applications active on an environment route", () => {
