@@ -13,7 +13,7 @@ vi.mock("react-i18next", () => ({
 		i18n: { language: "en" },
 		t: (key: string): string => {
 			const translations: Record<string, string> = {
-					"footer.apiDocumentation": "API Documentation",
+				"footer.apiDocumentation": "Technical documentation",
 				"footer.contextualHeading": "Canadian Digital Service",
 				"footer.privacy": "Privacy",
 				"footer.support": "Support",
@@ -40,7 +40,7 @@ describe("Footer", () => {
 		expect(footerProperties).toMatchObject({
 			contextualHeading: "Canadian Digital Service",
 			contextualLinks: {
-				"API Documentation": "#",
+				"Technical documentation": "#",
 				Support: "/support",
 				"System status": "#",
 			},
