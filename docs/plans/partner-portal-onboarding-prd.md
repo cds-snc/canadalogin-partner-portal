@@ -93,6 +93,7 @@ Implementation status: Implemented baseline / policy alignment needed
 
 Open Spec statement:
 - The system shall enforce domain-based partner access controls when associating users to partner organization context.
+- The email shall not be a shared email, it must be tied to an individual account
 
 ### Feature 3: Role and Permission Model
 Implementation status: Partially implemented (current role model differs from target operations model)
@@ -159,40 +160,34 @@ Open Spec statement:
 TBD:
 - Evidence mechanism: upload, reference, or both.
 
-### Feature 11: Onboarding Checklist Tracking
-Implementation status: Partially implemented
-
-Open Spec statement:
-- The system shall represent onboarding checklist progress from preparation through go-live and make required artifacts visible before production progression.
-
-### Feature 12: Documentation and External Link Hub
+### Feature 11: Documentation and External Link Hub
 Implementation status: Implemented baseline/expandable
 
 Open Spec statement:
 - The system shall provide contextual links to required onboarding documentation and external process entry points.
 
-### Feature 13: Integration Health Visualization
+### Feature 12: Integration Health Visualization
 Implementation status: Implemented baseline
 
 Open Spec statement:
-- The system shall display partner-facing integration status by environment.
+- The system shall display partner-facing integration status by environment for their application or the system.
 
-### Feature 14: Metrics and MAU Reporting
+### Feature 13: Metrics and MAU Reporting
 Implementation status: Implemented baseline
 
 Open Spec statement:
 - The system shall display high-level usage metrics, including monthly active user-related reporting, sourced from approved data pipelines.
 
-### Feature 15: Volume Spike Notification
+### Feature 14: Volume Spike Notification
 Implementation status: Net new
 
 Open Spec statement:
-- The system shall provide an in-portal path for partners to notify CanadaLogin of anticipated volume spikes.
+- The system shall provide a link to JIRA so they can notify us of significant volume increases of end-users for their service. 
 
 TBD:
 - Submission implementation (ticket creation vs redirect to intake link).
 
-### Feature 16: Incident Reporting Path
+### Feature 15: Incident Reporting Path
 Implementation status: Deferred/TBD
 
 Open Spec statement:
@@ -201,13 +196,13 @@ Open Spec statement:
 TBD:
 - Detailed incident workflow, intake mechanism, and SLA handling.
 
-### Feature 17: Live Integration Management
+### Feature 16: Live Integration Management
 Implementation status: Partially implemented
 
 Open Spec statement:
 - The system shall provide post-go-live integration visibility including status, support references, and operational metadata needed by partner teams.
 
-### Feature 18: Deprecation Transition Foundation
+### Feature 17: Deprecation Transition Foundation
 Implementation status: Net new (foundational)
 
 Open Spec statement:
