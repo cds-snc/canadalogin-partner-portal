@@ -87,12 +87,13 @@ Implementation status: Implemented baseline
 
 Open Spec statement:
 - The system shall require CanadaLogin authentication for partner users before any protected onboarding or operations workflow is available.
+- Second factor authentication method is limited to Passkey, no SMS, voice, or email. 
 
 ### Feature 2: Domain-Restricted Access
 Implementation status: Implemented baseline / policy alignment needed
 
 Open Spec statement:
-- The system shall enforce domain-based partner access controls when associating users to partner organization context.
+- The system shall enforce domain-based partner access controls when associating users to partner organization context. Including: .gc.ca or canada.ca
 
 ### Feature 3: Role and Permission Model
 Implementation status: Partially implemented (current role model differs from target operations model)
@@ -101,22 +102,32 @@ Open Spec statement:
 - The system shall enforce role-based permissions that support RP Admin, RP User (Edit), Read Only, and CL Admin responsibilities while preventing CL Admin access to RP secrets.
 
 Required behavior:
-- RP Admin: all partner permissions except promotion approve/reject.
-- RP User (Edit): read/edit for config, promotion request metadata, secret-reveal workflows, and CATS-related submission fields.
-- Read Only: no edit actions.
+- RP Admin:
+  - the ability to manage users on their RP to Admin, Edit, or read-only access
+  - the ability to request promotion from STAGING to PRODUCTION, which a CL Admin will approve out-of-bound in Jira
+  - all partner permissions except direct permission to promote from STAGING to PRODUCTION without CL-Admin approval
+- RP User (Edit): read/edit for config, environment promotion request metadata, secret-reveal workflows.
+- Read Only: no edit actions, no secret access.
 - CL Admin: metadata/status visibility only; no secret values.
+- CL Read-only: are able to see the partner contacts on the RP so they can provide communication and support
 
-### Feature 4: Application Information Intake
+### Feature 4: RP Registration Information Intake
 Implementation status: Implemented baseline (field alignment refinement required)
 
 Open Spec statement:
-- The system shall capture and maintain application information required for STAGING readiness and production planning.
+- [Open decision]
+  - The system shall intake all required information to provision a TEST, STAGING, and PRODUCTION environment, stored in the partner portal database.
+  - The system shall share the information with IBM Verify for runtime config
+  - The system shall maintain all required information to provision a TEST, STAGING, and PRODUCTION environment, stored in the partner portal database.
 
 ### Feature 5: Application Contacts Intake
 Implementation status: Implemented baseline (gating rules TBD)
 
 Open Spec statement:
-- The system shall capture application contacts and contact-type designations required for onboarding, support, incident response, and authorization workflows.
+- The system shall capture application contacts and contact-type designations required for onboarding, support, incident response, and approval workflows.
+- The system shall intake development contacts when setting up their TEST environment
+- The system shall direct RP admins to Jira to request to go-live, providing information on the date, number of users, 
+- The system shall inform all user types of the people who have permissions on the RP
 
 TBD:
 - Mandatory contact-type gate by stage (STAGING, PRODUCTION).
@@ -133,43 +144,39 @@ Implementation status: Partially implemented
 Open Spec statement:
 - The system shall support TEST-optional onboarding, self-serve TEST to STAGING progression, and CL-reviewed STAGING to PRODUCTION progression.
 
-### Feature 8: Promotion Review Tracking (Out-of-Band Approval)
+### Feature 8:  Promotion from STAGING to PRODUCTION Review Tracking (Out-of-Band Approval)
 Implementation status: Net new
 
 Open Spec statement:
+- The system shall provide a checklist of the go-live requirements before presenting an RP Admin with the link to Jira to request to go-live
+- Jira will intake additional information for the go-live request, like the date, number of expected users, and documents for approval
 - The system shall track promotion request status and external review references when approval actions occur outside the portal.
 
+
 Required minimum:
-- Status states (for example pending, approved, rejected).
+- Status states for go-live (for example pending, approved, rejected).
 - External reference (for example ticket or review record).
 - Reviewer metadata and timestamps.
 
-### Feature 9: Secrets Handling and One-Time Reveal
+### Feature 9: CL Admin read-only screens
+- The system shall make available the contacts per RP
+- The system shall provide the environment an RP is configured in
+- The system shall provide a list of all partner contacts per environment (TEST, STAGING, and PRODUCTION)
+
+### Feature 10: Secrets Handling and One-Time Reveal
 Implementation status: Implemented baseline with policy constraints
 
 Open Spec statement:
 - The system shall provide authorized RP users one-time secret reveal behavior and enforce strict non-visibility of secret values for CL Admin users.
 
-### Feature 10: CATS Evidence and Readiness
-Implementation status: Partially implemented/TBD
-
-Open Spec statement:
-- The system shall represent CATS readiness in production progression and support traceable evidence references.
-
-TBD:
-- Evidence mechanism: upload, reference, or both.
-
-### Feature 11: Onboarding Checklist Tracking
-Implementation status: Partially implemented
-
-Open Spec statement:
-- The system shall represent onboarding checklist progress from preparation through go-live and make required artifacts visible before production progression.
-
-### Feature 12: Documentation and External Link Hub
+### Feature 11: Documentation and External Link Hub
 Implementation status: Implemented baseline/expandable
 
 Open Spec statement:
-- The system shall provide contextual links to required onboarding documentation and external process entry points.
+- The system shall provide contextual links to required onboarding documentation on GCExchange and external process entry points.
+- The system shall provide a page on the partner portal with our terms and conditions
+- The system shall provide external links to our incident response contacts
+- The system shall instruct users to create a ticket in Jira for bugs on CanadaLogin or the partner portal
 
 ### Feature 13: Integration Health Visualization
 Implementation status: Implemented baseline
