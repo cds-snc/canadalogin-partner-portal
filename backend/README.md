@@ -52,6 +52,10 @@ UV_PROJECT_ENVIRONMENT=../.venv uv run uvicorn src.app.main:app --reload --host 
 
 When authoring Alembic migrations in `backend/src/migrations/versions/`, keep the internal `revision` string at 32 characters or fewer. Prefer short symbolic ids; the filename can stay more descriptive if needed.
 
+## Database test data
+
+Use [database/load_test_data.sql](database/load_test_data.sql) for the one-time test dataset. All editable data is at the top of the file. The [database guide](database/README.md) covers prerequisites, CloudShell commands, and scenario limits. Running the seed commits the data; schema migrations remain separate.
+
 ## Docker
 
 ```bash
