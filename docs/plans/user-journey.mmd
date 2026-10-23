@@ -1,0 +1,49 @@
+---
+config:
+  layout: elk
+---
+graph TD
+    A[User Story Map: Partner Portal] --> B[Onboarding & Setup]
+    A --> C[Register Application]
+    A --> D[Configure Authentication Integration]
+    A --> E[Manage Secrets]
+    A --> F[Monitor & Usage Reporting]
+    A --> G[Support & Troubleshooting]
+
+    B --> B1[Sign in to Partner Portal]
+    B --> B2[Accept Terms of Use]
+    B --> B3[Invite Team Members]
+    B --> B4[Set up Organization Profile]
+
+    C --> C1[Create New Application]
+    C --> C2[Provide Redirect URIs]
+    C --> C3[Download Client ID]
+    C --> C4[Review Application Info]
+
+    D --> D1[Access Documentation]
+    D --> D2[Test Integration]
+    D --> D3[Validate Integration]
+    D --> D4[Go Live]
+
+    E --> E1[View Current Secrets]
+    E --> E2[Generate New Secret]
+    E --> E3[Rotate Secret]
+    E --> E4[Delete Secret]
+
+    F --> F1[View MAU Dashboard]
+    F --> F2[Filter by Time]
+    F --> F3[Export Reports]
+    F --> F4[Analyze Trends]
+
+    G --> G1[Submit Support Request]
+    G --> G2[View FAQs]
+    G --> G3[Report Integration Issue]
+    G --> G4[Track Tickets]
+
+    classDef epic fill:#eef2ff,stroke:#818cf8
+    classDef journey fill:#f0fdfa,stroke:#2dd4bf
+    classDef story fill:#fdf4ff,stroke:#e879f9
+
+    class A epic
+    class B,C,D,E,F,G journey
+    class B1,B2,B3,B4,C1,C2,C3,C4,D1,D2,D3,D4,E1,E2,E3,E4,F1,F2,F3,F4,G1,G2,G3,G4 story
